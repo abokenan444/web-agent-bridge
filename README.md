@@ -2,6 +2,8 @@
 
 **Open-source middleware that bridges AI agents and websites — providing a standardized command interface for intelligent automation.**
 
+**English** | **[العربية](README.ar.md)**
+
 WAB gives website owners a script they embed in their pages that exposes a `window.AICommands` interface. AI agents read this interface to discover available actions, execute commands, and interact with sites accurately — without parsing raw DOM.
 
 ---
@@ -13,6 +15,10 @@ WAB gives website owners a script they embed in their pages that exposes a `wind
 - **Standardized Interface** — Unified `window.AICommands` object any agent can consume
 - **Rate Limiting** — Built-in abuse protection with configurable limits
 - **Analytics Dashboard** — Track how AI agents interact with your site
+- **Real-Time Analytics** — WebSocket-based live event streaming for Enterprise users
+- **WebDriver BiDi Compatible** — Standard protocol support via `window.__wab_bidi`
+- **CDN Versioning** — Serve scripts via versioned URLs (`/v1/ai-agent-bridge.js`, `/latest/ai-agent-bridge.js`)
+- **Docker Ready** — One-command deployment with Docker Compose
 - **Custom Actions** — Register your own actions with custom handlers
 - **Subscription Tiers** — Free core + paid premium features (API access, analytics, automated login)
 - **Event System** — Subscribe to bridge events for monitoring
@@ -33,6 +39,12 @@ npm start
 ```
 
 The server starts at `http://localhost:3000`.
+
+**Or with Docker:**
+
+```bash
+docker compose up -d
+```
 
 ### 2. Create an Account
 
@@ -192,11 +204,81 @@ window.AIBridgeConfig = {
 
 ## Tech Stack
 
-- **Backend**: Node.js + Express
+- **Backend**: Node.js + Express + WebSocket (ws)
 - **Database**: SQLite (via better-sqlite3)
 - **Auth**: JWT + bcrypt
 - **Frontend**: Vanilla HTML/CSS/JS (no framework dependencies)
-- **Security**: Helmet, CORS, rate limiting
+- **Security**: Helmet, CORS, CSP, rate limiting
+- **Containers**: Docker + Docker Compose
+- **Testing**: Jest + Supertest
+
+---
+
+## WebDriver BiDi Compatibility
+
+WAB exposes a `window.__wab_bidi` interface for agents using standardized WebDriver BiDi protocol:
+
+```javascript
+// Get BiDi context
+const context = window.__wab_bidi.getContext();
+
+// Send BiDi command
+const result = await window.__wab_bidi.send({
+  id: 1,
+  method: 'wab.executeAction',
+  params: { name: 'signup', data: {} }
+});
+
+// Supported methods:
+// wab.getContext, wab.getActions, wab.executeAction, wab.readContent, wab.getPageInfo
+```
+
+---
+
+## Real-Time Analytics (WebSocket)
+
+Connect to `ws://localhost:3000/ws/analytics` for live analytics:
+
+```javascript
+const ws = new WebSocket('ws://localhost:3000/ws/analytics');
+ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token: 'jwt-token', siteId: 'site-id' }));
+ws.onmessage = (e) => console.log(JSON.parse(e.data));
+```
+
+---
+
+## CDN & Versioning
+
+Scripts are served at versioned URLs for cache-safe deployments:
+
+| URL | Description |
+|---|---|
+| `/script/ai-agent-bridge.js` | Default path |
+| `/v1/ai-agent-bridge.js` | Version-pinned (recommended) |
+| `/latest/ai-agent-bridge.js` | Always latest (use with caution) |
+
+---
+
+## Docker
+
+```bash
+# Quick start
+docker compose up -d
+
+# Or build manually
+docker build -t web-agent-bridge .
+docker run -p 3000:3000 -e JWT_SECRET=your-secret web-agent-bridge
+```
+
+---
+
+## Testing
+
+```bash
+npm test
+```
+
+Tests cover: authentication, site CRUD, config management, license verification, analytics tracking, and static pages.
 
 ---
 

@@ -1,0 +1,15 @@
+services:
+  web-agent-bridge:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET:-change-this-to-a-strong-random-secret}
+      - NODE_ENV=production
+    volumes:
+      - wab-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  wab-data:

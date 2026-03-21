@@ -741,6 +741,66 @@
         actions: this.getActions()
       };
     }
+
+    // ── WebDriver BiDi Compatibility ────────────────────────────────────
+    // Exposes a standardized protocol for agents using WebDriver BiDi
+    toBiDi() {
+      return {
+        type: 'wab:context',
+        version: VERSION,
+        context: {
+          url: location.href,
+          title: document.title,
+          browsingContext: typeof window !== 'undefined' ? window.name || 'default' : 'default'
+        },
+        capabilities: {
+          actions: this.getActions().map(a => ({
+            id: a.name,
+            type: a.trigger === 'click' ? 'pointerDown' : a.trigger === 'fill_and_submit' ? 'key' : a.trigger,
+            description: a.description,
+            parameters: a.fields ? a.fields.map(f => ({ name: f.name, type: f.type, required: f.required })) : undefined
+          })),
+          permissions: this._getEffectivePermissions(),
+          tier: this.getEffectiveTier()
+        }
+      };
+    }
+
+    // Execute via BiDi-style command
+    async executeBiDi(command) {
+      if (!command || !command.method) {
+        return { id: command?.id, error: { code: 'invalid argument', message: 'Missing method' } };
+      }
+
+      const responseBase = { id: command.id || null, type: 'success' };
+
+      switch (command.method) {
+        case 'wab.getContext':
+          return { ...responseBase, result: this.toBiDi() };
+
+        case 'wab.getActions':
+          return { ...responseBase, result: this.getActions(command.params?.category) };
+
+        case 'wab.executeAction':
+          if (!command.params?.name) {
+            return { id: command.id, error: { code: 'invalid argument', message: 'Action name required' } };
+          }
+          const result = await this.execute(command.params.name, command.params.data || {});
+          return { ...responseBase, result };
+
+        case 'wab.readContent':
+          if (!command.params?.selector) {
+            return { id: command.id, error: { code: 'invalid argument', message: 'Selector required' } };
+          }
+          return { ...responseBase, result: this.readContent(command.params.selector) };
+
+        case 'wab.getPageInfo':
+          return { ...responseBase, result: this.getPageInfo() };
+
+        default:
+          return { id: command.id, error: { code: 'unknown command', message: `Unknown method: ${command.method}` } };
+      }
+    }
   }
 
   // ─── Auto-initialize ──────────────────────────────────────────────────
@@ -763,6 +823,13 @@
 
     global.AICommands = bridge;
     global.WebAgentBridge = WebAgentBridge;
+
+    // WebDriver BiDi compatibility: expose via __wab_bidi channel
+    global.__wab_bidi = {
+      version: VERSION,
+      send: async (command) => bridge.executeBiDi(command),
+      getContext: () => bridge.toBiDi()
+    };
 
     if (typeof CustomEvent !== 'undefined') {
       document.dispatchEvent(new CustomEvent('wab:ready', { detail: { version: VERSION } }));

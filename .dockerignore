@@ -1,0 +1,7 @@
+.dockerignore
+node_modules
+data
+data-test
+*.db
+.env
+.git

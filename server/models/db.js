@@ -4,10 +4,14 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
-const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+const isTest = process.env.NODE_ENV === 'test';
+const DATA_DIR = isTest
+  ? path.join(__dirname, '..', '..', 'data-test')
+  : path.join(__dirname, '..', '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-const db = new Database(path.join(DATA_DIR, 'wab.db'));
+const dbFile = isTest ? 'wab-test.db' : 'wab.db';
+const db = new Database(path.join(DATA_DIR, dbFile));
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -188,6 +192,7 @@ module.exports = {
   addSite,
   findSitesByUser,
   findSiteById,
+  findSiteByLicense,
   updateSiteConfig,
   updateSiteTier,
   deleteSite,

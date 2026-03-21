@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { verifyLicense, recordAnalytic } = require('../models/db');
+const { verifyLicense, recordAnalytic, findSiteByLicense } = require('../models/db');
+const { broadcastAnalytic } = require('../ws');
 
 router.post('/verify', (req, res) => {
   const { domain, licenseKey } = req.body;
@@ -21,7 +22,6 @@ router.post('/track', (req, res) => {
   }
 
   try {
-    const { findSiteByLicense } = require('../models/db');
     const site = findSiteByLicense.get(licenseKey);
     if (!site) return res.status(404).json({ error: 'Site not found' });
 
@@ -32,6 +32,14 @@ router.post('/track', (req, res) => {
       triggerType,
       success: success !== false,
       metadata
+    });
+
+    // Broadcast real-time analytics via WebSocket
+    broadcastAnalytic(site.id, {
+      actionName,
+      agentId,
+      triggerType,
+      success: success !== false
     });
 
     res.json({ recorded: true });
