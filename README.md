@@ -1,5 +1,11 @@
 # Web Agent Bridge (WAB)
 
+[![CI](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 **Open-source middleware that bridges AI agents and websites — providing a standardized command interface for intelligent automation.**
 
 **English** | **[العربية](README.ar.md)**
@@ -31,18 +37,17 @@ WAB gives website owners a script they embed in their pages that exposes a `wind
 ### 1. Install & Run the Server
 
 ```bash
+# Option A: Clone and run
 git clone https://github.com/abokenan444/web-agent-bridge.git
 cd web-agent-bridge
 npm install
 cp .env.example .env
 npm start
-```
 
-The server starts at `http://localhost:3000`.
+# Option B: npx (one command)
+npx web-agent-bridge start
 
-**Or with Docker:**
-
-```bash
+# Option C: Docker
 docker compose up -d
 ```
 
@@ -245,6 +250,51 @@ ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token: 'jwt-token', sit
 ws.onmessage = (e) => console.log(JSON.parse(e.data));
 ```
 
+### WebSocket Message Protocol
+
+**Client → Server Messages:**
+
+| Message | Fields | Description |
+|---|---|---|
+| `auth` | `type`, `token`, `siteId` | Authenticate and subscribe to a site's events |
+
+```json
+{ "type": "auth", "token": "eyJhbGciOi...", "siteId": "uuid-of-site" }
+```
+
+**Server → Client Messages:**
+
+| Message Type | Fields | Description |
+|---|---|---|
+| `auth:success` | `type`, `siteId` | Authentication succeeded |
+| `analytic` | `type`, `timestamp`, `actionName`, `agentId`, `success` | Real-time analytics event |
+| `error` | `type`, `message` | Error (invalid auth, malformed message) |
+
+```json
+// Success response
+{ "type": "auth:success", "siteId": "uuid-of-site" }
+
+// Analytics event
+{
+  "type": "analytic",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "actionName": "click-signup",
+  "agentId": "agent-123",
+  "triggerType": "click",
+  "success": true
+}
+
+// Error
+{ "type": "error", "message": "Invalid message or auth failed" }
+```
+
+**Connection Lifecycle:**
+1. Connect to `ws://host:port/ws/analytics`
+2. Send `auth` message with valid JWT and site ID
+3. Receive `auth:success` confirmation
+4. Receive `analytic` events as they occur
+5. Server sends heartbeat pings every 30 seconds — dead connections are cleaned up automatically
+
 ---
 
 ## CDN & Versioning
@@ -279,6 +329,78 @@ npm test
 ```
 
 Tests cover: authentication, site CRUD, config management, license verification, analytics tracking, and static pages.
+
+---
+
+## Agent SDK
+
+WAB includes a built-in SDK for building AI agents. See [`sdk/README.md`](sdk/README.md) for full documentation.
+
+```javascript
+const puppeteer = require('puppeteer');
+const { WABAgent } = require('web-agent-bridge/sdk');
+
+const browser = await puppeteer.launch();
+const page = await browser.newPage();
+const agent = new WABAgent(page);
+
+await agent.navigateAndWait('https://example.com');
+const actions = await agent.getActions();
+await agent.execute('signup', { email: 'user@test.com' });
+await browser.close();
+```
+
+---
+
+## Agent Examples
+
+Ready-to-run agent examples in the [`examples/`](examples/) directory:
+
+| File | Description |
+|---|---|
+| `puppeteer-agent.js` | Basic agent using Puppeteer + `window.AICommands` |
+| `bidi-agent.js` | Agent using WebDriver BiDi protocol via `window.__wab_bidi` |
+
+```bash
+node examples/puppeteer-agent.js http://localhost:3000
+node examples/bidi-agent.js http://localhost:3000
+```
+
+---
+
+## Multi-Database Support
+
+WAB defaults to SQLite but supports PostgreSQL and MySQL via database adapters.
+
+```bash
+# SQLite (default — no setup needed)
+npm start
+
+# PostgreSQL
+npm install pg
+DB_ADAPTER=postgresql DATABASE_URL=postgres://user:pass@localhost:5432/wab npm start
+
+# MySQL
+npm install mysql2
+DB_ADAPTER=mysql DATABASE_URL=mysql://user:pass@localhost:3306/wab npm start
+```
+
+See [`server/models/adapters/`](server/models/adapters/) for adapter implementations.
+
+---
+
+## CLI
+
+Install globally or use via npx:
+
+```bash
+# Run the server
+npx web-agent-bridge start
+npx web-agent-bridge start --port 8080
+
+# Initialize a new project
+npx web-agent-bridge init
+```
 
 ---
 

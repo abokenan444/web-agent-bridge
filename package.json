@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "Open-source middleware that bridges AI agents and websites — providing a standardized command interface for intelligent automation",
   "main": "server/index.js",
+  "bin": {
+    "web-agent-bridge": "./bin/wab.js",
+    "wab": "./bin/wab.js"
+  },
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js",
@@ -15,8 +19,31 @@
     "bridge",
     "automation",
     "web",
-    "middleware"
+    "middleware",
+    "ai-agent",
+    "browser-automation",
+    "webdriver-bidi"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abokenan444/web-agent-bridge.git"
+  },
+  "homepage": "https://github.com/abokenan444/web-agent-bridge#readme",
+  "bugs": {
+    "url": "https://github.com/abokenan444/web-agent-bridge/issues"
+  },
+  "files": [
+    "server/",
+    "script/",
+    "public/",
+    "bin/",
+    "sdk/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^2.4.3",

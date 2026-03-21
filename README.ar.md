@@ -2,6 +2,11 @@
 
 # Web Agent Bridge (WAB) — جسر الوكيل الذكي
 
+[![CI](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/)
+
 **برمجية وسيطة مفتوحة المصدر تربط وكلاء الذكاء الاصطناعي بالمواقع الإلكترونية — توفر واجهة أوامر موحدة للأتمتة الذكية.**
 
 يتيح WAB لأصحاب المواقع إضافة سكريبت يكشف واجهة `window.AICommands` لوكلاء الذكاء الاصطناعي. بدلاً من تحليل شيفرة HTML المعقدة، يقرأ الوكيل قائمة الإجراءات المتاحة وينفذها بدقة وأمان.
@@ -31,18 +36,17 @@
 ### ١. التثبيت والتشغيل
 
 ```bash
+# الطريقة أ: استنساخ وتشغيل
 git clone https://github.com/abokenan444/web-agent-bridge.git
 cd web-agent-bridge
 npm install
 cp .env.example .env
 npm start
-```
 
-الخادم يعمل على `http://localhost:3000`.
+# الطريقة ب: npx (أمر واحد)
+npx web-agent-bridge start
 
-### باستخدام Docker:
-
-```bash
+# الطريقة ج: Docker
 docker compose up -d
 ```
 
@@ -284,6 +288,74 @@ npm test
 - واجهات إدارة المواقع (CRUD، الإعدادات، المستويات)
 - واجهات التراخيص (التحقق، التتبع)
 - خدمة الصفحات الثابتة
+
+---
+
+## 🤖 Agent SDK — حزمة أدوات الوكيل
+
+يضم WAB حزمة SDK جاهزة لبناء وكلاء ذكاء اصطناعي. راجع [`sdk/README.md`](sdk/README.md) للتوثيق الكامل.
+
+```javascript
+const puppeteer = require('puppeteer');
+const { WABAgent } = require('web-agent-bridge/sdk');
+
+const browser = await puppeteer.launch();
+const page = await browser.newPage();
+const agent = new WABAgent(page);
+
+await agent.navigateAndWait('https://example.com');
+const actions = await agent.getActions();
+await agent.execute('signup', { email: 'user@test.com' });
+await browser.close();
+```
+
+---
+
+## 📚 أمثلة الوكلاء
+
+أمثلة جاهزة للتشغيل في مجلد [`examples/`](examples/):
+
+| الملف | الوصف |
+|---|---|
+| `puppeteer-agent.js` | وكيل أساسي باستخدام Puppeteer و `window.AICommands` |
+| `bidi-agent.js` | وكيل يستخدم بروتوكول WebDriver BiDi عبر `window.__wab_bidi` |
+
+```bash
+node examples/puppeteer-agent.js http://localhost:3000
+node examples/bidi-agent.js http://localhost:3000
+```
+
+---
+
+## 🗄️ دعم قواعد بيانات متعددة
+
+يستخدم WAB قاعدة SQLite افتراضياً ويدعم PostgreSQL و MySQL عبر محوّلات قاعدة البيانات.
+
+```bash
+# SQLite (افتراضي — لا حاجة لإعداد)
+npm start
+
+# PostgreSQL
+npm install pg
+DB_ADAPTER=postgresql DATABASE_URL=postgres://user:pass@localhost:5432/wab npm start
+
+# MySQL
+npm install mysql2
+DB_ADAPTER=mysql DATABASE_URL=mysql://user:pass@localhost:3306/wab npm start
+```
+
+---
+
+## 💻 واجهة سطر الأوامر (CLI)
+
+```bash
+# تشغيل الخادم
+npx web-agent-bridge start
+npx web-agent-bridge start --port 8080
+
+# تهيئة مشروع جديد
+npx web-agent-bridge init
+```
 
 ---
 
