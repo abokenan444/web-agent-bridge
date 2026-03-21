@@ -24,6 +24,7 @@
         <a href="#" class="active" data-view="overview">📊 Overview</a>
         <a href="#" data-view="sites">🌐 My Sites</a>
         <a href="#" data-view="analytics">📈 Analytics</a>
+        <a href="#" data-view="billing">💳 Billing</a>
         <a href="#" data-view="settings">⚙️ Settings</a>
         <a href="/docs" style="margin-top:20px;">📖 Documentation</a>
       </nav>
@@ -104,6 +105,82 @@
           <div style="text-align:center; padding:80px 0; color:var(--text-muted);">
             Select a site to view analytics data.
           </div>
+        </div>
+      </div>
+
+      <!-- ── Billing View ── -->
+      <div id="view-billing" class="view">
+        <div class="page-header">
+          <h1>Billing & Subscription</h1>
+        </div>
+
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+          <div class="stat-card">
+            <div class="label">Current Plan</div>
+            <div class="value" id="billingPlan" style="font-size:1.4rem;">Free</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Status</div>
+            <div class="value" id="billingStatus" style="font-size:1.2rem;">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Payments</div>
+            <div class="value" id="billingPayments">0</div>
+          </div>
+        </div>
+
+        <!-- Pricing Cards -->
+        <h3 style="margin-bottom:16px;">Upgrade Your Plan</h3>
+        <div class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:32px;" id="pricingCards">
+          <div class="card" style="border:1px solid var(--border-color);text-align:center;padding:32px 24px;">
+            <h3 style="margin-bottom:8px;">Starter</h3>
+            <div style="font-size:2rem;font-weight:700;margin:16px 0;">$19<span style="font-size:0.9rem;font-weight:400;color:var(--text-muted);">/mo</span></div>
+            <ul style="text-align:left;list-style:none;padding:0;margin:0 0 24px;font-size:0.9rem;color:var(--text-secondary);">
+              <li style="padding:6px 0;">✓ Up to 5 sites</li>
+              <li style="padding:6px 0;">✓ 10,000 actions/month</li>
+              <li style="padding:6px 0;">✓ Automated Login</li>
+              <li style="padding:6px 0;">✓ Email support</li>
+            </ul>
+            <button class="btn btn-secondary" onclick="startCheckout('starter')" style="width:100%;">Select Starter</button>
+          </div>
+          <div class="card" style="border:2px solid var(--accent-blue);text-align:center;padding:32px 24px;position:relative;">
+            <span style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--gradient-primary);padding:4px 16px;border-radius:12px;font-size:0.75rem;font-weight:600;">POPULAR</span>
+            <h3 style="margin-bottom:8px;">Pro</h3>
+            <div style="font-size:2rem;font-weight:700;margin:16px 0;">$49<span style="font-size:0.9rem;font-weight:400;color:var(--text-muted);">/mo</span></div>
+            <ul style="text-align:left;list-style:none;padding:0;margin:0 0 24px;font-size:0.9rem;color:var(--text-secondary);">
+              <li style="padding:6px 0;">✓ Up to 20 sites</li>
+              <li style="padding:6px 0;">✓ 100,000 actions/month</li>
+              <li style="padding:6px 0;">✓ API & Data Extraction</li>
+              <li style="padding:6px 0;">✓ Priority support</li>
+            </ul>
+            <button class="btn btn-primary" onclick="startCheckout('pro')" style="width:100%;">Select Pro</button>
+          </div>
+          <div class="card" style="border:1px solid var(--border-color);text-align:center;padding:32px 24px;">
+            <h3 style="margin-bottom:8px;">Enterprise</h3>
+            <div style="font-size:2rem;font-weight:700;margin:16px 0;">$149<span style="font-size:0.9rem;font-weight:400;color:var(--text-muted);">/mo</span></div>
+            <ul style="text-align:left;list-style:none;padding:0;margin:0 0 24px;font-size:0.9rem;color:var(--text-secondary);">
+              <li style="padding:6px 0;">✓ Unlimited sites</li>
+              <li style="padding:6px 0;">✓ Unlimited actions</li>
+              <li style="padding:6px 0;">✓ Dedicated support</li>
+              <li style="padding:6px 0;">✓ Custom integrations</li>
+            </ul>
+            <button class="btn btn-secondary" onclick="startCheckout('enterprise')" style="width:100%;">Select Enterprise</button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;">
+          <button class="btn btn-secondary" onclick="openBillingPortal()">📋 Manage Subscription</button>
+        </div>
+
+        <!-- Payment History -->
+        <h3 style="margin:32px 0 16px;">Payment History</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Amount</th><th>Status</th><th>Description</th><th>Date</th></tr></thead>
+            <tbody id="paymentHistory">
+              <tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-muted);">No payments yet</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -249,6 +326,7 @@
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         const el = document.getElementById(`view-${view}`);
         if (el) el.classList.add('active');
+        if (view === 'billing') loadBilling();
       });
     });
 
@@ -552,6 +630,54 @@
       const d = document.createElement('div');
       d.textContent = str;
       return d.innerHTML;
+    }
+
+    // ─── Billing ─────────────────────────────────────────────────────────
+    async function loadBilling() {
+      try {
+        const sRes = await fetch(`${API}/sites`, { headers: headers() });
+        const sData = await sRes.json();
+        const mySites = sData.sites || [];
+        const topTier = mySites.reduce((best, s) => {
+          const order = { enterprise: 4, pro: 3, starter: 2, free: 1 };
+          return (order[s.tier] || 0) > (order[best] || 0) ? s.tier : best;
+        }, 'free');
+        document.getElementById('billingPlan').textContent = topTier.charAt(0).toUpperCase() + topTier.slice(1);
+        document.getElementById('billingStatus').textContent = topTier !== 'free' ? '✅ Active' : 'Free Tier';
+      } catch (err) { console.error(err); }
+    }
+
+    async function startCheckout(tier) {
+      try {
+        const siteId = sites.length > 0 ? sites[0].id : null;
+        if (!siteId) { alert('Please add a site first before subscribing.'); return; }
+        const res = await fetch('/api/billing/checkout', {
+          method: 'POST',
+          headers: headers(),
+          body: JSON.stringify({ tier, siteId })
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          alert(data.error || 'Failed to start checkout. Please ensure Stripe is configured.');
+        }
+      } catch (err) { alert('Connection error'); }
+    }
+
+    async function openBillingPortal() {
+      try {
+        const res = await fetch('/api/billing/portal', {
+          method: 'POST',
+          headers: headers()
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          alert(data.error || 'Could not open billing portal.');
+        }
+      } catch (err) { alert('Connection error'); }
     }
 
     // ─── View toggling style ────────────────────────────────────────────

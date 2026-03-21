@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login — Web Agent Bridge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="auth-page">
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header" style="text-align:center;">
+        <div class="brand-icon" style="background:linear-gradient(135deg,#ef4444,#f59e0b);width:56px;height:56px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:16px;">🛡️</div>
+        <h1>Admin Panel</h1>
+        <p style="color:var(--text-muted);">Web Agent Bridge Administration</p>
+      </div>
+      <div class="alert alert-error" id="loginError" style="display:none;"></div>
+      <form id="loginForm" onsubmit="return handleLogin(event)">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" class="form-input" id="email" required autofocus placeholder="admin@webagentbridge.com">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" class="form-input" id="password" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:16px;" id="submitBtn">Sign In</button>
+      </form>
+      <div style="text-align:center;margin-top:20px;">
+        <a href="/" style="color:var(--text-muted);font-size:0.85rem;">← Back to Website</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    if (localStorage.getItem('wab_admin_token')) {
+      window.location.href = '/admin';
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errEl = document.getElementById('loginError');
+      const btn = document.getElementById('submitBtn');
+
+      errEl.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Signing in...';
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          errEl.textContent = data.error || 'Invalid credentials';
+          errEl.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Sign In';
+          return;
+        }
+
+        localStorage.setItem('wab_admin_token', data.token);
+        localStorage.setItem('wab_admin', JSON.stringify(data.admin));
+        window.location.href = '/admin';
+      } catch (err) {
+        errEl.textContent = 'Connection error. Please try again.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+      return false;
+    }
+  </script>
+</body>
+</html>

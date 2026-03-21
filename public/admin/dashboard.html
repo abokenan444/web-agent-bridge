@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — Web Agent Bridge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="dashboard">
+
+    <!-- ═══════════ SIDEBAR ═══════════ -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <a href="/" class="navbar-brand">
+          <div class="brand-icon" style="background:linear-gradient(135deg,#ef4444,#f59e0b);">🛡️</div>
+          <span>WAB Admin</span>
+        </a>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="active" data-view="overview">📊 Overview</a>
+        <a href="#" data-view="users">👥 Users</a>
+        <a href="#" data-view="sites">🌐 Sites</a>
+        <a href="#" data-view="analytics">📈 Analytics</a>
+        <a href="#" data-view="grants">🎁 Free Grants</a>
+        <a href="#" data-view="payments">💳 Payments</a>
+        <a href="#" data-view="stripe">🔧 Stripe Config</a>
+        <a href="#" data-view="smtp">📧 SMTP / Email</a>
+        <a href="#" data-view="notifications">🔔 Notifications</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;" id="adminName"></div>
+        <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%;justify-content:flex-start;">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- ═══════════ MAIN CONTENT ═══════════ -->
+    <main class="main-content">
+
+      <!-- ── Overview ── -->
+      <div id="view-overview" class="view active">
+        <div class="page-header"><h1>Admin Dashboard</h1></div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="label">Total Users</div><div class="value" id="statUsers">0</div></div>
+          <div class="stat-card"><div class="label">Active Sites</div><div class="value" id="statSites">0</div></div>
+          <div class="stat-card"><div class="label">Total Actions</div><div class="value" id="statAnalytics">0</div></div>
+          <div class="stat-card"><div class="label">Today Actions</div><div class="value" id="statToday">0</div></div>
+          <div class="stat-card"><div class="label">Revenue (USD)</div><div class="value" id="statRevenue">$0</div></div>
+          <div class="stat-card"><div class="label">Active Grants</div><div class="value" id="statGrants">0</div></div>
+          <div class="stat-card"><div class="label">Monthly Signups</div><div class="value" id="statSignups">0</div></div>
+          <div class="stat-card"><div class="label">Stripe</div><div class="value" id="statStripe" style="font-size:1.2rem;">—</div></div>
+        </div>
+        <div class="grid-2" style="margin-top:24px;">
+          <div class="card">
+            <h3 style="margin-bottom:16px;">Tier Breakdown</h3>
+            <div id="tierBreakdown"></div>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:16px;">Recent Users</h3>
+            <div id="recentUsers" style="max-height:300px;overflow-y:auto;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Users ── -->
+      <div id="view-users" class="view">
+        <div class="page-header">
+          <h1>Users Management</h1>
+          <input type="text" class="form-input" placeholder="Search users..." id="userSearch" oninput="filterUsers()" style="width:260px;">
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Registered</th><th>Actions</th></tr></thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── User Detail Modal ── -->
+      <div class="modal-overlay" id="userDetailModal">
+        <div class="modal" style="max-width:750px;">
+          <div class="modal-header">
+            <h2 id="userDetailName">User Details</h2>
+            <button class="modal-close" onclick="closeModal('userDetailModal')">&times;</button>
+          </div>
+          <div class="modal-body" id="userDetailContent"></div>
+        </div>
+      </div>
+
+      <!-- ── Sites ── -->
+      <div id="view-sites" class="view">
+        <div class="page-header"><h1>All Sites</h1></div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Name</th><th>Domain</th><th>Owner</th><th>Tier</th><th>License</th><th>Status</th></tr></thead>
+            <tbody id="sitesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Analytics ── -->
+      <div id="view-analytics" class="view">
+        <div class="page-header">
+          <h1>Platform Analytics</h1>
+          <select class="form-input" style="width:auto;" id="analyticsDays" onchange="loadAnalytics()">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </div>
+        <div id="analyticsContent"></div>
+      </div>
+
+      <!-- ── Free Grants ── -->
+      <div id="view-grants" class="view">
+        <div class="page-header">
+          <h1>Free Grants</h1>
+          <button class="btn btn-primary btn-sm" onclick="showGrantModal()">+ New Grant</button>
+        </div>
+        <p style="color:var(--text-secondary);margin-bottom:20px;">Grant free premium access to users for marketing, testing, or support purposes.</p>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>User</th><th>Tier</th><th>Reason</th><th>Granted By</th><th>Date</th><th>Expires</th><th>Actions</th></tr></thead>
+            <tbody id="grantsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Grant Modal ── -->
+      <div class="modal-overlay" id="grantModal">
+        <div class="modal">
+          <div class="modal-header">
+            <h2>Grant Free Tier</h2>
+            <button class="modal-close" onclick="closeModal('grantModal')">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-error" id="grantError"></div>
+            <div class="form-group">
+              <label>User (select)</label>
+              <select class="form-input" id="grantUserId"></select>
+            </div>
+            <div class="form-group">
+              <label>Tier</label>
+              <select class="form-input" id="grantTier">
+                <option value="starter">Starter</option>
+                <option value="pro">Pro</option>
+                <option value="enterprise" selected>Enterprise</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Reason</label>
+              <input type="text" class="form-input" id="grantReason" placeholder="Marketing, Beta tester, etc.">
+            </div>
+            <div class="form-group">
+              <label>Expires (optional)</label>
+              <input type="date" class="form-input" id="grantExpires">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('grantModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="createGrant()">Grant Access</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Payments ── -->
+      <div id="view-payments" class="view">
+        <div class="page-header"><h1>Payment History</h1></div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>User</th><th>Amount</th><th>Currency</th><th>Status</th><th>Description</th><th>Date</th></tr></thead>
+            <tbody id="paymentsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Stripe Config ── -->
+      <div id="view-stripe" class="view">
+        <div class="page-header"><h1>Stripe Configuration</h1></div>
+        <div class="card" style="max-width:700px;">
+          <div class="alert alert-info" style="display:block;margin-bottom:20px;background:var(--bg-card);border:1px solid var(--accent-blue);border-radius:var(--radius-md);padding:16px;">
+            <strong>💡 Setup Guide:</strong> Create products and prices in your <a href="https://dashboard.stripe.com" target="_blank">Stripe Dashboard</a>, then enter the keys below.
+          </div>
+          <div class="form-group">
+            <label>Publishable Key</label>
+            <input type="text" class="form-input" id="stripePublishable" placeholder="pk_live_...">
+          </div>
+          <div class="form-group">
+            <label>Secret Key</label>
+            <input type="password" class="form-input" id="stripeSecret" placeholder="sk_live_...">
+          </div>
+          <div class="form-group">
+            <label>Webhook Secret</label>
+            <input type="password" class="form-input" id="stripeWebhook" placeholder="whsec_...">
+          </div>
+          <hr style="border-color:var(--border-color);margin:24px 0;">
+          <h4 style="margin-bottom:16px;">Price IDs</h4>
+          <div class="form-group">
+            <label>Starter Price ID</label>
+            <input type="text" class="form-input" id="priceStarter" placeholder="price_...">
+          </div>
+          <div class="form-group">
+            <label>Pro Price ID</label>
+            <input type="text" class="form-input" id="pricePro" placeholder="price_...">
+          </div>
+          <div class="form-group">
+            <label>Enterprise Price ID</label>
+            <input type="text" class="form-input" id="priceEnterprise" placeholder="price_...">
+          </div>
+          <button class="btn btn-primary" onclick="saveStripeConfig()">Save Stripe Configuration</button>
+        </div>
+      </div>
+
+      <!-- ── SMTP Config ── -->
+      <div id="view-smtp" class="view">
+        <div class="page-header"><h1>SMTP / Email Settings</h1></div>
+        <div class="card" style="max-width:700px;">
+          <div class="form-group">
+            <label>SMTP Host</label>
+            <input type="text" class="form-input" id="smtpHost" placeholder="smtp.gmail.com">
+          </div>
+          <div class="form-group">
+            <label>Port</label>
+            <input type="number" class="form-input" id="smtpPort" placeholder="587" value="587">
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;">
+              <input type="checkbox" id="smtpSecure"> Use SSL/TLS
+            </label>
+          </div>
+          <div class="form-group">
+            <label>Username / Email</label>
+            <input type="text" class="form-input" id="smtpUsername" placeholder="your@email.com">
+          </div>
+          <div class="form-group">
+            <label>Password / App Password</label>
+            <input type="password" class="form-input" id="smtpPassword" placeholder="App-specific password">
+          </div>
+          <hr style="border-color:var(--border-color);margin:24px 0;">
+          <div class="form-group">
+            <label>From Name</label>
+            <input type="text" class="form-input" id="smtpFromName" placeholder="Web Agent Bridge" value="Web Agent Bridge">
+          </div>
+          <div class="form-group">
+            <label>From Email</label>
+            <input type="text" class="form-input" id="smtpFromEmail" placeholder="noreply@webagentbridge.com">
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;">
+              <input type="checkbox" id="smtpEnabled"> Enable Email Notifications
+            </label>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:20px;">
+            <button class="btn btn-primary" onclick="saveSmtpConfig()">Save SMTP Settings</button>
+            <button class="btn btn-secondary" onclick="testSmtp()">Send Test Email</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Notifications Log ── -->
+      <div id="view-notifications" class="view">
+        <div class="page-header"><h1>Notification Logs</h1></div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>To</th><th>Template</th><th>Subject</th><th>Status</th><th>Error</th><th>Date</th></tr></thead>
+            <tbody id="notificationsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // ─── State ──────────────────────────────────────────────────────────
+    const API = '/api/admin';
+    let token = localStorage.getItem('wab_admin_token');
+    let admin = JSON.parse(localStorage.getItem('wab_admin') || 'null');
+    let allUsers = [];
+
+    if (!token) window.location.href = '/admin/login';
+
+    function headers() {
+      return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+    }
+
+    function logout() {
+      localStorage.removeItem('wab_admin_token');
+      localStorage.removeItem('wab_admin');
+      window.location.href = '/admin/login';
+    }
+
+    function esc(str) {
+      if (!str) return '';
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // ─── Navigation ─────────────────────────────────────────────────────
+    document.querySelectorAll('.sidebar-nav a[data-view]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const view = link.dataset.view;
+        document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+        link.classList.add('active');
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(`view-${view}`).classList.add('active');
+        loadView(view);
+      });
+    });
+
+    function loadView(view) {
+      switch(view) {
+        case 'overview': loadStats(); break;
+        case 'users': loadUsers(); break;
+        case 'sites': loadSites(); break;
+        case 'analytics': loadAnalytics(); break;
+        case 'grants': loadGrants(); break;
+        case 'payments': loadPayments(); break;
+        case 'stripe': loadStripeConfig(); break;
+        case 'smtp': loadSmtpConfig(); break;
+        case 'notifications': loadNotifications(); break;
+      }
+    }
+
+    // ─── Init ───────────────────────────────────────────────────────────
+    async function init() {
+      if (admin) document.getElementById('adminName').textContent = admin.name;
+      await loadStats();
+    }
+
+    // ─── Stats ──────────────────────────────────────────────────────────
+    async function loadStats() {
+      try {
+        const res = await fetch(`${API}/stats`, { headers: headers() });
+        if (res.status === 401 || res.status === 403) return logout();
+        const s = await res.json();
+        document.getElementById('statUsers').textContent = s.totalUsers;
+        document.getElementById('statSites').textContent = s.totalSites;
+        document.getElementById('statAnalytics').textContent = s.totalAnalytics.toLocaleString();
+        document.getElementById('statToday').textContent = s.todayAnalytics;
+        document.getElementById('statRevenue').textContent = '$' + (s.totalRevenue / 100).toFixed(2);
+        document.getElementById('statGrants').textContent = s.activeGrants;
+        document.getElementById('statSignups').textContent = s.monthlySignups;
+        document.getElementById('statStripe').textContent = s.stripeConfigured ? '✅ Active' : '❌ Not Set';
+
+        // Tier breakdown
+        const tb = document.getElementById('tierBreakdown');
+        if (s.tierBreakdown && s.tierBreakdown.length) {
+          tb.innerHTML = s.tierBreakdown.map(t => `
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);">
+              <span class="badge badge-${t.tier}">${t.tier}</span>
+              <strong>${t.count}</strong>
+            </div>
+          `).join('');
+        } else {
+          tb.innerHTML = '<p style="color:var(--text-muted);">No sites yet</p>';
+        }
+
+        // Recent users
+        const ru = document.getElementById('recentUsers');
+        if (s.recentUsers && s.recentUsers.length) {
+          ru.innerHTML = s.recentUsers.map(u => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">
+              <div>
+                <strong style="color:var(--text-primary);">${esc(u.name)}</strong>
+                <div style="font-size:0.8rem;color:var(--text-muted);">${esc(u.email)}</div>
+              </div>
+              <span style="font-size:0.75rem;color:var(--text-muted);">${new Date(u.created_at).toLocaleDateString()}</span>
+            </div>
+          `).join('');
+        } else {
+          ru.innerHTML = '<p style="color:var(--text-muted);">No users yet</p>';
+        }
+      } catch (err) { console.error(err); }
+    }
+
+    // ─── Users ──────────────────────────────────────────────────────────
+    async function loadUsers() {
+      try {
+        const res = await fetch(`${API}/users`, { headers: headers() });
+        const data = await res.json();
+        allUsers = data.users || [];
+        renderUsers(allUsers);
+      } catch (err) { console.error(err); }
+    }
+
+    function filterUsers() {
+      const q = document.getElementById('userSearch').value.toLowerCase();
+      renderUsers(allUsers.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.company || '').toLowerCase().includes(q)));
+    }
+
+    function renderUsers(users) {
+      const tbody = document.getElementById('usersTableBody');
+      if (!users.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);">No users found</td></tr>';
+        return;
+      }
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td><strong style="color:var(--text-primary);">${esc(u.name)}</strong></td>
+          <td style="font-size:0.85rem;">${esc(u.email)}</td>
+          <td style="color:var(--text-muted);">${esc(u.company) || '—'}</td>
+          <td style="font-size:0.8rem;color:var(--text-muted);">${new Date(u.created_at).toLocaleDateString()}</td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="viewUser('${u.id}')">View</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}','${esc(u.name)}')">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function viewUser(id) {
+      try {
+        const res = await fetch(`${API}/users/${id}`, { headers: headers() });
+        const { user } = await res.json();
+        document.getElementById('userDetailName').textContent = user.name;
+        document.getElementById('userDetailContent').innerHTML = `
+          <div class="grid-2" style="gap:20px;">
+            <div>
+              <h4 style="margin-bottom:12px;">Profile</h4>
+              <p><strong>Email:</strong> ${esc(user.email)}</p>
+              <p><strong>Company:</strong> ${esc(user.company) || '—'}</p>
+              <p><strong>Registered:</strong> ${new Date(user.created_at).toLocaleString()}</p>
+              ${user.stripeCustomer ? `<p><strong>Stripe ID:</strong> <span class="mono" style="font-size:0.8rem;">${esc(user.stripeCustomer.stripe_customer_id)}</span></p>` : ''}
+            </div>
+            <div>
+              <h4 style="margin-bottom:12px;">Quick Actions</h4>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <button class="btn btn-primary btn-sm" onclick="quickGrant('${user.id}','${esc(user.name)}')">🎁 Grant Free Tier</button>
+                <button class="btn btn-secondary btn-sm" onclick="quickChangeTier('${user.id}')">🔄 Change Tier</button>
+              </div>
+            </div>
+          </div>
+          <h4 style="margin:24px 0 12px;">Sites (${user.sites ? user.sites.length : 0})</h4>
+          ${user.sites && user.sites.length ? `
+            <div class="table-wrapper">
+              <table>
+                <thead><tr><th>Name</th><th>Domain</th><th>Tier</th><th>Active</th></tr></thead>
+                <tbody>${user.sites.map(s => `
+                  <tr>
+                    <td>${esc(s.name)}</td>
+                    <td class="mono" style="font-size:0.85rem;">${esc(s.domain)}</td>
+                    <td><span class="badge badge-${s.tier}">${s.tier}</span></td>
+                    <td>${s.active ? '<span style="color:var(--accent-green);">✓</span>' : '<span style="color:var(--accent-red);">✗</span>'}</td>
+                  </tr>
+                `).join('')}</tbody>
+              </table>
+            </div>
+          ` : '<p style="color:var(--text-muted);">No sites</p>'}
+          ${user.grants && user.grants.length ? `
+            <h4 style="margin:24px 0 12px;">Active Grants</h4>
+            ${user.grants.map(g => `<div style="padding:8px;background:var(--bg-surface);border-radius:var(--radius-sm);margin-bottom:6px;"><span class="badge badge-${g.granted_tier}">${g.granted_tier}</span> — ${esc(g.reason) || 'No reason'}</div>`).join('')}
+          ` : ''}
+          ${user.payments && user.payments.length ? `
+            <h4 style="margin:24px 0 12px;">Payments</h4>
+            ${user.payments.map(p => `<div style="padding:8px;background:var(--bg-surface);border-radius:var(--radius-sm);margin-bottom:6px;">$${(p.amount / 100).toFixed(2)} ${p.currency.toUpperCase()} — ${esc(p.description) || ''} — ${new Date(p.created_at).toLocaleDateString()}</div>`).join('')}
+          ` : ''}
+        `;
+        openModal('userDetailModal');
+      } catch (err) { console.error(err); }
+    }
+
+    function quickGrant(userId, userName) {
+      closeModal('userDetailModal');
+      document.getElementById('grantUserId').value = userId;
+      showGrantModal();
+    }
+
+    async function quickChangeTier(userId) {
+      const tier = prompt('Enter new tier (free, starter, pro, enterprise):');
+      if (!tier || !['free', 'starter', 'pro', 'enterprise'].includes(tier)) return;
+      try {
+        await fetch(`${API}/users/${userId}/tier`, { method: 'PUT', headers: headers(), body: JSON.stringify({ tier }) });
+        alert('Tier updated!');
+        viewUser(userId);
+      } catch (err) { alert('Failed'); }
+    }
+
+    async function deleteUser(id, name) {
+      if (!confirm(`Delete user "${name}"? This will deactivate all their sites. This action cannot be undone.`)) return;
+      try {
+        await fetch(`${API}/users/${id}`, { method: 'DELETE', headers: headers() });
+        loadUsers();
+      } catch (err) { alert('Failed to delete user'); }
+    }
+
+    // ─── Sites ──────────────────────────────────────────────────────────
+    async function loadSites() {
+      try {
+        const res = await fetch(`${API}/sites`, { headers: headers() });
+        const { sites } = await res.json();
+        const tbody = document.getElementById('sitesTableBody');
+        if (!sites.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No sites</td></tr>';
+          return;
+        }
+        tbody.innerHTML = sites.map(s => `
+          <tr>
+            <td><strong style="color:var(--text-primary);">${esc(s.name)}</strong></td>
+            <td class="mono" style="font-size:0.85rem;">${esc(s.domain)}</td>
+            <td style="font-size:0.85rem;">${esc(s.user_name)} <span style="color:var(--text-muted);">(${esc(s.user_email)})</span></td>
+            <td><span class="badge badge-${s.tier}">${s.tier}</span></td>
+            <td class="mono" style="font-size:0.75rem;color:var(--text-muted);">${esc(s.license_key)}</td>
+            <td>${s.active ? '<span style="color:var(--accent-green);">Active</span>' : '<span style="color:var(--accent-red);">Inactive</span>'}</td>
+          </tr>
+        `).join('');
+      } catch (err) { console.error(err); }
+    }
+
+    // ─── Analytics ──────────────────────────────────────────────────────
+    async function loadAnalytics() {
+      const days = document.getElementById('analyticsDays').value;
+      try {
+        const res = await fetch(`${API}/analytics?days=${days}`, { headers: headers() });
+        const data = await res.json();
+        const c = document.getElementById('analyticsContent');
+
+        let html = '<div class="grid-2" style="gap:20px;">';
+
+        // Timeline
+        html += '<div class="card"><h4 style="margin-bottom:16px;">Actions Timeline</h4>';
+        if (data.timeline && data.timeline.length) {
+          const maxCount = Math.max(...data.timeline.map(t => t.count));
+          html += data.timeline.map(t => `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span style="font-size:0.75rem;color:var(--text-muted);width:70px;">${t.day.slice(5)}</span>
+              <div style="flex:1;background:var(--bg-surface);border-radius:4px;height:20px;overflow:hidden;">
+                <div style="width:${(t.count / maxCount * 100)}%;height:100%;background:var(--gradient-primary);border-radius:4px;"></div>
+              </div>
+              <span style="font-size:0.75rem;width:35px;text-align:right;">${t.count}</span>
+            </div>
+          `).join('');
+        } else { html += '<p style="color:var(--text-muted);">No data</p>'; }
+        html += '</div>';
+
+        // Top Actions
+        html += '<div class="card"><h4 style="margin-bottom:16px;">Top Actions</h4>';
+        if (data.topActions && data.topActions.length) {
+          html += data.topActions.map((a, i) => `
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);">
+              <span>${i + 1}. ${esc(a.action_name)}</span>
+              <strong>${a.count}</strong>
+            </div>
+          `).join('');
+        } else { html += '<p style="color:var(--text-muted);">No data</p>'; }
+        html += '</div>';
+
+        // Signups
+        html += '<div class="card" style="grid-column:1/-1;"><h4 style="margin-bottom:16px;">User Signups</h4>';
+        if (data.signups && data.signups.length) {
+          const maxS = Math.max(...data.signups.map(s => s.count));
+          html += '<div style="display:flex;gap:4px;align-items:flex-end;height:120px;">';
+          html += data.signups.map(s => `
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <span style="font-size:0.7rem;">${s.count}</span>
+              <div style="width:100%;height:${(s.count / maxS * 80)}px;background:var(--gradient-secondary);border-radius:4px 4px 0 0;min-height:4px;"></div>
+              <span style="font-size:0.65rem;color:var(--text-muted);">${s.day.slice(5)}</span>
+            </div>
+          `).join('');
+          html += '</div>';
+        } else { html += '<p style="color:var(--text-muted);">No signups in this period</p>'; }
+        html += '</div></div>';
+
+        c.innerHTML = html;
+      } catch (err) { console.error(err); }
+    }
+
+    // ─── Free Grants ────────────────────────────────────────────────────
+    async function loadGrants() {
+      try {
+        const res = await fetch(`${API}/grants`, { headers: headers() });
+        const { grants } = await res.json();
+        const tbody = document.getElementById('grantsTableBody');
+        if (!grants.length) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">No active grants</td></tr>';
+          return;
+        }
+        tbody.innerHTML = grants.map(g => `
+          <tr>
+            <td>${esc(g.user_name)} <span style="color:var(--text-muted);font-size:0.8rem;">(${esc(g.user_email)})</span></td>
+            <td><span class="badge badge-${g.granted_tier}">${g.granted_tier}</span></td>
+            <td style="color:var(--text-secondary);">${esc(g.reason) || '—'}</td>
+            <td style="font-size:0.85rem;">${esc(g.admin_name) || '—'}</td>
+            <td style="font-size:0.8rem;color:var(--text-muted);">${new Date(g.granted_at).toLocaleDateString()}</td>
+            <td style="font-size:0.8rem;color:var(--text-muted);">${g.expires_at ? new Date(g.expires_at).toLocaleDateString() : 'Never'}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="revokeGrant('${g.id}')">Revoke</button></td>
+          </tr>
+        `).join('');
+      } catch (err) { console.error(err); }
+    }
+
+    function showGrantModal() {
+      // Populate user select
+      const sel = document.getElementById('grantUserId');
+      sel.innerHTML = allUsers.map(u => `<option value="${u.id}">${esc(u.name)} (${esc(u.email)})</option>`).join('');
+      if (!allUsers.length) {
+        fetch(`${API}/users`, { headers: headers() }).then(r => r.json()).then(data => {
+          allUsers = data.users || [];
+          sel.innerHTML = allUsers.map(u => `<option value="${u.id}">${esc(u.name)} (${esc(u.email)})</option>`).join('');
+        });
+      }
+      openModal('grantModal');
+    }
+
+    async function createGrant() {
+      const userId = document.getElementById('grantUserId').value;
+      const tier = document.getElementById('grantTier').value;
+      const reason = document.getElementById('grantReason').value;
+      const expires = document.getElementById('grantExpires').value;
+      const errEl = document.getElementById('grantError');
+      errEl.style.display = 'none';
+
+      if (!userId) { errEl.textContent = 'Select a user'; errEl.style.display = 'block'; return; }
+
+      try {
+        const res = await fetch(`${API}/grants`, {
+          method: 'POST', headers: headers(),
+          body: JSON.stringify({ userId, tier, reason, expiresAt: expires || null })
+        });
+        if (!res.ok) { const d = await res.json(); errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+        closeModal('grantModal');
+        loadGrants();
+        alert('Free grant created successfully! User has been notified via email.');
+      } catch (err) { errEl.textContent = 'Failed'; errEl.style.display = 'block'; }
+    }
+
+    async function revokeGrant(id) {
+      if (!confirm('Revoke this grant? The user will be downgraded to Free tier.')) return;
+      try {
+        await fetch(`${API}/grants/${id}`, { method: 'DELETE', headers: headers() });
+        loadGrants();
+      } catch (err) { alert('Failed'); }
+    }
+
+    // ─── Payments ───────────────────────────────────────────────────────
+    async function loadPayments() {
+      try {
+        const res = await fetch(`${API}/payments`, { headers: headers() });
+        const { payments } = await res.json();
+        const tbody = document.getElementById('paymentsTableBody');
+        if (!payments.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No payments recorded</td></tr>';
+          return;
+        }
+        tbody.innerHTML = payments.map(p => `
+          <tr>
+            <td>${esc(p.user_name)} <span style="color:var(--text-muted);font-size:0.8rem;">(${esc(p.user_email)})</span></td>
+            <td><strong style="color:var(--accent-green);">$${(p.amount / 100).toFixed(2)}</strong></td>
+            <td style="text-transform:uppercase;">${p.currency}</td>
+            <td><span class="badge badge-${p.status === 'succeeded' ? 'active' : 'inactive'}">${p.status}</span></td>
+            <td style="color:var(--text-secondary);">${esc(p.description) || '—'}</td>
+            <td style="font-size:0.8rem;color:var(--text-muted);">${new Date(p.created_at).toLocaleDateString()}</td>
+          </tr>
+        `).join('');
+      } catch (err) { console.error(err); }
+    }
+
+    // ─── Stripe Config ──────────────────────────────────────────────────
+    async function loadStripeConfig() {
+      try {
+        const res = await fetch(`${API}/stripe/config`, { headers: headers() });
+        const cfg = await res.json();
+        document.getElementById('stripePublishable').value = cfg.publishableKey || '';
+        document.getElementById('priceStarter').value = cfg.prices.starter || '';
+        document.getElementById('pricePro').value = cfg.prices.pro || '';
+        document.getElementById('priceEnterprise').value = cfg.prices.enterprise || '';
+      } catch (err) { console.error(err); }
+    }
+
+    async function saveStripeConfig() {
+      try {
+        const body = {
+          publishableKey: document.getElementById('stripePublishable').value,
+          secretKey: document.getElementById('stripeSecret').value || undefined,
+          webhookSecret: document.getElementById('stripeWebhook').value || undefined,
+          priceStarter: document.getElementById('priceStarter').value,
+          pricePro: document.getElementById('pricePro').value,
+          priceEnterprise: document.getElementById('priceEnterprise').value
+        };
+        const res = await fetch(`${API}/stripe/config`, { method: 'PUT', headers: headers(), body: JSON.stringify(body) });
+        if (res.ok) alert('Stripe configuration saved!');
+        else alert('Failed to save');
+      } catch (err) { alert('Error saving Stripe config'); }
+    }
+
+    // ─── SMTP Config ────────────────────────────────────────────────────
+    async function loadSmtpConfig() {
+      try {
+        const res = await fetch(`${API}/smtp`, { headers: headers() });
+        const { settings } = await res.json();
+        if (settings) {
+          document.getElementById('smtpHost').value = settings.host || '';
+          document.getElementById('smtpPort').value = settings.port || 587;
+          document.getElementById('smtpSecure').checked = !!settings.secure;
+          document.getElementById('smtpUsername').value = settings.username || '';
+          document.getElementById('smtpFromName').value = settings.from_name || 'Web Agent Bridge';
+          document.getElementById('smtpFromEmail').value = settings.from_email || '';
+          document.getElementById('smtpEnabled').checked = !!settings.enabled;
+        }
+      } catch (err) { console.error(err); }
+    }
+
+    async function saveSmtpConfig() {
+      try {
+        const body = {
+          host: document.getElementById('smtpHost').value,
+          port: parseInt(document.getElementById('smtpPort').value) || 587,
+          secure: document.getElementById('smtpSecure').checked,
+          username: document.getElementById('smtpUsername').value,
+          password: document.getElementById('smtpPassword').value,
+          fromName: document.getElementById('smtpFromName').value,
+          fromEmail: document.getElementById('smtpFromEmail').value,
+          enabled: document.getElementById('smtpEnabled').checked
+        };
+        const res = await fetch(`${API}/smtp`, { method: 'PUT', headers: headers(), body: JSON.stringify(body) });
+        if (res.ok) alert('SMTP settings saved!');
+        else { const d = await res.json(); alert(d.error || 'Failed'); }
+      } catch (err) { alert('Error saving SMTP settings'); }
+    }
+
+    async function testSmtp() {
+      const email = prompt('Enter email address to send test email:');
+      if (!email) return;
+      try {
+        const res = await fetch(`${API}/smtp/test`, { method: 'POST', headers: headers(), body: JSON.stringify({ testEmail: email }) });
+        const data = await res.json();
+        alert(data.success ? 'Test email sent successfully!' : 'Failed: ' + (data.error || 'Unknown error'));
+      } catch (err) { alert('Connection error'); }
+    }
+
+    // ─── Notifications ──────────────────────────────────────────────────
+    async function loadNotifications() {
+      try {
+        const res = await fetch(`${API}/notifications`, { headers: headers() });
+        const { logs } = await res.json();
+        const tbody = document.getElementById('notificationsTableBody');
+        if (!logs.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No notifications sent yet</td></tr>';
+          return;
+        }
+        tbody.innerHTML = logs.map(n => `
+          <tr>
+            <td style="font-size:0.85rem;">${esc(n.email_to)}</td>
+            <td><span class="badge">${esc(n.template)}</span></td>
+            <td style="font-size:0.85rem;color:var(--text-secondary);">${esc(n.subject)}</td>
+            <td><span style="color:${n.status === 'sent' ? 'var(--accent-green)' : 'var(--accent-red)'};">${n.status}</span></td>
+            <td style="font-size:0.8rem;color:var(--accent-red);">${esc(n.error_message) || '—'}</td>
+            <td style="font-size:0.8rem;color:var(--text-muted);">${new Date(n.created_at).toLocaleString()}</td>
+          </tr>
+        `).join('');
+      } catch (err) { console.error(err); }
+    }
+
+    // ─── Styles ─────────────────────────────────────────────────────────
+    const style = document.createElement('style');
+    style.textContent = '.view { display: none; } .view.active { display: block; }';
+    document.head.appendChild(style);
+
+    init();
+  </script>
+</body>
+</html>

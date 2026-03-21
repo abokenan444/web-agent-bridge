@@ -11,6 +11,9 @@ const { setupWebSocket } = require('./ws');
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
 const licenseRoutes = require('./routes/license');
+const adminRoutes = require('./routes/admin');
+const billingRoutes = require('./routes/billing');
+const { handleWebhookEvent } = require('./services/stripe');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,6 +37,18 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 app.use(cors());
+
+// Stripe webhook needs raw body — must be before express.json()
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    await handleWebhookEvent(req);
+    res.json({ received: true });
+  } catch (err) {
+    console.error('Webhook error:', err.message);
+    res.status(400).json({ error: err.message });
+  }
+});
+
 app.use(express.json());
 
 const apiLimiter = rateLimit({
@@ -59,6 +74,8 @@ app.use('/script', express.static(path.join(__dirname, '..', 'script')));
 app.use('/api/auth', apiLimiter, authRoutes);
 app.use('/api', apiLimiter, apiRoutes);
 app.use('/api/license', licenseLimiter, licenseRoutes);
+app.use('/api/admin', apiLimiter, adminRoutes);
+app.use('/api/billing', apiLimiter, billingRoutes);
 
 // ─── HTML Routes ────────────────────────────────────────────────────────
 app.get('/dashboard', (req, res) => {
@@ -72,6 +89,12 @@ app.get('/login', (req, res) => {
 });
 app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'register.html'));
+});
+app.get('/admin/login', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'login.html'));
+});
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'dashboard.html'));
 });
 
 // ─── CDN Versioned Script ───────────────────────────────────────────────
