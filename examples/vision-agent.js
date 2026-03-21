@@ -8,6 +8,16 @@
  * The agent describes what it wants to do in natural language,
  * and the IntentResolver matches it to available WAB actions.
  *
+ * HOW IT WORKS:
+ *   The IntentResolver is a LOCAL, keyword-based NLP mapper — it does NOT
+ *   call any external AI/ML API. It scores WAB actions against the intent
+ *   string using word overlap, category bonuses, and synonym matching.
+ *   This keeps the example dependency-free and easy to understand.
+ *
+ *   To integrate a real LLM (e.g., OpenAI, Claude), replace the
+ *   IntentResolver.resolve() method with an API call that returns the
+ *   best-matching action name from the available actions list.
+ *
  * Prerequisites:
  *   npm install puppeteer
  *
@@ -20,6 +30,8 @@ const puppeteer = require('puppeteer');
 const TARGET_URL = process.argv[2] || 'http://localhost:3000';
 
 // ─── Intent Resolver: maps natural language to WAB actions ────────────
+// This is a lightweight LOCAL resolver (no external API calls).
+// It uses keyword matching, synonym expansion, and category heuristics.
 class IntentResolver {
   constructor(actions) {
     this.actions = actions;

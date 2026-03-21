@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { setupWebSocket } = require('./ws');
+const { runMigrations } = require('./utils/migrate');
 
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
@@ -63,7 +64,30 @@ const licenseLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 120,
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Rate limit by IP + license key (if provided) for better granularity
+    const key = req.body?.licenseKey || req.ip;
+    return `${req.ip}:${key}`;
+  }
+});
+
+// Stricter limit for token exchange (auth-like endpoint)
+const tokenLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many token requests, please try again later' }
+});
+
+// Analytics tracking — generous but bounded
+const trackLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${req.ip}:${req.body?.licenseKey || 'anon'}`
 });
 
 // ─── Static Files ───────────────────────────────────────────────────────
@@ -74,6 +98,9 @@ app.use('/script', express.static(path.join(__dirname, '..', 'script')));
 app.use('/api/auth', apiLimiter, authRoutes);
 app.use('/api', apiLimiter, apiRoutes);
 app.use('/api/license', licenseLimiter, licenseRoutes);
+// Apply stricter limiters on specific license sub-endpoints
+app.use('/api/license/token', tokenLimiter);
+app.use('/api/license/track', trackLimiter);
 app.use('/api/admin', apiLimiter, adminRoutes);
 app.use('/api/billing', apiLimiter, billingRoutes);
 
@@ -113,6 +140,10 @@ app.get('*', (req, res) => {
 
 // ─── Start ──────────────────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'test') {
+  // Run pending database migrations
+  console.log('Running database migrations...');
+  runMigrations();
+
   const server = http.createServer(app);
   setupWebSocket(server);
 

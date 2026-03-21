@@ -1,16 +1,25 @@
 # Web Agent Bridge (WAB)
 
+[![npm](https://img.shields.io/npm/v/web-agent-bridge)](https://www.npmjs.com/package/web-agent-bridge)
 [![CI](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-**Open-source middleware that bridges AI agents and websites — providing a standardized command interface for intelligent automation.**
+> **robots.txt told bots what NOT to do. WAB tells AI agents what they CAN do.**
 
 **English** | **[العربية](README.ar.md)**
 
-WAB gives website owners a script they embed in their pages that exposes a `window.AICommands` interface. AI agents read this interface to discover available actions, execute commands, and interact with sites accurately — without parsing raw DOM.
+WAB is an open-source middleware layer that bridges AI agents and websites — like **OpenAPI for human-facing pages**. Website owners embed a script that exposes a standardized `window.AICommands` interface. AI agents discover available actions, execute commands, and interact with sites accurately — no DOM parsing, no scraping, no guesswork.
+
+### Three Paths to WAB
+
+| Path | For | How |
+|---|---|---|
+| **🏢 Website Owner** | Control how AI interacts with your site | Embed the script, configure permissions |
+| **🤖 Agent Developer** | Build reliable agents that work on any WAB-enabled site | Use `window.AICommands` or the Agent SDK |
+| **🔧 Self-Hosting** | Run the full WAB platform for your organization | Clone, deploy, manage licenses & analytics |
 
 ---
 
@@ -19,20 +28,26 @@ WAB gives website owners a script they embed in their pages that exposes a `wind
 - **Auto-Discovery** — Automatically detects buttons, forms, and navigation on the page
 - **Permission System** — Granular control over what AI agents can do (click, fill forms, API access, etc.)
 - **Standardized Interface** — Unified `window.AICommands` object any agent can consume
-- **Rate Limiting** — Built-in abuse protection with configurable limits
+- **Secure License Exchange** — Server-side token exchange; license keys never exposed in page source
+- **Rate Limiting** — Multi-dimensional abuse protection (IP + license key + site)
 - **Analytics Dashboard** — Track how AI agents interact with your site
-- **Real-Time Analytics** — WebSocket-based live event streaming for Enterprise users
+- **Real-Time Analytics** — WebSocket-based live event streaming with auto-reconnection
+- **In-Memory Caching** — TTL-based cache layer reduces DB reads on hot paths
+- **Analytics Queue** — Batched writes with transaction support for high-throughput tracking
 - **WebDriver BiDi Compatible** — Standard protocol support via `window.__wab_bidi`
 - **CDN Versioning** — Serve scripts via versioned URLs (`/v1/ai-agent-bridge.js`, `/latest/ai-agent-bridge.js`)
 - **Docker Ready** — One-command deployment with Docker Compose
+- **DB Migrations** — Numbered SQL migration runner with tracking table
 - **Custom Actions** — Register your own actions with custom handlers
 - **Subscription Tiers** — Free core + paid premium features (API access, analytics, automated login)
 - **Event System** — Subscribe to bridge events for monitoring
 - **Security Sandbox** — Origin validation, session tokens, command signing, audit logging, auto-lockdown
 - **Self-Healing Selectors** — Resilient element resolution with fuzzy matching for dynamic SPAs
-- **Stealth Mode** — Human-like interaction patterns (mouse events, typing delays, natural scrolling)
+- **Stealth Mode** — Human-like interaction patterns (requires explicit consent)
 - **Multi-Database** — SQLite (default), PostgreSQL, MySQL via pluggable adapters
 - **Agent SDK** — Built-in SDK for building AI agents with Puppeteer/Playwright
+- **Admin Dashboard** — User management, tier grants, system analytics
+- **Stripe Integration** — Payment processing with customer portal
 
 ---
 
@@ -62,9 +77,11 @@ Visit `http://localhost:3000/register` and create an account, then add your site
 ### 3. Add the Script to Your Website
 
 ```html
+<!-- Secure Mode (recommended): license key is exchanged server-side -->
 <script>
 window.AIBridgeConfig = {
-  licenseKey: "WAB-XXXXX-XXXXX-XXXXX-XXXXX",
+  configEndpoint: "https://yourserver.com/api/license/token",
+  _licenseKey: "WAB-XXXXX-XXXXX-XXXXX-XXXXX",
   agentPermissions: {
     readContent: true,
     click: true,
@@ -73,8 +90,10 @@ window.AIBridgeConfig = {
   }
 };
 </script>
-<script src="http://localhost:3000/script/ai-agent-bridge.js"></script>
+<script src="https://yourserver.com/script/ai-agent-bridge.js"></script>
 ```
+
+The `_licenseKey` is sent via POST to your server and exchanged for a short-lived session token — it is **never exposed in the page source** at runtime.
 
 ### 4. AI Agents Can Now Interact
 
@@ -97,20 +116,31 @@ web-agent-bridge/
 │   ├── routes/
 │   │   ├── auth.js         # Authentication (register/login)
 │   │   ├── api.js          # Sites, config, analytics API
-│   │   └── license.js      # License verification & tracking
+│   │   ├── license.js      # License verification, token exchange & tracking
+│   │   ├── admin.js        # Admin dashboard API
+│   │   └── billing.js      # Stripe billing integration
 │   ├── middleware/
 │   │   └── auth.js         # JWT authentication middleware
-│   └── models/
-│       └── db.js           # SQLite database & operations
+│   ├── models/
+│   │   └── db.js           # SQLite database & operations
+│   ├── migrations/         # Numbered SQL migrations
+│   └── utils/
+│       ├── cache.js        # In-memory cache + analytics queue
+│       └── migrate.js      # Migration runner
 ├── public/                 # Frontend
 │   ├── index.html          # Landing page
 │   ├── dashboard.html      # Management dashboard
 │   ├── docs.html           # Documentation
 │   ├── login.html          # Sign in
 │   ├── register.html       # Sign up
+│   ├── admin/              # Admin panel
+│   ├── js/
+│   │   └── ws-client.js    # WebSocket client with auto-reconnect
 │   └── css/styles.css      # Design system
 ├── script/
 │   └── ai-agent-bridge.js  # The bridge script (embed in websites)
+├── examples/               # Agent examples (Puppeteer, BiDi, Vision)
+├── sdk/                    # Agent SDK for Puppeteer/Playwright
 ├── .env                    # Environment variables
 └── package.json
 ```
@@ -141,8 +171,10 @@ web-agent-bridge/
 ### License (Public)
 | Endpoint | Method | Description |
 |---|---|---|
-| `/api/license/verify` | POST | Verify license key for domain |
-| `/api/license/track` | POST | Record analytics event |
+| `/api/license/verify` | POST | Verify license key for domain (cached) |
+| `/api/license/token` | POST | Exchange license key for session token |
+| `/api/license/session` | POST | Validate session token (domain-locked) |
+| `/api/license/track` | POST | Record analytics event (batched) |
 
 ---
 
@@ -171,7 +203,13 @@ Once loaded, `window.AICommands` exposes:
 
 ```javascript
 window.AIBridgeConfig = {
-  licenseKey: "WAB-XXXXX-XXXXX-XXXXX-XXXXX",
+  // Secure mode (recommended) — license exchanged server-side
+  configEndpoint: "/api/license/token",
+  _licenseKey: "WAB-XXXXX-XXXXX-XXXXX-XXXXX",
+
+  // Legacy mode — direct license key (less secure)
+  // licenseKey: "WAB-XXXXX-XXXXX-XXXXX-XXXXX",
+
   agentPermissions: {
     readContent: true,      // Read page text
     click: true,            // Click elements
@@ -214,11 +252,14 @@ window.AIBridgeConfig = {
 ## Tech Stack
 
 - **Backend**: Node.js + Express + WebSocket (ws)
-- **Database**: SQLite (via better-sqlite3)
-- **Auth**: JWT + bcrypt
+- **Database**: SQLite (via better-sqlite3) with migration runner
+- **Auth**: JWT + bcrypt + session tokens (domain-locked)
+- **Caching**: In-memory TTL cache + batched analytics queue
+- **Payments**: Stripe integration with billing portal
 - **Frontend**: Vanilla HTML/CSS/JS (no framework dependencies)
-- **Security**: Helmet, CORS, CSP, rate limiting
+- **Security**: Helmet, CORS, CSP, multi-layer rate limiting
 - **Containers**: Docker + Docker Compose
+- **CI/CD**: GitHub Actions (test + auto-publish to npm)
 - **Testing**: Jest + Supertest
 
 ---
@@ -246,9 +287,20 @@ const result = await window.__wab_bidi.send({
 
 ## Real-Time Analytics (WebSocket)
 
-Connect to `ws://localhost:3000/ws/analytics` for live analytics:
+Connect to `ws://localhost:3000/ws/analytics` for live analytics. Use the built-in `WABWebSocket` client for automatic reconnection with exponential backoff:
 
 ```javascript
+// Recommended: use the auto-reconnecting client
+import { WABWebSocket } from './js/ws-client.js';
+
+const ws = new WABWebSocket('jwt-token', 'site-id');
+ws.on('analytic', (data) => console.log(data));
+ws.on('reconnecting', ({ attempt, delay }) => console.log(`Reconnecting #${attempt}...`));
+ws.connect();
+```
+
+```javascript
+// Or connect manually
 const ws = new WebSocket('ws://localhost:3000/ws/analytics');
 ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token: 'jwt-token', siteId: 'site-id' }));
 ws.onmessage = (e) => console.log(JSON.parse(e.data));
@@ -364,7 +416,7 @@ Ready-to-run agent examples in the [`examples/`](examples/) directory:
 |---|---|
 | `puppeteer-agent.js` | Basic agent using Puppeteer + `window.AICommands` |
 | `bidi-agent.js` | Agent using WebDriver BiDi protocol via `window.__wab_bidi` |
-| `vision-agent.js` | Vision/NLP agent — resolves natural language intents to actions |
+| `vision-agent.js` | Vision/NLP agent — resolves natural language intents to actions using a local keyword-based resolver (no external API) |
 
 ```bash
 node examples/puppeteer-agent.js http://localhost:3000
@@ -408,6 +460,25 @@ See [`server/models/adapters/`](server/models/adapters/) for adapter implementat
 ## Security Architecture
 
 WAB implements defense-in-depth to protect the bridge from misuse:
+
+### Secure License Exchange (NEW)
+
+License keys are **never exposed in page source**. The bridge uses a server-side token exchange flow:
+
+1. Client sends `_licenseKey` via POST to `configEndpoint`
+2. Server validates and returns a domain-locked session token (1 hour TTL)
+3. Client deletes `_licenseKey` from memory and uses session token for all subsequent calls
+4. Token auto-refreshes at 80% TTL — no interruptions
+
+```
+Client                          Server
+  │── POST /api/license/token ──→│  (licenseKey in body, not URL)
+  │                              │  verifyLicense(domain, key)
+  │←── { sessionToken, tier } ──│  domain-locked, 1hr TTL
+  │                              │
+  │── POST /api/license/session →│  (sessionToken + origin check)
+  │←── { valid, tier } ─────────│
+```
 
 ### Security Sandbox
 
@@ -487,13 +558,18 @@ Add `data-wab-id` attributes to critical elements for maximum stability:
 
 ## Stealth Mode
 
-For sites with anti-bot protection, WAB can simulate human-like interaction patterns:
+For sites with anti-bot protection, WAB can simulate human-like interaction patterns. **Stealth mode requires explicit consent** to ensure ethical use.
 
 ```javascript
 window.AIBridgeConfig = {
-  stealth: { enabled: true }
+  stealth: {
+    enabled: true,
+    consent: true  // Required — confirms site owner authorizes human-like patterns
+  }
 };
 ```
+
+> **⚠️ Ethical Use Policy:** Stealth mode is designed for accessibility and testing on your own websites. Using it to bypass security controls on sites you do not own may violate terms of service and applicable laws.
 
 When enabled, all interactions use:
 
@@ -505,8 +581,8 @@ When enabled, all interactions use:
 | **Random delays** | 50-400ms natural pauses between actions |
 
 ```javascript
-// Enable/disable at runtime
-bridge.stealth.enable();
+// Enable/disable at runtime (consent required)
+bridge.stealth.enable(true);   // true = consent granted
 bridge.stealth.disable();
 ```
 

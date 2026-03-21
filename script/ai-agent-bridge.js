@@ -348,15 +348,28 @@
   }
 
   // ─── Stealth / Human-like Interaction ─────────────────────────────────
-  // Makes automation interactions look natural to anti-bot systems
+  // ⚠️ ETHICAL USE POLICY:
+  // Stealth mode simulates human-like interaction patterns for LEGITIMATE uses:
+  //   - Accessibility testing    - QA automation on YOUR OWN sites
+  //   - UX research with consent - Authorized penetration testing
+  // DO NOT use to bypass anti-bot protections on sites you do not own or control.
+  // Misuse violates the MIT license terms and is the user's legal responsibility.
   const Stealth = {
     _enabled: false,
+    _consentGiven: false,
 
-    enable() { this._enabled = true; },
+    enable(consent) {
+      if (consent !== true) {
+        console.warn('[WAB] Stealth mode requires explicit consent: stealth.enable(true)');
+        return;
+      }
+      this._consentGiven = true;
+      this._enabled = true;
+    },
     disable() { this._enabled = false; },
     get isEnabled() { return this._enabled; },
 
-    // Random delay between min and max ms, with optional Gaussian distribution
+    // Random delay between min and max ms
     delay(min = 50, max = 300) {
       if (!this._enabled) return Promise.resolve();
       const duration = min + Math.floor(Math.random() * (max - min));
@@ -561,9 +574,9 @@
       this._readyCallbacks = [];
       this._mutationObserver = null;
 
-      // Enable stealth mode if configured
-      if (this.config.stealth?.enabled) {
-        this.stealth.enable();
+      // Enable stealth mode if configured (requires consent: true)
+      if (this.config.stealth?.enabled && this.config.stealth?.consent === true) {
+        this.stealth.enable(true);
       }
 
       this._init();
@@ -571,7 +584,10 @@
 
     // ── Initialization ──────────────────────────────────────────────────
     async _init() {
-      if (this.config.licenseKey) {
+      if (this.config.configEndpoint && this.config._licenseKey) {
+        // Secure flow: exchange license key for session token server-side
+        await this._secureLicenseExchange();
+      } else if (this.config.licenseKey) {
         await this._verifyLicense();
       } else {
         this._licenseVerified = { tier: 'free', valid: true };
@@ -585,6 +601,36 @@
       this._readyCallbacks = [];
       this.events.emit('ready', { version: VERSION, tier: this.getEffectiveTier() });
       this.logger.log('init', { version: VERSION, tier: this.getEffectiveTier(), security: 'sandbox-active' });
+    }
+
+    // Secure license exchange: POST license key to server, get session token back
+    // License key is transmitted once via POST (not visible in page source)
+    async _secureLicenseExchange() {
+      try {
+        const endpoint = this.config.configEndpoint;
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ licenseKey: this.config._licenseKey })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          this._licenseVerified = { tier: data.tier, valid: true, sessionToken: data.sessionToken };
+          // Remove the license key from config after exchange
+          delete this.config._licenseKey;
+          // Schedule token refresh before expiry (at 80% of TTL)
+          if (data.expiresIn) {
+            this._tokenRefreshTimer = setTimeout(() => {
+              this.config._licenseKey = this._licenseVerified._originalKey;
+              this._secureLicenseExchange();
+            }, data.expiresIn * 800);
+          }
+        } else {
+          this._licenseVerified = { tier: 'free', valid: false, error: 'Token exchange failed' };
+        }
+      } catch (e) {
+        this._licenseVerified = { tier: this.config.subscriptionTier || 'free', valid: false, error: 'Offline' };
+      }
     }
 
     // Store fingerprints for all discovered actions (self-healing)

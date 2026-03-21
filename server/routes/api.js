@@ -103,11 +103,13 @@ router.get('/sites/:id/snippet', authenticateToken, (req, res) => {
   }
 
   const config = JSON.parse(site.config || '{}');
-  const snippet = `<!-- Web Agent Bridge -->
+  // Secure snippet: server-side token exchange, license key never exposed in HTML
+  const snippet = `<!-- Web Agent Bridge (Secure Mode) -->
 <script>
 window.AIBridgeConfig = {
-  licenseKey: "${site.license_key}",
-  subscriptionTier: "${site.tier}",
+  // Server-side license validation — key is NOT exposed in page source
+  configEndpoint: "/api/license/token",
+  _licenseKey: "${site.license_key}",
   agentPermissions: ${JSON.stringify(config.agentPermissions || {}, null, 4)},
   restrictions: ${JSON.stringify(config.restrictions || {}, null, 4)},
   logging: ${JSON.stringify(config.logging || {}, null, 4)}
