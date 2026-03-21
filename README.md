@@ -28,7 +28,11 @@ WAB gives website owners a script they embed in their pages that exposes a `wind
 - **Custom Actions** — Register your own actions with custom handlers
 - **Subscription Tiers** — Free core + paid premium features (API access, analytics, automated login)
 - **Event System** — Subscribe to bridge events for monitoring
-- **Security First** — Selector blocking, agent authentication, HTTPS verification
+- **Security Sandbox** — Origin validation, session tokens, command signing, audit logging, auto-lockdown
+- **Self-Healing Selectors** — Resilient element resolution with fuzzy matching for dynamic SPAs
+- **Stealth Mode** — Human-like interaction patterns (mouse events, typing delays, natural scrolling)
+- **Multi-Database** — SQLite (default), PostgreSQL, MySQL via pluggable adapters
+- **Agent SDK** — Built-in SDK for building AI agents with Puppeteer/Playwright
 
 ---
 
@@ -360,10 +364,12 @@ Ready-to-run agent examples in the [`examples/`](examples/) directory:
 |---|---|
 | `puppeteer-agent.js` | Basic agent using Puppeteer + `window.AICommands` |
 | `bidi-agent.js` | Agent using WebDriver BiDi protocol via `window.__wab_bidi` |
+| `vision-agent.js` | Vision/NLP agent — resolves natural language intents to actions |
 
 ```bash
 node examples/puppeteer-agent.js http://localhost:3000
 node examples/bidi-agent.js http://localhost:3000
+node examples/vision-agent.js http://localhost:3000
 ```
 
 ---
@@ -385,7 +391,124 @@ npm install mysql2
 DB_ADAPTER=mysql DATABASE_URL=mysql://user:pass@localhost:3306/wab npm start
 ```
 
+### When to Choose Which Database
+
+| Scenario | Recommended DB | Why |
+|---|---|---|
+| Local dev / prototyping | SQLite | Zero setup, single file, instant |
+| Small production (< 100 sites) | SQLite | Fast, no external dependencies |
+| Medium production (100-10K sites) | PostgreSQL | Better concurrency, JSONB support |
+| Large / enterprise production | PostgreSQL | Replication, backups, scalability |
+| Existing MySQL infrastructure | MySQL | Integrate with what you already use |
+
 See [`server/models/adapters/`](server/models/adapters/) for adapter implementations.
+
+---
+
+## Security Architecture
+
+WAB implements defense-in-depth to protect the bridge from misuse:
+
+### Security Sandbox
+
+Every bridge instance runs inside a `SecuritySandbox` that provides:
+
+- **Session tokens** — Unique cryptographic token per session prevents replay attacks
+- **Origin validation** — Only whitelisted origins can interact with the bridge
+- **Command validation** — All commands are validated for format, length, and blocklist
+- **Audit logging** — Every action is logged with timestamp, agent fingerprint, and status
+- **Escalation protection** — Attempts to access higher-tier features trigger automatic lockdown after 5 violations
+- **Auto-lockdown** — Bridge becomes read-only when security violations are detected
+
+```javascript
+// Get security status
+const info = bridge.getPageInfo();
+console.log(info.security);
+// { sandboxActive: true, locked: false, sessionToken: "a3f2..." }
+
+// View audit log
+const audit = bridge.security.getAuditLog(20);
+```
+
+### Selector Restrictions
+
+Block sensitive page sections from agent access:
+
+```javascript
+window.AIBridgeConfig = {
+  restrictions: {
+    blockedSelectors: [".private", "[data-private]", "#payment-form"],
+    allowedSelectors: [".public-content"]
+  }
+};
+```
+
+---
+
+## Self-Healing Selectors
+
+Modern SPAs frequently change their DOM structure. WAB's self-healing system ensures selectors keep working even when the page changes:
+
+### How It Works
+
+1. **Fingerprinting** — When actions are discovered, WAB stores a rich fingerprint of each element (tag, id, classes, text, ARIA attributes, position)
+2. **7-Strategy Resolution** — When a selector breaks, WAB tries these strategies in order:
+   - `data-wab-id` attribute (most stable — add to your HTML)
+   - `data-testid` attribute
+   - Element ID
+   - `aria-label` (semantic, usually survives redesigns)
+   - `name` attribute
+   - Fuzzy text matching (bigram similarity > 70%)
+   - Role + position heuristic
+3. **SPA Observer** — A `MutationObserver` watches for DOM changes and automatically re-discovers actions with a 500ms debounce
+
+```javascript
+// Check healing stats
+const info = bridge.getPageInfo();
+console.log(info.selfHealing);
+// { tracked: 12, healed: 3, failed: 0 }
+
+// Listen for healing events
+bridge.events.on('selector:healed', (data) => {
+  console.log(`Healed: ${data.action} via ${data.strategy}`);
+});
+```
+
+### Best Practices for Site Owners
+
+Add `data-wab-id` attributes to critical elements for maximum stability:
+
+```html
+<button data-wab-id="signup-btn">Sign Up</button>
+<form data-wab-id="login-form">...</form>
+```
+
+---
+
+## Stealth Mode
+
+For sites with anti-bot protection, WAB can simulate human-like interaction patterns:
+
+```javascript
+window.AIBridgeConfig = {
+  stealth: { enabled: true }
+};
+```
+
+When enabled, all interactions use:
+
+| Feature | Description |
+|---|---|
+| **Mouse event chain** | `mouseover → mouseenter → mousemove → mousedown → mouseup → click` with natural coordinates |
+| **Typing simulation** | Character-by-character input with 30-120ms delays per keystroke |
+| **Scroll easing** | Multi-step scrolling with variable speed |
+| **Random delays** | 50-400ms natural pauses between actions |
+
+```javascript
+// Enable/disable at runtime
+bridge.stealth.enable();
+bridge.stealth.disable();
+```
 
 ---
 
@@ -410,6 +533,8 @@ npx web-agent-bridge init
 PORT=3000
 JWT_SECRET=your-secret-here
 NODE_ENV=development
+DB_ADAPTER=sqlite          # sqlite | postgresql | mysql
+DATABASE_URL=              # Required for postgresql/mysql
 ```
 
 ---

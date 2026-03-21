@@ -45,12 +45,53 @@ npm start
 
 The server runs on `http://localhost:3000`.
 
+### Running Tests
+
+```bash
+npm test
+```
+
+Tests run with `NODE_ENV=test` and use a separate SQLite database (`data-test/`) to avoid touching production data.
+
+### Running with PostgreSQL (Docker)
+
+```bash
+# Start PostgreSQL
+docker run -d --name wab-postgres -p 5432:5432 \
+  -e POSTGRES_DB=wab -e POSTGRES_USER=wab -e POSTGRES_PASSWORD=wab123 \
+  postgres:16-alpine
+
+# Install driver & run
+npm install pg
+DB_ADAPTER=postgresql DATABASE_URL=postgres://wab:wab123@localhost:5432/wab npm start
+```
+
+### Running with MySQL (Docker)
+
+```bash
+# Start MySQL
+docker run -d --name wab-mysql -p 3306:3306 \
+  -e MYSQL_DATABASE=wab -e MYSQL_ROOT_PASSWORD=wab123 \
+  mysql:8
+
+# Install driver & run
+npm install mysql2
+DB_ADAPTER=mysql DATABASE_URL=mysql://root:wab123@localhost:3306/wab npm start
+```
+
 ### Project Structure
 
 ```
 server/          → Express.js backend (API, auth, licensing)
+  models/
+    db.js        → SQLite database (default)
+    adapters/    → PostgreSQL & MySQL adapters
 script/          → Bridge script (ai-agent-bridge.js) — the core product
 public/          → Frontend (landing page, dashboard, docs)
+sdk/             → Agent SDK for building AI agents
+examples/        → Ready-to-run agent examples
+bin/             → CLI entry point (npx web-agent-bridge)
+tests/           → Jest test suite
 scripts/         → Build tools
 ```
 

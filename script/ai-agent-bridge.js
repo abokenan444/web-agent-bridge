@@ -101,6 +101,325 @@
     }
   }
 
+  // ─── Security Sandbox ──────────────────────────────────────────────────
+  // Isolates the bridge with origin validation, session tokens, and audit log
+  class SecuritySandbox {
+    constructor(config) {
+      this._sessionToken = this._generateToken();
+      this._allowedOrigins = config.security?.allowedOrigins || [location.origin];
+      this._auditLog = [];
+      this._maxAuditEntries = 500;
+      this._commandCounter = 0;
+      this._blockedCommands = new Set();
+      this._escalationAttempts = 0;
+      this._maxEscalationAttempts = 5;
+      this._locked = false;
+    }
+
+    _generateToken() {
+      const arr = new Uint8Array(32);
+      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        crypto.getRandomValues(arr);
+      } else {
+        for (let i = 0; i < 32; i++) arr[i] = Math.floor(Math.random() * 256);
+      }
+      return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    get sessionToken() { return this._sessionToken; }
+
+    validateOrigin(origin) {
+      if (!origin) return this._allowedOrigins.includes(location.origin);
+      return this._allowedOrigins.includes(origin);
+    }
+
+    audit(action, details, status = 'ok') {
+      const entry = {
+        id: ++this._commandCounter,
+        timestamp: Date.now(),
+        action,
+        status,
+        fingerprint: details?.agentId || 'anonymous'
+      };
+      this._auditLog.push(entry);
+      if (this._auditLog.length > this._maxAuditEntries) {
+        this._auditLog = this._auditLog.slice(-250);
+      }
+      return entry;
+    }
+
+    getAuditLog(limit = 50) {
+      return this._auditLog.slice(-limit);
+    }
+
+    checkEscalation(requestedTier, currentTier) {
+      const tierLevel = { free: 0, starter: 1, pro: 2, enterprise: 3 };
+      if ((tierLevel[requestedTier] || 0) > (tierLevel[currentTier] || 0)) {
+        this._escalationAttempts++;
+        this.audit('escalation_attempt', { requestedTier, currentTier }, 'blocked');
+        if (this._escalationAttempts >= this._maxEscalationAttempts) {
+          this._locked = true;
+          this.audit('bridge_locked', { reason: 'Too many escalation attempts' }, 'critical');
+        }
+        return false;
+      }
+      return true;
+    }
+
+    get isLocked() { return this._locked; }
+
+    validateCommand(command) {
+      if (this._locked) return { valid: false, error: 'Bridge is locked due to security violations' };
+      if (typeof command !== 'object' || !command) return { valid: false, error: 'Invalid command format' };
+      if (typeof command.method !== 'string') return { valid: false, error: 'Command method must be a string' };
+      if (command.method.length > 200) return { valid: false, error: 'Command method too long' };
+      if (this._blockedCommands.has(command.method)) return { valid: false, error: 'Command is blocked' };
+      return { valid: true };
+    }
+  }
+
+  // ─── Self-Healing Selectors ───────────────────────────────────────────
+  // Resilient element resolution for SPAs with dynamic DOM
+  class SelfHealingSelector {
+    constructor() {
+      this._fingerprints = new Map(); // name → element fingerprint
+      this._healingStats = { healed: 0, failed: 0 };
+    }
+
+    fingerprint(el) {
+      if (!el) return null;
+      return {
+        tag: el.tagName.toLowerCase(),
+        id: el.id || null,
+        classes: Array.from(el.classList),
+        text: (el.textContent || '').trim().slice(0, 100),
+        ariaLabel: el.getAttribute('aria-label') || null,
+        name: el.getAttribute('name') || null,
+        type: el.getAttribute('type') || null,
+        role: el.getAttribute('role') || null,
+        dataTestId: el.getAttribute('data-testid') || null,
+        dataWabId: el.getAttribute('data-wab-id') || null,
+        href: el.tagName === 'A' ? el.getAttribute('href') : null,
+        placeholder: el.getAttribute('placeholder') || null,
+        parentTag: el.parentElement ? el.parentElement.tagName.toLowerCase() : null,
+        index: el.parentElement ? Array.from(el.parentElement.children).indexOf(el) : -1
+      };
+    }
+
+    store(actionName, selector) {
+      const el = safeQuerySelector(selector);
+      if (el) {
+        this._fingerprints.set(actionName, {
+          selector,
+          fp: this.fingerprint(el),
+          storedAt: Date.now()
+        });
+      }
+    }
+
+    resolve(actionName, originalSelector) {
+      // Try original selector first
+      const el = safeQuerySelector(originalSelector);
+      if (el) return { element: el, selector: originalSelector, healed: false };
+
+      // Try self-healing
+      const stored = this._fingerprints.get(actionName);
+      if (!stored || !stored.fp) {
+        this._healingStats.failed++;
+        return null;
+      }
+
+      const healed = this._heal(stored.fp);
+      if (healed) {
+        this._healingStats.healed++;
+        return healed;
+      }
+
+      this._healingStats.failed++;
+      return null;
+    }
+
+    _heal(fp) {
+      // Strategy 1: data-wab-id (most stable)
+      if (fp.dataWabId) {
+        const el = safeQuerySelector(`[data-wab-id="${fp.dataWabId}"]`);
+        if (el) return { element: el, selector: `[data-wab-id="${fp.dataWabId}"]`, healed: true, strategy: 'data-wab-id' };
+      }
+
+      // Strategy 2: data-testid
+      if (fp.dataTestId) {
+        const el = safeQuerySelector(`[data-testid="${fp.dataTestId}"]`);
+        if (el) return { element: el, selector: `[data-testid="${fp.dataTestId}"]`, healed: true, strategy: 'data-testid' };
+      }
+
+      // Strategy 3: id (may have changed)
+      if (fp.id) {
+        const el = safeQuerySelector(`#${CSS.escape(fp.id)}`);
+        if (el) return { element: el, selector: `#${CSS.escape(fp.id)}`, healed: true, strategy: 'id' };
+      }
+
+      // Strategy 4: aria-label (semantic, usually stable)
+      if (fp.ariaLabel) {
+        const sel = `${fp.tag}[aria-label="${CSS.escape(fp.ariaLabel)}"]`;
+        const el = safeQuerySelector(sel);
+        if (el) return { element: el, selector: sel, healed: true, strategy: 'aria-label' };
+      }
+
+      // Strategy 5: name attribute
+      if (fp.name) {
+        const sel = `${fp.tag}[name="${CSS.escape(fp.name)}"]`;
+        const el = safeQuerySelector(sel);
+        if (el) return { element: el, selector: sel, healed: true, strategy: 'name' };
+      }
+
+      // Strategy 6: text content matching (fuzzy)
+      if (fp.text && fp.text.length > 0) {
+        const candidates = safeQuerySelectorAll(fp.tag);
+        const target = fp.text.toLowerCase();
+        let bestMatch = null;
+        let bestScore = 0;
+
+        for (const candidate of candidates) {
+          const candidateText = (candidate.textContent || '').trim().toLowerCase();
+          if (!candidateText) continue;
+
+          const score = this._textSimilarity(target, candidateText);
+          if (score > 0.7 && score > bestScore) {
+            bestScore = score;
+            bestMatch = candidate;
+          }
+        }
+
+        if (bestMatch) {
+          const healedSel = this._buildSelectorFor(bestMatch);
+          return { element: bestMatch, selector: healedSel, healed: true, strategy: 'text-fuzzy', confidence: bestScore };
+        }
+      }
+
+      // Strategy 7: role + position heuristic
+      if (fp.role && fp.parentTag) {
+        const candidates = safeQuerySelectorAll(`${fp.parentTag} > ${fp.tag}[role="${fp.role}"]`);
+        if (candidates.length > 0 && fp.index >= 0 && fp.index < candidates.length) {
+          const el = candidates[fp.index];
+          const sel = this._buildSelectorFor(el);
+          return { element: el, selector: sel, healed: true, strategy: 'role-position' };
+        }
+      }
+
+      return null;
+    }
+
+    _textSimilarity(a, b) {
+      if (a === b) return 1;
+      const longer = a.length > b.length ? a : b;
+      const shorter = a.length > b.length ? b : a;
+      if (longer.length === 0) return 1;
+      if (longer.includes(shorter) || shorter.includes(longer)) {
+        return shorter.length / longer.length;
+      }
+      // Simple bigram similarity
+      const bigramsA = new Set();
+      for (let i = 0; i < a.length - 1; i++) bigramsA.add(a.slice(i, i + 2));
+      let matches = 0;
+      for (let i = 0; i < b.length - 1; i++) {
+        if (bigramsA.has(b.slice(i, i + 2))) matches++;
+      }
+      const total = Math.max(bigramsA.size, b.length - 1);
+      return total > 0 ? matches / total : 0;
+    }
+
+    _buildSelectorFor(el) {
+      if (el.id) return `#${CSS.escape(el.id)}`;
+      if (el.dataset.wabId) return `[data-wab-id="${el.dataset.wabId}"]`;
+      const tag = el.tagName.toLowerCase();
+      const attrs = ['data-testid', 'aria-label', 'name'];
+      for (const attr of attrs) {
+        const val = el.getAttribute(attr);
+        if (val && document.querySelectorAll(`${tag}[${attr}="${CSS.escape(val)}"]`).length === 1) {
+          return `${tag}[${attr}="${CSS.escape(val)}"]`;
+        }
+      }
+      return null;
+    }
+
+    getStats() {
+      return { ...this._healingStats, tracked: this._fingerprints.size };
+    }
+  }
+
+  // ─── Stealth / Human-like Interaction ─────────────────────────────────
+  // Makes automation interactions look natural to anti-bot systems
+  const Stealth = {
+    _enabled: false,
+
+    enable() { this._enabled = true; },
+    disable() { this._enabled = false; },
+    get isEnabled() { return this._enabled; },
+
+    // Random delay between min and max ms, with optional Gaussian distribution
+    delay(min = 50, max = 300) {
+      if (!this._enabled) return Promise.resolve();
+      const duration = min + Math.floor(Math.random() * (max - min));
+      return new Promise(resolve => setTimeout(resolve, duration));
+    },
+
+    // Simulate a full mouse event chain: mouseover → mouseenter → mousemove → mousedown → mouseup → click
+    async simulateClick(el) {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const x = rect.left + rect.width * (0.3 + Math.random() * 0.4);
+      const y = rect.top + rect.height * (0.3 + Math.random() * 0.4);
+      const eventOpts = { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window };
+
+      el.dispatchEvent(new MouseEvent('mouseover', eventOpts));
+      el.dispatchEvent(new MouseEvent('mouseenter', { ...eventOpts, bubbles: false }));
+      await this.delay(30, 80);
+      el.dispatchEvent(new MouseEvent('mousemove', eventOpts));
+      await this.delay(40, 120);
+      el.dispatchEvent(new MouseEvent('mousedown', eventOpts));
+      await this.delay(50, 150);
+      el.dispatchEvent(new MouseEvent('mouseup', eventOpts));
+      el.dispatchEvent(new MouseEvent('click', eventOpts));
+    },
+
+    // Simulate human-like typing with variable delays
+    async simulateTyping(el, text) {
+      if (!el) return;
+      el.focus();
+      el.dispatchEvent(new Event('focus', { bubbles: true }));
+      el.value = '';
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        el.dispatchEvent(new KeyboardEvent('keydown', { key: char, bubbles: true }));
+        el.value += char;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new KeyboardEvent('keyup', { key: char, bubbles: true }));
+        await this.delay(30, 120); // Human typing speed: 30-120ms per key
+      }
+
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    },
+
+    // Simulate natural scrolling (variable speed, easing)
+    async simulateScroll(el, direction = 'down') {
+      const target = el || document.documentElement;
+      const distance = 300 + Math.floor(Math.random() * 400);
+      const steps = 5 + Math.floor(Math.random() * 5);
+      const stepSize = distance / steps;
+
+      for (let i = 0; i < steps; i++) {
+        const delta = direction === 'down' ? stepSize : -stepSize;
+        if (el && el !== document.documentElement) {
+          el.scrollTop += delta;
+        } else {
+          window.scrollBy(0, delta);
+        }
+        await this.delay(15, 50);
+      }
+    }
+  };
+
   // ─── Element Utilities ────────────────────────────────────────────────
   function isElementAllowed(selector, config) {
     const { allowedSelectors, blockedSelectors } = config.restrictions;
@@ -232,11 +551,20 @@
       this.rateLimiter = new RateLimiter(this.config.restrictions.rateLimit.maxCallsPerMinute);
       this.logger = new BridgeLogger(this.config.logging);
       this.events = new BridgeEventEmitter();
+      this.security = new SecuritySandbox(this.config);
+      this.healer = new SelfHealingSelector();
+      this.stealth = Stealth;
       this.authenticated = false;
       this.agentInfo = null;
       this._licenseVerified = null;
       this._ready = false;
       this._readyCallbacks = [];
+      this._mutationObserver = null;
+
+      // Enable stealth mode if configured
+      if (this.config.stealth?.enabled) {
+        this.stealth.enable();
+      }
 
       this._init();
     }
@@ -250,11 +578,43 @@
       }
 
       this._autoDiscoverActions();
+      this._storeFingerprints();
+      this._setupSPAObserver();
       this._ready = true;
       this._readyCallbacks.forEach(cb => cb());
       this._readyCallbacks = [];
       this.events.emit('ready', { version: VERSION, tier: this.getEffectiveTier() });
-      this.logger.log('init', { version: VERSION, tier: this.getEffectiveTier() });
+      this.logger.log('init', { version: VERSION, tier: this.getEffectiveTier(), security: 'sandbox-active' });
+    }
+
+    // Store fingerprints for all discovered actions (self-healing)
+    _storeFingerprints() {
+      for (const action of this.registry.actions.values()) {
+        if (action.selector) {
+          this.healer.store(action.name, action.selector);
+        }
+      }
+    }
+
+    // Watch for SPA DOM changes and re-discover actions
+    _setupSPAObserver() {
+      if (this._mutationObserver) this._mutationObserver.disconnect();
+
+      let debounceTimer = null;
+      this._mutationObserver = new MutationObserver(() => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          this._autoDiscoverActions();
+          this._storeFingerprints();
+          this.events.emit('dom:changed', { actionsCount: this.registry.actions.size });
+        }, 500);
+      });
+
+      this._mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: false
+      });
     }
 
     onReady(callback) {
@@ -471,9 +831,15 @@
 
     // ── Core: Execute Action ────────────────────────────────────────────
     async execute(actionName, params = {}) {
+      // Security: check if bridge is locked
+      if (this.security.isLocked) {
+        return { success: false, error: 'Bridge locked due to security violations' };
+      }
+
       if (!this.rateLimiter.check()) {
         const error = { success: false, error: 'Rate limit exceeded', retryAfter: 60 };
         this.logger.log('rate_limit', { action: actionName });
+        this.security.audit('rate_limit', { action: actionName }, 'blocked');
         this.events.emit('error', error);
         return error;
       }
@@ -484,6 +850,7 @@
       }
 
       if (!this._checkPermission(action.trigger)) {
+        this.security.audit('permission_denied', { action: actionName, trigger: action.trigger }, 'blocked');
         return { success: false, error: `Permission denied for trigger type: ${action.trigger}`, tier: this.getEffectiveTier() };
       }
 
@@ -496,7 +863,18 @@
         return { success: false, error: 'Login required for this action type' };
       }
 
+      // Self-healing: resolve selector if original is broken
+      if (action.selector) {
+        const resolved = this.healer.resolve(actionName, action.selector);
+        if (resolved && resolved.healed) {
+          action.selector = resolved.selector;
+          this.logger.log('self_heal', { action: actionName, strategy: resolved.strategy, confidence: resolved.confidence }, 'detailed');
+          this.events.emit('selector:healed', { action: actionName, strategy: resolved.strategy });
+        }
+      }
+
       this.logger.log('execute', { action: actionName, params }, 'basic');
+      this.security.audit('execute', { action: actionName, agentId: this.agentInfo?.key });
       this.events.emit('action:before', { action: actionName, params });
 
       try {
@@ -541,10 +919,25 @@
         return { success: false, error: 'Element is blocked by restrictions' };
       }
 
-      const el = safeQuerySelector(action.selector);
-      if (!el) return { success: false, error: `Element not found: ${action.selector}` };
+      // Self-healing: try to find element even if selector is stale
+      let el = safeQuerySelector(action.selector);
+      if (!el) {
+        const resolved = this.healer.resolve(action.name, action.selector);
+        if (resolved) {
+          el = resolved.element;
+        } else {
+          return { success: false, error: `Element not found: ${action.selector}` };
+        }
+      }
 
-      el.click();
+      // Stealth: use human-like click simulation
+      if (this.stealth.isEnabled) {
+        await this.stealth.delay(100, 400);
+        await this.stealth.simulateClick(el);
+      } else {
+        el.click();
+      }
+
       return { success: true, action: 'click', selector: action.selector };
     }
 
@@ -558,18 +951,29 @@
           continue;
         }
 
-        const el = safeQuerySelector(field.selector);
+        let el = safeQuerySelector(field.selector);
         if (!el) {
-          results.push({ field: field.name, success: false, error: 'Element not found' });
-          continue;
+          // Self-healing: try to find field by name/placeholder
+          const healedField = this.healer.resolve(`field_${field.name}`, field.selector);
+          if (healedField) {
+            el = healedField.element;
+          } else {
+            results.push({ field: field.name, success: false, error: 'Element not found' });
+            continue;
+          }
         }
 
         const value = params[field.name];
         if (value !== undefined) {
-          el.focus();
-          el.value = value;
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
+          if (this.stealth.isEnabled) {
+            await this.stealth.delay(200, 600);
+            await this.stealth.simulateTyping(el, String(value));
+          } else {
+            el.focus();
+            el.value = value;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+          }
           results.push({ field: field.name, success: true });
         } else if (field.required !== false) {
           results.push({ field: field.name, success: false, error: 'Value required but not provided' });
@@ -577,9 +981,14 @@
       }
 
       if (action.submitSelector) {
-        const submitEl = safeQuerySelector(action.submitSelector);
+        let submitEl = safeQuerySelector(action.submitSelector);
         if (submitEl) {
-          submitEl.click();
+          if (this.stealth.isEnabled) {
+            await this.stealth.delay(300, 800);
+            await this.stealth.simulateClick(submitEl);
+          } else {
+            submitEl.click();
+          }
           results.push({ field: '_submit', success: true });
         }
       }
@@ -591,12 +1000,20 @@
       if (action.selector) {
         const el = safeQuerySelector(action.selector);
         if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (this.stealth.isEnabled) {
+            await this.stealth.simulateScroll(el);
+          } else {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
           return { success: true, action: 'scroll', selector: action.selector };
         }
         return { success: false, error: `Element not found: ${action.selector}` };
       }
-      window.scrollBy({ top: 500, behavior: 'smooth' });
+      if (this.stealth.isEnabled) {
+        await this.stealth.simulateScroll(null, 'down');
+      } else {
+        window.scrollBy({ top: 500, behavior: 'smooth' });
+      }
       return { success: true, action: 'scroll', direction: 'down' };
     }
 
@@ -650,7 +1067,14 @@
         tier: this.getEffectiveTier(),
         permissions: this._getEffectivePermissions(),
         actionsCount: this.registry.actions.size,
-        rateLimitRemaining: this.rateLimiter.remaining
+        rateLimitRemaining: this.rateLimiter.remaining,
+        security: {
+          sandboxActive: true,
+          locked: this.security.isLocked,
+          sessionToken: this.security.sessionToken
+        },
+        selfHealing: this.healer.getStats(),
+        stealthMode: this.stealth.isEnabled
       };
     }
 
@@ -721,16 +1145,22 @@
     refresh() {
       this.registry = new ActionRegistry();
       this._autoDiscoverActions();
+      this._storeFingerprints();
       this.events.emit('refresh');
       this.logger.log('refresh', {});
     }
 
     destroy() {
       this.events.emit('destroy');
+      if (this._mutationObserver) {
+        this._mutationObserver.disconnect();
+        this._mutationObserver = null;
+      }
       this.registry = new ActionRegistry();
       this.logger.clear();
       delete global.AICommands;
       delete global.WebAgentBridge;
+      delete global.__wab_bidi;
     }
 
     // ── Serialization ───────────────────────────────────────────────────
@@ -768,10 +1198,17 @@
 
     // Execute via BiDi-style command
     async executeBiDi(command) {
+      // Security: validate command
+      const validation = this.security.validateCommand(command || {});
+      if (!validation.valid) {
+        return { id: command?.id, error: { code: 'security error', message: validation.error } };
+      }
+
       if (!command || !command.method) {
         return { id: command?.id, error: { code: 'invalid argument', message: 'Missing method' } };
       }
 
+      this.security.audit('bidi_command', { method: command.method });
       const responseBase = { id: command.id || null, type: 'success' };
 
       switch (command.method) {
