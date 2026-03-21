@@ -4,14 +4,15 @@
   "description": "Open-source middleware that bridges AI agents and websites — providing a standardized command interface for intelligent automation",
   "main": "server/index.js",
   "bin": {
-    "web-agent-bridge": "./bin/wab.js",
-    "wab": "./bin/wab.js"
+    "web-agent-bridge": "./bin/cli.js",
+    "wab": "./bin/cli.js"
   },
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js",
     "test": "jest --forceExit --detectOpenHandles",
-    "build:script": "node scripts/build.js"
+    "build:script": "node scripts/build.js",
+    "prepublishOnly": "npm test"
   },
   "keywords": [
     "ai",
@@ -33,12 +34,14 @@
     "url": "https://github.com/abokenan444/web-agent-bridge/issues"
   },
   "files": [
-    "server/",
-    "script/",
-    "public/",
     "bin/",
+    "server/",
+    "public/",
+    "script/",
     "sdk/",
+    "examples/",
     "README.md",
+    "README.ar.md",
     "LICENSE"
   ],
   "engines": {
