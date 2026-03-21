@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Agent Bridge — AI Agent Middleware for the Web</title>
+  <meta name="description" content="Open-source middleware that bridges AI agents and websites. Standardized commands, permissions, and analytics for intelligent automation.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+  <!-- ═══════════ NAVBAR ═══════════ -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <div class="brand-icon">⚡</div>
+        <span>WAB</span>
+      </a>
+      <ul class="navbar-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="/docs">Docs</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <a href="/login" class="btn btn-ghost">Sign In</a>
+        <a href="/register" class="btn btn-primary btn-sm">Get Started</a>
+      </div>
+      <button class="mobile-menu-btn" onclick="document.querySelector('.navbar-links').classList.toggle('active')">☰</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════ HERO ═══════════ -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content fade-in">
+        <div class="hero-badge">
+          🚀 Open Source &middot; v1.0.0
+        </div>
+        <h1>
+          Bridge the Gap Between<br>
+          <span class="gradient-text">AI Agents</span> &amp; <span class="gradient-text-accent">Websites</span>
+        </h1>
+        <p>
+          An open-source middleware script that gives AI agents a standardized command interface 
+          to interact with any website — with permissions, rate limiting, and full control for site owners.
+        </p>
+        <div class="hero-actions">
+          <a href="/register" class="btn btn-primary btn-lg">Start Free</a>
+          <a href="/docs" class="btn btn-secondary btn-lg">Read the Docs</a>
+        </div>
+
+        <div class="hero-code fade-in fade-in-delay-2">
+          <code>
+            <span class="comment">// Add the bridge to your website</span><br>
+            &lt;<span class="keyword">script</span>&gt;<br>
+            &nbsp;&nbsp;window.<span class="property">AIBridgeConfig</span> = {<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="property">licenseKey</span>: <span class="string">"WAB-XXXXX-XXXXX"</span>,<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="property">agentPermissions</span>: { <span class="property">click</span>: <span class="boolean">true</span>, <span class="property">fillForms</span>: <span class="boolean">true</span> }<br>
+            &nbsp;&nbsp;};<br>
+            &lt;/<span class="keyword">script</span>&gt;<br>
+            &lt;<span class="keyword">script</span> <span class="property">src</span>=<span class="string">"/script/ai-agent-bridge.js"</span>&gt;&lt;/<span class="keyword">script</span>&gt;
+          </code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ FEATURES ═══════════ -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header">
+        <span class="label">Features</span>
+        <h2>Everything AI Agents Need</h2>
+        <p>A complete interface layer that makes websites AI-ready with security and control built in.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card fade-in">
+          <div class="card-icon blue">🎯</div>
+          <h3>Auto-Discovery</h3>
+          <p>Automatically detects buttons, forms, and navigation elements — generating precise CSS selectors and action descriptions for AI agents.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-1">
+          <div class="card-icon purple">🔐</div>
+          <h3>Permission System</h3>
+          <p>Granular control over what AI agents can do. Enable clicking, form filling, API access, and more — each toggled independently.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-2">
+          <div class="card-icon cyan">⚡</div>
+          <h3>Standardized Commands</h3>
+          <p>Unified <code>window.AICommands</code> interface that any AI agent can read and execute — no more DOM guessing.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-1">
+          <div class="card-icon green">🛡️</div>
+          <h3>Rate Limiting</h3>
+          <p>Built-in rate limiting prevents abuse. Configure max calls per minute to protect your site from aggressive automation.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-2">
+          <div class="card-icon orange">📊</div>
+          <h3>Analytics Dashboard</h3>
+          <p>Track how AI agents interact with your site. See which actions are used most, success rates, and usage patterns.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-3">
+          <div class="card-icon pink">🔌</div>
+          <h3>Custom Actions</h3>
+          <p>Register your own actions with custom handlers. Create complex workflows that AI agents can trigger with a single command.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ HOW IT WORKS ═══════════ -->
+  <section class="section" id="how-it-works" style="background: var(--bg-secondary);">
+    <div class="container">
+      <div class="section-header">
+        <span class="label">How It Works</span>
+        <h2>Three Steps to AI-Ready</h2>
+        <p>Get your website ready for AI agents in minutes, not days.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card" style="text-align:center;">
+          <div style="font-size:2.5rem; margin-bottom:16px;">1️⃣</div>
+          <h3>Add the Script</h3>
+          <p>Include the bridge script in your HTML with your configuration. Set permissions, restrictions, and your license key.</p>
+        </div>
+        <div class="card" style="text-align:center;">
+          <div style="font-size:2.5rem; margin-bottom:16px;">2️⃣</div>
+          <h3>Configure Permissions</h3>
+          <p>Use the dashboard to fine-tune which actions AI agents can perform. Block sensitive areas and set rate limits.</p>
+        </div>
+        <div class="card" style="text-align:center;">
+          <div style="font-size:2.5rem; margin-bottom:16px;">3️⃣</div>
+          <h3>AI Agents Connect</h3>
+          <p>AI agents read <code>window.AICommands</code>, discover available actions, and execute them precisely — no DOM scraping needed.</p>
+        </div>
+      </div>
+
+      <div style="margin-top:48px;">
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript — AI Agent Side</span>
+          </div>
+          <div class="code-body">
+<pre><span class="cm">// AI Agent reads available commands</span>
+<span class="kw">const</span> bridge = window.<span class="prop">AICommands</span>;
+
+<span class="cm">// Discover all available actions</span>
+<span class="kw">const</span> actions = bridge.<span class="fn">getActions</span>();
+console.<span class="fn">log</span>(actions);
+<span class="cm">// → [{ name: "signup", trigger: "click", ... }, ...]</span>
+
+<span class="cm">// Execute a form fill action</span>
+<span class="kw">const</span> result = <span class="kw">await</span> bridge.<span class="fn">execute</span>(<span class="str">"fill_contact_form"</span>, {
+  <span class="prop">name</span>: <span class="str">"John Doe"</span>,
+  <span class="prop">email</span>: <span class="str">"john@example.com"</span>,
+  <span class="prop">message</span>: <span class="str">"Hello from AI!"</span>
+});
+
+<span class="cm">// Wait for dynamic content</span>
+<span class="kw">await</span> bridge.<span class="fn">waitForElement</span>(<span class="str">".success-message"</span>);</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ PRICING ═══════════ -->
+  <section class="section" id="pricing">
+    <div class="container">
+      <div class="section-header">
+        <span class="label">Pricing</span>
+        <h2>Simple, Transparent Pricing</h2>
+        <p>Start free, upgrade when you need advanced features. Open source forever.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="pricing-card">
+          <div class="pricing-tier">Free</div>
+          <div class="pricing-price">$0 <span>/mo</span></div>
+          <div class="pricing-desc">Perfect for personal projects and experimentation.</div>
+          <ul class="pricing-features">
+            <li>Auto-discovery of actions</li>
+            <li>Click &amp; scroll permissions</li>
+            <li>Rate limiting (60/min)</li>
+            <li>Basic logging</li>
+            <li>1 site</li>
+            <li class="disabled">Form filling</li>
+            <li class="disabled">API access</li>
+            <li class="disabled">Analytics dashboard</li>
+          </ul>
+          <a href="/register" class="btn btn-secondary" style="width:100%;">Get Started Free</a>
+        </div>
+
+        <div class="pricing-card featured">
+          <div class="pricing-tier">Pro</div>
+          <div class="pricing-price">$29 <span>/mo</span></div>
+          <div class="pricing-desc">For businesses that want full AI agent integration.</div>
+          <ul class="pricing-features">
+            <li>Everything in Free</li>
+            <li>Form filling &amp; submission</li>
+            <li>Internal API access</li>
+            <li>Advanced analytics</li>
+            <li>Up to 10 sites</li>
+            <li>Automated login support</li>
+            <li>Data extraction</li>
+            <li>Priority support</li>
+          </ul>
+          <a href="/register" class="btn btn-primary" style="width:100%;">Start Pro Trial</a>
+        </div>
+
+        <div class="pricing-card">
+          <div class="pricing-tier">Enterprise</div>
+          <div class="pricing-price">Custom</div>
+          <div class="pricing-desc">Custom solutions for large-scale deployments.</div>
+          <ul class="pricing-features">
+            <li>Everything in Pro</li>
+            <li>Unlimited sites</li>
+            <li>Custom rate limits</li>
+            <li>Webhook integrations</li>
+            <li>SSO / SAML</li>
+            <li>Dedicated support</li>
+            <li>SLA guarantee</li>
+            <li>Custom development</li>
+          </ul>
+          <a href="mailto:sales@webagentbridge.com" class="btn btn-secondary" style="width:100%;">Contact Sales</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ CTA ═══════════ -->
+  <section class="section" style="background: var(--bg-secondary); text-align:center;">
+    <div class="container">
+      <h2 style="margin-bottom:16px;">Ready to Make Your Site <span class="gradient-text">AI-Ready</span>?</h2>
+      <p style="color:var(--text-secondary); max-width:540px; margin:0 auto 32px; font-size:1.1rem;">
+        Join the open-source movement that's bridging the gap between AI agents and the web.
+      </p>
+      <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
+        <a href="/register" class="btn btn-primary btn-lg">Create Free Account</a>
+        <a href="/docs" class="btn btn-secondary btn-lg">View Documentation</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="navbar-brand">
+            <div class="brand-icon">⚡</div>
+            <span>Web Agent Bridge</span>
+          </a>
+          <p>Open-source middleware for AI agent and website interaction. Built for the future of intelligent automation.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+            <li><a href="/docs">Documentation</a></li>
+            <li><a href="/dashboard">Dashboard</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Developers</h4>
+          <ul>
+            <li><a href="/docs#quick-start">Quick Start</a></li>
+            <li><a href="/docs#api-reference">API Reference</a></li>
+            <li><a href="/docs#examples">Examples</a></li>
+            <li><a href="#">GitHub</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Blog</a></li>
+            <li><a href="#">Contact</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 Web Agent Bridge. MIT License.</span>
+        <span>Built with care for the AI-powered web</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.style.background = window.scrollY > 50 
+        ? 'rgba(10, 14, 26, 0.95)' 
+        : 'rgba(10, 14, 26, 0.8)';
+    });
+  </script>
+</body>
+</html>

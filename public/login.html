@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — Web Agent Bridge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card fade-in">
+      <div style="text-align:center; margin-bottom:32px;">
+        <a href="/" class="navbar-brand" style="justify-content:center;">
+          <div class="brand-icon">⚡</div>
+          <span>WAB</span>
+        </a>
+      </div>
+      <h1 style="text-align:center;">Welcome back</h1>
+      <p class="subtitle" style="text-align:center;">Sign in to your account</p>
+
+      <div class="alert alert-error" id="errorAlert"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" class="form-input" placeholder="you@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="Your password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg">Sign In</button>
+      </form>
+
+      <div class="auth-footer">
+        Don't have an account? <a href="/register">Create one</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    if (localStorage.getItem('wab_token')) {
+      window.location.href = '/dashboard';
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById('errorAlert');
+      errorEl.style.display = 'none';
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          errorEl.textContent = data.error || 'Login failed';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        localStorage.setItem('wab_token', data.token);
+        localStorage.setItem('wab_user', JSON.stringify(data.user));
+        window.location.href = '/dashboard';
+      } catch (err) {
+        errorEl.textContent = 'Connection error. Please try again.';
+        errorEl.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

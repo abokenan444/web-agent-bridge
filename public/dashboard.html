@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Web Agent Bridge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="dashboard">
+
+    <!-- ═══════════ SIDEBAR ═══════════ -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <a href="/" class="navbar-brand">
+          <div class="brand-icon">⚡</div>
+          <span>WAB</span>
+        </a>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="active" data-view="overview">📊 Overview</a>
+        <a href="#" data-view="sites">🌐 My Sites</a>
+        <a href="#" data-view="analytics">📈 Analytics</a>
+        <a href="#" data-view="settings">⚙️ Settings</a>
+        <a href="/docs" style="margin-top:20px;">📖 Documentation</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;" id="userName"></div>
+        <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%; justify-content:flex-start;">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- ═══════════ MAIN CONTENT ═══════════ -->
+    <main class="main-content">
+
+      <!-- ── Overview View ── -->
+      <div id="view-overview" class="view active">
+        <div class="page-header">
+          <h1>Dashboard</h1>
+          <button class="btn btn-primary btn-sm" onclick="showAddSiteModal()">+ Add Site</button>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="label">Total Sites</div>
+            <div class="value" id="statSites">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Total Actions</div>
+            <div class="value" id="statActions">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Active Tier</div>
+            <div class="value" id="statTier" style="font-size:1.5rem;">Free</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">API Calls (30d)</div>
+            <div class="value" id="statCalls">0</div>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <div class="table-header">
+            <h3 style="font-size:1rem;">Your Sites</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Domain</th>
+                <th>Tier</th>
+                <th>License Key</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="sitesTableBody">
+              <tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">No sites yet. Click "Add Site" to get started.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Sites View ── -->
+      <div id="view-sites" class="view">
+        <div class="page-header">
+          <h1>My Sites</h1>
+          <button class="btn btn-primary btn-sm" onclick="showAddSiteModal()">+ Add Site</button>
+        </div>
+        <div id="sitesGrid" class="grid-2"></div>
+      </div>
+
+      <!-- ── Analytics View ── -->
+      <div id="view-analytics" class="view">
+        <div class="page-header">
+          <h1>Analytics</h1>
+          <select class="form-input" style="width:auto;" id="analyticsSiteSelect" onchange="loadAnalytics()">
+            <option value="">Select a site</option>
+          </select>
+        </div>
+        <div id="analyticsContent">
+          <div style="text-align:center; padding:80px 0; color:var(--text-muted);">
+            Select a site to view analytics data.
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Settings View ── -->
+      <div id="view-settings" class="view">
+        <div class="page-header">
+          <h1>Account Settings</h1>
+        </div>
+        <div class="card" style="max-width:600px;">
+          <h3 style="margin-bottom:20px;">Profile</h3>
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" class="form-input" id="settingsName" readonly>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" class="form-input" id="settingsEmail" readonly>
+          </div>
+          <div class="form-group">
+            <label>Company</label>
+            <input type="text" class="form-input" id="settingsCompany" readonly>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ═══════════ ADD SITE MODAL ═══════════ -->
+  <div class="modal-overlay" id="addSiteModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Add New Site</h2>
+        <button class="modal-close" onclick="closeModal('addSiteModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-error" id="addSiteError"></div>
+        <form id="addSiteForm">
+          <div class="form-group">
+            <label for="siteName">Site Name</label>
+            <input type="text" id="siteName" class="form-input" placeholder="My Website" required>
+          </div>
+          <div class="form-group">
+            <label for="siteDomain">Domain</label>
+            <input type="text" id="siteDomain" class="form-input" placeholder="example.com" required>
+          </div>
+          <div class="form-group">
+            <label for="siteDescription">Description</label>
+            <textarea id="siteDescription" class="form-input" placeholder="Brief description of your site"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('addSiteModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="addSite()">Add Site</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SITE DETAIL MODAL ═══════════ -->
+  <div class="modal-overlay" id="siteDetailModal">
+    <div class="modal" style="max-width:700px;">
+      <div class="modal-header">
+        <h2 id="detailSiteName">Site Details</h2>
+        <button class="modal-close" onclick="closeModal('siteDetailModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="tabs">
+          <button class="tab active" onclick="switchDetailTab('snippet')">Install Snippet</button>
+          <button class="tab" onclick="switchDetailTab('config')">Configuration</button>
+          <button class="tab" onclick="switchDetailTab('info')">Info</button>
+        </div>
+
+        <div class="tab-content active" id="tab-snippet">
+          <p style="color:var(--text-secondary); margin-bottom:16px;">Add this code to your website's <code>&lt;head&gt;</code> tag:</p>
+          <div class="snippet-box">
+            <button class="copy-btn" onclick="copySnippet()">Copy</button>
+            <pre id="snippetCode"></pre>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-config">
+          <h4 style="margin-bottom:16px;">Agent Permissions</h4>
+          <div id="configToggles"></div>
+          <div style="margin-top:20px;">
+            <button class="btn btn-primary btn-sm" onclick="saveConfig()">Save Changes</button>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-info">
+          <div class="form-group">
+            <label>License Key</label>
+            <div class="snippet-box"><pre id="detailLicense"></pre></div>
+          </div>
+          <div class="form-group">
+            <label>API Key</label>
+            <div class="snippet-box"><pre id="detailApiKey"></pre></div>
+          </div>
+          <div class="form-group">
+            <label>Tier</label>
+            <div id="detailTier"></div>
+          </div>
+          <div class="form-group">
+            <label>Created</label>
+            <div id="detailCreated" style="color:var(--text-secondary);"></div>
+          </div>
+          <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--border-color);">
+            <button class="btn btn-danger btn-sm" onclick="deleteSiteConfirm()">Delete Site</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─── State ──────────────────────────────────────────────────────────
+    const API = '/api';
+    let token = localStorage.getItem('wab_token');
+    let user = JSON.parse(localStorage.getItem('wab_user') || 'null');
+    let sites = [];
+    let currentSite = null;
+    let currentConfig = null;
+
+    if (!token) window.location.href = '/login';
+
+    function headers() {
+      return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+    }
+
+    function logout() {
+      localStorage.removeItem('wab_token');
+      localStorage.removeItem('wab_user');
+      window.location.href = '/login';
+    }
+
+    // ─── Navigation ─────────────────────────────────────────────────────
+    document.querySelectorAll('.sidebar-nav a[data-view]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const view = link.dataset.view;
+        document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+        link.classList.add('active');
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        const el = document.getElementById(`view-${view}`);
+        if (el) el.classList.add('active');
+      });
+    });
+
+    // ─── Init ───────────────────────────────────────────────────────────
+    async function init() {
+      if (user) {
+        document.getElementById('userName').textContent = user.name || user.email;
+        document.getElementById('settingsName').value = user.name || '';
+        document.getElementById('settingsEmail').value = user.email || '';
+        document.getElementById('settingsCompany').value = user.company || '';
+      }
+      await loadSites();
+    }
+
+    // ─── Load Sites ─────────────────────────────────────────────────────
+    async function loadSites() {
+      try {
+        const res = await fetch(`${API}/sites`, { headers: headers() });
+        if (res.status === 401 || res.status === 403) return logout();
+        const data = await res.json();
+        sites = data.sites || [];
+        renderOverview();
+        renderSitesGrid();
+        renderAnalyticsSelect();
+      } catch (err) {
+        console.error('Failed to load sites:', err);
+      }
+    }
+
+    function renderOverview() {
+      document.getElementById('statSites').textContent = sites.length;
+      const topTier = sites.reduce((best, s) => {
+        const order = { enterprise: 4, pro: 3, starter: 2, free: 1 };
+        return (order[s.tier] || 0) > (order[best] || 0) ? s.tier : best;
+      }, 'free');
+      document.getElementById('statTier').textContent = topTier.charAt(0).toUpperCase() + topTier.slice(1);
+
+      const tbody = document.getElementById('sitesTableBody');
+      if (sites.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">No sites yet. Click "Add Site" to get started.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = sites.map(s => `
+        <tr>
+          <td><strong style="color:var(--text-primary);">${esc(s.name)}</strong></td>
+          <td><span class="mono" style="font-size:0.85rem;">${esc(s.domain)}</span></td>
+          <td><span class="badge badge-${s.tier}">${s.tier}</span></td>
+          <td><span class="mono" style="font-size:0.8rem; color:var(--text-muted);">${esc(s.license_key)}</span></td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="openSiteDetail('${s.id}')">Manage</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderSitesGrid() {
+      const grid = document.getElementById('sitesGrid');
+      if (sites.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:60px; color:var(--text-muted);">No sites yet.</div>';
+        return;
+      }
+
+      grid.innerHTML = sites.map(s => `
+        <div class="card" style="cursor:pointer;" onclick="openSiteDetail('${s.id}')">
+          <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:16px;">
+            <h3 style="font-size:1.1rem;">${esc(s.name)}</h3>
+            <span class="badge badge-${s.tier}">${s.tier}</span>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.85rem; font-family:var(--font-mono);">${esc(s.domain)}</p>
+          ${s.description ? `<p style="margin-top:8px; font-size:0.9rem;">${esc(s.description)}</p>` : ''}
+          <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between;">
+            <span style="font-size:0.8rem; color:var(--text-muted);">Key: ${esc(s.license_key)}</span>
+            <span class="badge badge-active">Active</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderAnalyticsSelect() {
+      const sel = document.getElementById('analyticsSiteSelect');
+      sel.innerHTML = '<option value="">Select a site</option>' +
+        sites.map(s => `<option value="${s.id}">${esc(s.name)} (${esc(s.domain)})</option>`).join('');
+    }
+
+    // ─── Add Site ───────────────────────────────────────────────────────
+    function showAddSiteModal() { openModal('addSiteModal'); }
+
+    async function addSite() {
+      const name = document.getElementById('siteName').value.trim();
+      const domain = document.getElementById('siteDomain').value.trim();
+      const description = document.getElementById('siteDescription').value.trim();
+      const errEl = document.getElementById('addSiteError');
+      errEl.style.display = 'none';
+
+      if (!name || !domain) {
+        errEl.textContent = 'Name and domain are required';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/sites`, {
+          method: 'POST',
+          headers: headers(),
+          body: JSON.stringify({ name, domain, description })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          errEl.textContent = data.error || 'Failed to add site';
+          errEl.style.display = 'block';
+          return;
+        }
+
+        closeModal('addSiteModal');
+        document.getElementById('addSiteForm').reset();
+        await loadSites();
+        openSiteDetail(data.site.id);
+      } catch (err) {
+        errEl.textContent = 'Connection error';
+        errEl.style.display = 'block';
+      }
+    }
+
+    // ─── Site Detail ────────────────────────────────────────────────────
+    async function openSiteDetail(siteId) {
+      try {
+        const res = await fetch(`${API}/sites/${siteId}`, { headers: headers() });
+        const data = await res.json();
+        currentSite = data.site;
+        currentConfig = currentSite.config || {};
+
+        document.getElementById('detailSiteName').textContent = currentSite.name;
+        document.getElementById('detailLicense').textContent = currentSite.license_key;
+        document.getElementById('detailApiKey').textContent = currentSite.api_key || '—';
+        document.getElementById('detailTier').innerHTML = `<span class="badge badge-${currentSite.tier}">${currentSite.tier}</span>`;
+        document.getElementById('detailCreated').textContent = new Date(currentSite.created_at).toLocaleDateString();
+
+        const snippetRes = await fetch(`${API}/sites/${siteId}/snippet`, { headers: headers() });
+        const snippetData = await snippetRes.json();
+        document.getElementById('snippetCode').textContent = snippetData.snippet;
+
+        renderConfigToggles();
+        switchDetailTab('snippet');
+        openModal('siteDetailModal');
+      } catch (err) {
+        console.error('Failed to load site:', err);
+      }
+    }
+
+    function renderConfigToggles() {
+      const perms = currentConfig.agentPermissions || {};
+      const container = document.getElementById('configToggles');
+
+      const permLabels = {
+        readContent: { label: 'Read Content', desc: 'Allow agents to read page text' },
+        click: { label: 'Click Elements', desc: 'Allow agents to click buttons and links' },
+        fillForms: { label: 'Fill Forms', desc: 'Allow agents to fill and submit forms' },
+        scroll: { label: 'Scroll', desc: 'Allow agents to scroll the page' },
+        navigate: { label: 'Navigate', desc: 'Allow agents to navigate between pages' },
+        apiAccess: { label: 'API Access', desc: 'Allow agents to call internal APIs (Pro+)' },
+        automatedLogin: { label: 'Automated Login', desc: 'Allow agents to perform login (Starter+)' },
+        extractData: { label: 'Extract Data', desc: 'Allow agents to extract structured data (Pro+)' }
+      };
+
+      container.innerHTML = Object.entries(permLabels).map(([key, info]) => `
+        <div class="toggle-wrap">
+          <div class="toggle-label">
+            ${info.label}
+            <small>${info.desc}</small>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" data-perm="${key}" ${perms[key] ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      `).join('');
+    }
+
+    async function saveConfig() {
+      const toggles = document.querySelectorAll('#configToggles input[data-perm]');
+      const agentPermissions = {};
+      toggles.forEach(t => { agentPermissions[t.dataset.perm] = t.checked; });
+
+      currentConfig.agentPermissions = agentPermissions;
+
+      try {
+        await fetch(`${API}/sites/${currentSite.id}/config`, {
+          method: 'PUT',
+          headers: headers(),
+          body: JSON.stringify({ config: currentConfig })
+        });
+        await loadSites();
+        alert('Configuration saved!');
+      } catch (err) {
+        alert('Failed to save configuration');
+      }
+    }
+
+    async function deleteSiteConfirm() {
+      if (!confirm(`Are you sure you want to delete "${currentSite.name}"? This cannot be undone.`)) return;
+
+      try {
+        await fetch(`${API}/sites/${currentSite.id}`, { method: 'DELETE', headers: headers() });
+        closeModal('siteDetailModal');
+        await loadSites();
+      } catch (err) {
+        alert('Failed to delete site');
+      }
+    }
+
+    function switchDetailTab(tab) {
+      document.querySelectorAll('#siteDetailModal .tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('#siteDetailModal .tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelector(`#siteDetailModal .tab[onclick*="${tab}"]`).classList.add('active');
+      document.getElementById(`tab-${tab}`).classList.add('active');
+    }
+
+    function copySnippet() {
+      const text = document.getElementById('snippetCode').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('#tab-snippet .copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
+    }
+
+    // ─── Analytics ──────────────────────────────────────────────────────
+    async function loadAnalytics() {
+      const siteId = document.getElementById('analyticsSiteSelect').value;
+      const container = document.getElementById('analyticsContent');
+
+      if (!siteId) {
+        container.innerHTML = '<div style="text-align:center; padding:80px 0; color:var(--text-muted);">Select a site to view analytics data.</div>';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/sites/${siteId}/analytics?days=30`, { headers: headers() });
+        const data = await res.json();
+
+        if (!data.summary || data.summary.length === 0) {
+          container.innerHTML = `
+            <div style="text-align:center; padding:60px 0; color:var(--text-muted);">
+              <div style="font-size:2.5rem; margin-bottom:16px;">📊</div>
+              <p>No analytics data yet.</p>
+              <p style="font-size:0.85rem; margin-top:8px;">Analytics will appear once AI agents start interacting with your site.</p>
+            </div>`;
+          return;
+        }
+
+        const totalCalls = data.summary.reduce((s, a) => s + a.count, 0);
+        const totalSuccess = data.summary.reduce((s, a) => s + a.successes, 0);
+        const rate = totalCalls > 0 ? Math.round((totalSuccess / totalCalls) * 100) : 0;
+
+        container.innerHTML = `
+          <div class="stats-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:24px;">
+            <div class="stat-card">
+              <div class="label">Total Calls</div>
+              <div class="value">${totalCalls}</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Success Rate</div>
+              <div class="value">${rate}%</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Unique Actions</div>
+              <div class="value">${data.summary.length}</div>
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <div class="table-header"><h3 style="font-size:1rem;">Action Breakdown</h3></div>
+            <table>
+              <thead><tr><th>Action</th><th>Type</th><th>Calls</th><th>Successes</th><th>Rate</th></tr></thead>
+              <tbody>
+                ${data.summary.map(a => `
+                  <tr>
+                    <td><strong style="color:var(--text-primary);">${esc(a.action_name)}</strong></td>
+                    <td><span class="badge badge-free">${esc(a.trigger_type || '—')}</span></td>
+                    <td>${a.count}</td>
+                    <td>${a.successes}</td>
+                    <td>${a.count > 0 ? Math.round((a.successes / a.count) * 100) : 0}%</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>`;
+      } catch (err) {
+        container.innerHTML = '<div style="text-align:center; padding:60px 0; color:var(--accent-red);">Failed to load analytics.</div>';
+      }
+    }
+
+    // ─── Modal Helpers ──────────────────────────────────────────────────
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // ─── Utils ──────────────────────────────────────────────────────────
+    function esc(str) {
+      if (!str) return '';
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    // ─── View toggling style ────────────────────────────────────────────
+    const style = document.createElement('style');
+    style.textContent = '.view { display: none; } .view.active { display: block; }';
+    document.head.appendChild(style);
+
+    // ─── Start ──────────────────────────────────────────────────────────
+    init();
+  </script>
+</body>
+</html>

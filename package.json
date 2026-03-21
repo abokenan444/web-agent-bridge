@@ -1,0 +1,24 @@
+{
+  "name": "web-agent-bridge",
+  "version": "1.0.0",
+  "description": "Open-source middleware that bridges AI agents and websites — providing a standardized command interface for intelligent automation",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "build:script": "node scripts/build.js"
+  },
+  "keywords": ["ai", "agent", "bridge", "automation", "web", "middleware"],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.0",
+    "better-sqlite3": "^11.6.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^10.0.0",
+    "cors": "^2.8.5",
+    "helmet": "^8.0.0",
+    "express-rate-limit": "^7.4.1",
+    "dotenv": "^16.4.5"
+  }
+}

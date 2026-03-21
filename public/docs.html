@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation — Web Agent Bridge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <div class="brand-icon">⚡</div>
+        <span>WAB</span>
+      </a>
+      <ul class="navbar-links">
+        <li><a href="/#features">Features</a></li>
+        <li><a href="/#pricing">Pricing</a></li>
+        <li><a href="/docs" style="color:var(--text-primary);">Docs</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <a href="/dashboard" class="btn btn-ghost">Dashboard</a>
+        <a href="/register" class="btn btn-primary btn-sm">Get Started</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- DOCS LAYOUT -->
+  <div class="container">
+    <div class="docs-layout">
+
+      <!-- Sidebar -->
+      <aside class="docs-sidebar">
+        <ul>
+          <li><a href="#overview" class="active">Overview</a></li>
+          <li><a href="#quick-start">Quick Start</a></li>
+          <li><a href="#configuration">Configuration</a></li>
+          <li><a href="#permissions">Permissions</a></li>
+          <li><a href="#api-reference">API Reference</a></li>
+          <li><a href="#actions">Actions</a></li>
+          <li><a href="#events">Events</a></li>
+          <li><a href="#agent-guide">Agent Integration Guide</a></li>
+          <li><a href="#security">Security</a></li>
+          <li><a href="#examples">Examples</a></li>
+          <li><a href="#rest-api">REST API</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </aside>
+
+      <!-- Content -->
+      <div class="docs-content">
+
+        <h2 id="overview">Overview</h2>
+        <p>
+          <strong>Web Agent Bridge (WAB)</strong> is an open-source middleware script that creates a standardized 
+          interface between AI agents and websites. Instead of forcing AI agents to parse and guess DOM structures, 
+          WAB provides a clean, documented command layer that agents can read and execute.
+        </p>
+        <p>
+          When a website includes the WAB script, it exposes a <code>window.AICommands</code> object that describes 
+          all available actions, their parameters, and how to execute them. AI agents can discover these commands 
+          instantly and interact with the site accurately and securely.
+        </p>
+
+        <h3>Key Concepts</h3>
+        <ul>
+          <li><strong>Bridge Script</strong> — The client-side JavaScript file added to websites</li>
+          <li><strong>Actions</strong> — Defined operations that AI agents can execute (click, fill, scroll, API call)</li>
+          <li><strong>Permissions</strong> — Granular controls over what agents are allowed to do</li>
+          <li><strong>License Key</strong> — Unique identifier that links a site to its WAB account</li>
+          <li><strong>Auto-Discovery</strong> — Automatic detection of interactive elements on the page</li>
+        </ul>
+
+        <h2 id="quick-start">Quick Start</h2>
+        <p>Get your website AI-ready in under 5 minutes.</p>
+
+        <h3>Step 1: Create an Account</h3>
+        <p>Sign up at <a href="/register">/register</a> and add your site from the dashboard. You'll receive a license key.</p>
+
+        <h3>Step 2: Add the Script</h3>
+        <p>Include this in your website's HTML:</p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">HTML</span>
+          </div>
+          <div class="code-body">
+<pre><code><span class="cm">&lt;!-- Web Agent Bridge Configuration --&gt;</span>
+&lt;script&gt;
+window.AIBridgeConfig = {
+  <span class="prop">licenseKey</span>: <span class="str">"WAB-XXXXX-XXXXX-XXXXX-XXXXX"</span>,
+  <span class="prop">agentPermissions</span>: {
+    <span class="prop">readContent</span>: <span class="bool">true</span>,
+    <span class="prop">click</span>: <span class="bool">true</span>,
+    <span class="prop">fillForms</span>: <span class="bool">true</span>,
+    <span class="prop">scroll</span>: <span class="bool">true</span>
+  }
+};
+&lt;/script&gt;
+&lt;script src=<span class="str">"https://yourserver.com/script/ai-agent-bridge.js"</span>&gt;&lt;/script&gt;</code></pre>
+          </div>
+        </div>
+
+        <h3>Step 3: Verify</h3>
+        <p>Open your browser console and type <code>window.AICommands</code>. You should see the bridge object with discovered actions.</p>
+
+        <h2 id="configuration">Configuration</h2>
+        <p>The bridge is configured through the <code>window.AIBridgeConfig</code> object, which must be set before loading the script.</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript — Full Configuration</span>
+          </div>
+          <div class="code-body">
+<pre><code>window.AIBridgeConfig = {
+  <span class="cm">// License key from your dashboard</span>
+  <span class="prop">licenseKey</span>: <span class="str">"WAB-XXXXX-XXXXX-XXXXX-XXXXX"</span>,
+
+  <span class="cm">// Subscription tier (verified server-side)</span>
+  <span class="prop">subscriptionTier</span>: <span class="str">"free"</span>,
+
+  <span class="cm">// What AI agents are allowed to do</span>
+  <span class="prop">agentPermissions</span>: {
+    <span class="prop">readContent</span>: <span class="bool">true</span>,       <span class="cm">// Read page text</span>
+    <span class="prop">click</span>: <span class="bool">true</span>,              <span class="cm">// Click elements</span>
+    <span class="prop">fillForms</span>: <span class="bool">false</span>,         <span class="cm">// Fill and submit forms</span>
+    <span class="prop">scroll</span>: <span class="bool">true</span>,             <span class="cm">// Scroll the page</span>
+    <span class="prop">navigate</span>: <span class="bool">false</span>,           <span class="cm">// Navigate between pages</span>
+    <span class="prop">apiAccess</span>: <span class="bool">false</span>,          <span class="cm">// Call internal APIs (Pro+)</span>
+    <span class="prop">automatedLogin</span>: <span class="bool">false</span>,     <span class="cm">// Automated login (Starter+)</span>
+    <span class="prop">extractData</span>: <span class="bool">false</span>         <span class="cm">// Extract structured data (Pro+)</span>
+  },
+
+  <span class="cm">// Access restrictions</span>
+  <span class="prop">restrictions</span>: {
+    <span class="prop">allowedSelectors</span>: [],                        <span class="cm">// Empty = allow all</span>
+    <span class="prop">blockedSelectors</span>: [<span class="str">".private"</span>, <span class="str">"[data-private]"</span>],
+    <span class="prop">requireLoginForActions</span>: [<span class="str">"apiAccess"</span>],
+    <span class="prop">rateLimit</span>: { <span class="prop">maxCallsPerMinute</span>: <span class="num">60</span> }
+  },
+
+  <span class="cm">// Activity logging</span>
+  <span class="prop">logging</span>: {
+    <span class="prop">enabled</span>: <span class="bool">false</span>,
+    <span class="prop">level</span>: <span class="str">"basic"</span>   <span class="cm">// "basic" or "detailed"</span>
+  }
+};</code></pre>
+          </div>
+        </div>
+
+        <h2 id="permissions">Permissions</h2>
+        <p>Permissions control what AI agents can do on your site. Each permission can be independently toggled.</p>
+
+        <table style="margin-bottom:24px;">
+          <thead>
+            <tr><th>Permission</th><th>Description</th><th>Min Tier</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>readContent</code></td><td>Read text content from page elements</td><td>Free</td></tr>
+            <tr><td><code>click</code></td><td>Click buttons, links, and interactive elements</td><td>Free</td></tr>
+            <tr><td><code>scroll</code></td><td>Scroll the page or to specific elements</td><td>Free</td></tr>
+            <tr><td><code>fillForms</code></td><td>Fill form fields and submit forms</td><td>Free</td></tr>
+            <tr><td><code>navigate</code></td><td>Navigate to different pages</td><td>Free</td></tr>
+            <tr><td><code>automatedLogin</code></td><td>Perform automated login flows</td><td>Starter</td></tr>
+            <tr><td><code>apiAccess</code></td><td>Call internal REST API endpoints</td><td>Pro</td></tr>
+            <tr><td><code>extractData</code></td><td>Extract structured data from the page</td><td>Pro</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="api-reference">API Reference</h2>
+        <p>The <code>window.AICommands</code> object provides the following methods:</p>
+
+        <h3><code>getActions(category?)</code></h3>
+        <p>Returns an array of all available actions. Optionally filter by category.</p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript</span>
+          </div>
+          <div class="code-body">
+<pre><code><span class="kw">const</span> allActions = window.AICommands.<span class="fn">getActions</span>();
+<span class="kw">const</span> navActions = window.AICommands.<span class="fn">getActions</span>(<span class="str">"navigation"</span>);
+
+<span class="cm">// Returns: [{ name, description, trigger, category, requiresAuth, params, fields }]</span></code></pre>
+          </div>
+        </div>
+
+        <h3><code>execute(actionName, params?)</code></h3>
+        <p>Execute a registered action. Returns a Promise with the result.</p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript</span>
+          </div>
+          <div class="code-body">
+<pre><code><span class="kw">const</span> result = <span class="kw">await</span> window.AICommands.<span class="fn">execute</span>(<span class="str">"signup"</span>);
+<span class="cm">// → { success: true, action: "click", selector: "#signup-button" }</span>
+
+<span class="kw">const</span> formResult = <span class="kw">await</span> window.AICommands.<span class="fn">execute</span>(<span class="str">"fill_contact_form"</span>, {
+  <span class="prop">name</span>: <span class="str">"Alice"</span>,
+  <span class="prop">email</span>: <span class="str">"alice@example.com"</span>
+});
+<span class="cm">// → { success: true, results: [...] }</span></code></pre>
+          </div>
+        </div>
+
+        <h3><code>readContent(selector)</code></h3>
+        <p>Read text content from a DOM element.</p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript</span>
+          </div>
+          <div class="code-body">
+<pre><code><span class="kw">const</span> content = window.AICommands.<span class="fn">readContent</span>(<span class="str">"h1.title"</span>);
+<span class="cm">// → { success: true, text: "Welcome!", html: "Welcome!", attributes: {...} }</span></code></pre>
+          </div>
+        </div>
+
+        <h3><code>getPageInfo()</code></h3>
+        <p>Get metadata about the current page and bridge state.</p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript</span>
+          </div>
+          <div class="code-body">
+<pre><code><span class="kw">const</span> info = window.AICommands.<span class="fn">getPageInfo</span>();
+<span class="cm">// → { title, url, domain, lang, bridgeVersion, tier, permissions, actionsCount, rateLimitRemaining }</span></code></pre>
+          </div>
+        </div>
+
+        <h3><code>waitForElement(selector, timeout?)</code></h3>
+        <p>Wait for a DOM element to appear. Useful for SPAs and dynamically loaded content.</p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript</span>
+          </div>
+          <div class="code-body">
+<pre><code><span class="kw">await</span> window.AICommands.<span class="fn">waitForElement</span>(<span class="str">".results-loaded"</span>, <span class="num">15000</span>);
+<span class="cm">// Resolves when the element appears, rejects on timeout</span></code></pre>
+          </div>
+        </div>
+
+        <h3><code>registerAction(actionDef)</code></h3>
+        <p>Register a custom action that AI agents can discover and execute.</p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript</span>
+          </div>
+          <div class="code-body">
+<pre><code>window.AICommands.<span class="fn">registerAction</span>({
+  <span class="prop">name</span>: <span class="str">"addToCart"</span>,
+  <span class="prop">description</span>: <span class="str">"Add the current product to cart"</span>,
+  <span class="prop">trigger</span>: <span class="str">"click"</span>,
+  <span class="prop">selector</span>: <span class="str">"#add-to-cart-btn"</span>,
+  <span class="prop">category</span>: <span class="str">"e-commerce"</span>,
+  <span class="prop">metadata</span>: { <span class="prop">requiresProduct</span>: <span class="bool">true</span> }
+});</code></pre>
+          </div>
+        </div>
+
+        <h3><code>authenticate(agentKey, agentMeta?)</code></h3>
+        <p>Authenticate an AI agent to access restricted actions.</p>
+
+        <h3><code>refresh()</code></h3>
+        <p>Re-scan the page and rebuild the action registry. Call this after significant DOM changes.</p>
+
+        <h3><code>onReady(callback)</code></h3>
+        <p>Register a callback for when the bridge finishes initialization.</p>
+
+        <h2 id="actions">Actions</h2>
+        <p>Actions are the core building blocks of WAB. Each action has:</p>
+        <ul>
+          <li><code>name</code> — Unique identifier</li>
+          <li><code>description</code> — Human/AI readable description</li>
+          <li><code>trigger</code> — Type of action: <code>click</code>, <code>fill_and_submit</code>, <code>scroll</code>, <code>api</code></li>
+          <li><code>selector</code> — CSS selector of the target element</li>
+          <li><code>fields</code> — Array of form fields (for fill_and_submit actions)</li>
+          <li><code>category</code> — Grouping label</li>
+          <li><code>requiresAuth</code> — Whether agent authentication is needed</li>
+        </ul>
+
+        <h3>Action Types</h3>
+        <table style="margin-bottom:24px;">
+          <thead>
+            <tr><th>Trigger</th><th>Description</th><th>Permission</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>click</code></td><td>Click on an element</td><td>click</td></tr>
+            <tr><td><code>fill_and_submit</code></td><td>Fill form fields and submit</td><td>fillForms</td></tr>
+            <tr><td><code>scroll</code></td><td>Scroll to an element or direction</td><td>scroll</td></tr>
+            <tr><td><code>api</code></td><td>Call an internal API endpoint</td><td>apiAccess</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="events">Events</h2>
+        <p>Subscribe to bridge events for monitoring and integration:</p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript</span>
+          </div>
+          <div class="code-body">
+<pre><code><span class="kw">const</span> bridge = window.AICommands;
+
+bridge.events.<span class="fn">on</span>(<span class="str">'ready'</span>, (data) =&gt; {
+  console.<span class="fn">log</span>(<span class="str">'Bridge ready'</span>, data.version);
+});
+
+bridge.events.<span class="fn">on</span>(<span class="str">'action:before'</span>, ({ action, params }) =&gt; {
+  console.<span class="fn">log</span>(<span class="str">`Executing: ${action}`</span>);
+});
+
+bridge.events.<span class="fn">on</span>(<span class="str">'action:after'</span>, ({ action, result }) =&gt; {
+  console.<span class="fn">log</span>(<span class="str">`Result: ${result.success}`</span>);
+});
+
+bridge.events.<span class="fn">on</span>(<span class="str">'error'</span>, (err) =&gt; {
+  console.<span class="fn">error</span>(<span class="str">'Bridge error'</span>, err);
+});</code></pre>
+          </div>
+        </div>
+
+        <p>Available events: <code>ready</code>, <code>action:before</code>, <code>action:after</code>, <code>action:registered</code>, <code>action:unregistered</code>, <code>agent:authenticate</code>, <code>error</code>, <code>refresh</code>, <code>destroy</code></p>
+
+        <h2 id="agent-guide">Agent Integration Guide</h2>
+        <p>If you're building an AI agent that interacts with websites, here's how to use WAB.</p>
+
+        <h3>Detecting WAB</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript — Agent Side</span>
+          </div>
+          <div class="code-body">
+<pre><code><span class="cm">// Check if the site supports WAB</span>
+<span class="kw">if</span> (window.AICommands) {
+  <span class="kw">const</span> info = window.AICommands.<span class="fn">getPageInfo</span>();
+  console.<span class="fn">log</span>(<span class="str">`WAB v${info.bridgeVersion} detected`</span>);
+  console.<span class="fn">log</span>(<span class="str">`${info.actionsCount} actions available`</span>);
+  console.<span class="fn">log</span>(<span class="str">`Tier: ${info.tier}`</span>);
+} <span class="kw">else</span> {
+  console.<span class="fn">log</span>(<span class="str">'No WAB support — fall back to DOM parsing'</span>);
+}</code></pre>
+          </div>
+        </div>
+
+        <h3>Discovering and Executing Actions</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript — Full Agent Workflow</span>
+          </div>
+          <div class="code-body">
+<pre><code><span class="kw">async function</span> <span class="fn">agentWorkflow</span>() {
+  <span class="kw">const</span> bridge = window.AICommands;
+
+  <span class="cm">// 1. Authenticate (if needed)</span>
+  bridge.<span class="fn">authenticate</span>(<span class="str">"agent-key-123"</span>, {
+    <span class="prop">name</span>: <span class="str">"MyAssistant"</span>,
+    <span class="prop">version</span>: <span class="str">"2.0"</span>
+  });
+
+  <span class="cm">// 2. Discover available actions</span>
+  <span class="kw">const</span> actions = bridge.<span class="fn">getActions</span>();
+
+  <span class="cm">// 3. Find the action we need</span>
+  <span class="kw">const</span> loginAction = actions.<span class="fn">find</span>(a =&gt; a.name.<span class="fn">includes</span>(<span class="str">'login'</span>));
+
+  <span class="cm">// 4. Execute it</span>
+  <span class="kw">if</span> (loginAction) {
+    <span class="kw">const</span> result = <span class="kw">await</span> bridge.<span class="fn">execute</span>(loginAction.name, {
+      <span class="prop">email</span>: <span class="str">"user@example.com"</span>,
+      <span class="prop">password</span>: <span class="str">"secure-password"</span>
+    });
+    console.<span class="fn">log</span>(result);
+  }
+
+  <span class="cm">// 5. Wait for navigation</span>
+  <span class="kw">await</span> bridge.<span class="fn">waitForNavigation</span>();
+
+  <span class="cm">// 6. Refresh actions for new page</span>
+  bridge.<span class="fn">refresh</span>();
+}</code></pre>
+          </div>
+        </div>
+
+        <h2 id="security">Security</h2>
+        <p>WAB is built with security as a first-class concern:</p>
+        <ul>
+          <li><strong>Permission-based access</strong> — Site owners control exactly what agents can do</li>
+          <li><strong>Selector restrictions</strong> — Block sensitive areas of the page from agent interaction</li>
+          <li><strong>Rate limiting</strong> — Built-in protection against abuse</li>
+          <li><strong>Server-side license verification</strong> — Tier permissions are verified by the licensing server</li>
+          <li><strong>Agent authentication</strong> — Optional agent identity verification</li>
+          <li><strong>Opt-in only</strong> — Sites must explicitly add the script; users can disable via extensions</li>
+        </ul>
+
+        <h3>Best Practices</h3>
+        <ol>
+          <li>Always use <code>blockedSelectors</code> to protect sensitive areas (forms with credit cards, admin panels)</li>
+          <li>Start with minimal permissions and expand as needed</li>
+          <li>Enable logging to monitor agent behavior</li>
+          <li>Use the <code>requireLoginForActions</code> restriction for sensitive operations</li>
+          <li>Keep your license key confidential</li>
+        </ol>
+
+        <h2 id="examples">Examples</h2>
+
+        <h3>E-commerce Site</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript</span>
+          </div>
+          <div class="code-body">
+<pre><code>window.AIBridgeConfig = {
+  <span class="prop">licenseKey</span>: <span class="str">"WAB-SHOP-XXXXX-XXXXX"</span>,
+  <span class="prop">agentPermissions</span>: {
+    <span class="prop">readContent</span>: <span class="bool">true</span>,
+    <span class="prop">click</span>: <span class="bool">true</span>,
+    <span class="prop">fillForms</span>: <span class="bool">true</span>,
+    <span class="prop">scroll</span>: <span class="bool">true</span>
+  },
+  <span class="prop">restrictions</span>: {
+    <span class="prop">blockedSelectors</span>: [<span class="str">"#checkout-payment"</span>, <span class="str">".credit-card-form"</span>],
+    <span class="prop">rateLimit</span>: { <span class="prop">maxCallsPerMinute</span>: <span class="num">30</span> }
+  }
+};
+
+<span class="cm">// After the bridge loads, add custom actions</span>
+document.<span class="fn">addEventListener</span>(<span class="str">'wab:ready'</span>, () =&gt; {
+  window.AICommands.<span class="fn">registerAction</span>({
+    <span class="prop">name</span>: <span class="str">"searchProducts"</span>,
+    <span class="prop">description</span>: <span class="str">"Search for products by keyword"</span>,
+    <span class="prop">trigger</span>: <span class="str">"fill_and_submit"</span>,
+    <span class="prop">fields</span>: [{ <span class="prop">name</span>: <span class="str">"query"</span>, <span class="prop">selector</span>: <span class="str">"#search-input"</span>, <span class="prop">type</span>: <span class="str">"text"</span> }],
+    <span class="prop">submitSelector</span>: <span class="str">"#search-btn"</span>,
+    <span class="prop">category</span>: <span class="str">"search"</span>
+  });
+});</code></pre>
+          </div>
+        </div>
+
+        <h3>SaaS Dashboard</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript</span>
+          </div>
+          <div class="code-body">
+<pre><code>window.AIBridgeConfig = {
+  <span class="prop">licenseKey</span>: <span class="str">"WAB-SAAS-XXXXX-XXXXX"</span>,
+  <span class="prop">subscriptionTier</span>: <span class="str">"pro"</span>,
+  <span class="prop">agentPermissions</span>: {
+    <span class="prop">readContent</span>: <span class="bool">true</span>,
+    <span class="prop">click</span>: <span class="bool">true</span>,
+    <span class="prop">fillForms</span>: <span class="bool">true</span>,
+    <span class="prop">apiAccess</span>: <span class="bool">true</span>,
+    <span class="prop">extractData</span>: <span class="bool">true</span>
+  }
+};
+
+document.<span class="fn">addEventListener</span>(<span class="str">'wab:ready'</span>, () =&gt; {
+  <span class="cm">// Custom API action</span>
+  window.AICommands.<span class="fn">registerAction</span>({
+    <span class="prop">name</span>: <span class="str">"getAnalytics"</span>,
+    <span class="prop">description</span>: <span class="str">"Fetch analytics data for the current period"</span>,
+    <span class="prop">trigger</span>: <span class="str">"api"</span>,
+    <span class="prop">endpoint</span>: <span class="str">"/api/analytics/current"</span>,
+    <span class="prop">method</span>: <span class="str">"GET"</span>,
+    <span class="prop">requiresAuth</span>: <span class="bool">true</span>,
+    <span class="prop">category</span>: <span class="str">"data"</span>
+  });
+
+  <span class="cm">// Custom handler action</span>
+  window.AICommands.<span class="fn">registerAction</span>({
+    <span class="prop">name</span>: <span class="str">"exportReport"</span>,
+    <span class="prop">description</span>: <span class="str">"Generate and download a PDF report"</span>,
+    <span class="prop">trigger</span>: <span class="str">"click"</span>,
+    <span class="prop">category</span>: <span class="str">"export"</span>,
+    <span class="prop">handler</span>: <span class="kw">async</span> () =&gt; {
+      <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'/api/report/generate'</span>);
+      <span class="kw">const</span> blob = <span class="kw">await</span> res.<span class="fn">blob</span>();
+      <span class="cm">// trigger download...</span>
+      <span class="kw">return</span> { <span class="prop">success</span>: <span class="bool">true</span>, <span class="prop">message</span>: <span class="str">"Report downloaded"</span> };
+    }
+  });
+});</code></pre>
+          </div>
+        </div>
+
+        <h2 id="rest-api">REST API</h2>
+        <p>The WAB server provides a REST API for managing sites, licenses, and analytics.</p>
+
+        <h3>Authentication</h3>
+        <table style="margin-bottom:16px;">
+          <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>POST /api/auth/register</code></td><td>POST</td><td>Create a new account</td></tr>
+            <tr><td><code>POST /api/auth/login</code></td><td>POST</td><td>Sign in and receive JWT token</td></tr>
+            <tr><td><code>GET /api/auth/me</code></td><td>GET</td><td>Get current user info</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Sites</h3>
+        <table style="margin-bottom:16px;">
+          <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>GET /api/sites</code></td><td>GET</td><td>List all your sites</td></tr>
+            <tr><td><code>POST /api/sites</code></td><td>POST</td><td>Add a new site</td></tr>
+            <tr><td><code>GET /api/sites/:id</code></td><td>GET</td><td>Get site details</td></tr>
+            <tr><td><code>PUT /api/sites/:id/config</code></td><td>PUT</td><td>Update site configuration</td></tr>
+            <tr><td><code>PUT /api/sites/:id/tier</code></td><td>PUT</td><td>Change subscription tier</td></tr>
+            <tr><td><code>DELETE /api/sites/:id</code></td><td>DELETE</td><td>Delete a site</td></tr>
+            <tr><td><code>GET /api/sites/:id/snippet</code></td><td>GET</td><td>Get install snippet</td></tr>
+            <tr><td><code>GET /api/sites/:id/analytics</code></td><td>GET</td><td>Get analytics data</td></tr>
+          </tbody>
+        </table>
+
+        <h3>License</h3>
+        <table style="margin-bottom:16px;">
+          <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>POST /api/license/verify</code></td><td>POST</td><td>Verify a license key for a domain</td></tr>
+            <tr><td><code>POST /api/license/track</code></td><td>POST</td><td>Record an analytics event</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="faq">FAQ</h2>
+        
+        <h3>Is WAB free to use?</h3>
+        <p>The core script is open source and free forever. Advanced features like API access, detailed analytics, and automated login require a paid subscription.</p>
+
+        <h3>Does WAB work with all AI agents?</h3>
+        <p>WAB works with any agent that can execute JavaScript in a browser context — including Selenium, Puppeteer, Playwright, browser extensions, and AI tools like OpenAI's Operator or Anthropic's Computer Use.</p>
+
+        <h3>What if my site is a SPA?</h3>
+        <p>Call <code>bridge.refresh()</code> after navigation events to re-scan for new elements. The <code>waitForElement()</code> method helps agents wait for dynamically loaded content.</p>
+
+        <h3>Can I use WAB without the licensing server?</h3>
+        <p>Yes. Without a license key, WAB runs in free-tier mode with all basic permissions. The licensing server only validates premium features.</p>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer" style="margin-top:48px;">
+    <div class="container">
+      <div class="footer-bottom" style="border-top:none; padding-top:0;">
+        <span>&copy; 2026 Web Agent Bridge. MIT License.</span>
+        <a href="/" class="btn btn-ghost btn-sm">Back to Home</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const links = document.querySelectorAll('.docs-sidebar a');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          links.forEach(l => l.classList.remove('active'));
+          const match = document.querySelector(`.docs-sidebar a[href="#${entry.target.id}"]`);
+          if (match) match.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-80px 0px -70% 0px' });
+
+    document.querySelectorAll('.docs-content h2[id]').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>
