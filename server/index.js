@@ -19,6 +19,9 @@ const { handleWebhookEvent } = require('./services/stripe');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust first proxy (Nginx reverse proxy)
+app.set('trust proxy', 1);
+
 // ─── Security & Middleware ──────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {
