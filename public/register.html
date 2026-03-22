@@ -41,6 +41,13 @@
           <label for="password">Password</label>
           <input type="password" id="password" class="form-input" placeholder="Min 8 characters" required minlength="8">
         </div>
+        <div class="form-group" style="display: flex; align-items: flex-start; gap: 8px;">
+          <input type="checkbox" id="termsConsent" required style="margin-top: 4px; accent-color: var(--accent-blue);">
+          <label for="termsConsent" style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+            I agree to the <a href="/terms" style="color: var(--accent-blue);">Terms of Service</a> and 
+            <a href="/privacy" style="color: var(--accent-blue);">Privacy Policy</a>
+          </label>
+        </div>
         <button type="submit" class="btn btn-primary btn-lg">Create Account</button>
       </form>
 
@@ -90,5 +97,6 @@
       }
     });
   </script>
+  <script src="/js/cookie-consent.js"></script>
 </body>
 </html>

@@ -126,6 +126,15 @@ app.get('/admin/login', (req, res) => {
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'dashboard.html'));
 });
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'privacy.html'));
+});
+app.get('/terms', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'terms.html'));
+});
+app.get('/cookies', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'cookies.html'));
+});
 
 // ─── CDN Versioned Script ───────────────────────────────────────────────
 const pkg = require('../package.json');
