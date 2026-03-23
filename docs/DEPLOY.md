@@ -91,9 +91,22 @@ Upload `web-agent-bridge-wordpress/` to the WordPress server (`wp-content/plugin
 
 ---
 
-## Automated deploy from GitHub (optional)
+## Why we do **not** recommend auto-deploy from this public repo
 
-Add repository secrets: `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`, `DEPLOY_PATH`, then use a workflow that SSHs and runs `git pull` + `docker compose up -d --build` (template can be added on request).
+This project is **open source**. Wiring GitHub Actions (or similar) so that every push to `main`/`master` deploys to your production server is **high risk**:
+
+| Risk | Why it matters |
+|------|----------------|
+| **Supply chain** | Anyone who can merge code (or bypass reviews) can change what runs on your server. |
+| **Fork / PR abuse** | CI that builds untrusted PRs with secrets in scope has led to credential theft. |
+| **Secret leakage** | Deploy keys and SSH keys in CI are juicy targets; misconfiguration exposes them in logs or artifacts. |
+| **Public visibility** | Attackers see your pipeline definition and know exactly how prod is updated. |
+
+**Recommended for operators:** deploy **manually** after you review changes (SSH → `git pull` → rebuild), or use a **private** deployment path (e.g. internal CI, private mirror, or release artifacts you promote by hand).
+
+**If you must automate** (enterprise, private fork only): use a **private** repo or private runners, **branch protection**, required reviews, **deploy only from signed tags** or approved releases—not raw `main`—and never store production SSH keys in workflows reachable from public PR builds.
+
+This repository intentionally does **not** ship a “deploy to production on push” workflow.
 
 ---
 
