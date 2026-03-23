@@ -6,7 +6,7 @@ The code is on GitHub (`master`). **You** deploy by SSH-ing into your VPS and pu
 
 - Ubuntu/Debian (or similar) with Docker **or** Node.js 20+
 - Firewall: open port **3000** (or your reverse proxy port 80/443)
-- A strong `JWT_SECRET` in production (never commit it)
+- Strong `JWT_SECRET` and `JWT_SECRET_ADMIN` in production (never commit them)
 
 ---
 
@@ -18,8 +18,8 @@ On the server, first time:
 cd /opt   # or your preferred path
 git clone https://github.com/abokenan444/web-agent-bridge.git
 cd web-agent-bridge
-cp .env.example .env   # if present; else create .env with JWT_SECRET and PORT
-# Edit .env: JWT_SECRET=...  PORT=3000
+cp .env.example .env   # if present; else create .env with secrets and PORT
+# Edit .env: JWT_SECRET=...  JWT_SECRET_ADMIN=...  PORT=3000
 docker compose up -d --build
 ```
 
@@ -43,6 +43,7 @@ git pull origin master
 npm ci --production
 export NODE_ENV=production
 export JWT_SECRET="your-long-random-secret"
+export JWT_SECRET_ADMIN="your-different-long-random-secret"
 export PORT=3000
 node server/index.js
 ```
@@ -114,4 +115,4 @@ This repository intentionally does **not** ship a “deploy to production on pus
 
 - [ ] `curl -s https://your-domain/api/license/verify` returns JSON (POST with body) or app responds on `/`
 - [ ] `https://your-domain/script/ai-agent-bridge.js` loads
-- [ ] `.env` / `JWT_SECRET` not exposed in git
+- [ ] `.env` / `JWT_SECRET` / `JWT_SECRET_ADMIN` not exposed in git

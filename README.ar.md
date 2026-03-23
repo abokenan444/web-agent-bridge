@@ -276,7 +276,7 @@ docker compose up -d
 
 # أو البناء يدوياً
 docker build -t web-agent-bridge .
-docker run -p 3000:3000 -e JWT_SECRET=your-secret web-agent-bridge
+docker run -p 3000:3000 -e JWT_SECRET=your-secret -e JWT_SECRET_ADMIN=your-admin-secret web-agent-bridge
 ```
 
 ---

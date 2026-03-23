@@ -31,6 +31,7 @@ jobs:
         env:
           NODE_ENV: test
           JWT_SECRET: ci-test-secret
+          JWT_SECRET_ADMIN: ci-test-admin-secret
 
   docker:
     runs-on: ubuntu-latest
@@ -45,7 +46,10 @@ jobs:
 
       - name: Verify Docker image
         run: |
-          docker run -d --name wab-test -p 3000:3000 -e JWT_SECRET=docker-test-secret web-agent-bridge
+          docker run -d --name wab-test -p 3000:3000 \
+            -e JWT_SECRET=docker-test-secret \
+            -e JWT_SECRET_ADMIN=docker-admin-test-secret \
+            web-agent-bridge
           sleep 5
           curl -f http://localhost:3000 || exit 1
           docker stop wab-test

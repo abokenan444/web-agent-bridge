@@ -6,6 +6,7 @@ services:
     environment:
       - PORT=3000
       - JWT_SECRET=${JWT_SECRET:-change-this-to-a-strong-random-secret}
+      - JWT_SECRET_ADMIN=${JWT_SECRET_ADMIN:-change-this-admin-secret}
       - NODE_ENV=production
     volumes:
       - wab-data:/app/data
