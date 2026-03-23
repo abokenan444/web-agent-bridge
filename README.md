@@ -20,6 +20,7 @@ WAB is an open-source middleware layer that bridges AI agents and websites — l
 | **🏢 Website Owner** | Control how AI interacts with your site | Embed the script, configure permissions |
 | **🤖 Agent Developer** | Build reliable agents that work on any WAB-enabled site | Use `window.AICommands` or the Agent SDK |
 | **🔧 Self-Hosting** | Run the full WAB platform for your organization | Clone, deploy, manage licenses & analytics |
+| **WordPress** | Sites powered by WP | Use the **[Web Agent Bridge WordPress plugin](web-agent-bridge-wordpress/README.md)** (settings, shortcode, per-page disable, hooks) |
 
 ---
 

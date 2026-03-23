@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
+  <script src="/js/auth-redirect.js"></script>
 </head>
 <body>
   <div class="auth-page">
@@ -43,7 +44,7 @@
 
   <script>
     if (localStorage.getItem('wab_token')) {
-      window.location.href = '/dashboard';
+      window.location.replace(typeof wabGetPostAuthRedirect === 'function' ? wabGetPostAuthRedirect() : '/dashboard');
     }
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -70,7 +71,7 @@
 
         localStorage.setItem('wab_token', data.token);
         localStorage.setItem('wab_user', JSON.stringify(data.user));
-        window.location.href = '/dashboard';
+        window.location.href = typeof wabGetPostAuthRedirect === 'function' ? wabGetPostAuthRedirect() : '/dashboard';
       } catch (err) {
         errorEl.textContent = 'Connection error. Please try again.';
         errorEl.style.display = 'block';

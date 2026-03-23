@@ -24,8 +24,9 @@
         <li><a href="/docs" style="color:var(--text-primary);">Docs</a></li>
       </ul>
       <div class="navbar-actions">
-        <a href="/dashboard" class="btn btn-ghost">Dashboard</a>
-        <a href="/register" class="btn btn-primary btn-sm">Get Started</a>
+        <a href="/login" class="btn btn-ghost" data-wab-auth="guest">Sign In</a>
+        <a href="/dashboard" class="btn btn-primary btn-sm" data-wab-auth="signed-in" style="display:none">Dashboard</a>
+        <a href="/register" class="btn btn-primary btn-sm" data-wab-auth="guest">Get Started</a>
       </div>
     </div>
   </nav>
@@ -564,6 +565,7 @@ document.<span class="fn">addEventListener</span>(<span class="str">'wab:ready'<
     </div>
   </footer>
 
+  <script src="/js/auth-nav.js"></script>
   <script>
     const links = document.querySelectorAll('.docs-sidebar a');
     const observer = new IntersectionObserver((entries) => {

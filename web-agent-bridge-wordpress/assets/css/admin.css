@@ -1,0 +1,21 @@
+/* Web Agent Bridge — settings */
+.wab-settings .title {
+	margin-top: 2em;
+	padding-bottom: 0.25em;
+	border-bottom: 1px solid #c3c4c7;
+}
+
+.wab-settings .wab-warning {
+	color: #b32d2e;
+	font-weight: 600;
+}
+
+.wab-widget-list {
+	margin: 0 0 12px;
+	list-style: disc;
+	padding-left: 1.2em;
+}
+
+.wab-widget-list li {
+	margin-bottom: 4px;
+}
