@@ -4,6 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Panel — Web Agent Bridge</title>
+  <script>
+    (function () {
+      try {
+        if (!localStorage.getItem('wab_admin_token')) {
+          window.location.replace('/admin/login');
+        }
+      } catch (e) {
+        window.location.replace('/admin/login');
+      }
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -24,7 +35,7 @@
         <a href="#" class="active" data-view="overview">📊 Overview</a>
         <a href="#" data-view="users">👥 Users</a>
         <a href="#" data-view="sites">🌐 Sites</a>
-        <a href="#" data-view="analytics">📈 Analytics</a>
+        <a href="#" data-view="analytics">📈 Platform analytics</a>
         <a href="#" data-view="grants">🎁 Free Grants</a>
         <a href="#" data-view="payments">💳 Payments</a>
         <a href="#" data-view="stripe">🔧 Stripe Config</a>
@@ -95,7 +106,7 @@
         <div class="page-header"><h1>All Sites</h1></div>
         <div class="table-wrapper">
           <table>
-            <thead><tr><th>Name</th><th>Domain</th><th>Owner</th><th>Tier</th><th>License</th><th>Status</th></tr></thead>
+            <thead><tr><th>Name</th><th>Domain</th><th>Owner</th><th>Tier</th><th>License</th><th>Status</th><th>Admin</th></tr></thead>
             <tbody id="sitesTableBody"></tbody>
           </table>
         </div>
@@ -104,13 +115,18 @@
       <!-- ── Analytics ── -->
       <div id="view-analytics" class="view">
         <div class="page-header">
-          <h1>Platform Analytics</h1>
+          <h1>Platform analytics</h1>
           <select class="form-input" style="width:auto;" id="analyticsDays" onchange="loadAnalytics()">
             <option value="7">Last 7 days</option>
             <option value="30" selected>Last 30 days</option>
             <option value="90">Last 90 days</option>
           </select>
         </div>
+        <p style="color:var(--text-secondary);max-width:800px;margin-bottom:20px;line-height:1.6;">
+          Aggregated events from all sites whose bridge script reports usage (<code>POST /api/license/track</code>).
+          Per-site charts are available under <strong>All Sites</strong> → <strong>Analytics</strong> on each row.
+          Ensure embedded sites use a valid <strong>license key</strong> and (for cross-domain scripts) CORS allows your API origin.
+        </p>
         <div id="analyticsContent"></div>
       </div>
 
@@ -163,6 +179,17 @@
             <button class="btn btn-secondary" onclick="closeModal('grantModal')">Cancel</button>
             <button class="btn btn-primary" onclick="createGrant()">Grant Access</button>
           </div>
+        </div>
+      </div>
+
+      <!-- ── Site analytics modal ── -->
+      <div class="modal-overlay" id="siteAnalyticsModal">
+        <div class="modal" style="max-width:720px;">
+          <div class="modal-header">
+            <h2 id="siteAnalyticsTitle">Site analytics</h2>
+            <button class="modal-close" onclick="closeModal('siteAnalyticsModal')">&times;</button>
+          </div>
+          <div class="modal-body" id="siteAnalyticsBody"></div>
         </div>
       </div>
 
@@ -499,7 +526,7 @@
         const { sites } = await res.json();
         const tbody = document.getElementById('sitesTableBody');
         if (!sites.length) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No sites</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">No sites</td></tr>';
           return;
         }
         tbody.innerHTML = sites.map(s => `
@@ -510,9 +537,59 @@
             <td><span class="badge badge-${s.tier}">${s.tier}</span></td>
             <td class="mono" style="font-size:0.75rem;color:var(--text-muted);">${esc(s.license_key)}</td>
             <td>${s.active ? '<span style="color:var(--accent-green);">Active</span>' : '<span style="color:var(--accent-red);">Inactive</span>'}</td>
+            <td style="white-space:nowrap;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="adminSiteTier('${s.id}')">Tier</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="adminSiteAnalytics('${s.id}')">Analytics</button>
+              <button type="button" class="btn btn-danger btn-sm" onclick="adminSiteToggle('${s.id}', ${s.active ? 'true' : 'false'})">${s.active ? 'Deactivate' : 'Activate'}</button>
+            </td>
           </tr>
         `).join('');
       } catch (err) { console.error(err); }
+    }
+
+    async function adminSiteTier(siteId) {
+      const tier = prompt('New tier (free, starter, pro, enterprise):');
+      if (!tier || !['free', 'starter', 'pro', 'enterprise'].includes(tier)) return;
+      try {
+        const res = await fetch(`${API}/sites/${siteId}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ tier }) });
+        if (!res.ok) { alert('Failed to update tier'); return; }
+        loadSites();
+      } catch (e) { alert('Error'); }
+    }
+
+    async function adminSiteToggle(siteId, currentlyActive) {
+      const cur = currentlyActive === true || currentlyActive === 'true';
+      const nextActive = !cur;
+      if (!confirm(nextActive ? 'Activate this site?' : 'Deactivate this site? Embedded keys will stop working until reactivated.')) return;
+      try {
+        const res = await fetch(`${API}/sites/${siteId}`, { method: 'PUT', headers: headers(), body: JSON.stringify({ active: nextActive }) });
+        if (!res.ok) { alert('Failed'); return; }
+        loadSites();
+      } catch (e) { alert('Error'); }
+    }
+
+    async function adminSiteAnalytics(siteId) {
+      try {
+        const res = await fetch(`${API}/sites/${siteId}/analytics?days=30`, { headers: headers() });
+        if (!res.ok) { alert('Failed to load analytics'); return; }
+        const data = await res.json();
+        const site = data.site || {};
+        document.getElementById('siteAnalyticsTitle').textContent = (site.name || 'Site') + ' — analytics';
+        const sum = data.summary || [];
+        const total = sum.reduce((a, r) => a + (r.count || 0), 0);
+        let html = `<p style="color:var(--text-secondary);margin-bottom:12px;"><strong>Domain:</strong> ${esc(site.domain || '')} · <strong>Total events:</strong> ${total}</p>`;
+        if (sum.length) {
+          html += '<div class="table-wrapper"><table><thead><tr><th>Action</th><th>Type</th><th>Calls</th><th>OK</th></tr></thead><tbody>';
+          html += sum.map(r => `<tr><td>${esc(r.action_name)}</td><td>${esc(r.trigger_type || '—')}</td><td>${r.count}</td><td>${r.successes}</td></tr>`).join('');
+          html += '</tbody></table></div>';
+        } else {
+          html += '<p style="color:var(--text-muted);">No events yet. Bridge must call <code>/api/license/track</code> after actions (enabled by default in the script).</p>';
+        }
+        document.getElementById('siteAnalyticsBody').innerHTML = html;
+        openModal('siteAnalyticsModal');
+      } catch (e) {
+        alert('Error loading analytics');
+      }
     }
 
     // ─── Analytics ──────────────────────────────────────────────────────

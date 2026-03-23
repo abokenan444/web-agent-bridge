@@ -22,12 +22,6 @@
       automatedLogin: false,
       extractData: false
     },
-    features: {
-      advancedAnalytics: false,
-      realTimeUpdates: false,
-      customActions: false,
-      webhooks: false
-    },
     restrictions: {
       allowedSelectors: [],
       blockedSelectors: ['.private', '[data-private]', '[data-no-agent]'],
@@ -39,7 +33,17 @@
       level: 'basic'
     },
     subscriptionTier: 'free',
-    licenseKey: null
+    licenseKey: null,
+    /** Base URL for /api/license/* (verify, track). Default: current origin, else LICENSING_SERVER. */
+    apiBaseUrl: null,
+    features: {
+      advancedAnalytics: false,
+      realTimeUpdates: false,
+      customActions: false,
+      webhooks: false,
+      /** Send execute events to POST /api/license/track (populates admin analytics). */
+      reportUsage: true
+    }
   };
 
   // ─── Rate Limiter ─────────────────────────────────────────────────────
@@ -688,10 +692,42 @@
       return result;
     }
 
+    _getLicenseApiBase() {
+      const c = this.config;
+      if (c.apiBaseUrl) return String(c.apiBaseUrl).replace(/\/$/, '');
+      if (typeof global.location !== 'undefined' && location && location.origin) return location.origin;
+      return LICENSING_SERVER;
+    }
+
+    /**
+     * Report action execution to WAB (fills platform analytics in admin).
+     */
+    _maybeReportUsage(actionName, triggerType, success) {
+      try {
+        const key = this.config.licenseKey;
+        if (!key || (this.config.features && this.config.features.reportUsage === false)) return;
+        const base = this._getLicenseApiBase();
+        const payload = JSON.stringify({
+          licenseKey: key,
+          actionName,
+          triggerType: triggerType || 'unknown',
+          success: success !== false
+        });
+        fetch(`${base}/api/license/track`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          keepalive: true,
+          mode: 'cors',
+          credentials: 'omit'
+        }).catch(function () {});
+      } catch (e) { /* ignore */ }
+    }
+
     // ── License Verification ────────────────────────────────────────────
     async _verifyLicense() {
       try {
-        const res = await fetch(`${LICENSING_SERVER}/api/license/verify`, {
+        const res = await fetch(`${this._getLicenseApiBase()}/api/license/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -949,12 +985,14 @@
 
         this.events.emit('action:after', { action: actionName, result });
         this.logger.log('execute_result', { action: actionName, success: result.success }, 'detailed');
+        this._maybeReportUsage(actionName, action.trigger, !!(result && result.success !== false));
         return result;
 
       } catch (err) {
         const error = { success: false, error: err.message };
         this.events.emit('error', { action: actionName, error: err.message });
         this.logger.log('execute_error', { action: actionName, error: err.message });
+        this._maybeReportUsage(actionName, action.trigger, false);
         return error;
       }
     }

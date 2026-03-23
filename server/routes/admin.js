@@ -9,11 +9,14 @@ const { authenticateAdmin, generateAdminToken } = require('../middleware/adminAu
 const {
   loginAdmin, findAdminById, createAdmin,
   getAllUsers, getAllSites, getAdminStats, getPlatformAnalytics,
-  getUserFullDetails, adminUpdateUserTier, adminDeleteUser,
+  getUserFullDetails, adminUpdateUserTier, adminUpdateSite, adminDeleteUser,
   grantFreeTier, revokeGrant, getActiveGrants,
   getSmtpSettings, updateSmtpSettings, getNotificationLogs,
   getPayments, getPlatformSetting, setPlatformSetting,
-  findUserByEmail
+  findUserByEmail,
+  findSiteById,
+  getAnalyticsBySite,
+  getAnalyticsTimeline
 } = require('../models/db');
 const { sendEmail } = require('../services/email');
 const { createCheckoutSession, createPortalSession, handleWebhookEvent, isStripeConfigured, getStripePrices } = require('../services/stripe');
@@ -83,6 +86,34 @@ router.delete('/users/:id', authenticateAdmin, (req, res) => {
 router.get('/sites', authenticateAdmin, (req, res) => {
   const sites = getAllSites();
   res.json({ sites });
+});
+
+router.put('/sites/:id', authenticateAdmin, (req, res) => {
+  const { tier, active } = req.body;
+  const ok = adminUpdateSite(req.params.id, { tier, active });
+  if (!ok) return res.status(404).json({ error: 'Site not found or invalid tier' });
+  res.json({ success: true });
+});
+
+router.get('/sites/:id/analytics', authenticateAdmin, (req, res) => {
+  const site = findSiteById.get(req.params.id);
+  if (!site) return res.status(404).json({ error: 'Site not found' });
+  const days = parseInt(req.query.days, 10) || 30;
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+  const summary = getAnalyticsBySite.all(site.id, since);
+  const timeline = getAnalyticsTimeline.all(site.id, since);
+  res.json({
+    site: {
+      id: site.id,
+      name: site.name,
+      domain: site.domain,
+      tier: site.tier,
+      license_key: site.license_key
+    },
+    summary,
+    timeline,
+    period: `${days} days`
+  });
 });
 
 // ─── Free Grants ──────────────────────────────────────────────────────

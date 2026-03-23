@@ -434,6 +434,29 @@ function adminUpdateUserTier(userId, siteId, tier) {
   }
 }
 
+/**
+ * Admin: update any site by id (tier and/or active).
+ *
+ * @param {string} siteId Site UUID.
+ * @param {{ tier?: string, active?: boolean }} updates Partial updates.
+ * @returns {boolean}
+ */
+function adminUpdateSite(siteId, updates) {
+  const site = findSiteById.get(siteId);
+  if (!site) return false;
+  let tier = site.tier;
+  let active = site.active;
+  if (updates.tier !== undefined) {
+    if (!['free', 'starter', 'pro', 'enterprise'].includes(updates.tier)) return false;
+    tier = updates.tier;
+  }
+  if (updates.active !== undefined) {
+    active = updates.active ? 1 : 0;
+  }
+  db.prepare(`UPDATE sites SET tier = ?, active = ?, updated_at = datetime('now') WHERE id = ?`).run(tier, active, siteId);
+  return true;
+}
+
 function adminDeleteUser(userId) {
   db.prepare(`UPDATE sites SET active = 0 WHERE user_id = ?`).run(userId);
   db.prepare(`DELETE FROM users WHERE id = ?`).run(userId);
@@ -487,6 +510,7 @@ module.exports = {
   getAdminStats,
   getPlatformAnalytics,
   adminUpdateUserTier,
+  adminUpdateSite,
   adminDeleteUser,
   getUserFullDetails,
   // Free Grants
