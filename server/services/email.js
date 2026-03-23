@@ -6,6 +6,22 @@
 const nodemailer = require('nodemailer');
 const { getSmtpSettings, logNotification } = require('../models/db');
 
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Plain-text email subject lines (no HTML entities) */
+function sanitizeSubjectPart(s) {
+  if (s == null) return '';
+  return String(s).replace(/[\r\n]/g, ' ').slice(0, 300);
+}
+
 let transporter = null;
 
 function getTransporter() {
@@ -27,14 +43,14 @@ function getTransporter() {
 
 const templates = {
   welcome: (data) => ({
-    subject: `Welcome to Web Agent Bridge, ${data.name}!`,
+    subject: `Welcome to Web Agent Bridge, ${sanitizeSubjectPart(data.name)}!`,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0e1a;color:#f0f4ff;padding:40px;border-radius:12px;">
         <div style="text-align:center;margin-bottom:30px;">
           <div style="font-size:40px;">⚡</div>
           <h1 style="color:#3b82f6;margin:10px 0;">Web Agent Bridge</h1>
         </div>
-        <h2 style="color:#f0f4ff;">Welcome aboard, ${data.name}!</h2>
+        <h2 style="color:#f0f4ff;">Welcome aboard, ${escapeHtml(data.name)}!</h2>
         <p style="color:#94a3b8;line-height:1.8;">
           Your account has been successfully created. You're now ready to bridge AI agents with your websites.
         </p>
@@ -66,14 +82,14 @@ const templates = {
           <h1 style="color:#3b82f6;margin:10px 0;">Web Agent Bridge</h1>
         </div>
         <h2>Registration Successful</h2>
-        <p style="color:#94a3b8;">Hello ${data.name},</p>
+        <p style="color:#94a3b8;">Hello ${escapeHtml(data.name)},</p>
         <p style="color:#94a3b8;line-height:1.8;">
           Your account has been registered successfully. Here are your account details:
         </p>
         <div style="background:#1a2236;border-radius:8px;padding:20px;margin:20px 0;">
-          <p style="color:#94a3b8;"><strong style="color:#f0f4ff;">Email:</strong> ${data.email}</p>
-          <p style="color:#94a3b8;"><strong style="color:#f0f4ff;">Name:</strong> ${data.name}</p>
-          ${data.company ? `<p style="color:#94a3b8;"><strong style="color:#f0f4ff;">Company:</strong> ${data.company}</p>` : ''}
+          <p style="color:#94a3b8;"><strong style="color:#f0f4ff;">Email:</strong> ${escapeHtml(data.email)}</p>
+          <p style="color:#94a3b8;"><strong style="color:#f0f4ff;">Name:</strong> ${escapeHtml(data.name)}</p>
+          ${data.company ? `<p style="color:#94a3b8;"><strong style="color:#f0f4ff;">Company:</strong> ${escapeHtml(data.company)}</p>` : ''}
         </div>
         <p style="color:#64748b;font-size:12px;text-align:center;margin-top:30px;">
           &copy; ${new Date().getFullYear()} Web Agent Bridge
@@ -90,7 +106,7 @@ const templates = {
           <div style="font-size:40px;">🔐</div>
           <h1 style="color:#3b82f6;margin:10px 0;">Password Reset</h1>
         </div>
-        <p style="color:#94a3b8;">Hello ${data.name},</p>
+        <p style="color:#94a3b8;">Hello ${escapeHtml(data.name)},</p>
         <p style="color:#94a3b8;line-height:1.8;">
           We received a request to reset your password. Click the button below to set a new password.
         </p>
@@ -108,7 +124,7 @@ const templates = {
   }),
 
   contact: (data) => ({
-    subject: `New Contact Message: ${data.subject || 'No Subject'}`,
+    subject: `New Contact Message: ${sanitizeSubjectPart(data.subject || 'No Subject')}`,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0e1a;color:#f0f4ff;padding:40px;border-radius:12px;">
         <div style="text-align:center;margin-bottom:30px;">
@@ -116,10 +132,10 @@ const templates = {
           <h1 style="color:#3b82f6;margin:10px 0;">New Contact Message</h1>
         </div>
         <div style="background:#1a2236;border-radius:8px;padding:20px;margin:20px 0;">
-          <p style="color:#94a3b8;"><strong style="color:#f0f4ff;">From:</strong> ${data.fromName} (${data.fromEmail})</p>
-          <p style="color:#94a3b8;"><strong style="color:#f0f4ff;">Subject:</strong> ${data.subject || 'N/A'}</p>
+          <p style="color:#94a3b8;"><strong style="color:#f0f4ff;">From:</strong> ${escapeHtml(data.fromName)} (${escapeHtml(data.fromEmail)})</p>
+          <p style="color:#94a3b8;"><strong style="color:#f0f4ff;">Subject:</strong> ${escapeHtml(data.subject || 'N/A')}</p>
           <div style="margin-top:16px;padding-top:16px;border-top:1px solid #334155;">
-            <p style="color:#f0f4ff;line-height:1.8;">${data.message}</p>
+            <p style="color:#f0f4ff;line-height:1.8;">${escapeHtml(data.message)}</p>
           </div>
         </div>
         <p style="color:#64748b;font-size:12px;text-align:center;margin-top:30px;">
@@ -130,17 +146,17 @@ const templates = {
   }),
 
   tier_upgrade: (data) => ({
-    subject: `Your plan has been upgraded to ${data.tier} — Web Agent Bridge`,
+    subject: `Your plan has been upgraded to ${sanitizeSubjectPart(data.tier)} — Web Agent Bridge`,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0e1a;color:#f0f4ff;padding:40px;border-radius:12px;">
         <div style="text-align:center;margin-bottom:30px;">
           <div style="font-size:40px;">🎉</div>
           <h1 style="color:#3b82f6;margin:10px 0;">Plan Upgraded!</h1>
         </div>
-        <p style="color:#94a3b8;">Hello ${data.name},</p>
+        <p style="color:#94a3b8;">Hello ${escapeHtml(data.name)},</p>
         <p style="color:#94a3b8;line-height:1.8;">
-          Great news! Your plan has been upgraded to <strong style="color:#10b981;">${data.tier.toUpperCase()}</strong>.
-          ${data.reason ? `<br><br>Reason: ${data.reason}` : ''}
+          Great news! Your plan has been upgraded to <strong style="color:#10b981;">${escapeHtml(String(data.tier).toUpperCase())}</strong>.
+          ${data.reason ? `<br><br>Reason: ${escapeHtml(data.reason)}` : ''}
         </p>
         <div style="text-align:center;margin-top:30px;">
           <a href="${data.dashboardUrl || 'https://webagentbridge.com/dashboard'}" style="background:linear-gradient(135deg,#10b981,#3b82f6);color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;">View Dashboard</a>

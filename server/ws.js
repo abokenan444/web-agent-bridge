@@ -1,7 +1,6 @@
 const WebSocket = require('ws');
-const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const { verifyUserToken, verifyAdminToken } = require('./config/secrets');
+const { findSiteById } = require('./models/db');
 
 // Map of siteId → Set of WebSocket clients
 const siteClients = new Map();
@@ -20,16 +19,39 @@ function setupWebSocket(server) {
         const msg = JSON.parse(data);
 
         if (msg.type === 'auth') {
-          // Authenticate via JWT token and subscribe to a site
-          const decoded = jwt.verify(msg.token, JWT_SECRET);
-          if (decoded && msg.siteId) {
-            authenticatedSiteId = msg.siteId;
-            if (!siteClients.has(msg.siteId)) {
-              siteClients.set(msg.siteId, new Set());
-            }
-            siteClients.get(msg.siteId).add(ws);
-            ws.send(JSON.stringify({ type: 'auth:success', siteId: msg.siteId }));
+          if (!msg.token || !msg.siteId) {
+            ws.send(JSON.stringify({ type: 'error', message: 'token and siteId required' }));
+            return;
           }
+
+          let decoded;
+          let isAdmin = false;
+          try {
+            decoded = verifyUserToken(msg.token);
+          } catch {
+            try {
+              decoded = verifyAdminToken(msg.token);
+              isAdmin = decoded.isAdmin === true;
+            } catch {
+              ws.send(JSON.stringify({ type: 'error', message: 'Invalid message or auth failed' }));
+              return;
+            }
+          }
+
+          if (!isAdmin) {
+            const site = findSiteById.get(msg.siteId);
+            if (!site || site.user_id !== decoded.id) {
+              ws.send(JSON.stringify({ type: 'error', message: 'Forbidden: not your site' }));
+              return;
+            }
+          }
+
+          authenticatedSiteId = msg.siteId;
+          if (!siteClients.has(msg.siteId)) {
+            siteClients.set(msg.siteId, new Set());
+          }
+          siteClients.get(msg.siteId).add(ws);
+          ws.send(JSON.stringify({ type: 'auth:success', siteId: msg.siteId }));
         }
       } catch (e) {
         ws.send(JSON.stringify({ type: 'error', message: 'Invalid message or auth failed' }));
@@ -46,7 +68,6 @@ function setupWebSocket(server) {
     });
   });
 
-  // Heartbeat to clean up dead connections
   const interval = setInterval(() => {
     wss.clients.forEach((ws) => {
       if (!ws.isAlive) return ws.terminate();
@@ -60,7 +81,6 @@ function setupWebSocket(server) {
   return wss;
 }
 
-// Broadcast an analytics event to all clients watching a specific site
 function broadcastAnalytic(siteId, eventData) {
   const clients = siteClients.get(siteId);
   if (!clients || clients.size === 0) return;

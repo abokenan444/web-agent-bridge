@@ -1,8 +1,10 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const { encryptOptional, decryptOptional } = require('../utils/secureFields');
 
 const isTest = process.env.NODE_ENV === 'test';
 const DATA_DIR = isTest
@@ -173,7 +175,8 @@ function generateLicenseKey() {
   const segments = [];
   for (let s = 0; s < 4; s++) {
     let seg = '';
-    for (let i = 0; i < 5; i++) seg += chars[Math.floor(Math.random() * chars.length)];
+    const bytes = crypto.randomBytes(5);
+    for (let i = 0; i < 5; i++) seg += chars[bytes[i] % chars.length];
     segments.push(seg);
   }
   return `WAB-${segments.join('-')}`;
@@ -302,13 +305,23 @@ function findAdminById(id) {
   return db.prepare(`SELECT id, email, name, role, created_at FROM admins WHERE id = ?`).get(id);
 }
 
-function ensureDefaultAdmin() {
+/**
+ * First-run admin creation from env only (no hardcoded password).
+ * Alternatively use: node scripts/create-admin.js <email> <password>
+ */
+function maybeBootstrapAdmin() {
+  if (isTest) return;
   const count = db.prepare(`SELECT COUNT(*) as c FROM admins`).get().c;
-  if (count === 0) {
-    createAdmin({ email: 'admin@webagentbridge.com', password: 'Admin@WAB2024!', name: 'Super Admin', role: 'superadmin' });
+  if (count > 0) return;
+  const email = process.env.BOOTSTRAP_ADMIN_EMAIL;
+  const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+  if (!email || !password) {
+    console.warn('[WAB] No admin accounts. Set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD for first boot, or run: node scripts/create-admin.js <email> <password>');
+    return;
   }
+  createAdmin({ email, password, name: 'Bootstrap Admin', role: 'superadmin' });
+  console.log('[WAB] Bootstrap admin created from BOOTSTRAP_ADMIN_* environment variables.');
 }
-ensureDefaultAdmin();
 
 // ─── Admin Queries ────────────────────────────────────────────────────
 function getAllUsers() {
@@ -410,11 +423,22 @@ function getPayments(limit) {
 
 // ─── SMTP Settings ────────────────────────────────────────────────────
 function getSmtpSettings() {
-  return db.prepare(`SELECT * FROM smtp_settings WHERE id = 1`).get();
+  const row = db.prepare(`SELECT * FROM smtp_settings WHERE id = 1`).get();
+  if (!row) return null;
+  if (row.password) {
+    const dec = decryptOptional(row.password);
+    return { ...row, password: dec != null ? dec : row.password };
+  }
+  return row;
 }
 
 function updateSmtpSettings({ host, port, secure, username, password, fromName, fromEmail, enabled }) {
-  db.prepare(`UPDATE smtp_settings SET host = ?, port = ?, secure = ?, username = ?, password = ?, from_name = ?, from_email = ?, enabled = ?, updated_at = datetime('now') WHERE id = 1`).run(host, port || 587, secure ? 1 : 0, username, password, fromName || 'Web Agent Bridge', fromEmail, enabled ? 1 : 0);
+  const current = db.prepare(`SELECT password FROM smtp_settings WHERE id = 1`).get();
+  let nextPassword = current && current.password;
+  if (password !== undefined) {
+    nextPassword = encryptOptional(password);
+  }
+  db.prepare(`UPDATE smtp_settings SET host = ?, port = ?, secure = ?, username = ?, password = ?, from_name = ?, from_email = ?, enabled = ?, updated_at = datetime('now') WHERE id = 1`).run(host, port || 587, secure ? 1 : 0, username, nextPassword, fromName || 'Web Agent Bridge', fromEmail, enabled ? 1 : 0);
 }
 
 function logNotification({ userId, emailTo, template, subject, status, errorMessage }) {
@@ -505,6 +529,7 @@ module.exports = {
   createAdmin,
   loginAdmin,
   findAdminById,
+  maybeBootstrapAdmin,
   getAllUsers,
   getAllSites,
   getAdminStats,

@@ -1,15 +1,8 @@
-/**
- * Admin Authentication Middleware
- */
-
-const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const { signAdminToken, verifyAdminToken } = require('../config/secrets');
 
 function generateAdminToken(admin) {
-  return jwt.sign(
+  return signAdminToken(
     { id: admin.id, email: admin.email, name: admin.name, role: admin.role, isAdmin: true },
-    JWT_SECRET,
     { expiresIn: '12h' }
   );
 }
@@ -23,7 +16,7 @@ function authenticateAdmin(req, res, next) {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = verifyAdminToken(token);
     if (!decoded.isAdmin) {
       return res.status(403).json({ error: 'Admin privileges required' });
     }

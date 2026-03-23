@@ -2,7 +2,17 @@
  * Stripe Payment Integration Service
  */
 
-const { getPlatformSetting, saveStripeCustomer, getStripeCustomer, saveStripeSubscription, updateStripeSubscription, getStripeSubscriptionBySubId, savePayment, updateSiteTier } = require('../models/db');
+const {
+  getPlatformSetting,
+  saveStripeCustomer,
+  getStripeCustomer,
+  saveStripeSubscription,
+  updateStripeSubscription,
+  getStripeSubscriptionBySubId,
+  savePayment,
+  updateSiteTier,
+  findSiteById
+} = require('../models/db');
 
 let stripe = null;
 
@@ -23,6 +33,11 @@ function getStripePrices() {
 }
 
 async function createCheckoutSession({ userId, userEmail, siteId, tier }) {
+  const site = findSiteById.get(siteId);
+  if (!site || site.user_id !== userId) {
+    throw new Error('Site not found or access denied');
+  }
+
   const s = getStripe();
   if (!s) throw new Error('Stripe not configured');
 
@@ -147,4 +162,31 @@ function isStripeConfigured() {
   return !!key;
 }
 
-module.exports = { getStripe, createCheckoutSession, createPortalSession, handleWebhookEvent, isStripeConfigured, getStripePrices };
+/**
+ * Express webhook handler: verifies Stripe signature, then dispatches business logic.
+ */
+function handleWebhookRequest(req) {
+  const sig = req.headers['stripe-signature'];
+  const raw = req.body;
+  const whSecret = process.env.STRIPE_WEBHOOK_SECRET || getPlatformSetting('stripe_webhook_secret');
+  if (!whSecret) {
+    throw new Error('Stripe webhook secret not configured (STRIPE_WEBHOOK_SECRET or platform stripe_webhook_secret)');
+  }
+  if (!sig) {
+    throw new Error('Missing Stripe-Signature header');
+  }
+  const s = getStripe();
+  if (!s) throw new Error('Stripe not configured');
+  const event = s.webhooks.constructEvent(raw, sig, whSecret);
+  handleWebhookEvent(event);
+}
+
+module.exports = {
+  getStripe,
+  createCheckoutSession,
+  createPortalSession,
+  handleWebhookEvent,
+  handleWebhookRequest,
+  isStripeConfigured,
+  getStripePrices
+};

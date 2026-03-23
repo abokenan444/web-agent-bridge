@@ -6,7 +6,6 @@ class Cache {
   constructor(defaultTTL = 60000) {
     this.store = new Map();
     this.defaultTTL = defaultTTL;
-    // Periodic cleanup every 2 minutes
     this._interval = setInterval(() => this._cleanup(), 120000);
   }
 
@@ -61,18 +60,24 @@ class Cache {
 
 /**
  * Analytics Queue — Batches analytics inserts for better write performance
- * Flushes every N seconds or when buffer reaches max size
+ * Flushes every N seconds or when buffer reaches max size.
+ * maxBufferTotal caps memory if DB writes fail repeatedly (DoS mitigation).
  */
 class AnalyticsQueue {
   constructor(db, options = {}) {
     this.db = db;
     this.buffer = [];
     this.maxSize = options.maxSize || 50;
-    this.flushInterval = options.flushInterval || 5000; // 5 seconds
+    this.maxBufferTotal = options.maxBufferTotal || 5000;
+    this.flushInterval = options.flushInterval || 5000;
     this._timer = setInterval(() => this.flush(), this.flushInterval);
   }
 
   push(analytic) {
+    while (this.buffer.length >= this.maxBufferTotal) {
+      this.buffer.shift();
+      console.warn('[WAB] Analytics buffer at cap; dropped oldest event');
+    }
     this.buffer.push(analytic);
     if (this.buffer.length >= this.maxSize) {
       this.flush();
@@ -102,18 +107,19 @@ class AnalyticsQueue {
       insertMany(batch);
     } catch (err) {
       console.error('[WAB Cache] Analytics batch insert failed:', err.message);
-      // Put items back if batch fails
+      while (this.buffer.length + batch.length > this.maxBufferTotal) {
+        batch.shift();
+      }
       this.buffer.unshift(...batch);
     }
   }
 
   destroy() {
     clearInterval(this._timer);
-    this.flush(); // flush remaining
+    this.flush();
   }
 }
 
-// Singleton cache instance with 60s TTL
 const cache = new Cache(60000);
 
 module.exports = { Cache, AnalyticsQueue, cache };

@@ -1,11 +1,18 @@
 const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
-const { verifyLicense, recordAnalytic, findSiteByLicense } = require('../models/db');
+const {
+  verifyLicense,
+  recordAnalytic,
+  findSiteByLicense,
+  findSiteById,
+  db
+} = require('../models/db');
 const { broadcastAnalytic } = require('../ws');
 const { cache, AnalyticsQueue } = require('../utils/cache');
+const { licenseTokenLimiter, licenseTrackLimiter } = require('../middleware/rateLimits');
 
-const analyticsQueue = new AnalyticsQueue(recordAnalytic);
+const analyticsQueue = new AnalyticsQueue(db, { maxSize: 50, maxBufferTotal: 5000 });
 
 // ─── Session Token Store (in-memory, TTL 1 hour) ────────────────────
 const sessionTokens = new Map();
@@ -18,14 +25,58 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-router.post('/verify', (req, res) => {
-  const { domain, licenseKey } = req.body;
+function normalizeHost(host) {
+  if (!host) return '';
+  let h = String(host).toLowerCase().trim();
+  if (h.startsWith('www.')) h = h.slice(4);
+  return h;
+}
 
-  if (!domain || !licenseKey) {
-    return res.status(400).json({ valid: false, error: 'Domain and licenseKey are required', tier: 'free' });
+function getRequestHostname(req) {
+  const origin = req.get('origin') || req.get('referer');
+  try {
+    return origin ? new URL(origin).hostname : req.hostname;
+  } catch {
+    return req.hostname;
+  }
+}
+
+function allowDevInsecureOrigin(hostname) {
+  if (process.env.NODE_ENV === 'production') return false;
+  if (process.env.ALLOW_INSECURE_LICENSE_ORIGIN !== 'true') return false;
+  const n = normalizeHost(hostname);
+  return n === 'localhost' || n === '127.0.0.1' || n === '[::1]';
+}
+
+// ─── Verify (domain + license OR session + siteId) ─────────────────
+router.post('/verify', (req, res) => {
+  const { domain, licenseKey, siteId, sessionToken } = req.body;
+
+  if (sessionToken && siteId) {
+    const session = sessionTokens.get(sessionToken);
+    if (!session || Date.now() > session.expiresAt) {
+      sessionTokens.delete(sessionToken);
+      return res.json({ valid: false, error: 'Session expired or invalid', tier: 'free' });
+    }
+    const requestDomain = getRequestHostname(req);
+    if (normalizeHost(requestDomain) !== normalizeHost(session.domain)) {
+      return res.json({ valid: false, error: 'Domain mismatch', tier: 'free' });
+    }
+    if (session.siteId !== siteId) {
+      return res.json({ valid: false, error: 'Invalid site', tier: 'free' });
+    }
+    return res.json({
+      valid: true,
+      tier: session.tier,
+      domain: session.domain,
+      allowedPermissions: session.permissions
+    });
   }
 
-  // Cache license verification for 60 seconds (hot path optimization)
+  if (!domain || !licenseKey) {
+    return res.status(400).json({ valid: false, error: 'Domain and licenseKey are required (or sessionToken + siteId)', tier: 'free' });
+  }
+
   const cacheKey = `license:${domain}:${licenseKey}`;
   const cached = cache.get(cacheKey);
   if (cached) return res.json(cached);
@@ -35,24 +86,58 @@ router.post('/verify', (req, res) => {
   res.json(result);
 });
 
-// ─── Secure Token Exchange ──────────────────────────────────────────
-// Client sends licenseKey → server validates → returns short-lived session token
-// The session token is domain-locked and expires in 1 hour
-router.post('/token', (req, res) => {
-  const { licenseKey } = req.body;
-  const origin = req.get('origin') || req.get('referer');
-  let domain;
-  try {
-    domain = origin ? new URL(origin).hostname : req.hostname;
-  } catch {
-    domain = req.hostname;
+// ─── Token exchange: siteId (preferred) or licenseKey (legacy) ─────
+router.post('/token', licenseTokenLimiter, (req, res) => {
+  const { licenseKey, siteId } = req.body;
+  const domain = getRequestHostname(req);
+  const normReq = normalizeHost(domain);
+
+  const finishSession = (site, result) => {
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + SESSION_TTL;
+    sessionTokens.set(sessionToken, {
+      siteId: site.id,
+      domain: site.domain,
+      tier: result.tier,
+      permissions: result.allowedPermissions,
+      expiresAt
+    });
+    res.json({
+      sessionToken,
+      siteId: site.id,
+      tier: result.tier,
+      permissions: result.allowedPermissions,
+      expiresIn: SESSION_TTL / 1000
+    });
+  };
+
+  if (siteId && !licenseKey) {
+    const site = findSiteById.get(siteId);
+    if (!site || !site.active) {
+      return res.status(404).json({ error: 'Site not found' });
+    }
+    const originOk =
+      normReq === normalizeHost(site.domain) ||
+      allowDevInsecureOrigin(domain);
+    if (!originOk) {
+      return res.status(403).json({ error: 'Origin does not match registered site domain' });
+    }
+    const cacheKey = `license:${site.domain}:${site.license_key}`;
+    let result = cache.get(cacheKey);
+    if (!result) {
+      result = verifyLicense(site.domain, site.license_key);
+      cache.set(cacheKey, result, 60000);
+    }
+    if (!result.valid) {
+      return res.status(403).json({ error: result.error || 'Invalid license', tier: 'free' });
+    }
+    return finishSession(site, result);
   }
 
   if (!licenseKey) {
-    return res.status(400).json({ error: 'licenseKey is required' });
+    return res.status(400).json({ error: 'siteId or licenseKey is required' });
   }
 
-  // Cache license verification for token exchange too
   const cacheKey = `license:${domain}:${licenseKey}`;
   let result = cache.get(cacheKey);
   if (!result) {
@@ -63,23 +148,12 @@ router.post('/token', (req, res) => {
     return res.status(403).json({ error: result.error || 'Invalid license', tier: 'free' });
   }
 
-  const sessionToken = crypto.randomBytes(32).toString('hex');
-  const expiresAt = Date.now() + SESSION_TTL;
+  const site = findSiteByLicense.get(licenseKey);
+  if (!site) {
+    return res.status(404).json({ error: 'Site not found' });
+  }
 
-  sessionTokens.set(sessionToken, {
-    domain,
-    tier: result.tier,
-    permissions: result.allowedPermissions,
-    licenseKey,
-    expiresAt
-  });
-
-  res.json({
-    sessionToken,
-    tier: result.tier,
-    permissions: result.allowedPermissions,
-    expiresIn: SESSION_TTL / 1000
-  });
+  finishSession(site, result);
 });
 
 // ─── Validate Session Token ─────────────────────────────────────────
@@ -95,36 +169,52 @@ router.post('/session', (req, res) => {
     return res.status(401).json({ valid: false, error: 'Session expired or invalid' });
   }
 
-  const origin = req.get('origin') || req.get('referer');
-  let requestDomain;
-  try {
-    requestDomain = origin ? new URL(origin).hostname : req.hostname;
-  } catch {
-    requestDomain = req.hostname;
-  }
-
-  if (requestDomain !== session.domain) {
+  const requestDomain = getRequestHostname(req);
+  if (normalizeHost(requestDomain) !== normalizeHost(session.domain)) {
     return res.status(403).json({ valid: false, error: 'Domain mismatch' });
   }
 
   res.json({
     valid: true,
+    siteId: session.siteId,
     tier: session.tier,
     permissions: session.permissions
   });
 });
 
-router.post('/track', (req, res) => {
-  const { licenseKey, actionName, agentId, triggerType, success, metadata } = req.body;
+// ─── Analytics track (session-bound; licenseKey deprecated) ──────
+router.post('/track', licenseTrackLimiter, (req, res) => {
+  const { sessionToken, actionName, agentId, triggerType, success, metadata, licenseKey } = req.body;
 
-  if (!licenseKey || !actionName) {
-    return res.status(400).json({ error: 'licenseKey and actionName are required' });
+  if (!actionName) {
+    return res.status(400).json({ error: 'actionName is required' });
+  }
+
+  let site;
+  if (sessionToken) {
+    const session = sessionTokens.get(sessionToken);
+    if (!session || Date.now() > session.expiresAt) {
+      sessionTokens.delete(sessionToken);
+      return res.status(401).json({ error: 'Session expired or invalid' });
+    }
+    const requestDomain = getRequestHostname(req);
+    if (normalizeHost(requestDomain) !== normalizeHost(session.domain)) {
+      return res.status(403).json({ error: 'Origin does not match session domain' });
+    }
+    site = findSiteById.get(session.siteId);
+    if (!site || !site.active) {
+      return res.status(404).json({ error: 'Site not found' });
+    }
+  } else if (licenseKey && process.env.ALLOW_LEGACY_LICENSE_TRACK === 'true') {
+    site = findSiteByLicense.get(licenseKey);
+    if (!site) return res.status(404).json({ error: 'Site not found' });
+  } else {
+    return res.status(400).json({
+      error: 'sessionToken is required. Obtain via POST /api/license/token (see installation snippet).'
+    });
   }
 
   try {
-    const site = findSiteByLicense.get(licenseKey);
-    if (!site) return res.status(404).json({ error: 'Site not found' });
-
     analyticsQueue.push({
       siteId: site.id,
       actionName,
@@ -134,7 +224,6 @@ router.post('/track', (req, res) => {
       metadata
     });
 
-    // Broadcast real-time analytics via WebSocket
     broadcastAnalytic(site.id, {
       actionName,
       agentId,

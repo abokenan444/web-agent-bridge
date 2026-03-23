@@ -34,6 +34,8 @@
     },
     subscriptionTier: 'free',
     licenseKey: null,
+    /** Public site id from dashboard (preferred). Used with configEndpoint for token exchange — license key stays off the page. */
+    siteId: null,
     /** Base URL for /api/license/* (verify, track). Default: current origin, else LICENSING_SERVER. */
     apiBaseUrl: null,
     features: {
@@ -588,8 +590,7 @@
 
     // ── Initialization ──────────────────────────────────────────────────
     async _init() {
-      if (this.config.configEndpoint && this.config._licenseKey) {
-        // Secure flow: exchange license key for session token server-side
+      if (this.config.configEndpoint && (this.config.siteId || this.config._licenseKey || this.config.licenseKey)) {
         await this._secureLicenseExchange();
       } else if (this.config.licenseKey) {
         await this._verifyLicense();
@@ -612,22 +613,23 @@
     async _secureLicenseExchange() {
       try {
         const endpoint = this.config.configEndpoint;
+        const body = this.config.siteId
+          ? { siteId: this.config.siteId }
+          : { licenseKey: this.config._licenseKey || this.config.licenseKey };
         const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ licenseKey: this.config._licenseKey })
+          body: JSON.stringify(body)
         });
         if (res.ok) {
           const data = await res.json();
           this._licenseVerified = { tier: data.tier, valid: true, sessionToken: data.sessionToken };
-          // Remove the license key from config after exchange
           delete this.config._licenseKey;
-          // Schedule token refresh before expiry (at 80% of TTL)
           if (data.expiresIn) {
+            if (this._tokenRefreshTimer) clearTimeout(this._tokenRefreshTimer);
             this._tokenRefreshTimer = setTimeout(() => {
-              this.config._licenseKey = this._licenseVerified._originalKey;
               this._secureLicenseExchange();
-            }, data.expiresIn * 800);
+            }, Math.floor(data.expiresIn * 800));
           }
         } else {
           this._licenseVerified = { tier: 'free', valid: false, error: 'Token exchange failed' };
@@ -704,11 +706,11 @@
      */
     _maybeReportUsage(actionName, triggerType, success) {
       try {
-        const key = this.config.licenseKey;
-        if (!key || (this.config.features && this.config.features.reportUsage === false)) return;
+        const sessionToken = this._licenseVerified && this._licenseVerified.sessionToken;
+        if (!sessionToken || (this.config.features && this.config.features.reportUsage === false)) return;
         const base = this._getLicenseApiBase();
         const payload = JSON.stringify({
-          licenseKey: key,
+          sessionToken,
           actionName,
           triggerType: triggerType || 'unknown',
           success: success !== false

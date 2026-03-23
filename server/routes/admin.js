@@ -19,7 +19,7 @@ const {
   getAnalyticsTimeline
 } = require('../models/db');
 const { sendEmail } = require('../services/email');
-const { createCheckoutSession, createPortalSession, handleWebhookEvent, isStripeConfigured, getStripePrices } = require('../services/stripe');
+const { createCheckoutSession, createPortalSession, isStripeConfigured, getStripePrices } = require('../services/stripe');
 
 // ─── Auth ──────────────────────────────────────────────────────────────
 

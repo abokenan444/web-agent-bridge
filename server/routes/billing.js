@@ -6,7 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { getPlatformSetting } = require('../models/db');
-const { createCheckoutSession, createPortalSession, handleWebhookEvent, isStripeConfigured } = require('../services/stripe');
+const { createCheckoutSession, createPortalSession, isStripeConfigured } = require('../services/stripe');
 
 // ─── Create Checkout Session ──────────────────────────────────────────
 router.post('/checkout', authenticateToken, async (req, res) => {

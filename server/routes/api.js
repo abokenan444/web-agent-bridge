@@ -47,7 +47,10 @@ router.put('/sites/:id/config', authenticateToken, (req, res) => {
   if (!config) return res.status(400).json({ error: 'Config is required' });
 
   try {
-    updateSiteConfig.run(JSON.stringify(config), req.params.id, req.user.id);
+    const r = updateSiteConfig.run(JSON.stringify(config), req.params.id, req.user.id);
+    if (r.changes === 0) {
+      return res.status(404).json({ error: 'Site not found' });
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update config' });
@@ -61,7 +64,10 @@ router.put('/sites/:id/tier', authenticateToken, (req, res) => {
   }
 
   try {
-    updateSiteTier.run(tier, req.params.id, req.user.id);
+    const r = updateSiteTier.run(tier, req.params.id, req.user.id);
+    if (r.changes === 0) {
+      return res.status(404).json({ error: 'Site not found' });
+    }
     res.json({ success: true, tier });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update tier' });
@@ -70,7 +76,10 @@ router.put('/sites/:id/tier', authenticateToken, (req, res) => {
 
 router.delete('/sites/:id', authenticateToken, (req, res) => {
   try {
-    deleteSite.run(req.params.id, req.user.id);
+    const r = deleteSite.run(req.params.id, req.user.id);
+    if (r.changes === 0) {
+      return res.status(404).json({ error: 'Site not found' });
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete site' });
@@ -103,13 +112,12 @@ router.get('/sites/:id/snippet', authenticateToken, (req, res) => {
   }
 
   const config = JSON.parse(site.config || '{}');
-  // Secure snippet: server-side token exchange, license key never exposed in HTML
+  // Public site id + token endpoint only — long-lived license key stays in dashboard, not in embed
   const snippet = `<!-- Web Agent Bridge (Secure Mode) -->
 <script>
 window.AIBridgeConfig = {
-  // Server-side license validation — key is NOT exposed in page source
+  siteId: "${site.id}",
   configEndpoint: "/api/license/token",
-  _licenseKey: "${site.license_key}",
   agentPermissions: ${JSON.stringify(config.agentPermissions || {}, null, 4)},
   restrictions: ${JSON.stringify(config.restrictions || {}, null, 4)},
   logging: ${JSON.stringify(config.logging || {}, null, 4)}
@@ -117,7 +125,7 @@ window.AIBridgeConfig = {
 </script>
 <script src="/script/ai-agent-bridge.js"></script>`;
 
-  res.json({ snippet, licenseKey: site.license_key });
+  res.json({ snippet, siteId: site.id });
 });
 
 module.exports = router;

@@ -29,7 +29,7 @@ WAB is an open-source middleware layer that bridges AI agents and websites — l
 - **Auto-Discovery** — Automatically detects buttons, forms, and navigation on the page
 - **Permission System** — Granular control over what AI agents can do (click, fill forms, API access, etc.)
 - **Standardized Interface** — Unified `window.AICommands` object any agent can consume
-- **Secure License Exchange** — Server-side token exchange; license keys never exposed in page source
+- **Secure License Exchange** — Embed uses public `siteId` + `/api/license/token`; long-lived license keys stay in the owner dashboard, not in HTML
 - **Rate Limiting** — Multi-dimensional abuse protection (IP + license key + site)
 - **Analytics Dashboard** — Track how AI agents interact with your site
 - **Real-Time Analytics** — WebSocket-based live event streaming with auto-reconnection
@@ -78,11 +78,11 @@ Visit `http://localhost:3000/register` and create an account, then add your site
 ### 3. Add the Script to Your Website
 
 ```html
-<!-- Secure Mode (recommended): license key is exchanged server-side -->
+<!-- Recommended: copy the snippet from your dashboard (uses siteId only) -->
 <script>
 window.AIBridgeConfig = {
+  siteId: "your-site-uuid-from-dashboard",
   configEndpoint: "https://yourserver.com/api/license/token",
-  _licenseKey: "WAB-XXXXX-XXXXX-XXXXX-XXXXX",
   agentPermissions: {
     readContent: true,
     click: true,
@@ -94,7 +94,7 @@ window.AIBridgeConfig = {
 <script src="https://yourserver.com/script/ai-agent-bridge.js"></script>
 ```
 
-The `_licenseKey` is sent via POST to your server and exchanged for a short-lived session token — it is **never exposed in the page source** at runtime.
+The server matches **Origin** to your registered site domain, then returns a short-lived **session token**. Analytics (`/api/license/track`) require that session — not the long-lived license key. Keep the license key in the dashboard only.
 
 ### 4. AI Agents Can Now Interact
 
@@ -173,9 +173,9 @@ web-agent-bridge/
 | Endpoint | Method | Description |
 |---|---|---|
 | `/api/license/verify` | POST | Verify license key for domain (cached) |
-| `/api/license/token` | POST | Exchange license key for session token |
+| `/api/license/token` | POST | Exchange `siteId` (Origin must match domain) or `licenseKey` for session token |
 | `/api/license/session` | POST | Validate session token (domain-locked) |
-| `/api/license/track` | POST | Record analytics event (batched) |
+| `/api/license/track` | POST | Record analytics (`sessionToken` + Origin; legacy `licenseKey` only if `ALLOW_LEGACY_LICENSE_TRACK`) |
 
 ---
 
@@ -204,12 +204,12 @@ Once loaded, `window.AICommands` exposes:
 
 ```javascript
 window.AIBridgeConfig = {
-  // Secure mode (recommended) — license exchanged server-side
+  // Recommended — copy siteId from dashboard snippet (no license key in HTML)
+  siteId: "uuid-from-dashboard",
   configEndpoint: "/api/license/token",
-  _licenseKey: "WAB-XXXXX-XXXXX-XXXXX-XXXXX",
 
-  // Legacy mode — direct license key (less secure)
-  // licenseKey: "WAB-XXXXX-XXXXX-XXXXX-XXXXX",
+  // Legacy: token exchange via license key (avoid embedding in public pages)
+  // licenseKey: "WAB-...",
 
   agentPermissions: {
     readContent: true,      // Read page text
@@ -374,7 +374,7 @@ docker compose up -d
 
 # Or build manually
 docker build -t web-agent-bridge .
-docker run -p 3000:3000 -e JWT_SECRET=your-secret web-agent-bridge
+docker run -p 3000:3000 -e JWT_SECRET=your-secret -e JWT_SECRET_ADMIN=your-admin-secret web-agent-bridge
 ```
 
 ---
@@ -462,24 +462,22 @@ See [`server/models/adapters/`](server/models/adapters/) for adapter implementat
 
 WAB implements defense-in-depth to protect the bridge from misuse:
 
-### Secure License Exchange (NEW)
+### Secure License Exchange
 
-License keys are **never exposed in page source**. The bridge uses a server-side token exchange flow:
-
-1. Client sends `_licenseKey` via POST to `configEndpoint`
-2. Server validates and returns a domain-locked session token (1 hour TTL)
-3. Client deletes `_licenseKey` from memory and uses session token for all subsequent calls
-4. Token auto-refreshes at 80% TTL — no interruptions
+1. **Dashboard snippet (recommended):** `siteId` + `configEndpoint`. The browser sends `POST /api/license/token` with `{ siteId }`; the server checks **Origin** against the site’s registered domain and issues a session token.
+2. **Legacy:** `licenseKey` + `configEndpoint` (or deprecated `_licenseKey`) still works for token exchange but should not be embedded in public HTML.
+3. **Session** is domain-locked (1h TTL); **analytics** use `sessionToken` on `POST /api/license/track` (not the license key).
+4. **WebSocket** `/ws/analytics`: user JWT must **own** the `siteId`; admin JWT may observe any site.
 
 ```
 Client                          Server
-  │── POST /api/license/token ──→│  (licenseKey in body, not URL)
-  │                              │  verifyLicense(domain, key)
-  │←── { sessionToken, tier } ──│  domain-locked, 1hr TTL
-  │                              │
-  │── POST /api/license/session →│  (sessionToken + origin check)
-  │←── { valid, tier } ─────────│
+  │── POST /api/license/token ──→│  { siteId } + Origin header
+  │                              │  domain match → sessionToken
+  │←── { sessionToken, tier } ──│
+  │── POST /api/license/track ─→│  { sessionToken, actionName } + Origin
 ```
+
+**Production:** set `JWT_SECRET`, `JWT_SECRET_ADMIN`, `STRIPE_WEBHOOK_SECRET`, `ALLOWED_ORIGINS`, and create the first admin via `BOOTSTRAP_ADMIN_*` or `node scripts/create-admin.js`.
 
 ### Security Sandbox
 
@@ -606,13 +604,21 @@ npx web-agent-bridge init
 
 ## Environment Variables
 
+See `.env.example`. Important:
+
 ```
 PORT=3000
-JWT_SECRET=your-secret-here
 NODE_ENV=development
-DB_ADAPTER=sqlite          # sqlite | postgresql | mysql
-DATABASE_URL=              # Required for postgresql/mysql
+JWT_SECRET=long-random-user-signing-secret
+JWT_SECRET_ADMIN=long-random-admin-signing-secret   # required in production
+ALLOWED_ORIGINS=http://localhost:3000,https://your-app.com
+STRIPE_WEBHOOK_SECRET=whsec_...                     # Stripe webhook verify
+CREDENTIALS_ENCRYPTION_KEY=...                      # optional SMTP password encryption
+DB_ADAPTER=sqlite
+DATABASE_URL=
 ```
+
+First admin: set `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` when the `admins` table is empty, or run `node scripts/create-admin.js <email> <password>`.
 
 ---
 

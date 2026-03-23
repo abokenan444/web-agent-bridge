@@ -5,6 +5,7 @@ const fs = require('fs');
 // Set test environment before requiring the app
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret-key-for-testing';
+process.env.JWT_SECRET_ADMIN = 'test-admin-secret-for-testing';
 
 // Clean test DB before run
 const TEST_DATA_DIR = path.join(__dirname, '..', 'data-test');
@@ -178,7 +179,9 @@ describe('Sites API', () => {
       .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.snippet).toContain('AIBridgeConfig');
-    expect(res.body.licenseKey).toMatch(/^WAB-/);
+    expect(res.body.snippet).toContain('siteId');
+    expect(res.body.snippet).not.toContain('_licenseKey');
+    expect(res.body.siteId).toBe(siteId);
   });
 
   test('GET /api/sites/:id/analytics - returns analytics', async () => {
@@ -201,6 +204,8 @@ describe('Sites API', () => {
 
 describe('License API', () => {
   let newLicenseKey;
+  let licensedSiteId;
+  let trackSessionToken;
 
   beforeAll(async () => {
     const res = await request(app)
@@ -208,6 +213,7 @@ describe('License API', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ domain: 'licensed.com', name: 'Licensed Site' });
     newLicenseKey = res.body.site.licenseKey;
+    licensedSiteId = res.body.site.id;
   });
 
   test('POST /api/license/verify - valid license', async () => {
@@ -243,18 +249,31 @@ describe('License API', () => {
     expect(res.status).toBe(400);
   });
 
-  test('POST /api/license/track - records analytics', async () => {
+  test('POST /api/license/token - siteId and matching Origin', async () => {
+    const res = await request(app)
+      .post('/api/license/token')
+      .set('Origin', 'http://licensed.com')
+      .send({ siteId: licensedSiteId });
+    expect(res.status).toBe(200);
+    expect(res.body.sessionToken).toBeDefined();
+    expect(res.body.siteId).toBe(licensedSiteId);
+    trackSessionToken = res.body.sessionToken;
+  });
+
+  test('POST /api/license/track - records analytics with sessionToken', async () => {
     const res = await request(app)
       .post('/api/license/track')
-      .send({ licenseKey: newLicenseKey, actionName: 'click_signup', agentId: 'test-agent', success: true });
+      .set('Origin', 'http://licensed.com')
+      .send({ sessionToken: trackSessionToken, actionName: 'click_signup', agentId: 'test-agent', success: true });
     expect(res.status).toBe(200);
     expect(res.body.recorded).toBe(true);
   });
 
-  test('POST /api/license/track - missing fields', async () => {
+  test('POST /api/license/track - missing session', async () => {
     const res = await request(app)
       .post('/api/license/track')
-      .send({ licenseKey: newLicenseKey });
+      .set('Origin', 'http://licensed.com')
+      .send({ actionName: 'x' });
     expect(res.status).toBe(400);
   });
 });

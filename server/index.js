@@ -1,5 +1,8 @@
 require('dotenv').config();
 
+const { assertSecretsAtStartup } = require('./config/secrets');
+assertSecretsAtStartup();
+
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
@@ -8,44 +11,70 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { setupWebSocket } = require('./ws');
 const { runMigrations } = require('./utils/migrate');
+const { maybeBootstrapAdmin } = require('./models/db');
 
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
 const licenseRoutes = require('./routes/license');
 const adminRoutes = require('./routes/admin');
 const billingRoutes = require('./routes/billing');
-const { handleWebhookEvent } = require('./services/stripe');
+const { handleWebhookRequest } = require('./services/stripe');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Trust first proxy (Nginx reverse proxy)
 app.set('trust proxy', 1);
 
-// ─── Security & Middleware ──────────────────────────────────────────────
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "ws:", "wss:"],
-      fontSrc: ["'self'", "https:", "data:"],
-      frameSrc: ["'none'"],
-      frameAncestors: ["'none'"],
-      objectSrc: ["'none'"],
-      baseUri: ["'self'"]
-    }
-  },
-  crossOriginEmbedderPolicy: false
-}));
-app.use(cors());
+const corsOrigins = (process.env.ALLOWED_ORIGINS
+  || 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 
-// Stripe webhook needs raw body — must be before express.json()
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      if (corsOrigins.includes(origin)) return callback(null, true);
+      if (process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+    credentials: true
+  })
+);
+
+const scriptSrc = process.env.CSP_ALLOW_UNSAFE_INLINE === 'false'
+  ? ["'self'"]
+  : ["'self'", "'unsafe-inline'"];
+const styleSrc = process.env.CSP_ALLOW_UNSAFE_INLINE === 'false'
+  ? ["'self'"]
+  : ["'self'", "'unsafe-inline'"];
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc,
+        styleSrc,
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", 'ws:', 'wss:'],
+        fontSrc: ["'self'", 'https:', 'data:'],
+        frameSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"]
+      }
+    },
+    crossOriginEmbedderPolicy: false
+  })
+);
+
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
-    await handleWebhookEvent(req);
+    await handleWebhookRequest(req);
     res.json({ received: true });
   } catch (err) {
     console.error('Webhook error:', err.message);
@@ -69,45 +98,20 @@ const licenseLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    // Rate limit by IP + license key (if provided) for better granularity
-    const key = req.body?.licenseKey || req.ip;
+    const key = req.body?.licenseKey || req.body?.siteId || req.ip;
     return `${req.ip}:${key}`;
   }
 });
 
-// Stricter limit for token exchange (auth-like endpoint)
-const tokenLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many token requests, please try again later' }
-});
-
-// Analytics tracking — generous but bounded
-const trackLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => `${req.ip}:${req.body?.licenseKey || 'anon'}`
-});
-
-// ─── Static Files ───────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/script', express.static(path.join(__dirname, '..', 'script')));
 
-// ─── API Routes ─────────────────────────────────────────────────────────
 app.use('/api/auth', apiLimiter, authRoutes);
 app.use('/api', apiLimiter, apiRoutes);
 app.use('/api/license', licenseLimiter, licenseRoutes);
-// Apply stricter limiters on specific license sub-endpoints
-app.use('/api/license/token', tokenLimiter);
-app.use('/api/license/track', trackLimiter);
 app.use('/api/admin', apiLimiter, adminRoutes);
 app.use('/api/billing', apiLimiter, billingRoutes);
 
-// ─── HTML Routes ────────────────────────────────────────────────────────
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));
 });
@@ -136,12 +140,10 @@ app.get('/cookies', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'cookies.html'));
 });
 
-// ─── CDN Versioned Script ───────────────────────────────────────────────
 const pkg = require('../package.json');
 app.use(`/v${pkg.version.split('.')[0]}`, express.static(path.join(__dirname, '..', 'script')));
 app.use('/latest', express.static(path.join(__dirname, '..', 'script')));
 
-// ─── SPA Fallback ───────────────────────────────────────────────────────
 app.get('*', (req, res) => {
   if (req.accepts('html')) {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
@@ -150,11 +152,10 @@ app.get('*', (req, res) => {
   }
 });
 
-// ─── Start ──────────────────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'test') {
-  // Run pending database migrations
   console.log('Running database migrations...');
   runMigrations();
+  maybeBootstrapAdmin();
 
   const server = http.createServer(app);
   setupWebSocket(server);
