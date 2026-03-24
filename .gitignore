@@ -5,3 +5,7 @@ data-test/
 *.db
 dist/
 *.tgz
+
+# Premium (paid) features — not open source
+public/premium.html
+public/css/premium.css

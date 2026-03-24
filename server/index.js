@@ -130,6 +130,9 @@ app.get('/admin/login', (req, res) => {
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'dashboard.html'));
 });
+app.get('/premium', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'premium.html'));
+});
 app.get('/privacy', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'privacy.html'));
 });

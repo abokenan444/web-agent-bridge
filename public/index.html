@@ -23,6 +23,7 @@
         <li><a href="#features">Features</a></li>
         <li><a href="#how-it-works">How It Works</a></li>
         <li><a href="#pricing">Pricing</a></li>
+        <li><a href="/premium">Premium</a></li>
         <li><a href="/docs">Docs</a></li>
       </ul>
       <div class="navbar-actions">
@@ -59,7 +60,7 @@
             <span class="comment">// Add the bridge to your website</span><br>
             &lt;<span class="keyword">script</span>&gt;<br>
             &nbsp;&nbsp;window.<span class="property">AIBridgeConfig</span> = {<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<span class="property">licenseKey</span>: <span class="string">"WAB-XXXXX-XXXXX"</span>,<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="property">siteId</span>: <span class="string">"your-site-id"</span>,<br>
             &nbsp;&nbsp;&nbsp;&nbsp;<span class="property">agentPermissions</span>: { <span class="property">click</span>: <span class="boolean">true</span>, <span class="property">fillForms</span>: <span class="boolean">true</span> }<br>
             &nbsp;&nbsp;};<br>
             &lt;/<span class="keyword">script</span>&gt;<br>
@@ -177,40 +178,57 @@ console.<span class="fn">log</span>(actions);
       <div class="section-header">
         <span class="label">Pricing</span>
         <h2>Simple, Transparent Pricing</h2>
-        <p>Start free, upgrade when you need advanced features. Open source forever.</p>
+        <p>Start free, upgrade when you need advanced features. Open source core forever.</p>
       </div>
 
-      <div class="grid-3">
+      <div class="grid-4">
         <div class="pricing-card">
           <div class="pricing-tier">Free</div>
           <div class="pricing-price">$0 <span>/mo</span></div>
-          <div class="pricing-desc">Perfect for personal projects and experimentation.</div>
+          <div class="pricing-desc">Personal projects and experimentation.</div>
           <ul class="pricing-features">
             <li>Auto-discovery of actions</li>
             <li>Click &amp; scroll permissions</li>
             <li>Rate limiting (60/min)</li>
             <li>Basic logging</li>
             <li>1 site</li>
+            <li>Community support</li>
             <li class="disabled">Form filling</li>
-            <li class="disabled">API access</li>
             <li class="disabled">Analytics dashboard</li>
           </ul>
           <a href="/register" class="btn btn-secondary" style="width:100%;">Get Started Free</a>
         </div>
 
+        <div class="pricing-card">
+          <div class="pricing-tier">Starter</div>
+          <div class="pricing-price">$9 <span>/mo</span></div>
+          <div class="pricing-desc">Small sites with basic analytics &amp; protection.</div>
+          <ul class="pricing-features">
+            <li>Everything in Free</li>
+            <li>Form filling &amp; submit</li>
+            <li>Agent Traffic Intelligence</li>
+            <li>Smart Actions (basic)</li>
+            <li>Up to 3 sites</li>
+            <li>Automated login support</li>
+            <li>Same-day email support</li>
+            <li class="disabled">API access</li>
+          </ul>
+          <a href="/register" class="btn btn-secondary" style="width:100%;">Start Starter</a>
+        </div>
+
         <div class="pricing-card featured">
           <div class="pricing-tier">Pro</div>
           <div class="pricing-price">$29 <span>/mo</span></div>
-          <div class="pricing-desc">For businesses that want full AI agent integration.</div>
+          <div class="pricing-desc">Full power for businesses and teams.</div>
           <ul class="pricing-features">
-            <li>Everything in Free</li>
-            <li>Form filling &amp; submission</li>
+            <li>Everything in Starter</li>
             <li>Internal API access</li>
-            <li>Advanced analytics</li>
+            <li>Advanced Exploit Shield</li>
+            <li>CRM &amp; Cloud Integrations</li>
             <li>Up to 10 sites</li>
-            <li>Automated login support</li>
-            <li>Data extraction</li>
-            <li>Priority support</li>
+            <li>Custom Bridge Script</li>
+            <li>Stealth Mode Pro</li>
+            <li>Private CDN + 1h support</li>
           </ul>
           <a href="/register" class="btn btn-primary" style="width:100%;">Start Pro Trial</a>
         </div>
@@ -218,19 +236,25 @@ console.<span class="fn">log</span>(actions);
         <div class="pricing-card">
           <div class="pricing-tier">Enterprise</div>
           <div class="pricing-price">Custom</div>
-          <div class="pricing-desc">Custom solutions for large-scale deployments.</div>
+          <div class="pricing-desc">Unlimited scale with compliance &amp; SLA.</div>
           <ul class="pricing-features">
             <li>Everything in Pro</li>
-            <li>Unlimited sites</li>
-            <li>Custom rate limits</li>
-            <li>Webhook integrations</li>
+            <li>Unlimited sites &amp; agents</li>
+            <li>Multi-tenant management</li>
+            <li>Extended Audit &amp; Compliance</li>
+            <li>Virtual Sandbox</li>
             <li>SSO / SAML</li>
-            <li>Dedicated support</li>
-            <li>SLA guarantee</li>
+            <li>15-min SLA guarantee</li>
             <li>Custom development</li>
           </ul>
           <a href="mailto:sales@webagentbridge.com" class="btn btn-secondary" style="width:100%;">Contact Sales</a>
         </div>
+      </div>
+
+      <div style="text-align:center;margin-top:40px;">
+        <a href="/premium" class="btn btn-ghost" style="color:var(--accent-purple);">
+          View all 12 premium services in detail &rarr;
+        </a>
       </div>
     </div>
   </section>
@@ -264,6 +288,7 @@ console.<span class="fn">log</span>(actions);
           <h4>Product</h4>
           <ul>
             <li><a href="#features">Features</a></li>
+            <li><a href="/premium">Premium Services</a></li>
             <li><a href="#pricing">Pricing</a></li>
             <li><a href="/docs">Documentation</a></li>
             <li data-wab-auth="signed-in" style="display:none"><a href="/dashboard">Dashboard</a></li>

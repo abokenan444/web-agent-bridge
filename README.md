@@ -52,6 +52,29 @@ WAB is an open-source middleware layer that bridges AI agents and websites — l
 
 ---
 
+## Premium Services (webagentbridge.com)
+
+The open-source core is free forever. For teams and businesses that need more, **[webagentbridge.com](https://webagentbridge.com/premium)** offers paid add-ons and higher-tier plans:
+
+| # | Service | Plans |
+|---|---------|-------|
+| 1 | **Agent Traffic Intelligence** — Deep analytics: agent type, platform, country, behavioral classification, anomaly alerts | Starter+ |
+| 2 | **Advanced Exploit Shield** — Behavioral fingerprint blocking, unauthorized command detection, periodic security reports | Pro+ |
+| 3 | **Pre-built Smart Actions Library** — Ready-made action packs for WooCommerce, Shopify, WordPress, Salesforce with auto-updates | Starter+ |
+| 4 | **Custom AI Agents as a Service** — Visual agent builder, task scheduling, cloud-based execution | Pro+ |
+| 5 | **CRM & Cloud Integrations** — Salesforce, HubSpot, Zoho; export to BigQuery/Snowflake/Datadog; custom webhooks | Pro+ |
+| 6 | **Multi-Tenant Permission Management** — Sub-users, per-user quotas, central control panel for agencies | Enterprise |
+| 7 | **AI-Powered Priority Support** — Smart chatbot, live video sessions, SLA from 15 min (Enterprise) to same-day (Starter) | Starter+ |
+| 8 | **Custom Bridge Script** — Plugin-based custom actions, performance optimization, automatic zero-day patches | Pro+ |
+| 9 | **Stealth Mode Pro** — Customizable human-like behavior profiles, anti-detection bypass, monthly fingerprint updates | Pro+ |
+| 10 | **Private CDN** — Global edge network, custom domain (`bridge.yoursite.com`), geo performance stats | Pro+ |
+| 11 | **Extended Audit Logs & Compliance** — 7-year retention, HIPAA/GDPR/SOC2 settings, signed PDF/CSV exports | Enterprise |
+| 12 | **Virtual Sandbox Environment** — Isolated test environment, simulated agent traffic, before/after benchmarks | Enterprise |
+
+Plans: **Free** (open source) → **Starter $9/mo** → **Pro $29/mo** → **Enterprise (custom)**. Visit [webagentbridge.com/premium](https://webagentbridge.com/premium) for details.
+
+---
+
 ## Quick Start
 
 ### 1. Install & Run the Server
