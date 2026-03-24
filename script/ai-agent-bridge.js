@@ -1354,9 +1354,54 @@
       getContext: () => bridge.toBiDi()
     };
 
+    // Inject NoJS fallback elements for pages that might disable JS later or
+    // for hybrid environments (SSR, partial hydration, headless crawlers).
+    if (config.siteId) {
+      injectNoScriptFallback(config);
+    }
+
     if (typeof CustomEvent !== 'undefined') {
       document.dispatchEvent(new CustomEvent('wab:ready', { detail: { version: VERSION } }));
     }
+  }
+
+  function injectNoScriptFallback(config) {
+    try {
+      var siteId = config.siteId;
+      var base = config.apiBaseUrl || '';
+
+      // Add <noscript> block if not already present
+      if (!document.querySelector('noscript [src*="noscript/pixel/' + siteId + '"]')) {
+        var ns = document.createElement('noscript');
+        ns.innerHTML =
+          '<link rel="stylesheet" href="' + base + '/api/noscript/css/' + siteId + '">' +
+          '<img src="' + base + '/api/noscript/pixel/' + siteId + '?action=pageview&t=noscript" width="1" height="1" alt="" style="position:absolute;opacity:0">';
+        document.body.appendChild(ns);
+      }
+
+      // Expose noscript endpoints on the bridge for AI agents
+      global.__wab_noscript = {
+        pixel: base + '/api/noscript/pixel/' + siteId,
+        css: base + '/api/noscript/css/' + siteId,
+        bridge: base + '/api/noscript/bridge/' + siteId,
+        embed: base + '/api/noscript/embed/' + siteId,
+        serverTrack: base + '/api/noscript/server-track',
+        status: base + '/api/noscript/status/' + siteId
+      };
+
+      // Add meta tags for crawlers/agents that read HTML
+      if (!document.querySelector('meta[name="wab:noscript"]')) {
+        var meta1 = document.createElement('meta');
+        meta1.name = 'wab:noscript';
+        meta1.content = 'true';
+        document.head.appendChild(meta1);
+
+        var meta2 = document.createElement('meta');
+        meta2.name = 'wab:bridge';
+        meta2.content = base + '/api/noscript/bridge/' + siteId;
+        document.head.appendChild(meta2);
+      }
+    } catch (_) {}
   }
 
   if (document.readyState === 'loading') {
