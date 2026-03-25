@@ -15,7 +15,7 @@ const {
   generateFairnessReport
 } = require('../services/fairness');
 
-const WAB_VERSION = '1.1.1';
+const WAB_VERSION = '1.1.2';
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
