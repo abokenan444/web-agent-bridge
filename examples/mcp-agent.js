@@ -50,21 +50,30 @@ async function main() {
   // Step 3: Execute built-in tools
   console.log('\n3. Executing wab_get_page_info...');
   try {
-    const info = await adapter.executeTool('wab_get_page_info', {});
-    console.log(`   Title:   ${info.title || 'N/A'}`);
-    console.log(`   Version: ${info.bridgeVersion || 'N/A'}`);
+    const infoResult = await adapter.executeTool('wab_get_page_info', {});
+    const info = infoResult.content;
+    if (infoResult.is_error) {
+      console.log(`   Error: ${info.error}`);
+    } else {
+      console.log(`   Title:   ${info.title || 'N/A'}`);
+      console.log(`   Version: ${info.bridgeVersion || 'N/A'}`);
+      console.log(`   Domain:  ${info.domain || 'N/A'}`);
+    }
   } catch (err) {
-    console.log(`   (Requires bridge script on page: ${err.message})`);
+    console.log(`   Error: ${err.message}`);
   }
 
   // Step 4: Search the fairness registry
   console.log('\n4. Fairness-weighted search (demo):');
   try {
-    const search = await adapter.executeTool('wab_fairness_search', {
+    const searchResult = await adapter.executeTool('wab_fairness_search', {
       query: 'e-commerce',
       limit: 5
     });
-    if (search.results?.length) {
+    const search = searchResult.content;
+    if (searchResult.is_error) {
+      console.log(`   Error: ${search.error}`);
+    } else if (search.results?.length) {
       search.results.forEach(r => {
         console.log(`   - ${r.name} (${r.domain}) — score: ${r.final_score}`);
       });

@@ -1,6 +1,6 @@
 {
   "name": "wab-mcp-adapter",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "MCP adapter for Web Agent Bridge — expose WAB site capabilities as MCP tools",
   "main": "index.js",
   "keywords": ["wab", "mcp", "ai-agent", "model-context-protocol", "web-agent-bridge"],

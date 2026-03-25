@@ -1,5 +1,5 @@
 /**
- * Web Agent Bridge v1.1.0
+ * Web Agent Bridge v1.1.1
  * Open protocol + runtime for AI agent ↔ website interaction
  * https://github.com/web-agent-bridge
  * License: MIT
@@ -7,7 +7,7 @@
 (function (global) {
   'use strict';
 
-  const VERSION = '1.1.0';
+  const VERSION = '1.1.1';
   const PROTOCOL_VERSION = '1.0';
   const LICENSING_SERVER = 'https://api.webagentbridge.com';
   const DISCOVERY_PATHS = ['/agent-bridge.json', '/.well-known/wab.json'];

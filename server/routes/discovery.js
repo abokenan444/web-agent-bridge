@@ -15,7 +15,7 @@ const {
   generateFairnessReport
 } = require('../services/fairness');
 
-const WAB_VERSION = '1.1.0';
+const WAB_VERSION = '1.1.1';
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
@@ -77,10 +77,10 @@ function buildDiscoveryDocument(site) {
     },
     agent_access: {
       bridge_script: '/script/ai-agent-bridge.js',
-      api_base: '/api/license',
+      api_base: '/api/wab',
       websocket: '/ws/analytics',
-      noscript: '/api/noscript',
-      discovery: '/api/discovery'
+      noscript: `/api/noscript/bridge/${site.id}`,
+      discovery: `/api/discovery/${site.id}`
     },
     fairness: {
       is_independent: dirEntry ? !!dirEntry.is_independent : false,
@@ -95,10 +95,15 @@ function buildDiscoveryDocument(site) {
       sandbox: true
     },
     endpoints: {
+      authenticate: '/api/wab/authenticate',
+      discover: `/api/wab/discover?siteId=${site.id}`,
+      actions: `/api/wab/actions?siteId=${site.id}`,
+      execute: '/api/wab/actions/{actionName}',
+      read: '/api/wab/read',
+      page_info: `/api/wab/page-info?siteId=${site.id}`,
+      search: '/api/wab/search',
+      ping: '/api/wab/ping',
       token_exchange: '/api/license/token',
-      verify: '/api/license/verify',
-      track: '/api/license/track',
-      actions: `/api/discovery/${site.id}`,
       bridge_page: `/api/noscript/bridge/${site.id}`
     }
   };

@@ -335,14 +335,14 @@ describe('WAB Protocol API', () => {
     const res = await request(app).get('/api/wab/ping');
     expect(res.status).toBe(200);
     expect(res.body.result.pong).toBe(true);
-    expect(res.body.result.version).toBe('1.1.0');
+    expect(res.body.result.version).toBe('1.1.1');
     expect(res.body.result.protocol).toBe('1.0');
   });
 
   test('GET /api/wab/discover - returns discovery doc for siteId', async () => {
     const res = await request(app).get(`/api/wab/discover?siteId=${wabSiteId}`);
     expect(res.status).toBe(200);
-    expect(res.body.result.wab_version).toBe('1.1.0');
+    expect(res.body.result.wab_version).toBe('1.1.1');
     expect(res.body.result.provider.name).toBe('WAB API Test');
     expect(res.body.result.endpoints).toBeDefined();
   });
@@ -358,7 +358,7 @@ describe('WAB Protocol API', () => {
     const res = await request(app).get(`/api/wab/page-info?siteId=${wabSiteId}`);
     expect(res.status).toBe(200);
     expect(res.body.result.domain).toBe('wab-test.com');
-    expect(res.body.result.bridgeVersion).toBe('1.1.0');
+    expect(res.body.result.bridgeVersion).toBe('1.1.1');
     expect(res.body.result.endpoints).toBeDefined();
   });
 
@@ -394,7 +394,7 @@ describe('Discovery Protocol', () => {
   test('GET /api/discovery/:siteId - returns discovery document', async () => {
     const res = await request(app).get(`/api/discovery/${discoverySiteId}`);
     expect(res.status).toBe(200);
-    expect(res.body.wab_version).toBe('1.1.0');
+    expect(res.body.wab_version).toBe('1.1.1');
     expect(res.body.provider.name).toBe('Discovery Test');
     expect(res.body.provider.domain).toBe('discover-test.com');
     expect(res.body.capabilities).toBeDefined();
@@ -410,7 +410,7 @@ describe('Discovery Protocol', () => {
   test('GET /api/discovery/registry - returns registry', async () => {
     const res = await request(app).get('/api/discovery/registry');
     expect(res.status).toBe(200);
-    expect(res.body.wab_version).toBe('1.1.0');
+    expect(res.body.wab_version).toBe('1.1.1');
     expect(Array.isArray(res.body.listings)).toBe(true);
   });
 
