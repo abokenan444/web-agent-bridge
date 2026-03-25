@@ -19,6 +19,7 @@ const licenseRoutes = require('./routes/license');
 const adminRoutes = require('./routes/admin');
 const billingRoutes = require('./routes/billing');
 const noscriptRoutes = require('./routes/noscript');
+const discoveryRoutes = require('./routes/discovery');
 const { handleWebhookRequest } = require('./services/stripe');
 
 const app = express();
@@ -113,6 +114,7 @@ app.use('/api/license', licenseLimiter, licenseRoutes);
 app.use('/api/admin', apiLimiter, adminRoutes);
 app.use('/api/billing', apiLimiter, billingRoutes);
 app.use('/api/noscript', noscriptRoutes);
+app.use('/', discoveryRoutes);
 
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));

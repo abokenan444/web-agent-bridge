@@ -6,45 +6,85 @@
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Socket](https://img.shields.io/badge/Socket-Verified-brightgreen.svg)](https://socket.dev/npm/package/web-agent-bridge)
 
 > **robots.txt told bots what NOT to do. WAB tells AI agents what they CAN do.**
 
-**English** | **[العربية](README.ar.md)**
+**English** | **[العربية](README.ar.md)** | **[Protocol Spec](docs/SPEC.md)** | **[Socket Report](https://socket.dev/npm/package/web-agent-bridge)**
 
-WAB is an open-source middleware layer that bridges AI agents and websites — like **OpenAPI for human-facing pages**. Website owners embed a script that exposes a standardized `window.AICommands` interface. AI agents discover available actions, execute commands, and interact with sites accurately — no DOM parsing, no scraping, no guesswork.
+WAB is an **open protocol + runtime** for AI agents to interact with websites — the **OpenAPI for human-facing pages**. It provides a standardized discovery format (`agent-bridge.json`), a command protocol, and a fairness layer that ensures small businesses get equal visibility alongside large platforms.
+
+WAB transforms websites from opaque HTML into **agent-readable endpoints** with declared capabilities, permissions, and actions. AI agents discover what a site offers, authenticate, and execute commands through a uniform protocol — no DOM scraping, no guesswork, no bias toward big brands.
+
+### Architecture: Protocol + Runtime + Ecosystem
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    WAB Protocol (Spec)                    │
+│  agent-bridge.json · Commands · Lifecycle · Fairness     │
+├────────────┬───────────────────┬─────────────────────────┤
+│ JS Runtime │  HTTP Transport   │  MCP Adapter            │
+│ AICommands │  REST + WebSocket │  WAB → MCP Tools        │
+├────────────┴───────────────────┴─────────────────────────┤
+│               Discovery Registry + Fairness Engine       │
+└──────────────────────────────────────────────────────────┘
+```
 
 ### Three Paths to WAB
 
 | Path | For | How |
 |---|---|---|
-| **🏢 Website Owner** | Control how AI interacts with your site | Embed the script, configure permissions |
-| **🤖 Agent Developer** | Build reliable agents that work on any WAB-enabled site | Use `window.AICommands` or the Agent SDK |
+| **🏢 Website Owner** | Control how AI interacts with your site | Embed the script, publish `agent-bridge.json` |
+| **🤖 Agent Developer** | Build reliable agents that work on any WAB-enabled site | Use `window.AICommands`, the Agent SDK, or the MCP Adapter |
 | **🔧 Self-Hosting** | Run the full WAB platform for your organization | Clone, deploy, manage licenses & analytics |
-| **WordPress** | Sites powered by WP | Use the **[Web Agent Bridge WordPress plugin](web-agent-bridge-wordpress/README.md)** (settings, shortcode, per-page disable, hooks) |
+| **🔌 MCP Integration** | Connect WAB to Claude, GPT, or any MCP-compatible agent | Use `wab-mcp-adapter` |
+| **WordPress** | Sites powered by WP | Use the **[Web Agent Bridge WordPress plugin](web-agent-bridge-wordpress/README.md)** |
+
+---
+
+## What's New in v1.1.0
+
+- **WAB Protocol Specification v1.0** — Formal protocol spec (`docs/SPEC.md`) with discovery format, command protocol, lifecycle, and fairness layer
+- **Discovery Protocol** — Sites publish `agent-bridge.json` or `/.well-known/wab.json` for agent discovery
+- **MCP Adapter** — `wab-mcp-adapter` converts WAB actions into MCP tools for Claude/GPT integration
+- **Fairness Engine** — Neutrality layer ensures equal visibility for small businesses and independent sites
+- **Discovery Registry** — Public searchable directory of WAB-enabled sites with fairness-weighted results
+- **9 Protocol Commands** — `wab.discover`, `wab.getContext`, `wab.getActions`, `wab.executeAction`, `wab.readContent`, `wab.getPageInfo`, `wab.authenticate`, `wab.subscribe`, `wab.ping`
 
 ---
 
 ## Features
 
+### Protocol Layer
+- **WAB Specification v1.0** — Formal protocol spec defining discovery, commands, lifecycle, and fairness ([docs/SPEC.md](docs/SPEC.md))
+- **Discovery Protocol** — Sites declare capabilities via `agent-bridge.json` or `/.well-known/wab.json`
+- **Command Protocol** — 9 standard methods with request/response format (transport-agnostic)
+- **Lifecycle Protocol** — Discover → Authenticate → Plan → Execute → Confirm
+- **MCP Compatibility** — Full adapter for Model Context Protocol (Claude, GPT, LangChain)
+
+### Fairness & Neutrality
+- **Fairness Engine** — Neutrality scoring ensures small businesses get equal agent visibility
+- **Discovery Registry** — Public directory of WAB-enabled sites with anti-bias ranking
+- **Commission Transparency** — Sites declare commission rates; agents can favor direct providers
+- **Independent Business Priority** — Self-declared independent sites get fairness scoring boost
+
+### Runtime
 - **Auto-Discovery** — Automatically detects buttons, forms, and navigation on the page
 - **Permission System** — Granular control over what AI agents can do (click, fill forms, API access, etc.)
 - **Standardized Interface** — Unified `window.AICommands` object any agent can consume
-- **Secure License Exchange** — Embed uses public `siteId` + `/api/license/token`; long-lived license keys stay in the owner dashboard, not in HTML
+- **Self-Healing Selectors** — Resilient element resolution with 7-strategy fuzzy matching for SPAs
+- **Security Sandbox** — Origin validation, session tokens, command signing, audit logging, auto-lockdown
+- **Stealth Mode** — Human-like interaction patterns (requires explicit consent)
+- **NoJS Fallback** — CSS tracking, pixel tracking, and SSR bridge for JavaScript-disabled environments
+
+### Infrastructure
+- **Secure License Exchange** — Embed uses `siteId` + token exchange; keys stay in the dashboard
 - **Rate Limiting** — Multi-dimensional abuse protection (IP + license key + site)
 - **Analytics Dashboard** — Track how AI agents interact with your site
 - **Real-Time Analytics** — WebSocket-based live event streaming with auto-reconnection
-- **In-Memory Caching** — TTL-based cache layer reduces DB reads on hot paths
-- **Analytics Queue** — Batched writes with transaction support for high-throughput tracking
 - **WebDriver BiDi Compatible** — Standard protocol support via `window.__wab_bidi`
 - **CDN Versioning** — Serve scripts via versioned URLs (`/v1/ai-agent-bridge.js`, `/latest/ai-agent-bridge.js`)
 - **Docker Ready** — One-command deployment with Docker Compose
-- **DB Migrations** — Numbered SQL migration runner with tracking table
-- **Custom Actions** — Register your own actions with custom handlers
-- **Subscription Tiers** — Free core + paid premium features (API access, analytics, automated login)
-- **Event System** — Subscribe to bridge events for monitoring
-- **Security Sandbox** — Origin validation, session tokens, command signing, audit logging, auto-lockdown
-- **Self-Healing Selectors** — Resilient element resolution with fuzzy matching for dynamic SPAs
-- **Stealth Mode** — Human-like interaction patterns (requires explicit consent)
 - **Multi-Database** — SQLite (default), PostgreSQL, MySQL via pluggable adapters
 - **Agent SDK** — Built-in SDK for building AI agents with Puppeteer/Playwright
 - **Admin Dashboard** — User management, tier grants, system analytics
@@ -131,18 +171,150 @@ const info = bridge.getPageInfo();          // get page metadata
 
 ---
 
+## Discovery Protocol (`agent-bridge.json`)
+
+Any website can declare its WAB capabilities by serving a discovery document at `/agent-bridge.json` or `/.well-known/wab.json`. AI agents fetch this file to understand what a site offers before interacting.
+
+```json
+{
+  "wab_version": "1.0",
+  "provider": {
+    "name": "Local Bookshop",
+    "domain": "localbookshop.com",
+    "category": "e-commerce",
+    "description": "Independent bookshop"
+  },
+  "capabilities": {
+    "commands": ["readContent", "click", "fillForms"],
+    "permissions": { "readContent": true, "click": true, "fillForms": true },
+    "tier": "starter",
+    "transport": ["js_global", "http"]
+  },
+  "agent_access": {
+    "bridge_script": "/script/ai-agent-bridge.js",
+    "api_base": "/api/license",
+    "selectors": { "search": "#search-input", "cart": ".add-to-cart" }
+  },
+  "fairness": {
+    "is_independent": true,
+    "commission_rate": 0,
+    "direct_benefit": "Owner is the producer",
+    "neutrality_score": 85
+  },
+  "security": {
+    "session_required": true,
+    "origin_validation": true,
+    "rate_limit": 60,
+    "sandbox": true
+  }
+}
+```
+
+WAB servers auto-generate this document from each site's configuration. No manual file creation needed — register your site and the discovery endpoint is live.
+
+### Discovery API Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/.well-known/wab.json` | GET | Discovery document (domain-matched) |
+| `/agent-bridge.json` | GET | Alternative discovery location |
+| `/api/discovery/:siteId` | GET | Discovery document for a specific site |
+| `/api/discovery/registry` | GET | Public directory of WAB-enabled sites |
+| `/api/discovery/search` | GET | Fairness-weighted site search |
+| `/api/discovery/register` | POST | Register site in directory (authenticated) |
+
+---
+
+## MCP Adapter (Model Context Protocol)
+
+The `wab-mcp-adapter` converts WAB capabilities into MCP tools, so Claude, GPT, LangChain, or any MCP-compatible agent can interact with WAB-enabled sites.
+
+```javascript
+const { WABMCPAdapter } = require('web-agent-bridge/wab-mcp-adapter');
+
+const adapter = new WABMCPAdapter({
+  siteUrl: 'https://example.com',
+  transport: 'http'
+});
+
+// Discover site capabilities
+const discovery = await adapter.discover();
+
+// Get all available MCP tools
+const tools = await adapter.getTools();
+// → [{ name: 'wab_discover', ... }, { name: 'wab_click_signup', ... }, ...]
+
+// Execute a tool (just like any MCP tool call)
+const result = await adapter.executeTool('wab_execute_action', {
+  name: 'signup',
+  data: { email: 'user@test.com' }
+});
+```
+
+### Built-in MCP Tools
+
+| Tool | Description |
+|---|---|
+| `wab_discover` | Discover site capabilities and fairness data |
+| `wab_get_actions` | List all available actions |
+| `wab_execute_action` | Execute any action by name |
+| `wab_read_content` | Read page content by CSS selector |
+| `wab_get_page_info` | Get page metadata and bridge status |
+| `wab_fairness_search` | Search WAB registry with fairness-weighted results |
+| `wab_authenticate` | Authenticate with a WAB site |
+
+See [`wab-mcp-adapter/README.md`](wab-mcp-adapter/README.md) for the full API reference.
+
+---
+
+## Fairness Engine
+
+WAB includes a **Neutrality Layer** — a fairness engine that prevents AI agents from systematically favoring large platforms over small businesses.
+
+### How It Works
+
+1. **Neutrality Scoring** — Each site gets a score (0-100) based on config quality, trust signatures, and commission transparency — not brand recognition
+2. **Anti-Bias Ranking** — Search results are fairness-weighted: independent businesses get +15%, transparent commission sites get +10%
+3. **Position Rotation** — Top results are shuffled to prevent position lock-in
+4. **Monopoly Prevention** — No single provider can dominate more than 30% of top results
+
+### Register Your Site
+
+```bash
+# Register in the WAB discovery directory
+curl -X POST https://yourserver.com/api/discovery/register \
+  -H "Authorization: Bearer YOUR_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "siteId": "your-site-uuid",
+    "category": "e-commerce",
+    "is_independent": true,
+    "commission_rate": 0,
+    "direct_benefit": "Products from local artisans",
+    "tags": ["handmade", "local", "organic"]
+  }'
+```
+
+---
+
 ## Project Structure
 
 ```
 web-agent-bridge/
+├── docs/
+│   └── SPEC.md             # WAB Protocol Specification v1.0
 ├── server/                 # Express.js backend
 │   ├── index.js            # Server entry point
 │   ├── routes/
 │   │   ├── auth.js         # Authentication (register/login)
 │   │   ├── api.js          # Sites, config, analytics API
-│   │   ├── license.js      # License verification, token exchange & tracking
+│   │   ├── license.js      # License verification & token exchange
+│   │   ├── discovery.js    # Discovery protocol endpoints
+│   │   ├── noscript.js     # NoJS fallback (pixel, CSS, SSR)
 │   │   ├── admin.js        # Admin dashboard API
 │   │   └── billing.js      # Stripe billing integration
+│   ├── services/
+│   │   └── fairness.js     # Fairness engine & neutrality layer
 │   ├── middleware/
 │   │   └── auth.js         # JWT authentication middleware
 │   ├── models/
@@ -151,19 +323,20 @@ web-agent-bridge/
 │   └── utils/
 │       ├── cache.js        # In-memory cache + analytics queue
 │       └── migrate.js      # Migration runner
+├── wab-mcp-adapter/        # MCP adapter for WAB → Claude/GPT
+│   ├── index.js            # WABMCPAdapter class
+│   ├── package.json
+│   └── README.md
 ├── public/                 # Frontend
 │   ├── index.html          # Landing page
 │   ├── dashboard.html      # Management dashboard
 │   ├── docs.html           # Documentation
-│   ├── login.html          # Sign in
-│   ├── register.html       # Sign up
 │   ├── admin/              # Admin panel
-│   ├── js/
-│   │   └── ws-client.js    # WebSocket client with auto-reconnect
+│   ├── js/                 # Client-side utilities
 │   └── css/styles.css      # Design system
 ├── script/
 │   └── ai-agent-bridge.js  # The bridge script (embed in websites)
-├── examples/               # Agent examples (Puppeteer, BiDi, Vision)
+├── examples/               # Agent examples (Puppeteer, BiDi, MCP, Vision)
 ├── sdk/                    # Agent SDK for Puppeteer/Playwright
 ├── .env                    # Environment variables
 └── package.json
@@ -200,6 +373,16 @@ web-agent-bridge/
 | `/api/license/session` | POST | Validate session token (domain-locked) |
 | `/api/license/track` | POST | Record analytics (`sessionToken` + Origin; legacy `licenseKey` only if `ALLOW_LEGACY_LICENSE_TRACK`) |
 
+### Discovery Protocol (Public)
+| Endpoint | Method | Description |
+|---|---|---|
+| `/.well-known/wab.json` | GET | Discovery document for the requesting domain |
+| `/agent-bridge.json` | GET | Alternative discovery location |
+| `/api/discovery/:siteId` | GET | Discovery document for a specific site |
+| `/api/discovery/registry` | GET | Public directory of WAB-enabled sites |
+| `/api/discovery/search?q=&category=` | GET | Fairness-weighted site search |
+| `/api/discovery/register` | POST | Register site in directory (authenticated) |
+
 ---
 
 ## Bridge Script API
@@ -208,18 +391,22 @@ Once loaded, `window.AICommands` exposes:
 
 | Method | Description |
 |---|---|
+| `discover()` | Get full discovery document with protocol info and fairness data |
+| `ping()` | Health check — returns version, protocol, ready state |
 | `getActions(category?)` | List available actions |
 | `getAction(name)` | Get a specific action |
 | `execute(name, params?)` | Execute an action |
 | `readContent(selector)` | Read element content |
 | `getPageInfo()` | Get page and bridge metadata |
+| `subscribe(event, callback)` | Subscribe to events with subscription ID |
+| `unsubscribe(subscriptionId)` | Unsubscribe from events |
 | `waitForElement(selector, timeout?)` | Wait for DOM element |
 | `waitForNavigation(timeout?)` | Wait for URL change |
 | `registerAction(def)` | Register a custom action |
 | `authenticate(key, meta?)` | Authenticate an agent |
 | `refresh()` | Re-scan the page |
 | `onReady(callback)` | Callback when bridge is ready |
-| `events.on(event, cb)` | Subscribe to events |
+| `events.on(event, cb)` | Subscribe to raw events |
 
 ---
 
@@ -275,13 +462,17 @@ window.AIBridgeConfig = {
 
 ## Tech Stack
 
+- **Protocol**: WAB Specification v1.0 with RFC 2119 conformance levels
 - **Backend**: Node.js + Express + WebSocket (ws)
 - **Database**: SQLite (via better-sqlite3) with migration runner
 - **Auth**: JWT + bcrypt + session tokens (domain-locked)
+- **MCP**: WAB-to-MCP adapter for Claude, GPT, LangChain integration
+- **Fairness**: Neutrality engine with anti-bias ranking and monopoly prevention
+- **Discovery**: Auto-generated `agent-bridge.json` + public registry
 - **Caching**: In-memory TTL cache + batched analytics queue
 - **Payments**: Stripe integration with billing portal
 - **Frontend**: Vanilla HTML/CSS/JS (no framework dependencies)
-- **Security**: Helmet, CORS, CSP, multi-layer rate limiting
+- **Security**: Helmet, CORS, CSP, multi-layer rate limiting, sandbox
 - **Containers**: Docker + Docker Compose
 - **CI/CD**: GitHub Actions (test + auto-publish to npm)
 - **Testing**: Jest + Supertest
@@ -304,7 +495,8 @@ const result = await window.__wab_bidi.send({
 });
 
 // Supported methods:
-// wab.getContext, wab.getActions, wab.executeAction, wab.readContent, wab.getPageInfo
+// wab.discover, wab.getContext, wab.getActions, wab.executeAction,
+// wab.readContent, wab.getPageInfo, wab.authenticate, wab.subscribe, wab.ping
 ```
 
 ---
@@ -440,11 +632,13 @@ Ready-to-run agent examples in the [`examples/`](examples/) directory:
 |---|---|
 | `puppeteer-agent.js` | Basic agent using Puppeteer + `window.AICommands` |
 | `bidi-agent.js` | Agent using WebDriver BiDi protocol via `window.__wab_bidi` |
+| `mcp-agent.js` | MCP adapter demo — WAB actions as MCP tools for Claude/GPT |
 | `vision-agent.js` | Vision/NLP agent — resolves natural language intents to actions using a local keyword-based resolver (no external API) |
 
 ```bash
 node examples/puppeteer-agent.js http://localhost:3000
 node examples/bidi-agent.js http://localhost:3000
+node examples/mcp-agent.js http://localhost:3000
 node examples/vision-agent.js http://localhost:3000
 ```
 

@@ -1,14 +1,16 @@
 /**
- * Web Agent Bridge v1.0.0
- * Open-source middleware for AI agent ↔ website interaction
+ * Web Agent Bridge v1.1.0
+ * Open protocol + runtime for AI agent ↔ website interaction
  * https://github.com/web-agent-bridge
  * License: MIT
  */
 (function (global) {
   'use strict';
 
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
+  const PROTOCOL_VERSION = '1.0';
   const LICENSING_SERVER = 'https://api.webagentbridge.com';
+  const DISCOVERY_PATHS = ['/agent-bridge.json', '/.well-known/wab.json'];
 
   // ─── Default Configuration ────────────────────────────────────────────
   const DEFAULT_CONFIG = {
@@ -576,9 +578,11 @@
       this.authenticated = false;
       this.agentInfo = null;
       this._licenseVerified = null;
+      this._discoveryDoc = null;
       this._ready = false;
       this._readyCallbacks = [];
       this._mutationObserver = null;
+      this._eventSubscriptions = new Map();
 
       // Enable stealth mode if configured (requires consent: true)
       if (this.config.stealth?.enabled && this.config.stealth?.consent === true) {
@@ -590,6 +594,8 @@
 
     // ── Initialization ──────────────────────────────────────────────────
     async _init() {
+      await this._fetchDiscoveryDocument();
+
       if (this.config.configEndpoint && (this.config.siteId || this.config._licenseKey || this.config.licenseKey)) {
         await this._secureLicenseExchange();
       } else if (this.config.licenseKey) {
@@ -604,8 +610,23 @@
       this._ready = true;
       this._readyCallbacks.forEach(cb => cb());
       this._readyCallbacks = [];
-      this.events.emit('ready', { version: VERSION, tier: this.getEffectiveTier() });
-      this.logger.log('init', { version: VERSION, tier: this.getEffectiveTier(), security: 'sandbox-active' });
+      this.events.emit('ready', { version: VERSION, protocol: PROTOCOL_VERSION, tier: this.getEffectiveTier() });
+      this.logger.log('init', { version: VERSION, protocol: PROTOCOL_VERSION, tier: this.getEffectiveTier(), security: 'sandbox-active' });
+    }
+
+    async _fetchDiscoveryDocument() {
+      var base = this._getLicenseApiBase();
+      for (var i = 0; i < DISCOVERY_PATHS.length; i++) {
+        try {
+          var res = await fetch(base + DISCOVERY_PATHS[i], { method: 'GET', credentials: 'omit' });
+          if (res.ok) {
+            this._discoveryDoc = await res.json();
+            this.logger.log('discovery', { path: DISCOVERY_PATHS[i], provider: this._discoveryDoc.provider });
+            this.events.emit('discovery', this._discoveryDoc);
+            return;
+          }
+        } catch (_) {}
+      }
     }
 
     // Secure license exchange: POST license key to server, get session token back
@@ -1176,6 +1197,50 @@
       this.events.emit('action:unregistered', { name });
     }
 
+    // ── Protocol Discovery ──────────────────────────────────────────────
+    discover() {
+      return {
+        wab_version: PROTOCOL_VERSION,
+        runtime_version: VERSION,
+        discovery_document: this._discoveryDoc,
+        page: this.getPageInfo(),
+        actions: this.getActions(),
+        fairness: this._discoveryDoc ? this._discoveryDoc.fairness : null,
+        transport: {
+          js_global: { enabled: true, interface: 'window.AICommands' },
+          bidi: { enabled: true, interface: 'window.__wab_bidi' },
+          noscript: { enabled: !!(this.config.siteId) }
+        }
+      };
+    }
+
+    subscribe(eventName, callback) {
+      if (typeof callback !== 'function') return { success: false, error: 'callback must be a function' };
+      var id = 'sub_' + (++this.security._commandCounter);
+      this._eventSubscriptions.set(id, { event: eventName, callback });
+      this.events.on(eventName, callback);
+      return { success: true, subscriptionId: id, event: eventName };
+    }
+
+    unsubscribe(subscriptionId) {
+      var sub = this._eventSubscriptions.get(subscriptionId);
+      if (!sub) return { success: false, error: 'Subscription not found' };
+      this.events.off(sub.event, sub.callback);
+      this._eventSubscriptions.delete(subscriptionId);
+      return { success: true };
+    }
+
+    ping() {
+      return {
+        pong: true,
+        version: VERSION,
+        protocol: PROTOCOL_VERSION,
+        timestamp: Date.now(),
+        ready: this._ready,
+        locked: this.security.isLocked
+      };
+    }
+
     // ── Discovery / Info ────────────────────────────────────────────────
     getActions(category) {
       if (category) return this.registry.getByCategory(category);
@@ -1253,8 +1318,13 @@
     toJSON() {
       return {
         version: VERSION,
+        protocol: PROTOCOL_VERSION,
         page: this.getPageInfo(),
-        actions: this.getActions()
+        actions: this.getActions(),
+        discovery: this._discoveryDoc ? {
+          provider: this._discoveryDoc.provider,
+          fairness: this._discoveryDoc.fairness
+        } : null
       };
     }
 
@@ -1264,6 +1334,7 @@
       return {
         type: 'wab:context',
         version: VERSION,
+        protocol: PROTOCOL_VERSION,
         context: {
           url: location.href,
           title: document.title,
@@ -1278,7 +1349,9 @@
           })),
           permissions: this._getEffectivePermissions(),
           tier: this.getEffectiveTier()
-        }
+        },
+        discovery: this._discoveryDoc || null,
+        fairness: this._discoveryDoc ? this._discoveryDoc.fairness : null
       };
     }
 
@@ -1320,6 +1393,24 @@
         case 'wab.getPageInfo':
           return { ...responseBase, result: this.getPageInfo() };
 
+        case 'wab.discover':
+          return { ...responseBase, result: this.discover() };
+
+        case 'wab.authenticate':
+          if (!command.params?.key) {
+            return { id: command.id, error: { code: 'invalid argument', message: 'Agent key required' } };
+          }
+          return { ...responseBase, result: this.authenticate(command.params.key, command.params.meta || {}) };
+
+        case 'wab.subscribe':
+          if (!command.params?.event) {
+            return { id: command.id, error: { code: 'invalid argument', message: 'Event name required' } };
+          }
+          return { ...responseBase, result: this.subscribe(command.params.event, command.params.callback || function() {}) };
+
+        case 'wab.ping':
+          return { ...responseBase, result: this.ping() };
+
         default:
           return { id: command.id, error: { code: 'unknown command', message: `Unknown method: ${command.method}` } };
       }
@@ -1347,9 +1438,18 @@
     global.AICommands = bridge;
     global.WebAgentBridge = WebAgentBridge;
 
+    // WAB Protocol interface
+    global.__wab_protocol = {
+      version: VERSION,
+      protocol: PROTOCOL_VERSION,
+      discover: () => bridge.discover(),
+      ping: () => bridge.ping()
+    };
+
     // WebDriver BiDi compatibility: expose via __wab_bidi channel
     global.__wab_bidi = {
       version: VERSION,
+      protocol: PROTOCOL_VERSION,
       send: async (command) => bridge.executeBiDi(command),
       getContext: () => bridge.toBiDi()
     };

@@ -1,7 +1,7 @@
 {
   "name": "web-agent-bridge",
-  "version": "1.0.0",
-  "description": "Open-source middleware that bridges AI agents and websites — providing a standardized command interface for intelligent automation",
+  "version": "1.1.0",
+  "description": "Open protocol and runtime for AI agents to interact with websites — standardized discovery, commands, and fairness layer for the Agentic Web",
   "main": "server/index.js",
   "bin": {
     "web-agent-bridge": "./bin/cli.js",
@@ -18,12 +18,19 @@
     "ai",
     "agent",
     "bridge",
+    "protocol",
+    "web-standard",
+    "mcp",
     "automation",
     "web",
     "middleware",
     "ai-agent",
     "browser-automation",
-    "webdriver-bidi"
+    "webdriver-bidi",
+    "fairness",
+    "discovery",
+    "agentic-web",
+    "model-context-protocol"
   ],
   "repository": {
     "type": "git",
@@ -39,6 +46,8 @@
     "public/",
     "script/",
     "sdk/",
+    "wab-mcp-adapter/",
+    "docs/",
     "examples/",
     "README.md",
     "README.ar.md",

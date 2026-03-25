@@ -1,0 +1,17 @@
+{
+  "name": "wab-mcp-adapter",
+  "version": "1.1.0",
+  "description": "MCP adapter for Web Agent Bridge — expose WAB site capabilities as MCP tools",
+  "main": "index.js",
+  "keywords": ["wab", "mcp", "ai-agent", "model-context-protocol", "web-agent-bridge"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abokenan444/web-agent-bridge.git",
+    "directory": "wab-mcp-adapter"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": ">=0.20.0"
+  },
+  "engines": { "node": ">=18.0.0" }
+}

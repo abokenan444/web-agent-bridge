@@ -320,6 +320,65 @@ describe('CDN Versioning', () => {
   });
 });
 
+describe('Discovery Protocol', () => {
+  let discoverySiteId;
+
+  beforeAll(async () => {
+    const res = await request(app)
+      .post('/api/sites')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ domain: 'discover-test.com', name: 'Discovery Test' });
+    discoverySiteId = res.body.site.id;
+  });
+
+  test('GET /api/discovery/:siteId - returns discovery document', async () => {
+    const res = await request(app).get(`/api/discovery/${discoverySiteId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.wab_version).toBe('1.1.0');
+    expect(res.body.provider.name).toBe('Discovery Test');
+    expect(res.body.provider.domain).toBe('discover-test.com');
+    expect(res.body.capabilities).toBeDefined();
+    expect(res.body.security).toBeDefined();
+    expect(res.body.endpoints).toBeDefined();
+  });
+
+  test('GET /api/discovery/:siteId - 404 for invalid site', async () => {
+    const res = await request(app).get('/api/discovery/nonexistent-id');
+    expect(res.status).toBe(404);
+  });
+
+  test('GET /api/discovery/registry - returns registry', async () => {
+    const res = await request(app).get('/api/discovery/registry');
+    expect(res.status).toBe(200);
+    expect(res.body.wab_version).toBe('1.1.0');
+    expect(Array.isArray(res.body.listings)).toBe(true);
+  });
+
+  test('GET /api/discovery/search - fairness search', async () => {
+    const res = await request(app).get('/api/discovery/search?q=test');
+    expect(res.status).toBe(200);
+    expect(res.body.query).toBe('test');
+    expect(Array.isArray(res.body.results)).toBe(true);
+  });
+
+  test('POST /api/discovery/register - registers site in directory', async () => {
+    const res = await request(app)
+      .post('/api/discovery/register')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        siteId: discoverySiteId,
+        category: 'e-commerce',
+        is_independent: true,
+        commission_rate: 0,
+        direct_benefit: 'Local business',
+        tags: ['local', 'handmade']
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.fairness_report).toBeDefined();
+  });
+});
+
 afterAll(() => {
   try {
     const { db } = require('../server/models/db');

@@ -150,11 +150,47 @@ class WABAgent {
   }
 
   /**
+   * Get the WAB discovery document for the current page.
+   * @returns {Promise<object>}
+   */
+  async discover() {
+    if (this.useBiDi) {
+      const result = await this._bidiSend('wab.discover');
+      return result.result || result;
+    }
+    return this.page.evaluate(() => window.AICommands.discover());
+  }
+
+  /**
+   * Ping the bridge for a health check.
+   * @returns {Promise<object>}
+   */
+  async ping() {
+    if (this.useBiDi) {
+      const result = await this._bidiSend('wab.ping');
+      return result.result || result;
+    }
+    return this.page.evaluate(() => window.AICommands.ping());
+  }
+
+  /**
    * Get BiDi context (only available when useBiDi is true).
    * @returns {Promise<object>}
    */
   async getBiDiContext() {
     return this.page.evaluate(() => window.__wab_bidi.getContext());
+  }
+
+  /**
+   * Get the WAB protocol interface data.
+   * @returns {Promise<object>}
+   */
+  async getProtocolInfo() {
+    return this.page.evaluate(() => window.__wab_protocol ? {
+      version: window.__wab_protocol.version,
+      protocol: window.__wab_protocol.protocol,
+      discovery: window.__wab_protocol.discover()
+    } : null);
   }
 
   /** @private */
