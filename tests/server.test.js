@@ -320,6 +320,66 @@ describe('CDN Versioning', () => {
   });
 });
 
+describe('WAB Protocol API', () => {
+  let wabSiteId;
+
+  beforeAll(async () => {
+    const res = await request(app)
+      .post('/api/sites')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ domain: 'wab-test.com', name: 'WAB API Test' });
+    wabSiteId = res.body.site.id;
+  });
+
+  test('GET /api/wab/ping - health check', async () => {
+    const res = await request(app).get('/api/wab/ping');
+    expect(res.status).toBe(200);
+    expect(res.body.result.pong).toBe(true);
+    expect(res.body.result.version).toBe('1.1.0');
+    expect(res.body.result.protocol).toBe('1.0');
+  });
+
+  test('GET /api/wab/discover - returns discovery doc for siteId', async () => {
+    const res = await request(app).get(`/api/wab/discover?siteId=${wabSiteId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.result.wab_version).toBe('1.1.0');
+    expect(res.body.result.provider.name).toBe('WAB API Test');
+    expect(res.body.result.endpoints).toBeDefined();
+  });
+
+  test('GET /api/wab/actions - lists site actions', async () => {
+    const res = await request(app).get(`/api/wab/actions?siteId=${wabSiteId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.result.actions).toBeDefined();
+    expect(Array.isArray(res.body.result.actions)).toBe(true);
+  });
+
+  test('GET /api/wab/page-info - returns site metadata', async () => {
+    const res = await request(app).get(`/api/wab/page-info?siteId=${wabSiteId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.result.domain).toBe('wab-test.com');
+    expect(res.body.result.bridgeVersion).toBe('1.1.0');
+    expect(res.body.result.endpoints).toBeDefined();
+  });
+
+  test('POST /api/wab/authenticate - creates session', async () => {
+    const res = await request(app)
+      .post('/api/wab/authenticate')
+      .send({ siteId: wabSiteId, meta: { name: 'test-agent' } });
+    expect(res.status).toBe(200);
+    expect(res.body.result.authenticated).toBe(true);
+    expect(res.body.result.token).toBeDefined();
+    expect(res.body.result.tier).toBeDefined();
+  });
+
+  test('GET /api/wab/search - fairness search', async () => {
+    const res = await request(app).get('/api/wab/search?q=test');
+    expect(res.status).toBe(200);
+    expect(res.body.result.fairness_applied).toBe(true);
+    expect(Array.isArray(res.body.result.results)).toBe(true);
+  });
+});
+
 describe('Discovery Protocol', () => {
   let discoverySiteId;
 

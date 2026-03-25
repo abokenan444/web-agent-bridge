@@ -39,7 +39,7 @@ adapter.close();
 | `siteId` | `string` | `null` | WAB site identifier |
 | `apiKey` | `string` | `null` | API key for authenticated requests |
 | `transport` | `string` | `'http'` | Transport type: `http`, `websocket`, or `direct` |
-| `registryUrl` | `string` | `https://registry.webagentbridge.com` | WAB fairness registry URL |
+| `registryUrl` | `string` | `https://webagentbridge.com` | WAB fairness registry URL |
 | `page` | `object` | — | Puppeteer/Playwright page (required for `direct`) |
 | `wsUrl` | `string` | auto | WebSocket URL (required for `websocket` if no `siteUrl`) |
 | `timeout` | `number` | `15000` | Request timeout in milliseconds |

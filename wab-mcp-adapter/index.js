@@ -11,7 +11,7 @@
 'use strict';
 
 const DISCOVERY_PATHS = ['/agent-bridge.json', '/.well-known/wab.json'];
-const DEFAULT_REGISTRY = 'https://registry.webagentbridge.com';
+const DEFAULT_REGISTRY = 'https://webagentbridge.com';
 const DEFAULT_TIMEOUT_MS = 15_000;
 
 // ---------------------------------------------------------------------------
@@ -320,20 +320,35 @@ class WABMCPAdapter {
       }
     }
 
+    if (this.siteId) {
+      try {
+        this._discovery = await jsonFetch(
+          resolveUrl(base, `/api/discovery/${this.siteId}`), {}, this.timeout
+        );
+        this._extractActions(this._discovery);
+        return this._discovery;
+      } catch (err) { lastError = err; }
+    }
+
     try {
-      this._discovery = await this._transport.request('/api/wab/discover');
+      this._discovery = await jsonFetch(
+        resolveUrl(base, '/api/wab/discover'), {}, this.timeout
+      );
+      if (this._discovery.result) this._discovery = this._discovery.result;
       this._extractActions(this._discovery);
       return this._discovery;
-    } catch (err) {
-      lastError = err;
-    }
+    } catch (err) { lastError = err; }
 
     throw new Error(`WAB discovery failed for ${base}: ${lastError?.message}`);
   }
 
   /** @private */
   _extractActions(doc) {
-    this._siteActions = doc.actions || doc.capabilities?.actions || [];
+    const actions = doc.actions || doc.capabilities?.commands || doc.capabilities?.actions || [];
+    this._siteActions = Array.isArray(actions) ? actions.map(a => {
+      if (typeof a === 'string') return { name: a, description: `Permission: ${a}`, trigger: 'api' };
+      return a;
+    }) : [];
   }
 
   // -----------------------------------------------------------------------
@@ -430,7 +445,7 @@ class WABMCPAdapter {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({ params: params || {} }),
-      }, this.timeout);
+      }, this.timeout).then(r => r.result || r);
     }
 
     return this._transport.request(`/api/wab/actions/${name}`, { name, data: params || {} });
@@ -446,7 +461,7 @@ class WABMCPAdapter {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...this._authHeaders() },
         body: JSON.stringify({ selector }),
-      }, this.timeout);
+      }, this.timeout).then(r => r.result || r);
     }
 
     return this._transport.request('/api/wab/read', { selector });
@@ -455,7 +470,11 @@ class WABMCPAdapter {
   /** @private */
   async _getPageInfo() {
     if (this._transport instanceof HTTPTransport) {
-      return jsonFetch(resolveUrl(this.siteUrl, '/api/wab/page-info'), { headers: this._authHeaders() }, this.timeout);
+      const siteParam = this.siteId ? `?siteId=${this.siteId}` : '';
+      return jsonFetch(
+        resolveUrl(this.siteUrl, `/api/wab/page-info${siteParam}`),
+        { headers: this._authHeaders() }, this.timeout
+      ).then(r => r.result || r);
     }
     return this._transport.request('/api/wab/page-info');
   }
@@ -474,10 +493,12 @@ class WABMCPAdapter {
    * @returns {Promise<object>}
    */
   async _fairnessSearch(query, category, limit = 10) {
-    const params = new URLSearchParams({ q: query, limit: String(limit) });
+    const params = new URLSearchParams({ q: query || '', limit: String(limit) });
     if (category) params.set('category', category);
 
-    return jsonFetch(`${this.registryUrl}/api/search?${params}`, {}, this.timeout);
+    const base = this.siteUrl || this.registryUrl;
+    const result = await jsonFetch(`${base.replace(/\/+$/, '')}/api/wab/search?${params}`, {}, this.timeout);
+    return result.result || result;
   }
 
   // -----------------------------------------------------------------------
@@ -488,7 +509,11 @@ class WABMCPAdapter {
   async _authenticate(apiKey, meta) {
     if (!apiKey) throw new Error('apiKey is required');
 
-    const payload = { apiKey, ...(meta ? { meta } : {}) };
+    const payload = {
+      apiKey,
+      ...(this.siteId ? { siteId: this.siteId } : {}),
+      ...(meta ? { meta } : {})
+    };
 
     if (this._transport instanceof HTTPTransport) {
       const result = await jsonFetch(resolveUrl(this.siteUrl, '/api/wab/authenticate'), {
@@ -496,13 +521,15 @@ class WABMCPAdapter {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       }, this.timeout);
-      if (result.token) this._sessionToken = result.token;
-      return result;
+      const data = result.result || result;
+      if (data.token) this._sessionToken = data.token;
+      return data;
     }
 
     const result = await this._transport.request('/api/wab/authenticate', payload);
-    if (result.token) this._sessionToken = result.token;
-    return result;
+    const data = result.result || result;
+    if (data.token) this._sessionToken = data.token;
+    return data;
   }
 
   /** @private Build auth headers from session token and/or API key. */

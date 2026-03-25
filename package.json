@@ -1,6 +1,6 @@
 {
   "name": "web-agent-bridge",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Open protocol and runtime for AI agents to interact with websites — standardized discovery, commands, and fairness layer for the Agentic Web",
   "main": "server/index.js",
   "bin": {
