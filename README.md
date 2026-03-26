@@ -297,6 +297,95 @@ curl -X POST https://yourserver.com/api/discovery/register \
 
 ---
 
+## Advanced Premium Features
+
+The following capabilities extend WAB with AI-powered intelligence layers. They require a **premium subscription** — see [webagentbridge.com/premium](https://webagentbridge.com/premium) for plans.
+
+### Agent Memory System
+
+Long-term memory for AI agents using vector embeddings. Agents remember user preferences, past interactions, and successful navigation paths across sessions.
+
+| Capability | Description |
+|---|---|
+| **Vector Embeddings** | TF-IDF based similarity search for intelligent recall |
+| **Memory Consolidation** | Auto-merges duplicate memories and decays stale ones |
+| **Session Tracking** | Maintains context across multiple agent sessions |
+| **Preference Management** | Stores and retrieves user preferences for personalized interactions |
+
+### Self-Healing Selectors (Premium)
+
+Automatic CSS/XPath selector repair when websites change their DOM structure. Goes beyond the built-in 7-strategy resolution with community-powered healing.
+
+| Strategy | Description |
+|---|---|
+| **Attribute Match** | Finds elements by matching known attributes |
+| **ID Match** | Resolves elements by ID similarity |
+| **Text Similarity** | Levenshtein-based fuzzy text matching |
+| **Structural Match** | Compares DOM tree position and hierarchy |
+| **Class Match** | Identifies elements by CSS class patterns |
+| **Community Corrections** | Shared selector fixes across the WAB ecosystem |
+
+Includes DOM drift detection and element snapshot comparison for proactive repair before selectors break.
+
+### Multimodal Vision
+
+Integrates local and cloud vision models so AI agents can "see" web pages as images instead of parsing raw DOM.
+
+| Model | Type |
+|---|---|
+| **Moondream** | Local (lightweight) |
+| **LLaVA** | Local (high quality) |
+| **GPT-4V** | Cloud (OpenAI) |
+| **Claude Vision** | Cloud (Anthropic) |
+
+- Automatic UI element extraction with bounding boxes and suggested selectors
+- Screenshot comparison for visual regression detection
+- Encrypted API key storage (AES-256-GCM)
+
+### Agent Swarm
+
+Multi-agent orchestration for complex tasks that benefit from parallel or collaborative execution.
+
+| Strategy | Description |
+|---|---|
+| **Parallel** | Run multiple agents simultaneously on independent subtasks |
+| **Sequential** | Chain agents in order, passing results forward |
+| **Competitive** | Race agents against each other, take the fastest result |
+| **Collaborative** | Agents share findings and build on each other's work |
+
+- Built-in fairness weighting to surface small/indie sites in swarm results
+- Real-time task monitoring and result merging
+- Automatic price/content extraction from target URLs
+- Consensus-based result validation across multiple agents
+
+### Plugin Marketplace
+
+Extensible hook system with 16 integration points for customizing WAB behavior.
+
+| Official Plugin | Description |
+|---|---|
+| `fairness-boost` | Amplifies fairness scoring for indie sites |
+| `security-monitor` | Real-time threat detection and alerts |
+| `analytics-enhanced` | Extended analytics with behavioral classification |
+| `auto-healer` | Proactive selector repair using DOM monitoring |
+| `memory-optimizer` | Memory consolidation and cleanup scheduling |
+
+- JSON Schema config validation for all plugins
+- Community plugin ratings and download tracking
+- Sandboxed handler execution via `Function()` constructor
+
+### Premium API Endpoints
+
+| Route Group | Feature | Endpoints |
+|---|---|---|
+| `/api/premium/memory/*` | Agent Memory | 13 |
+| `/api/premium/healing/*` | Self-Healing | 9 |
+| `/api/premium/vision/*` | Vision Inference | 9 |
+| `/api/premium/swarm/*` | Agent Swarm | 10 |
+| `/api/premium/plugins/*` | Plugin Marketplace | 12 |
+
+---
+
 ## Project Structure
 
 ```
