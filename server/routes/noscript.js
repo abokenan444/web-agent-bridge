@@ -13,7 +13,7 @@ const TRANSPARENT_GIF = Buffer.from(
   'base64'
 );
 
-const WAB_VERSION = '1.1.2';
+const WAB_VERSION = '1.2.0';
 
 // ─── Rate limiter for pixel endpoint (300 req/min per IP) ────────────
 const pixelLimiter = rateLimit({

@@ -18,7 +18,7 @@ const {
   generateFairnessReport
 } = require('../services/fairness');
 
-const WAB_VERSION = '1.1.2';
+const WAB_VERSION = '1.2.0';
 const PROTOCOL_VERSION = '1.0';
 
 // ─── Session management ──────────────────────────────────────────────

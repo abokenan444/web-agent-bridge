@@ -5,7 +5,7 @@
 
 const { db } = require('../models/db');
 
-const WAB_VERSION = '1.1.2';
+const WAB_VERSION = '1.2.0';
 
 // ─── Directory Table (created lazily) ────────────────────────────────
 
