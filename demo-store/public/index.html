@@ -9,80 +9,142 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;color:#1e293b;min-height:100vh}
-    .topbar{background:#0f172a;color:#f1f5f9;padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
+
+    .topbar{background:#0f172a;color:#f1f5f9;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
     .topbar h1{font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:8px}
     .wab-badge{background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;font-size:0.65rem;padding:3px 8px;border-radius:20px;font-weight:600;letter-spacing:0.5px}
-    .cart-icon{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:6px 12px;color:#f1f5f9;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px}
+    .cart-toggle{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:6px 14px;color:#f1f5f9;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.2s;position:relative}
+    .cart-toggle:hover{background:#334155}
+    .cart-badge{background:#3b82f6;color:#fff;font-size:0.65rem;min-width:18px;height:18px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+    .cart-badge.has{background:#ef4444}
+
     .container{max-width:960px;margin:0 auto;padding:24px}
-    .hero{text-align:center;padding:32px 0 16px}
-    .hero h2{font-size:1.6rem;font-weight:800;margin-bottom:6px}
-    .hero p{color:#64748b;font-size:0.95rem;max-width:600px;margin:0 auto}
-    .integration-box{background:#0f172a;border-radius:12px;padding:20px 24px;margin:20px 0;overflow-x:auto}
-    .integration-box .label{color:#8b5cf6;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:block}
-    .integration-box pre{color:#e2e8f0;font-family:'Courier New',monospace;font-size:0.82rem;line-height:1.6;margin:0;white-space:pre;overflow-x:auto}
-    .integration-box .comment{color:#64748b}
-    .integration-box .keyword{color:#8b5cf6}
-    .integration-box .string{color:#10b981}
-    .integration-box .tag{color:#f59e0b}
-    .products{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:24px}
-    .product-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;transition:all 0.2s;position:relative}
-    .product-card:hover{border-color:#3b82f6;box-shadow:0 4px 20px rgba(59,130,246,0.1);transform:translateY(-2px)}
-    .product-card .emoji{font-size:3rem;margin-bottom:12px;display:block}
-    .product-card h3{font-size:0.95rem;font-weight:600;margin-bottom:4px}
-    .product-card .price{font-size:1.3rem;font-weight:800;color:#0f172a;margin:8px 0}
-    .product-card .stock{font-size:0.75rem;color:#10b981}
-    .product-card .stock.low{color:#f59e0b}
-    .add-btn{width:100%;padding:8px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:0.85rem;cursor:pointer;transition:background 0.2s;margin-top:8px}
-    .add-btn:hover{background:#1e293b}
-    .rating{color:#f59e0b;font-size:0.8rem;margin-bottom:4px}
-    .protocol-bar{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:10px 16px;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;font-size:0.8rem;color:#64748b}
+    .hero{text-align:center;padding:24px 0 16px}
+    .hero h2{font-size:1.5rem;font-weight:800;margin-bottom:6px}
+    .hero p{color:#64748b;font-size:0.9rem;max-width:560px;margin:0 auto}
+
+    .protocol-bar{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:10px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;font-size:0.78rem;color:#64748b}
     .protocol-bar a{color:#3b82f6;text-decoration:none;font-weight:500}
     .protocol-bar a:hover{text-decoration:underline}
     .dot{width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;animation:pulse 2s infinite}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+    .products{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+    .product-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px;text-align:center;transition:all 0.2s}
+    .product-card:hover{border-color:#3b82f6;box-shadow:0 4px 20px rgba(59,130,246,0.1);transform:translateY(-2px)}
+    .product-card .emoji{font-size:2.8rem;margin-bottom:10px;display:block}
+    .product-card h3{font-size:0.92rem;font-weight:600;margin-bottom:2px}
+    .product-card .price{font-size:1.2rem;font-weight:800;color:#0f172a;margin:6px 0}
+    .product-card .stock{font-size:0.72rem;color:#10b981}.product-card .stock.low{color:#f59e0b}
+    .rating{color:#f59e0b;font-size:0.78rem;margin-bottom:4px}
+    .add-btn{width:100%;padding:8px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:0.82rem;cursor:pointer;transition:all 0.2s;margin-top:8px}
+    .add-btn:hover{background:#1e40af}
+    .add-btn:disabled{opacity:0.3;cursor:not-allowed}
+    .add-btn.added{background:#10b981}
+
+    /* Cart drawer */
+    .cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:90;opacity:0;pointer-events:none;transition:opacity 0.25s}
+    .cart-overlay.open{opacity:1;pointer-events:auto}
+    .cart-drawer{position:fixed;top:0;right:0;width:380px;max-width:90vw;height:100vh;background:#fff;z-index:100;transform:translateX(100%);transition:transform 0.3s ease;display:flex;flex-direction:column;box-shadow:-4px 0 30px rgba(0,0,0,0.15)}
+    .cart-drawer.open{transform:translateX(0)}
+    .cart-head{padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between}
+    .cart-head h3{font-size:1rem;font-weight:700}
+    .cart-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:#64748b;padding:4px}
+    .cart-body{flex:1;overflow-y:auto;padding:16px 20px}
+    .cart-empty{text-align:center;padding:60px 20px;color:#94a3b8}
+    .cart-empty .empty-icon{font-size:3rem;margin-bottom:12px}
+    .ci{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #f1f5f9;align-items:center}
+    .ci .ci-img{font-size:2rem;width:48px;text-align:center}
+    .ci .ci-info{flex:1}
+    .ci .ci-name{font-weight:600;font-size:0.88rem}
+    .ci .ci-meta{font-size:0.75rem;color:#94a3b8;margin-top:2px}
+    .ci .ci-price{font-weight:700;font-size:0.95rem;white-space:nowrap}
+    .ci .ci-qty{display:flex;align-items:center;gap:6px;margin-top:4px}
+    .ci .ci-qty button{width:24px;height:24px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center}
+    .ci .ci-qty button:hover{background:#e2e8f0}
+    .ci .ci-qty span{font-size:0.85rem;font-weight:600;min-width:20px;text-align:center}
+    .ci .ci-remove{background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.75rem;padding:4px 8px;border-radius:4px;margin-top:4px}
+    .ci .ci-remove:hover{background:#fef2f2}
+    .cart-footer{padding:16px 20px;border-top:1px solid #e2e8f0;background:#f8fafc}
+    .cart-subtotal{display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.85rem;color:#64748b}
+    .cart-total{display:flex;justify-content:space-between;font-weight:800;font-size:1.15rem;margin-bottom:16px;padding-top:10px;border-top:2px solid #e2e8f0}
+    .checkout-area input{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.88rem;margin-bottom:10px;outline:none;font-family:inherit}
+    .checkout-area input:focus{border-color:#3b82f6}
+    .checkout-btn{width:100%;padding:12px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:0.95rem;cursor:pointer;transition:opacity 0.15s}
+    .checkout-btn:hover{opacity:0.9}
+    .checkout-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+    /* Order confirmation */
+    .order-success{text-align:center;padding:40px 20px}
+    .order-success .check{font-size:3.5rem;margin-bottom:16px}
+    .order-success h3{font-size:1.3rem;color:#10b981;margin-bottom:8px}
+    .order-success .oid{font-family:monospace;font-size:1rem;color:#3b82f6;background:#eff6ff;padding:8px 16px;border-radius:8px;display:inline-block;margin:10px 0}
+    .order-success p{font-size:0.88rem;color:#64748b;line-height:1.6;margin-bottom:6px}
+    .order-success .summary{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:16px 0;text-align:left}
+    .order-success .summary .row{display:flex;justify-content:space-between;padding:4px 0;font-size:0.85rem}
+    .order-success .summary .row.total{font-weight:700;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px}
+    .continue-btn{padding:12px 32px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:0.9rem;cursor:pointer;margin-top:16px}
+    .continue-btn:hover{background:#1e293b}
+
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#0f172a;color:#fff;padding:10px 20px;border-radius:10px;font-size:0.85rem;opacity:0;transition:all 0.3s;z-index:200;white-space:nowrap}
+    .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
     .footer-info{margin-top:32px;padding:24px;background:#fff;border:1px solid #e2e8f0;border-radius:12px}
     .footer-info h3{font-size:1rem;margin-bottom:12px;text-align:center}
-    .footer-info .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
-    .footer-info .step{text-align:center;padding:12px}
-    .footer-info .step-num{width:28px;height:28px;background:#3b82f6;color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;margin-bottom:8px}
-    .footer-info .step h4{font-size:0.85rem;margin-bottom:4px}
-    .footer-info .step p{font-size:0.78rem;color:#64748b;line-height:1.4}
-    .footer-info code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:0.75rem;color:#3b82f6}
-    .toast{position:fixed;bottom:24px;right:24px;background:#0f172a;color:#fff;padding:12px 20px;border-radius:10px;font-size:0.85rem;transform:translateY(100px);opacity:0;transition:all 0.3s;z-index:100}
-    .toast.show{transform:translateY(0);opacity:1}
+    .footer-info .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+    .footer-info .step{text-align:center;padding:10px}
+    .footer-info .step-num{width:26px;height:26px;background:#3b82f6;color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;margin-bottom:6px}
+    .footer-info .step h4{font-size:0.82rem;margin-bottom:3px}
+    .footer-info .step p{font-size:0.75rem;color:#64748b;line-height:1.4}
+    .footer-info code{background:#f1f5f9;padding:2px 5px;border-radius:4px;font-size:0.72rem;color:#3b82f6}
+
+    .integration-box{background:#0f172a;border-radius:12px;padding:18px 22px;margin:0 0 20px;overflow-x:auto}
+    .integration-box .label{color:#8b5cf6;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:block}
+    .integration-box pre{color:#e2e8f0;font-family:'Courier New',monospace;font-size:0.78rem;line-height:1.5;margin:0;white-space:pre;overflow-x:auto}
+    .integration-box .comment{color:#64748b}.integration-box .keyword{color:#8b5cf6}.integration-box .string{color:#10b981}.integration-box .tag{color:#f59e0b}
   </style>
 </head>
 <body>
 
   <div class="topbar">
     <h1>🛒 TechStore <span class="wab-badge">WAB ENABLED</span></h1>
-    <div class="cart-icon" id="cart-btn">🛒 Cart (<span id="cart-count">0</span>)</div>
+    <div class="cart-toggle" id="cart-toggle">
+      🛒 Cart <span class="cart-badge" id="cart-badge">0</span>
+    </div>
+  </div>
+
+  <!-- Cart Overlay -->
+  <div class="cart-overlay" id="cart-overlay"></div>
+
+  <!-- Cart Drawer -->
+  <div class="cart-drawer" id="cart-drawer">
+    <div class="cart-head">
+      <h3>🛒 Shopping Cart</h3>
+      <button class="cart-close" id="cart-close">✕</button>
+    </div>
+    <div class="cart-body" id="cart-body">
+      <div class="cart-empty" id="cart-empty">
+        <div class="empty-icon">🛒</div>
+        <p>Your cart is empty</p>
+        <p style="font-size:0.8rem;margin-top:4px">Add some products to get started!</p>
+      </div>
+      <div id="cart-items"></div>
+    </div>
+    <div class="cart-footer" id="cart-footer" style="display:none">
+      <div class="cart-subtotal"><span>Subtotal</span><span id="cart-subtotal">$0.00</span></div>
+      <div class="cart-total"><span>Total</span><span id="cart-total">$0.00</span></div>
+      <div class="checkout-area">
+        <input type="email" id="checkout-email" placeholder="Email for order confirmation" value="">
+        <button class="checkout-btn" id="btn-checkout">🔒 Secure Checkout</button>
+      </div>
+    </div>
+    <div id="order-confirmation" style="display:none"></div>
   </div>
 
   <div class="container">
     <div class="hero">
       <h2>Welcome to TechStore</h2>
-      <p>This store is AI-agent-ready. It was integrated with WAB using just a script tag and 5 lines of code.</p>
-    </div>
-
-    <!-- Show the actual integration code -->
-    <div class="integration-box">
-      <span class="label">How this store was made WAB-enabled</span>
-      <pre><span class="comment">&lt;!-- Step 1: Add the script --&gt;</span>
-<span class="tag">&lt;script</span> <span class="keyword">src</span>=<span class="string">"https://webagentbridge.com/script/wab.min.js"</span><span class="tag">&gt;&lt;/script&gt;</span>
-
-<span class="comment">&lt;!-- Step 2: Register your actions --&gt;</span>
-<span class="tag">&lt;script&gt;</span>
-  <span class="keyword">WAB</span>.init({
-    name: <span class="string">"TechStore"</span>,
-    actions: {
-      getPrice:  <span class="keyword">()</span> => document.querySelector(<span class="string">"#price"</span>).innerText,
-      addToCart: <span class="keyword">({ id })</span> => fetch(<span class="string">"/wab/execute"</span>, { <span class="comment">...</span> }),
-      buy:       <span class="keyword">()</span> => document.querySelector(<span class="string">"#buy"</span>).click()
-    }
-  });
-<span class="tag">&lt;/script&gt;</span>
-<span class="comment">&lt;!-- That's it. AI agents can now discover and use your store. --&gt;</span></pre>
+      <p>A fully functional WAB-enabled store. Browse, add to cart, and checkout — AI agents can do the same via protocol.</p>
     </div>
 
     <div class="protocol-bar">
@@ -93,46 +155,54 @@
       <a href="/wab/audit" target="_blank">Audit Log</a>
     </div>
 
-    <div class="products" id="products"></div>
+    <div class="products" id="products">
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:#94a3b8">Loading products...</div>
+    </div>
+
+    <div class="integration-box" style="margin-top:32px">
+      <span class="label">How this store was made WAB-enabled</span>
+      <pre><span class="tag">&lt;script</span> <span class="keyword">src</span>=<span class="string">"https://webagentbridge.com/script/wab.min.js"</span><span class="tag">&gt;&lt;/script&gt;</span>
+<span class="tag">&lt;script&gt;</span>
+  <span class="keyword">WAB</span>.init({ name: <span class="string">"TechStore"</span>, actions: {
+    getPrice:  <span class="keyword">()</span> => document.querySelector(<span class="string">"#price"</span>).innerText,
+    addToCart: <span class="keyword">({ id })</span> => fetch(<span class="string">"/wab/execute"</span>, { <span class="comment">...</span> }),
+    buy:       <span class="keyword">()</span> => document.querySelector(<span class="string">"#buy"</span>).click()
+  }});
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
 
     <div class="footer-info">
       <h3>How AI Agents Interact With This Store</h3>
       <div class="steps">
-        <div class="step">
-          <div class="step-num">1</div>
-          <h4>Discover</h4>
-          <p>Agent fetches <code>/.well-known/wab.json</code> to learn available actions</p>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <h4>Plan</h4>
-          <p>Agent reads action descriptions and decides which to call</p>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <h4>Execute</h4>
-          <p>Agent calls <code>POST /wab/execute</code> with <code>{"action":"addToCart"}</code></p>
-        </div>
-        <div class="step">
-          <div class="step-num">4</div>
-          <h4>Confirm</h4>
-          <p>Agent verifies the result and checks order status</p>
-        </div>
+        <div class="step"><div class="step-num">1</div><h4>Discover</h4><p>Fetch <code>/.well-known/wab.json</code></p></div>
+        <div class="step"><div class="step-num">2</div><h4>Plan</h4><p>Read action descriptions</p></div>
+        <div class="step"><div class="step-num">3</div><h4>Execute</h4><p><code>POST /wab/execute</code></p></div>
+        <div class="step"><div class="step-num">4</div><h4>Confirm</h4><p>Verify order status</p></div>
       </div>
     </div>
   </div>
 
   <div class="toast" id="toast"></div>
 
-  <!-- ✅ THIS IS THE WHOLE WAB INTEGRATION -->
   <script src="https://webagentbridge.com/script/wab.min.js"></script>
   <script>
   (function() {
     var productsEl = document.getElementById('products');
-    var cartCount = document.getElementById('cart-count');
+    var cartBadge = document.getElementById('cart-badge');
+    var cartBody = document.getElementById('cart-body');
+    var cartItems = document.getElementById('cart-items');
+    var cartEmpty = document.getElementById('cart-empty');
+    var cartFooter = document.getElementById('cart-footer');
+    var cartSubtotal = document.getElementById('cart-subtotal');
+    var cartTotal = document.getElementById('cart-total');
+    var cartDrawer = document.getElementById('cart-drawer');
+    var cartOverlay = document.getElementById('cart-overlay');
+    var orderConf = document.getElementById('order-confirmation');
     var toastEl = document.getElementById('toast');
     var toastTimer;
+    var productsCache = [];
 
+    // ── Toast ───────────────────────────────────────
     function showToast(msg) {
       toastEl.textContent = msg;
       toastEl.classList.add('show');
@@ -140,87 +210,193 @@
       toastTimer = setTimeout(function() { toastEl.classList.remove('show'); }, 2500);
     }
 
-    function loadProducts() {
-      fetch('/wab/execute', {
+    // ── WAB API helper ──────────────────────────────
+    function wabExec(action, params) {
+      return fetch('/wab/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'listProducts' })
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (!data.success) return;
-        productsEl.innerHTML = data.result.products.map(function(p) {
-          var stars = '';
-          for (var i = 0; i < 5; i++) stars += i < Math.round(p.rating) ? '★' : '☆';
-          var stockClass = p.stock <= 5 ? 'stock low' : 'stock';
-          var stockText = p.stock <= 0 ? '✗ Out of stock' : (p.stock <= 5 ? '⚠ Only ' + p.stock + ' left' : '✓ ' + p.stock + ' in stock');
-          return '<div class="product-card" data-id="' + p.id + '">' +
-            '<span class="emoji">' + p.image + '</span>' +
-            '<h3>' + p.name + '</h3>' +
-            '<div class="rating">' + stars + ' ' + p.rating + '</div>' +
-            '<div class="price" id="price-' + p.id + '">' + p.priceFormatted + '</div>' +
-            '<div class="' + stockClass + '">' + stockText + '</div>' +
-            '<button class="add-btn" data-product-id="' + p.id + '" data-product-name="' + p.name.replace(/'/g, "\\'") + '"' + (p.stock <= 0 ? ' disabled' : '') + '>Add to Cart</button>' +
-          '</div>';
-        }).join('');
+        body: JSON.stringify({ action: action, params: params || {} })
+      }).then(function(r) { return r.json(); });
+    }
 
-        productsEl.querySelectorAll('.add-btn').forEach(function(btn) {
-          btn.addEventListener('click', function() {
-            addToCart(parseInt(this.dataset.productId), this.dataset.productName);
+    // ── Cart drawer toggle ──────────────────────────
+    function openCart() { cartDrawer.classList.add('open'); cartOverlay.classList.add('open'); }
+    function closeCart() { cartDrawer.classList.remove('open'); cartOverlay.classList.remove('open'); }
+    document.getElementById('cart-toggle').addEventListener('click', openCart);
+    document.getElementById('cart-close').addEventListener('click', closeCart);
+    cartOverlay.addEventListener('click', closeCart);
+
+    // ── Load products ───────────────────────────────
+    function loadProducts() {
+      wabExec('listProducts').then(function(data) {
+        if (!data.success) return;
+        productsCache = data.result.products;
+        renderProducts();
+      });
+    }
+
+    function renderProducts() {
+      productsEl.innerHTML = productsCache.map(function(p) {
+        var stars = '';
+        for (var i = 0; i < 5; i++) stars += i < Math.round(p.rating) ? '★' : '☆';
+        var sc = p.stock <= 5 ? 'stock low' : 'stock';
+        var st = p.stock <= 0 ? '✗ Out of stock' : (p.stock <= 5 ? '⚠ Only ' + p.stock + ' left' : '✓ ' + p.stock + ' in stock');
+        return '<div class="product-card">' +
+          '<span class="emoji">' + p.image + '</span>' +
+          '<h3>' + p.name + '</h3>' +
+          '<div class="rating">' + stars + ' ' + p.rating + '</div>' +
+          '<div class="price" id="price-' + p.id + '">' + p.priceFormatted + '</div>' +
+          '<div class="' + sc + '">' + st + '</div>' +
+          '<button class="add-btn" data-id="' + p.id + '" data-name="' + p.name.replace(/"/g, '&quot;') + '"' + (p.stock <= 0 ? ' disabled' : '') + '>+ Add to Cart</button>' +
+        '</div>';
+      }).join('');
+
+      productsEl.querySelectorAll('.add-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var self = this;
+          var id = parseInt(self.dataset.id);
+          var name = self.dataset.name;
+          self.disabled = true;
+          self.textContent = 'Adding...';
+          wabExec('addToCart', { productId: id, quantity: 1 }).then(function(data) {
+            if (data.success) {
+              self.classList.add('added');
+              self.textContent = '✓ Added!';
+              showToast('✓ ' + name + ' added — ' + data.result.cartTotal);
+              updateCartBadge(data.result.cartItems);
+              refreshCart();
+              setTimeout(function() { self.classList.remove('added'); self.disabled = false; self.textContent = '+ Add to Cart'; loadProducts(); }, 1200);
+              notifyParent('cart-update', { product: name, cartItems: data.result.cartItems, cartTotal: data.result.cartTotal });
+            } else {
+              self.disabled = false;
+              self.textContent = '+ Add to Cart';
+              showToast('✗ ' + (data.result.error || 'Failed'));
+            }
           });
         });
       });
     }
 
-    function addToCart(id, name) {
-      fetch('/wab/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'addToCart', params: { productId: id, quantity: 1 } })
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.success) {
-          cartCount.textContent = data.result.cartItems;
-          showToast('✓ ' + name + ' added to cart — ' + data.result.cartTotal);
-          loadProducts();
-        } else {
-          showToast('✗ ' + (data.result.error || 'Failed'));
+    // ── Cart ────────────────────────────────────────
+    function updateCartBadge(count) {
+      cartBadge.textContent = count;
+      cartBadge.classList.toggle('has', count > 0);
+    }
+
+    function refreshCart() {
+      wabExec('viewCart').then(function(data) {
+        if (!data.success) return;
+        var cart = data.result;
+        updateCartBadge(cart.itemCount);
+        if (cart.itemCount === 0) {
+          cartEmpty.style.display = '';
+          cartItems.innerHTML = '';
+          cartFooter.style.display = 'none';
+          return;
         }
+        cartEmpty.style.display = 'none';
+        cartFooter.style.display = '';
+        cartSubtotal.textContent = cart.total;
+        cartTotal.textContent = cart.total;
+        cartItems.innerHTML = cart.items.map(function(c) {
+          var prod = productsCache.find(function(p) { return p.id === c.productId; }) || {};
+          return '<div class="ci">' +
+            '<div class="ci-img">' + (prod.image || '📦') + '</div>' +
+            '<div class="ci-info">' +
+              '<div class="ci-name">' + c.name + '</div>' +
+              '<div class="ci-meta">' + c.priceFormatted + ' × ' + c.quantity + '</div>' +
+              '<button class="ci-remove" data-id="' + c.productId + '">Remove</button>' +
+            '</div>' +
+            '<div class="ci-price">' + c.subtotal + '</div>' +
+          '</div>';
+        }).join('');
+
+        cartItems.querySelectorAll('.ci-remove').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = parseInt(this.dataset.id);
+            wabExec('removeFromCart', { productId: id }).then(function(data) {
+              if (data.success) { refreshCart(); loadProducts(); showToast('Removed from cart'); }
+            });
+          });
+        });
       });
     }
 
-    // ✅ WAB INTEGRATION: Register client-side actions
+    // ── Checkout ─────────────────────────────────────
+    document.getElementById('btn-checkout').addEventListener('click', function() {
+      var email = document.getElementById('checkout-email').value.trim();
+      if (!email) { showToast('Please enter your email'); document.getElementById('checkout-email').focus(); return; }
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = '⏳ Processing order...';
+
+      wabExec('checkout', { email: email }).then(function(data) {
+        if (data.success) {
+          wabExec('getOrderStatus', { orderId: data.result.orderId }).then(function(statusData) {
+            var status = statusData.success ? statusData.result.status : 'confirmed';
+            cartBody.style.display = 'none';
+            cartFooter.style.display = 'none';
+            orderConf.style.display = '';
+            orderConf.innerHTML =
+              '<div class="order-success">' +
+                '<div class="check">✅</div>' +
+                '<h3>Order Confirmed!</h3>' +
+                '<div class="oid">' + data.result.orderId + '</div>' +
+                '<div class="summary">' +
+                  '<div class="row"><span>Items</span><span>' + data.result.itemCount + ' item(s)</span></div>' +
+                  '<div class="row"><span>Email</span><span>' + data.result.email + '</span></div>' +
+                  '<div class="row"><span>Status</span><span style="color:#10b981;font-weight:600">' + status.charAt(0).toUpperCase() + status.slice(1) + '</span></div>' +
+                  '<div class="row total"><span>Total</span><span>' + data.result.total + '</span></div>' +
+                '</div>' +
+                '<p>Thank you for your purchase!</p>' +
+                '<button class="continue-btn" id="btn-continue">Continue Shopping</button>' +
+              '</div>';
+            document.getElementById('btn-continue').addEventListener('click', function() {
+              orderConf.style.display = 'none';
+              cartBody.style.display = '';
+              btn.disabled = false;
+              btn.textContent = '🔒 Secure Checkout';
+              document.getElementById('checkout-email').value = '';
+              refreshCart();
+              loadProducts();
+              closeCart();
+            });
+            updateCartBadge(0);
+            loadProducts();
+            notifyParent('checkout', { orderId: data.result.orderId, total: data.result.total });
+          });
+        } else {
+          btn.disabled = false;
+          btn.textContent = '🔒 Secure Checkout';
+          showToast('✗ ' + (data.result.error || 'Checkout failed'));
+        }
+      });
+    });
+
+    // ── Cross-frame sync ────────────────────────────
+    function notifyParent(type, detail) {
+      try { if (window.parent !== window) window.parent.postMessage({ source: 'wab-store', type: type, detail: detail }, '*'); } catch(e) {}
+    }
+    window.addEventListener('message', function(e) {
+      if (e.data && e.data.source === 'wab-agent' && e.data.type === 'refresh') { loadProducts(); refreshCart(); }
+    });
+
+    // ── WAB client-side registration ────────────────
     var store = WAB.init({
       name: 'TechStore Demo',
       actions: {
-        getPrice: {
-          description: 'Get the price of a product by reading the page',
-          run: function(params) {
-            var el = document.querySelector('#price-' + (params.productId || 1));
-            return { price: el ? el.innerText : 'Not found' };
-          }
-        },
-        addToCartUI: {
-          description: 'Click the Add to Cart button for a product',
-          run: function(params) {
-            var btn = document.querySelector('[data-product-id="' + (params.productId || 1) + '"]');
-            if (btn) { btn.click(); return { success: true }; }
-            return { error: 'Button not found' };
-          }
-        },
-        getCartCount: {
-          description: 'Read the current cart item count from the UI',
-          run: function() {
-            return { count: document.getElementById('cart-count').innerText };
-          }
-        }
+        getPrice: { description: 'Read product price from the page', run: function(p) { var el = document.querySelector('#price-' + (p.productId || 1)); return { price: el ? el.innerText : 'Not found' }; } },
+        addToCartUI: { description: 'Click Add to Cart button', run: function(p) { var b = document.querySelector('[data-id="' + (p.productId || 1) + '"]'); if (b) { b.click(); return { success: true }; } return { error: 'Not found' }; } },
+        getCartCount: { description: 'Read cart count from UI', run: function() { return { count: cartBadge.textContent }; } },
+        openCart: { description: 'Open the cart drawer', run: function() { openCart(); return { success: true }; } }
       }
     });
+    store.on('refresh', function() { loadProducts(); refreshCart(); });
 
-    store.on('refresh', function() { loadProducts(); });
-
+    // ── Init ────────────────────────────────────────
     loadProducts();
+    refreshCart();
+    notifyParent('store-ready', { name: 'TechStore Demo' });
   })();
   </script>
 </body>
