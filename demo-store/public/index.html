@@ -14,30 +14,40 @@
     .wab-badge{background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;font-size:0.65rem;padding:3px 8px;border-radius:20px;font-weight:600;letter-spacing:0.5px}
     .cart-icon{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:6px 12px;color:#f1f5f9;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px}
     .container{max-width:960px;margin:0 auto;padding:24px}
-    .hero{text-align:center;padding:32px 0 24px}
+    .hero{text-align:center;padding:32px 0 16px}
     .hero h2{font-size:1.6rem;font-weight:800;margin-bottom:6px}
-    .hero p{color:#64748b;font-size:0.95rem}
+    .hero p{color:#64748b;font-size:0.95rem;max-width:600px;margin:0 auto}
+    .integration-box{background:#0f172a;border-radius:12px;padding:20px 24px;margin:20px 0;overflow-x:auto}
+    .integration-box .label{color:#8b5cf6;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:block}
+    .integration-box pre{color:#e2e8f0;font-family:'Courier New',monospace;font-size:0.82rem;line-height:1.6;margin:0;white-space:pre;overflow-x:auto}
+    .integration-box .comment{color:#64748b}
+    .integration-box .keyword{color:#8b5cf6}
+    .integration-box .string{color:#10b981}
+    .integration-box .tag{color:#f59e0b}
     .products{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:24px}
     .product-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;transition:all 0.2s;position:relative}
     .product-card:hover{border-color:#3b82f6;box-shadow:0 4px 20px rgba(59,130,246,0.1);transform:translateY(-2px)}
     .product-card .emoji{font-size:3rem;margin-bottom:12px;display:block}
     .product-card h3{font-size:0.95rem;font-weight:600;margin-bottom:4px}
     .product-card .price{font-size:1.3rem;font-weight:800;color:#0f172a;margin:8px 0}
-    .product-card .meta{font-size:0.75rem;color:#94a3b8;margin-bottom:12px}
     .product-card .stock{font-size:0.75rem;color:#10b981}
     .product-card .stock.low{color:#f59e0b}
     .add-btn{width:100%;padding:8px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:0.85rem;cursor:pointer;transition:background 0.2s;margin-top:8px}
     .add-btn:hover{background:#1e293b}
     .rating{color:#f59e0b;font-size:0.8rem;margin-bottom:4px}
-    .footer-info{margin-top:40px;padding:24px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;text-align:center}
-    .footer-info h3{font-size:1rem;margin-bottom:8px}
-    .footer-info p{color:#64748b;font-size:0.85rem;line-height:1.6}
-    .footer-info code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:0.8rem;color:#3b82f6}
     .protocol-bar{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:10px 16px;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;font-size:0.8rem;color:#64748b}
     .protocol-bar a{color:#3b82f6;text-decoration:none;font-weight:500}
     .protocol-bar a:hover{text-decoration:underline}
     .dot{width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;animation:pulse 2s infinite}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+    .footer-info{margin-top:32px;padding:24px;background:#fff;border:1px solid #e2e8f0;border-radius:12px}
+    .footer-info h3{font-size:1rem;margin-bottom:12px;text-align:center}
+    .footer-info .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+    .footer-info .step{text-align:center;padding:12px}
+    .footer-info .step-num{width:28px;height:28px;background:#3b82f6;color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;margin-bottom:8px}
+    .footer-info .step h4{font-size:0.85rem;margin-bottom:4px}
+    .footer-info .step p{font-size:0.78rem;color:#64748b;line-height:1.4}
+    .footer-info code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:0.75rem;color:#3b82f6}
     .toast{position:fixed;bottom:24px;right:24px;background:#0f172a;color:#fff;padding:12px 20px;border-radius:10px;font-size:0.85rem;transform:translateY(100px);opacity:0;transition:all 0.3s;z-index:100}
     .toast.show{transform:translateY(0);opacity:1}
   </style>
@@ -52,13 +62,33 @@
   <div class="container">
     <div class="hero">
       <h2>Welcome to TechStore</h2>
-      <p>This is a real WAB-enabled store. AI agents can discover products, add to cart, and checkout via the WAB protocol.</p>
+      <p>This store is AI-agent-ready. It was integrated with WAB using just a script tag and 5 lines of code.</p>
+    </div>
+
+    <!-- Show the actual integration code -->
+    <div class="integration-box">
+      <span class="label">How this store was made WAB-enabled</span>
+      <pre><span class="comment">&lt;!-- Step 1: Add the script --&gt;</span>
+<span class="tag">&lt;script</span> <span class="keyword">src</span>=<span class="string">"https://webagentbridge.com/script/wab.min.js"</span><span class="tag">&gt;&lt;/script&gt;</span>
+
+<span class="comment">&lt;!-- Step 2: Register your actions --&gt;</span>
+<span class="tag">&lt;script&gt;</span>
+  <span class="keyword">WAB</span>.init({
+    name: <span class="string">"TechStore"</span>,
+    actions: {
+      getPrice:  <span class="keyword">()</span> => document.querySelector(<span class="string">"#price"</span>).innerText,
+      addToCart: <span class="keyword">({ id })</span> => fetch(<span class="string">"/wab/execute"</span>, { <span class="comment">...</span> }),
+      buy:       <span class="keyword">()</span> => document.querySelector(<span class="string">"#buy"</span>).click()
+    }
+  });
+<span class="tag">&lt;/script&gt;</span>
+<span class="comment">&lt;!-- That's it. AI agents can now discover and use your store. --&gt;</span></pre>
     </div>
 
     <div class="protocol-bar">
       <span><span class="dot"></span> WAB Protocol Active</span>
-      <a href="/.well-known/wab.json" target="_blank">Discovery Document</a>
-      <a href="/wab/actions" target="_blank">Available Actions</a>
+      <a href="/.well-known/wab.json" target="_blank">Discovery</a>
+      <a href="/wab/actions" target="_blank">Actions</a>
       <a href="/wab/ping" target="_blank">Ping</a>
       <a href="/wab/audit" target="_blank">Audit Log</a>
     </div>
@@ -66,18 +96,36 @@
     <div class="products" id="products"></div>
 
     <div class="footer-info">
-      <h3>🤖 How AI Agents Use This Store</h3>
-      <p>
-        Agents fetch <code>/.well-known/wab.json</code> to discover available actions, 
-        then call <code>POST /wab/execute</code> with structured commands like 
-        <code>{"action":"listProducts"}</code> or <code>{"action":"addToCart","params":{"productId":1}}</code>.
-        No scraping needed — the protocol handles everything.
-      </p>
+      <h3>How AI Agents Interact With This Store</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h4>Discover</h4>
+          <p>Agent fetches <code>/.well-known/wab.json</code> to learn available actions</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h4>Plan</h4>
+          <p>Agent reads action descriptions and decides which to call</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h4>Execute</h4>
+          <p>Agent calls <code>POST /wab/execute</code> with <code>{"action":"addToCart"}</code></p>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <h4>Confirm</h4>
+          <p>Agent verifies the result and checks order status</p>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="toast" id="toast"></div>
 
+  <!-- ✅ THIS IS THE WHOLE WAB INTEGRATION -->
+  <script src="https://webagentbridge.com/script/wab.min.js"></script>
   <script>
   (function() {
     var productsEl = document.getElementById('products');
@@ -106,27 +154,25 @@
           for (var i = 0; i < 5; i++) stars += i < Math.round(p.rating) ? '★' : '☆';
           var stockClass = p.stock <= 5 ? 'stock low' : 'stock';
           var stockText = p.stock <= 0 ? '✗ Out of stock' : (p.stock <= 5 ? '⚠ Only ' + p.stock + ' left' : '✓ ' + p.stock + ' in stock');
-          return '<div class="product-card">' +
+          return '<div class="product-card" data-id="' + p.id + '">' +
             '<span class="emoji">' + p.image + '</span>' +
             '<h3>' + p.name + '</h3>' +
             '<div class="rating">' + stars + ' ' + p.rating + '</div>' +
-            '<div class="price">' + p.priceFormatted + '</div>' +
+            '<div class="price" id="price-' + p.id + '">' + p.priceFormatted + '</div>' +
             '<div class="' + stockClass + '">' + stockText + '</div>' +
-            '<button class="add-btn" onclick="addToCart(' + p.id + ',\'' + p.name.replace(/'/g, "\\'") + '\')"' + (p.stock <= 0 ? ' disabled' : '') + '>Add to Cart</button>' +
+            '<button class="add-btn" data-product-id="' + p.id + '" data-product-name="' + p.name.replace(/'/g, "\\'") + '"' + (p.stock <= 0 ? ' disabled' : '') + '>Add to Cart</button>' +
           '</div>';
         }).join('');
+
+        productsEl.querySelectorAll('.add-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            addToCart(parseInt(this.dataset.productId), this.dataset.productName);
+          });
+        });
       });
     }
 
-    function notifyParent(eventType, detail) {
-      try {
-        if (window.parent !== window) {
-          window.parent.postMessage({ source: 'wab-store', type: eventType, detail: detail }, '*');
-        }
-      } catch(e) {}
-    }
-
-    window.addToCart = function(id, name) {
+    function addToCart(id, name) {
       fetch('/wab/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -138,31 +184,43 @@
           cartCount.textContent = data.result.cartItems;
           showToast('✓ ' + name + ' added to cart — ' + data.result.cartTotal);
           loadProducts();
-          notifyParent('cart-update', { action: 'addToCart', product: name, cartItems: data.result.cartItems, cartTotal: data.result.cartTotal });
         } else {
           showToast('✗ ' + (data.result.error || 'Failed'));
-          notifyParent('cart-error', { action: 'addToCart', product: name, error: data.result.error });
         }
       });
-    };
+    }
 
-    window.addEventListener('message', function(e) {
-      if (e.data && e.data.source === 'wab-agent' && e.data.type === 'refresh') {
-        loadProducts();
-        fetch('/wab/execute', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'viewCart' })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.success) cartCount.textContent = data.result.itemCount;
-        });
+    // ✅ WAB INTEGRATION: Register client-side actions
+    var store = WAB.init({
+      name: 'TechStore Demo',
+      actions: {
+        getPrice: {
+          description: 'Get the price of a product by reading the page',
+          run: function(params) {
+            var el = document.querySelector('#price-' + (params.productId || 1));
+            return { price: el ? el.innerText : 'Not found' };
+          }
+        },
+        addToCartUI: {
+          description: 'Click the Add to Cart button for a product',
+          run: function(params) {
+            var btn = document.querySelector('[data-product-id="' + (params.productId || 1) + '"]');
+            if (btn) { btn.click(); return { success: true }; }
+            return { error: 'Button not found' };
+          }
+        },
+        getCartCount: {
+          description: 'Read the current cart item count from the UI',
+          run: function() {
+            return { count: document.getElementById('cart-count').innerText };
+          }
+        }
       }
     });
 
+    store.on('refresh', function() { loadProducts(); });
+
     loadProducts();
-    notifyParent('store-ready', { name: 'TechStore Demo' });
   })();
   </script>
 </body>
