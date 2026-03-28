@@ -184,7 +184,7 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="https://webagentbridge.com/script/wab.min.js"></script>
+  <script src="/wab.min.js"></script>
   <script>
   (function() {
     var productsEl = document.getElementById('products');
@@ -229,9 +229,11 @@
     // ── Load products ───────────────────────────────
     function loadProducts() {
       wabExec('listProducts').then(function(data) {
-        if (!data.success) return;
+        if (!data.success) { productsEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:#ef4444">Error loading products</div>'; return; }
         productsCache = data.result.products;
         renderProducts();
+      }).catch(function(err) {
+        productsEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:#ef4444">Failed to load: ' + err.message + '</div>';
       });
     }
 
