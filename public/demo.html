@@ -351,11 +351,16 @@
     await sleep(300);
     addMessage('✅ Agent session complete — 4 lifecycle phases, ' + requestId + ' real HTTP requests to remote store', 'system');
 
-    // Reload store iframe to show updated state
-    document.getElementById('store-frame').src = STORE + '?t=' + Date.now();
+    refreshStore();
 
     busy = false;
     document.getElementById('btn-full').disabled = false;
+  }
+
+  function refreshStore() {
+    const frame = document.getElementById('store-frame');
+    try { frame.contentWindow.postMessage({ source: 'wab-agent', type: 'refresh' }, '*'); } catch(e) {}
+    setTimeout(function() { frame.src = STORE + '?t=' + Date.now(); }, 300);
   }
 
   // ── Natural language handler ──────────────────────
@@ -372,6 +377,7 @@
         if (parsed.action) {
           addMessage('Executing raw command: ' + parsed.action, 'user');
           await wabExecute(parsed.action, parsed.params);
+          if (['addToCart','removeFromCart','checkout'].includes(parsed.action)) refreshStore();
           busy = false;
           return;
         }
@@ -409,6 +415,19 @@
     }
     busy = false;
   }
+
+  // ── Store ↔ Agent sync via postMessage ─────────────
+  window.addEventListener('message', function(e) {
+    if (!e.data || e.data.source !== 'wab-store') return;
+    const d = e.data;
+    if (d.type === 'cart-update') {
+      addMessage('🛒 [Store UI] User added "' + d.detail.product + '" to cart → ' + d.detail.cartItems + ' item(s), total ' + d.detail.cartTotal, 'result');
+    } else if (d.type === 'cart-error') {
+      addMessage('⚠ [Store UI] Failed to add "' + d.detail.product + '": ' + d.detail.error, 'error');
+    } else if (d.type === 'store-ready') {
+      addMessage('Store connected: ' + d.detail.name, 'system');
+    }
+  });
 
   // ── Event bindings ────────────────────────────────
   document.getElementById('btn-full').addEventListener('click', runFullAgent);

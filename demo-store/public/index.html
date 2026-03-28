@@ -118,6 +118,14 @@
       });
     }
 
+    function notifyParent(eventType, detail) {
+      try {
+        if (window.parent !== window) {
+          window.parent.postMessage({ source: 'wab-store', type: eventType, detail: detail }, '*');
+        }
+      } catch(e) {}
+    }
+
     window.addToCart = function(id, name) {
       fetch('/wab/execute', {
         method: 'POST',
@@ -130,13 +138,31 @@
           cartCount.textContent = data.result.cartItems;
           showToast('✓ ' + name + ' added to cart — ' + data.result.cartTotal);
           loadProducts();
+          notifyParent('cart-update', { action: 'addToCart', product: name, cartItems: data.result.cartItems, cartTotal: data.result.cartTotal });
         } else {
           showToast('✗ ' + (data.result.error || 'Failed'));
+          notifyParent('cart-error', { action: 'addToCart', product: name, error: data.result.error });
         }
       });
     };
 
+    window.addEventListener('message', function(e) {
+      if (e.data && e.data.source === 'wab-agent' && e.data.type === 'refresh') {
+        loadProducts();
+        fetch('/wab/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'viewCart' })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success) cartCount.textContent = data.result.itemCount;
+        });
+      }
+    });
+
     loadProducts();
+    notifyParent('store-ready', { name: 'TechStore Demo' });
   })();
   </script>
 </body>
