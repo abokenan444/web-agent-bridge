@@ -255,9 +255,9 @@ class WAB_Settings {
 		}
 		?>
 		<div class="wrap wab-settings">
-			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+			<h1><?php echo esc_html( get_admin_page_title() ); ?> <span class="wab-badge">v<?php echo esc_html( WAB_VERSION ); ?></span></h1>
 			<p class="description">
-				<?php esc_html_e( 'Connect your site to Web Agent Bridge so AI agents can use structured commands instead of guessing the DOM.', 'web-agent-bridge' ); ?>
+				<?php esc_html_e( 'Open protocol for AI agent-website interaction. Connect your WordPress site so agents can discover, plan, and execute structured commands.', 'web-agent-bridge' ); ?>
 			</p>
 
 			<form method="post" action="options.php">
@@ -444,6 +444,74 @@ class WAB_Settings {
 						<td>
 							<input type="text" class="large-text" id="wab_exclude_terms" name="wab_options[exclude_term_ids]" value="<?php echo esc_attr( $opts['exclude_term_ids'] ); ?>" placeholder="12, 34, 56" />
 							<p class="description"><?php esc_html_e( 'Comma-separated taxonomy term IDs. If the current post has any of these, the bridge will not load.', 'web-agent-bridge' ); ?></p>
+						</td>
+					</tr>
+				</table>
+
+				<h2 class="title"><?php esc_html_e( 'WAB Protocol & Discovery', 'web-agent-bridge' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Protocol version', 'web-agent-bridge' ); ?></th>
+						<td><code>WAB Protocol 1.0 — Runtime <?php echo esc_html( WAB_VERSION ); ?></code></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Discovery endpoints', 'web-agent-bridge' ); ?></th>
+						<td>
+							<?php
+							$disc_urls = array(
+								home_url( '/agent-bridge.json' ),
+								home_url( '/.well-known/wab.json' ),
+								home_url( '/wp-json/wab/v1/discover' ),
+							);
+							echo '<ul class="wab-widget-list">';
+							foreach ( $disc_urls as $u ) {
+								echo '<li><code>' . esc_html( $u ) . '</code> ';
+								echo '<a href="' . esc_url( $u ) . '" target="_blank" rel="noopener noreferrer" class="button button-small">' . esc_html__( 'Test', 'web-agent-bridge' ) . '</a>';
+								echo '</li>';
+							}
+							echo '</ul>';
+							?>
+							<p class="description"><?php esc_html_e( 'All three URLs serve the same discovery document. AI agents fetch this to learn your site capabilities.', 'web-agent-bridge' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'WAB REST API', 'web-agent-bridge' ); ?></th>
+						<td>
+							<?php
+							$api_routes = array(
+								'/wp-json/wab/v1/discover' => __( 'Discovery document', 'web-agent-bridge' ),
+								'/wp-json/wab/v1/actions'  => __( 'Available actions', 'web-agent-bridge' ),
+								'/wp-json/wab/v1/page-info' => __( 'Site info', 'web-agent-bridge' ),
+								'/wp-json/wab/v1/ping'     => __( 'Health check', 'web-agent-bridge' ),
+							);
+							echo '<ul class="wab-widget-list">';
+							foreach ( $api_routes as $path => $desc ) {
+								$full = home_url( $path );
+								echo '<li><code>' . esc_html( $path ) . '</code> — ' . esc_html( $desc ) . ' ';
+								echo '<a href="' . esc_url( $full ) . '" target="_blank" rel="noopener noreferrer" class="button button-small">' . esc_html__( 'Test', 'web-agent-bridge' ) . '</a>';
+								echo '</li>';
+							}
+							echo '</ul>';
+							?>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'NoScript fallback', 'web-agent-bridge' ); ?></th>
+						<td>
+							<span style="color:#0a0;font-weight:600;"><?php esc_html_e( 'Active', 'web-agent-bridge' ); ?></span>
+							<p class="description"><?php esc_html_e( 'When JavaScript is disabled, meta tags and link elements expose discovery URLs so HTTP-only agents can still find your site.', 'web-agent-bridge' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Lifecycle', 'web-agent-bridge' ); ?></th>
+						<td>
+							<ol style="margin:0;padding-left:1.5em;">
+								<li>Discover</li>
+								<li>Authenticate</li>
+								<li>Plan</li>
+								<li>Execute</li>
+								<li>Confirm</li>
+							</ol>
 						</td>
 					</tr>
 				</table>

@@ -2,7 +2,7 @@
 # This file is distributed under the GPL-2.0-or-later license.
 msgid ""
 msgstr ""
-"Project-Id-Version: Web Agent Bridge 1.0.0\n"
+"Project-Id-Version: Web Agent Bridge 1.2.0\n"
 "Report-Msgid-Bugs-To: https://webagentbridge.com\n"
 "POT-Creation-Date: 2026-03-21 12:00+0000\n"
 "MIME-Version: 1.0\n"

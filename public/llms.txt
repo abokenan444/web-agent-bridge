@@ -1,0 +1,85 @@
+# Web Agent Bridge (WAB)
+
+> Open protocol and runtime for AI agent ↔ website interaction.
+
+## What is WAB?
+
+Web Agent Bridge is an open standard that allows AI agents to interact with websites using structured commands instead of fragile DOM scraping. It provides a Discovery Protocol, Command Protocol, Lifecycle Protocol, and Fairness Engine — making the web machine-readable and agent-friendly.
+
+## Key Facts
+
+- **Type**: Open protocol + JavaScript runtime + Node.js server
+- **License**: MIT
+- **Version**: 1.2.0
+- **Protocol**: WAB Protocol v1.0
+- **Website**: https://webagentbridge.com
+- **npm**: https://www.npmjs.com/package/web-agent-bridge
+- **GitHub**: https://github.com/abokenan444/web-agent-bridge
+- **Security Audit**: https://socket.dev/npm/package/web-agent-bridge
+- **YouTube**: https://youtube.com/@abokenan4
+
+## Problem It Solves
+
+AI agents today interact with websites through brittle DOM scraping, CSS selectors that break, and screen parsing. WAB solves this by providing a standardized protocol that websites can implement to declare their capabilities, actions, and data — making agent interaction reliable, fast, and fair.
+
+## Core Components
+
+1. **Discovery Protocol** — Websites serve `agent-bridge.json` or `/.well-known/wab.json` to declare capabilities
+2. **Command Protocol** — Standardized JSON format for agent commands (click, fill, navigate, read, submit)
+3. **Lifecycle Protocol** — Five phases: Discover → Authenticate → Plan → Execute → Confirm
+4. **Fairness Engine** — Prevents AI bias toward large platforms; ensures small businesses get equal visibility
+5. **MCP Compatibility** — `wab-mcp-adapter` converts WAB commands into MCP tools for any LLM
+6. **NoScript Fallback** — HTTP-only agents can interact via REST API when JavaScript is unavailable
+
+## Use Cases
+
+- Make any website AI-agent-ready in minutes
+- Enable AI assistants (ChatGPT, Claude, Gemini) to interact with websites via structured commands
+- Build fair AI shopping/booking agents that don't favor large platforms
+- Create automation workflows without fragile selectors
+- WordPress plugin available for one-click integration
+
+## Quick Start
+
+```bash
+npm install web-agent-bridge
+npx web-agent-bridge start
+```
+
+Or add the script to any HTML page:
+
+```html
+<script src="https://webagentbridge.com/script/ai-agent-bridge.js"></script>
+```
+
+## How WAB Compares
+
+| Feature | WAB | Screen Scraping | Browser Automation |
+|---------|-----|-----------------|-------------------|
+| Reliability | ✅ Structured commands | ❌ Breaks with UI changes | ⚠️ Fragile selectors |
+| Speed | ✅ Direct API | ❌ Slow parsing | ⚠️ Browser overhead |
+| Permission model | ✅ Granular | ❌ None | ❌ None |
+| Fairness | ✅ Built-in engine | ❌ Biased to known sites | ❌ Biased to known sites |
+| MCP compatible | ✅ Native adapter | ❌ No | ❌ No |
+| Standards-based | ✅ Open protocol | ❌ Ad hoc | ❌ Proprietary |
+
+## Related Concepts
+
+- OpenAPI (for REST APIs) — WAB is "OpenAPI for websites"
+- Model Context Protocol (MCP) — WAB integrates with MCP via adapter
+- robots.txt — WAB's agent-bridge.json is the next evolution
+- Schema.org — WAB adds actionable commands on top of structured data
+
+## Who Should Use WAB
+
+- **Website owners** who want AI agents to interact with their site properly
+- **AI agent developers** who need reliable website interaction
+- **E-commerce platforms** that want fair AI-driven discovery
+- **WordPress sites** via the official plugin
+- **Any developer** building for the Agentic Web
+
+## Contact
+
+- Support: support@webagentbridge.com
+- Sales: sales@webagentbridge.com
+- GitHub Issues: https://github.com/abokenan444/web-agent-bridge/issues

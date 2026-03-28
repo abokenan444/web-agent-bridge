@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Web Agent Bridge
  * Plugin URI:        https://webagentbridge.com
- * Description:       Embeds the Web Agent Bridge script for AI agents: permissions, license verification, custom actions, and per-page controls.
- * Version:           1.0.0
+ * Description:       Open protocol for AI agent-website interaction. WAB Discovery, REST API, structured commands, NoScript fallback, and MCP compatibility.
+ * Version:           1.2.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Web Agent Bridge
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WAB_VERSION', '1.0.0' );
+define( 'WAB_VERSION', '1.2.0' );
 define( 'WAB_PLUGIN_FILE', __FILE__ );
 define( 'WAB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WAB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -33,6 +33,7 @@ require_once WAB_PLUGIN_DIR . 'includes/class-wab-settings.php';
 require_once WAB_PLUGIN_DIR . 'includes/class-wab-metabox.php';
 require_once WAB_PLUGIN_DIR . 'includes/class-wab-loader.php';
 require_once WAB_PLUGIN_DIR . 'includes/class-wab-dashboard-widget.php';
+require_once WAB_PLUGIN_DIR . 'includes/class-wab-discovery.php';
 
 /**
  * Initialize plugin.
@@ -44,6 +45,7 @@ function wab_init() {
 	WAB_Metabox::instance();
 	WAB_Loader::instance();
 	WAB_Dashboard_Widget::instance();
+	WAB_Discovery::instance();
 }
 add_action( 'plugins_loaded', 'wab_init' );
 
@@ -81,5 +83,17 @@ function wab_activate() {
 			)
 		);
 	}
+
+	// Flush rewrite rules for discovery endpoints.
+	WAB_Discovery::instance();
+	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'wab_activate' );
+
+/**
+ * Flush rewrite rules on deactivation.
+ */
+function wab_deactivate() {
+	flush_rewrite_rules();
+}
+register_deactivation_hook( __FILE__, 'wab_deactivate' );

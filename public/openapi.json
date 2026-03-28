@@ -1,0 +1,580 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Web Agent Bridge (WAB) API",
+    "description": "Open protocol API for AI agent ↔ website interaction. Provides discovery, command execution, fairness-weighted search, and plan management for the Agentic Web.",
+    "version": "1.2.0",
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "contact": {
+      "name": "WAB Support",
+      "email": "support@webagentbridge.com",
+      "url": "https://webagentbridge.com"
+    },
+    "termsOfService": "https://webagentbridge.com/terms",
+    "x-logo": {
+      "url": "https://webagentbridge.com/favicon.ico"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://webagentbridge.com",
+      "description": "Production"
+    }
+  ],
+  "tags": [
+    {"name": "Discovery", "description": "WAB Discovery Protocol endpoints"},
+    {"name": "WAB Protocol", "description": "Core WAB command protocol over HTTP"},
+    {"name": "Registry", "description": "Public directory of WAB-enabled sites"},
+    {"name": "Plans", "description": "Subscription plan information"},
+    {"name": "Authentication", "description": "User authentication"},
+    {"name": "Sites", "description": "Site management"},
+    {"name": "License", "description": "License verification"},
+    {"name": "NoScript", "description": "Fallback for JS-disabled agents"}
+  ],
+  "paths": {
+    "/agent-bridge.json": {
+      "get": {
+        "tags": ["Discovery"],
+        "summary": "Discovery document (root)",
+        "description": "Returns the WAB discovery document for the requesting domain. This is the primary entry point for AI agents discovering site capabilities.",
+        "operationId": "getAgentBridgeJson",
+        "responses": {
+          "200": {
+            "description": "WAB discovery document",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/DiscoveryDocument"}
+              }
+            }
+          },
+          "404": {
+            "description": "No WAB-enabled site found for this domain"
+          }
+        }
+      }
+    },
+    "/.well-known/wab.json": {
+      "get": {
+        "tags": ["Discovery"],
+        "summary": "Discovery document (well-known)",
+        "description": "Standard well-known location for WAB discovery. Identical to /agent-bridge.json.",
+        "operationId": "getWellKnownWab",
+        "responses": {
+          "200": {
+            "description": "WAB discovery document",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/DiscoveryDocument"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wab/ping": {
+      "get": {
+        "tags": ["WAB Protocol"],
+        "summary": "Health check",
+        "description": "Returns server status, WAB version, and protocol version. No authentication required.",
+        "operationId": "wabPing",
+        "responses": {
+          "200": {
+            "description": "Server status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "example": "ok"},
+                    "wab_version": {"type": "string", "example": "1.2.0"},
+                    "protocol_version": {"type": "string", "example": "1.0"},
+                    "timestamp": {"type": "string", "format": "date-time"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wab/discover": {
+      "get": {
+        "tags": ["WAB Protocol"],
+        "summary": "Discover site capabilities",
+        "description": "Returns capabilities, actions, permissions, and fairness data for a WAB-enabled site. Agents should call this first.",
+        "operationId": "wabDiscover",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "query",
+            "description": "The site ID to discover",
+            "required": false,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Site capabilities and metadata",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/DiscoveryDocument"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wab/authenticate": {
+      "post": {
+        "tags": ["WAB Protocol"],
+        "summary": "Authenticate agent session",
+        "description": "Exchanges a license key for a session token. Required before executing commands.",
+        "operationId": "wabAuthenticate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["licenseKey"],
+                "properties": {
+                  "licenseKey": {"type": "string", "description": "WAB license key"},
+                  "agentId": {"type": "string", "description": "Agent identifier"},
+                  "agentName": {"type": "string", "description": "Human-readable agent name"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session token issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {"type": "string", "example": "auth_success"},
+                    "session": {
+                      "type": "object",
+                      "properties": {
+                        "token": {"type": "string"},
+                        "expiresIn": {"type": "integer"},
+                        "permissions": {"type": "object"}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {"description": "Invalid license key"}
+        }
+      }
+    },
+    "/api/wab/actions": {
+      "get": {
+        "tags": ["WAB Protocol"],
+        "summary": "List available actions",
+        "description": "Returns all registered actions for a site, including parameters and permissions.",
+        "operationId": "wabListActions",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "query",
+            "required": false,
+            "schema": {"type": "string"}
+          }
+        ],
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {
+            "description": "List of available actions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {"type": "string", "example": "actions_list"},
+                    "actions": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/Action"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wab/execute": {
+      "post": {
+        "tags": ["WAB Protocol"],
+        "summary": "Execute a command",
+        "description": "Execute a WAB command on a site. Requires an authenticated session.",
+        "operationId": "wabExecute",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                  "action": {"type": "string", "description": "Command name (click, fill, navigate, read, submit, etc.)"},
+                  "target": {"type": "string", "description": "CSS selector or URL"},
+                  "value": {"type": "string", "description": "Value for fill commands"},
+                  "context": {"type": "object", "description": "Additional context"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Command executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {"type": "string", "example": "action_result"},
+                    "success": {"type": "boolean"},
+                    "result": {"type": "object"}
+                  }
+                }
+              }
+            }
+          },
+          "401": {"description": "Authentication required"},
+          "403": {"description": "Permission denied for this action"}
+        }
+      }
+    },
+    "/api/wab/page-info": {
+      "get": {
+        "tags": ["WAB Protocol"],
+        "summary": "Get page information",
+        "description": "Returns metadata, headings, links, forms, and images for a site page.",
+        "operationId": "wabPageInfo",
+        "parameters": [
+          {"name": "siteId", "in": "query", "schema": {"type": "string"}},
+          {"name": "url", "in": "query", "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {"description": "Page metadata and structure"}
+        }
+      }
+    },
+    "/api/wab/search": {
+      "get": {
+        "tags": ["WAB Protocol"],
+        "summary": "Fairness-weighted search",
+        "description": "Search WAB-enabled sites with fairness scoring that gives equal weight to small businesses.",
+        "operationId": "wabSearch",
+        "parameters": [
+          {"name": "q", "in": "query", "required": true, "schema": {"type": "string"}, "description": "Search query"},
+          {"name": "category", "in": "query", "schema": {"type": "string"}, "description": "Filter by category"},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 20, "maximum": 100}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Fairness-weighted search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "wab_version": {"type": "string"},
+                    "query": {"type": "string"},
+                    "total": {"type": "integer"},
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "siteId": {"type": "string"},
+                          "name": {"type": "string"},
+                          "domain": {"type": "string"},
+                          "neutrality_score": {"type": "number"},
+                          "fairness_boost": {"type": "number"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discovery/registry": {
+      "get": {
+        "tags": ["Registry"],
+        "summary": "Public WAB registry",
+        "description": "Browse all WAB-enabled sites registered in the public directory, with fairness scoring.",
+        "operationId": "getRegistry",
+        "parameters": [
+          {"name": "category", "in": "query", "schema": {"type": "string", "default": "all"}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 50, "maximum": 200}},
+          {"name": "offset", "in": "query", "schema": {"type": "integer", "default": 0}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Registry listings with fairness scores"
+          }
+        }
+      }
+    },
+    "/api/discovery/search": {
+      "get": {
+        "tags": ["Registry"],
+        "summary": "Search WAB directory",
+        "description": "Search the WAB directory with fairness-weighted ranking.",
+        "operationId": "searchDirectory",
+        "parameters": [
+          {"name": "q", "in": "query", "required": true, "schema": {"type": "string"}},
+          {"name": "category", "in": "query", "schema": {"type": "string"}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 20}}
+        ],
+        "responses": {
+          "200": {"description": "Fairness-weighted search results"}
+        }
+      }
+    },
+    "/api/plans": {
+      "get": {
+        "tags": ["Plans"],
+        "summary": "List subscription plans",
+        "description": "Returns all active subscription plans with features, pricing, and limits.",
+        "operationId": "getPlans",
+        "responses": {
+          "200": {
+            "description": "Active plans",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plans": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/Plan"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Create account",
+        "operationId": "register",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password", "name"],
+                "properties": {
+                  "email": {"type": "string", "format": "email"},
+                  "password": {"type": "string", "minLength": 8},
+                  "name": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Account created"},
+          "400": {"description": "Validation error"}
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Sign in",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {"type": "string", "format": "email"},
+                  "password": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "JWT token returned"},
+          "401": {"description": "Invalid credentials"}
+        }
+      }
+    },
+    "/api/license/verify": {
+      "post": {
+        "tags": ["License"],
+        "summary": "Verify license key",
+        "description": "Validates a WAB license key and returns site configuration.",
+        "operationId": "verifyLicense",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["licenseKey", "domain"],
+                "properties": {
+                  "licenseKey": {"type": "string"},
+                  "domain": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "License valid"},
+          "403": {"description": "License invalid or expired"}
+        }
+      }
+    },
+    "/api/noscript/bridge/{siteId}": {
+      "get": {
+        "tags": ["NoScript"],
+        "summary": "NoScript bridge page",
+        "description": "HTML bridge page for agents that cannot execute JavaScript. Provides structured page metadata via HTTP.",
+        "operationId": "getNoscriptBridge",
+        "parameters": [
+          {"name": "siteId", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML page with structured WAB metadata",
+            "content": {"text/html": {}}
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "WAB session token obtained from /api/wab/authenticate"
+      }
+    },
+    "schemas": {
+      "DiscoveryDocument": {
+        "type": "object",
+        "properties": {
+          "wab_version": {"type": "string", "example": "1.2.0"},
+          "generated_at": {"type": "string", "format": "date-time"},
+          "provider": {
+            "type": "object",
+            "properties": {
+              "name": {"type": "string"},
+              "domain": {"type": "string"},
+              "category": {"type": "string"},
+              "description": {"type": "string"}
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "commands": {"type": "array", "items": {"type": "string"}},
+              "permissions": {"type": "object"},
+              "tier": {"type": "string"},
+              "transport": {"type": "array", "items": {"type": "string"}},
+              "features": {"type": "array", "items": {"type": "string"}}
+            }
+          },
+          "agent_access": {
+            "type": "object",
+            "properties": {
+              "bridge_script": {"type": "string"},
+              "api_base": {"type": "string"},
+              "websocket": {"type": "string"},
+              "noscript": {"type": "string"},
+              "discovery": {"type": "string"}
+            }
+          },
+          "fairness": {
+            "type": "object",
+            "properties": {
+              "is_independent": {"type": "boolean"},
+              "commission_rate": {"type": "number"},
+              "direct_benefit": {"type": "string"},
+              "neutrality_score": {"type": "number", "minimum": 0, "maximum": 100}
+            }
+          },
+          "security": {
+            "type": "object",
+            "properties": {
+              "session_required": {"type": "boolean"},
+              "origin_validation": {"type": "boolean"},
+              "rate_limit": {"type": "integer"},
+              "sandbox": {"type": "boolean"}
+            }
+          },
+          "endpoints": {"type": "object"}
+        }
+      },
+      "Action": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string", "description": "Action identifier"},
+          "description": {"type": "string"},
+          "category": {"type": "string", "enum": ["navigation", "form", "commerce", "content", "custom"]},
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {"type": "string"},
+                "type": {"type": "string"},
+                "required": {"type": "boolean"},
+                "description": {"type": "string"}
+              }
+            }
+          },
+          "permissions_required": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "Plan": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "tier": {"type": "string", "enum": ["free", "starter", "pro", "enterprise"]},
+          "name": {"type": "string"},
+          "price": {"type": "number"},
+          "currency": {"type": "string"},
+          "billing_cycle": {"type": "string"},
+          "description": {"type": "string"},
+          "features": {"type": "string", "description": "JSON array of feature strings"},
+          "max_sites": {"type": "integer"},
+          "max_actions_per_month": {"type": "integer"},
+          "rate_limit": {"type": "integer"},
+          "is_featured": {"type": "boolean"},
+          "is_contact_sales": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

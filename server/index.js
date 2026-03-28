@@ -61,6 +61,7 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc,
+        scriptSrcAttr: scriptSrc,
         styleSrc,
         imgSrc: ["'self'", 'data:', 'https:'],
         connectSrc: ["'self'", 'ws:', 'wss:'],
@@ -68,7 +69,8 @@ app.use(
         frameSrc: ["'none'"],
         frameAncestors: ["'none'"],
         objectSrc: ["'none'"],
-        baseUri: ["'self'"]
+        baseUri: ["'self'"],
+        formAction: ["'self'"]
       }
     },
     crossOriginEmbedderPolicy: false
@@ -108,6 +110,7 @@ const licenseLimiter = rateLimit({
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/script', express.static(path.join(__dirname, '..', 'script')));
+app.use('/cdn', express.static(path.join(__dirname, '..', 'public', 'script')));
 
 app.use('/api/auth', apiLimiter, authRoutes);
 app.use('/api', apiLimiter, apiRoutes);
@@ -147,6 +150,40 @@ app.get('/terms', (req, res) => {
 });
 app.get('/cookies', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'cookies.html'));
+});
+app.get('/ai', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'ai.html'));
+});
+app.get('/demo', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'demo.html'));
+});
+
+// Demo API endpoints (public, for showcasing WAB protocol over HTTP)
+const demoState = { price: '$49', purchased: false };
+app.get('/api/demo/discover', (req, res) => {
+  res.json({
+    wab_version: '1.2.0',
+    name: 'WAB Demo Store',
+    actions: [
+      { name: 'getPrice', description: 'Get current product price' },
+      { name: 'getStock', description: 'Check if product is in stock' },
+      { name: 'buy', description: 'Purchase the product' },
+      { name: 'reset', description: 'Reset demo store' }
+    ],
+    transport: ['http', 'javascript']
+  });
+});
+app.post('/api/demo/execute', (req, res) => {
+  const { action } = req.body || {};
+  if (action === 'getPrice') return res.json({ success: true, price: demoState.price });
+  if (action === 'getStock') return res.json({ success: true, inStock: !demoState.purchased, status: demoState.purchased ? 'sold out' : 'in stock' });
+  if (action === 'buy') {
+    if (demoState.purchased) return res.json({ success: false, error: 'Already purchased' });
+    demoState.purchased = true;
+    return res.json({ success: true, message: 'Product purchased successfully' });
+  }
+  if (action === 'reset') { demoState.purchased = false; return res.json({ success: true }); }
+  res.status(400).json({ success: false, error: 'Unknown action: ' + action });
 });
 
 const pkg = require('../package.json');

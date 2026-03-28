@@ -23,7 +23,7 @@ function findSiteByDomain(domain) {
   if (!domain) return null;
   const normalized = domain.toLowerCase().replace(/^www\./, '');
   return db.prepare(
-    'SELECT * FROM sites WHERE LOWER(REPLACE(domain, "www.", "")) = ? AND active = 1 LIMIT 1'
+    "SELECT * FROM sites WHERE LOWER(REPLACE(domain, 'www.', '')) = ? AND active = 1 LIMIT 1"
   ).get(normalized);
 }
 
@@ -113,12 +113,84 @@ function buildDiscoveryDocument(site) {
 // 1. GET /.well-known/wab.json — Standard discovery location
 // ═════════════════════════════════════════════════════════════════════
 
+function buildSelfDiscovery() {
+  return {
+    wab_version: WAB_VERSION,
+    protocol: '1.0',
+    generated_at: new Date().toISOString(),
+    provider: {
+      name: 'Web Agent Bridge',
+      domain: 'webagentbridge.com',
+      category: 'developer-tools',
+      description: 'Open protocol and runtime for AI agent ↔ website interaction. The OpenAPI for human-facing web pages.'
+    },
+    capabilities: {
+      commands: ['read', 'navigate', 'search', 'discover'],
+      permissions: { readContent: true, navigate: true, apiAccess: true },
+      tier: 'platform',
+      transport: ['http', 'javascript', 'websocket'],
+      features: [
+        'discovery_protocol', 'fairness_engine', 'mcp_adapter',
+        'noscript_fallback', 'agent_sdk', 'wordpress_plugin',
+        'openapi_spec', 'llms_txt', 'atom_feed'
+      ]
+    },
+    agent_access: {
+      bridge_script: '/script/ai-agent-bridge.js',
+      api_base: '/api/wab',
+      websocket: '/ws/analytics',
+      discovery: '/agent-bridge.json',
+      llms_txt: '/llms.txt',
+      llms_full_txt: '/llms-full.txt',
+      openapi: '/openapi.json',
+      ai_assets: '/.well-known/ai-assets.json',
+      atom_feed: '/feed.xml',
+      sitemap: '/sitemap.xml'
+    },
+    fairness: {
+      is_independent: true,
+      commission_rate: 0,
+      direct_benefit: 'Open-source protocol maintainer',
+      neutrality_score: 100
+    },
+    security: {
+      session_required: false,
+      origin_validation: true,
+      rate_limit: 60,
+      sandbox: true
+    },
+    endpoints: {
+      discover: '/api/wab/discover',
+      actions: '/api/wab/actions',
+      execute: '/api/wab/execute',
+      ping: '/api/wab/ping',
+      search: '/api/wab/search',
+      registry: '/api/discovery/registry',
+      plans: '/api/plans',
+      page_info: '/api/wab/page-info'
+    },
+    ecosystem: {
+      npm: 'https://www.npmjs.com/package/web-agent-bridge',
+      github: 'https://github.com/abokenan444/web-agent-bridge',
+      security: 'https://socket.dev/npm/package/web-agent-bridge',
+      mcp_adapter: 'https://www.npmjs.com/package/wab-mcp-adapter',
+      wordpress: 'https://github.com/abokenan444/web-agent-bridge/tree/master/web-agent-bridge-wordpress',
+      specification: 'https://github.com/abokenan444/web-agent-bridge/blob/master/docs/SPEC.md'
+    }
+  };
+}
+
 router.get('/.well-known/wab.json', (req, res) => {
   try {
     const domain = getRequestDomain(req);
     const site = findSiteByDomain(domain);
 
     if (!site) {
+      if (domain === 'webagentbridge.com' || domain === 'www.webagentbridge.com' || domain === 'localhost') {
+        res.set('Cache-Control', 'public, max-age=300');
+        res.set('X-WAB-Version', WAB_VERSION);
+        return res.json(buildSelfDiscovery());
+      }
       return res.status(404).json({
         error: 'No WAB-enabled site found for this domain',
         domain,
@@ -145,6 +217,11 @@ router.get('/agent-bridge.json', (req, res) => {
     const site = findSiteByDomain(domain);
 
     if (!site) {
+      if (domain === 'webagentbridge.com' || domain === 'www.webagentbridge.com' || domain === 'localhost') {
+        res.set('Cache-Control', 'public, max-age=300');
+        res.set('X-WAB-Version', WAB_VERSION);
+        return res.json(buildSelfDiscovery());
+      }
       return res.status(404).json({
         error: 'No WAB-enabled site found for this domain',
         domain,

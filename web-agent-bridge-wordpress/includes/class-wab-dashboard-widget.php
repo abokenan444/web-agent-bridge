@@ -47,7 +47,11 @@ class WAB_Dashboard_Widget {
 		$api   = esc_url( untrailingslashit( $opts['api_base_url'] ) );
 		$dash  = $api . '/dashboard';
 
+		$discovery_url = home_url( '/agent-bridge.json' );
+		$api_url       = home_url( '/wp-json/wab/v1' );
+
 		echo '<ul class="wab-widget-list">';
+		echo '<li><strong>' . esc_html__( 'Protocol:', 'web-agent-bridge' ) . '</strong> WAB v' . esc_html( WAB_VERSION ) . '</li>';
 		echo '<li><strong>' . esc_html__( 'Plan:', 'web-agent-bridge' ) . '</strong> ' . esc_html( ucfirst( $tier ) ) . '</li>';
 		echo '<li><strong>' . esc_html__( 'License:', 'web-agent-bridge' ) . '</strong> ';
 		echo $valid
@@ -59,6 +63,8 @@ class WAB_Dashboard_Widget {
 			echo esc_html( gmdate( 'Y-m-d H:i', (int) $cache['checked'] ) );
 			echo ' UTC</li>';
 		}
+		echo '<li><strong>' . esc_html__( 'Discovery:', 'web-agent-bridge' ) . '</strong> <code style="font-size:11px;">' . esc_html( $discovery_url ) . '</code></li>';
+		echo '<li><strong>' . esc_html__( 'WAB API:', 'web-agent-bridge' ) . '</strong> <code style="font-size:11px;">' . esc_html( $api_url ) . '</code></li>';
 		echo '</ul>';
 		echo '<p>';
 		printf(
@@ -67,11 +73,16 @@ class WAB_Dashboard_Widget {
 			esc_html__( 'Open WAB dashboard', 'web-agent-bridge' )
 		);
 		printf(
-			'<a class="button" href="%1$s">%2$s</a>',
+			'<a class="button" href="%1$s">%2$s</a> ',
 			esc_url( admin_url( 'options-general.php?page=web-agent-bridge' ) ),
 			esc_html__( 'Plugin settings', 'web-agent-bridge' )
 		);
+		printf(
+			'<a class="button" href="%1$s" target="_blank" rel="noopener noreferrer">%2$s</a>',
+			esc_url( $discovery_url ),
+			esc_html__( 'View Discovery', 'web-agent-bridge' )
+		);
 		echo '</p>';
-		echo '<p class="description">' . esc_html__( 'Usage analytics require recording events from your bridge; connect your site key in the hosted dashboard.', 'web-agent-bridge' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'WAB Protocol endpoints are live. AI agents can discover your site via agent-bridge.json.', 'web-agent-bridge' ) . '</p>';
 	}
 }

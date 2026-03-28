@@ -4,8 +4,16 @@ const { authenticateToken } = require('../middleware/auth');
 const {
   addSite, findSitesByUser, findSiteById,
   updateSiteConfig, updateSiteTier, deleteSite,
-  getAnalyticsBySite, getAnalyticsTimeline
+  getAnalyticsBySite, getAnalyticsTimeline,
+  getAllPlans
 } = require('../models/db');
+
+// ─── Plans (public) ─────────────────────────────────────────────────────
+
+router.get('/plans', (req, res) => {
+  const plans = getAllPlans(false);
+  res.json({ plans });
+});
 
 // ─── Sites ──────────────────────────────────────────────────────────────
 

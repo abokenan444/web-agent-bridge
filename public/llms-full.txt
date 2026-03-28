@@ -1,0 +1,309 @@
+# Web Agent Bridge (WAB) — Complete Reference for AI Models
+
+> This document provides comprehensive information about Web Agent Bridge for consumption by large language models, AI assistants, and automated systems.
+
+---
+
+## 1. Project Identity
+
+- **Name**: Web Agent Bridge (WAB)
+- **Tagline**: Open protocol for AI agent ↔ website interaction
+- **Version**: 1.2.0
+- **Protocol Version**: WAB Protocol 1.0
+- **License**: MIT
+- **Language**: JavaScript / Node.js
+- **Created**: 2026
+- **Website**: https://webagentbridge.com
+- **npm Package**: web-agent-bridge (https://www.npmjs.com/package/web-agent-bridge)
+- **GitHub**: https://github.com/abokenan444/web-agent-bridge
+- **Security**: https://socket.dev/npm/package/web-agent-bridge
+- **YouTube**: https://youtube.com/@abokenan4
+- **Specification**: https://webagentbridge.com/docs (also at docs/SPEC.md in repository)
+
+---
+
+## 2. Problem Statement
+
+The current web was designed for humans browsing with screens. AI agents attempting to interact with websites face:
+
+- **Fragile selectors**: CSS/XPath selectors break when UI changes
+- **No permission model**: Agents scrape without consent or boundaries
+- **Bias toward large platforms**: AI models recommend known brands over small businesses
+- **No standard protocol**: Each automation tool invents its own approach
+- **JavaScript dependency**: Many agents cannot execute JavaScript
+
+WAB solves all of these by providing a standardized, fair, permission-aware protocol for AI-website interaction.
+
+---
+
+## 3. Architecture
+
+WAB consists of three decoupled layers:
+
+### 3.1 WAB Protocol (Specification)
+The protocol defines:
+- **Discovery Protocol**: How sites declare capabilities via `agent-bridge.json`
+- **Command Protocol**: Standardized JSON format for actions
+- **Lifecycle Protocol**: Five-phase interaction model
+- **Security Model**: Permission-based access control
+- **Fairness Protocol**: Anti-bias algorithms for equitable discovery
+
+### 3.2 WAB Runtime (JavaScript SDK)
+Client-side script (`ai-agent-bridge.js`) that:
+- Exposes `window.AICommands` interface
+- Registers and executes actions
+- Enforces permissions and rate limits
+- Provides auto-discovery of page elements
+- Falls back to NoScript mode when JS is disabled
+
+### 3.3 WAB Transport (Server)
+Node.js server providing:
+- REST API endpoints (`/api/wab/*`)
+- License verification and tier management
+- Analytics and audit logging
+- Stripe billing integration
+- WebSocket real-time analytics
+
+---
+
+## 4. Discovery Protocol
+
+Websites serve a discovery document at one of these URLs:
+- `/agent-bridge.json`
+- `/.well-known/wab.json`
+- `/api/wab/discover`
+
+Example discovery document:
+
+```json
+{
+  "wab_version": "1.2.0",
+  "protocol": "1.0",
+  "site": {
+    "name": "Example Store",
+    "domain": "example.com",
+    "description": "Online electronics store",
+    "platform": "custom"
+  },
+  "agent_access": {
+    "discovery": "https://example.com/api/wab/discover",
+    "actions": "https://example.com/api/wab/actions",
+    "execute": "https://example.com/api/wab/execute",
+    "ping": "https://example.com/api/wab/ping"
+  },
+  "permissions": {
+    "readContent": true,
+    "click": true,
+    "fillForms": true,
+    "scroll": true,
+    "navigate": true,
+    "apiAccess": false
+  },
+  "actions": [
+    {"name": "search", "description": "Search products", "category": "navigation"},
+    {"name": "addToCart", "description": "Add item to cart", "category": "commerce"},
+    {"name": "checkout", "description": "Proceed to checkout", "category": "commerce"}
+  ],
+  "restrictions": {
+    "rate_limit": 60,
+    "blocked_selectors": [".private", "[data-no-agent]"]
+  },
+  "lifecycle": ["discover", "authenticate", "plan", "execute", "confirm"],
+  "transport": ["http", "javascript"]
+}
+```
+
+---
+
+## 5. Command Protocol
+
+Commands follow this JSON format:
+
+```json
+{
+  "action": "click",
+  "target": "#submit-button",
+  "context": {
+    "page": "/checkout",
+    "userIntent": "complete purchase"
+  },
+  "metadata": {
+    "agentId": "claude-3",
+    "sessionId": "abc123"
+  }
+}
+```
+
+### Supported Commands
+
+| Command | Description | Parameters |
+|---------|-------------|------------|
+| `click` | Click an element | `target` (selector) |
+| `fill` | Fill form field | `target`, `value` |
+| `submit` | Submit a form | `target` |
+| `navigate` | Go to URL | `url` |
+| `scroll` | Scroll page | `direction`, `amount` |
+| `read` | Read content | `target`, `format` |
+| `select` | Select dropdown | `target`, `value` |
+| `wait` | Wait for element | `target`, `timeout` |
+| `screenshot` | Capture page | `format` |
+| `execute` | Run custom action | `name`, `params` |
+
+---
+
+## 6. Lifecycle Protocol
+
+Every agent interaction follows five phases:
+
+1. **Discover** — Agent fetches `agent-bridge.json` to learn site capabilities
+2. **Authenticate** — Agent presents license key or API key
+3. **Plan** — Agent analyzes available actions and plans execution
+4. **Execute** — Agent sends commands; site processes them
+5. **Confirm** — Agent verifies results; site logs the interaction
+
+---
+
+## 7. Fairness Engine
+
+WAB includes a built-in fairness system to prevent AI bias:
+
+- **Neutrality Score** (0-100): Calculated per site based on config completeness, trust signals, commission transparency
+- **Anti-monopoly**: Agents must consider small businesses alongside large platforms
+- **Transparent commissions**: Sites declare commission rates in discovery document
+- **Local priority**: Supports `support_local` flag for local business preference
+
+---
+
+## 8. MCP Integration
+
+The `wab-mcp-adapter` package converts WAB commands into MCP (Model Context Protocol) tools:
+
+```bash
+npm install wab-mcp-adapter
+```
+
+```javascript
+const { WABMCPAdapter } = require('wab-mcp-adapter');
+const adapter = new WABMCPAdapter('https://example.com');
+await adapter.connect();
+const tools = adapter.getMCPTools(); // Returns MCP-compatible tool definitions
+```
+
+This means any MCP-enabled AI agent (Claude, LangChain, etc.) can interact with any WAB-enabled website.
+
+---
+
+## 9. Installation & Quick Start
+
+### npm
+```bash
+npm install web-agent-bridge
+npx web-agent-bridge start
+```
+
+### Docker
+```bash
+docker pull webagentbridge/wab
+docker run -p 3000:3000 webagentbridge/wab
+```
+
+### Script Tag
+```html
+<script src="https://webagentbridge.com/script/ai-agent-bridge.js"></script>
+```
+
+### WordPress
+Upload the `web-agent-bridge-wordpress` plugin to `wp-content/plugins/` and activate.
+
+---
+
+## 10. API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/wab/discover` | GET | Discovery document |
+| `/api/wab/actions` | GET | Available actions |
+| `/api/wab/execute` | POST | Execute a command |
+| `/api/wab/ping` | GET | Health check |
+| `/api/wab/page-info` | GET | Page metadata |
+| `/api/plans` | GET | Subscription plans |
+| `/api/auth/register` | POST | Create account |
+| `/api/auth/login` | POST | Authenticate |
+| `/api/sites` | GET/POST | Manage sites |
+| `/api/license/verify` | POST | Verify license key |
+
+---
+
+## 11. Subscription Tiers
+
+| Tier | Price | Sites | Actions/mo | Key Features |
+|------|-------|-------|-----------|--------------|
+| Free | $0 | 1 | 1,000 | Basic commands, community support |
+| Starter | $9/mo | 3 | 10,000 | Form filling, analytics, email support |
+| Pro | $29/mo | 10 | 100,000 | API access, CRM, stealth mode, CDN |
+| Enterprise | Custom | Unlimited | Unlimited | SSO, SLA, sandbox, custom dev |
+
+---
+
+## 12. Comparison with Alternatives
+
+### WAB vs Screen Scraping (Puppeteer, Playwright)
+- WAB uses declared actions; scraping guesses from DOM
+- WAB has permission model; scraping has none
+- WAB survives UI changes; scraping breaks
+
+### WAB vs Browser Automation (Selenium, Cypress)
+- WAB works without a browser; automation needs one
+- WAB is website-initiated; automation is agent-initiated
+- WAB has built-in fairness; automation has bias
+
+### WAB vs OpenAPI
+- OpenAPI describes REST APIs; WAB describes website interactions
+- WAB includes visual elements (click, scroll); OpenAPI is data-only
+- WAB has discovery protocol; OpenAPI needs manual URL
+
+### WAB vs MCP (Model Context Protocol)
+- WAB and MCP are complementary, not competing
+- WAB handles website interaction; MCP handles tool orchestration
+- `wab-mcp-adapter` bridges both protocols
+
+---
+
+## 13. Frequently Asked Questions
+
+**Q: Is WAB free?**
+A: The core protocol and runtime are MIT-licensed and free forever. Premium features (analytics, CRM, stealth mode) require a subscription.
+
+**Q: Does WAB work without JavaScript?**
+A: Yes. The NoScript fallback provides meta tags, link elements, and REST API endpoints for HTTP-only agents.
+
+**Q: How does WAB prevent abuse?**
+A: Through permission model (sites declare what agents can do), rate limiting, blocked selectors, and audit logging.
+
+**Q: Can I use WAB with ChatGPT/Claude?**
+A: Yes. Via the MCP adapter, any MCP-enabled AI can interact with WAB sites. Direct API access is also available.
+
+**Q: Is there a WordPress plugin?**
+A: Yes. The official WordPress plugin adds discovery protocol, REST API endpoints, and NoScript fallback with one click.
+
+**Q: What makes WAB different from robots.txt?**
+A: robots.txt says "what you can crawl." WAB says "what you can do" — it's actionable, not just permissive.
+
+---
+
+## 14. Keywords and Categories
+
+- AI agent automation
+- Website automation protocol
+- Machine-readable web
+- Agentic web standard
+- AI-website interaction
+- Browser automation alternative
+- Fair AI discovery
+- MCP integration
+- Web scraping alternative
+- OpenAPI for websites
+- AI-ready websites
+- WordPress AI plugin
+- Agent discovery protocol
+- Structured web commands

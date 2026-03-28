@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Web Agent Bridge — Changelog</title>
+  <subtitle>Open protocol for AI agent ↔ website interaction. Release notes and updates.</subtitle>
+  <link href="https://webagentbridge.com/feed.xml" rel="self" type="application/atom+xml"/>
+  <link href="https://webagentbridge.com/" rel="alternate" type="text/html"/>
+  <id>https://webagentbridge.com/</id>
+  <updated>2026-03-28T00:00:00Z</updated>
+  <author>
+    <name>Web Agent Bridge</name>
+    <uri>https://webagentbridge.com</uri>
+  </author>
+  <icon>https://webagentbridge.com/favicon.ico</icon>
+  <rights>MIT License</rights>
+  <category term="AI" label="Artificial Intelligence"/>
+  <category term="web-protocol" label="Web Protocol"/>
+  <category term="automation" label="Automation"/>
+
+  <entry>
+    <title>v1.2.0 — WAB Protocol Ecosystem Release</title>
+    <link href="https://github.com/abokenan444/web-agent-bridge/releases/tag/v1.2.0" rel="alternate"/>
+    <id>https://webagentbridge.com/releases/v1.2.0</id>
+    <updated>2026-03-28T00:00:00Z</updated>
+    <summary type="html">
+      &lt;p&gt;Major release: WAB Protocol Specification v1.0, MCP Adapter for Claude/GPT integration,
+      Fairness Engine for equitable AI discovery, Discovery Protocol with agent-bridge.json,
+      WordPress plugin with full protocol support, dynamic subscription plan management,
+      NoScript HTTP fallback for JS-disabled environments, Agent SDK with discover/ping/execute methods,
+      and comprehensive OpenAPI documentation.&lt;/p&gt;
+    </summary>
+    <content type="html">
+      &lt;h2&gt;WAB Protocol v1.2.0 — Ecosystem Release&lt;/h2&gt;
+      &lt;h3&gt;Protocol &amp; Specification&lt;/h3&gt;
+      &lt;ul&gt;
+        &lt;li&gt;WAB Protocol Specification v1.0 — Formal spec with Discovery, Command, Lifecycle, Security, and Fairness protocols&lt;/li&gt;
+        &lt;li&gt;Discovery Protocol — Sites publish agent-bridge.json or /.well-known/wab.json&lt;/li&gt;
+        &lt;li&gt;Command Protocol — Standardized JSON format for agent actions&lt;/li&gt;
+        &lt;li&gt;Lifecycle Protocol — Discover → Authenticate → Plan → Execute → Confirm&lt;/li&gt;
+      &lt;/ul&gt;
+      &lt;h3&gt;MCP Integration&lt;/h3&gt;
+      &lt;ul&gt;
+        &lt;li&gt;wab-mcp-adapter — Converts WAB actions into MCP tools&lt;/li&gt;
+        &lt;li&gt;Compatible with Claude, GPT, LangChain, and any MCP-enabled agent&lt;/li&gt;
+      &lt;/ul&gt;
+      &lt;h3&gt;Fairness Engine&lt;/h3&gt;
+      &lt;ul&gt;
+        &lt;li&gt;Neutrality scoring (0–100) for equitable site discovery&lt;/li&gt;
+        &lt;li&gt;Anti-monopoly bias correction in search results&lt;/li&gt;
+        &lt;li&gt;Commission transparency and local business support flags&lt;/li&gt;
+      &lt;/ul&gt;
+      &lt;h3&gt;WordPress Plugin&lt;/h3&gt;
+      &lt;ul&gt;
+        &lt;li&gt;Discovery Protocol endpoints (REST API + rewrite rules)&lt;/li&gt;
+        &lt;li&gt;NoScript meta tags and fallback for HTTP-only agents&lt;/li&gt;
+        &lt;li&gt;Protocol status page in admin settings&lt;/li&gt;
+      &lt;/ul&gt;
+      &lt;h3&gt;Infrastructure&lt;/h3&gt;
+      &lt;ul&gt;
+        &lt;li&gt;Dynamic subscription plan management via admin dashboard&lt;/li&gt;
+        &lt;li&gt;OpenAPI specification for all public endpoints&lt;/li&gt;
+        &lt;li&gt;llms.txt and llms-full.txt for AI model discovery&lt;/li&gt;
+        &lt;li&gt;AI-optimized robots.txt and sitemap.xml&lt;/li&gt;
+      &lt;/ul&gt;
+    </content>
+  </entry>
+
+  <entry>
+    <title>v1.1.0 — Protocol Specification &amp; MCP Adapter</title>
+    <link href="https://github.com/abokenan444/web-agent-bridge/releases/tag/v1.1.0" rel="alternate"/>
+    <id>https://webagentbridge.com/releases/v1.1.0</id>
+    <updated>2026-03-25T00:00:00Z</updated>
+    <summary type="html">
+      &lt;p&gt;Introduction of the WAB Protocol Specification v1.0, MCP adapter for LLM integration,
+      Discovery Protocol, and Fairness Engine.&lt;/p&gt;
+    </summary>
+  </entry>
+
+  <entry>
+    <title>v1.0.0 — Initial Release</title>
+    <link href="https://github.com/abokenan444/web-agent-bridge/releases/tag/v1.0.0" rel="alternate"/>
+    <id>https://webagentbridge.com/releases/v1.0.0</id>
+    <updated>2026-03-20T00:00:00Z</updated>
+    <summary type="html">
+      &lt;p&gt;First public release of Web Agent Bridge. Core runtime with AI command registration,
+      client-side bridge script, Express.js server, license management, analytics,
+      and the initial NoScript fallback.&lt;/p&gt;
+    </summary>
+  </entry>
+</feed>

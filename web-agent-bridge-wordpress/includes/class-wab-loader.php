@@ -33,6 +33,7 @@ class WAB_Loader {
 
 	private function __construct() {
 		add_shortcode( 'wab_bridge', array( __CLASS__, 'shortcode' ) );
+		add_action( 'wp_head', array( $this, 'inject_discovery_link' ), 5 );
 		add_action( 'wp_head', array( $this, 'maybe_inject_head' ), 99 );
 		add_action( 'wp_footer', array( $this, 'maybe_inject_footer' ), 5 );
 		add_action( 'wp_footer', array( $this, 'maybe_inject_shortcode_footer' ), 6 );
@@ -46,6 +47,17 @@ class WAB_Loader {
 	public static function shortcode() {
 		self::$shortcode_requested = true;
 		return '';
+	}
+
+	/**
+	 * Inject WAB Discovery Protocol <link> for all front-end pages.
+	 */
+	public function inject_discovery_link() {
+		if ( is_admin() || is_feed() || wp_is_json_request() ) {
+			return;
+		}
+		echo '<link rel="alternate" type="application/json" href="' . esc_url( home_url( '/agent-bridge.json' ) ) . '" title="WAB Discovery" />' . "\n";
+		echo '<meta name="wab:version" content="' . esc_attr( WAB_VERSION ) . '" />' . "\n";
 	}
 
 	/**
@@ -159,9 +171,17 @@ class WAB_Loader {
 		$custom = wab_collect_registered_actions();
 
 		$config_json = wp_json_encode( $config );
+		$protocol_info = wp_json_encode( array(
+			'version'         => WAB_VERSION,
+			'protocol'        => '1.0',
+			'discovery'       => home_url( '/agent-bridge.json' ),
+			'api_base'        => home_url( '/wp-json/wab/v1' ),
+			'platform'        => 'wordpress',
+		) );
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON.
 		echo '<script>window.AIBridgeConfig = Object.assign(' . $config_json . ', window.AIBridgeConfig || {});';
 		echo 'window._wabLicenseKey = ' . wp_json_encode( $opts['license_key'] ) . ';';
+		echo 'window.__wab_protocol = ' . $protocol_info . ';';
 		echo '</script>' . "\n";
 
 		if ( ! empty( $custom ) ) {
@@ -178,6 +198,16 @@ class WAB_Loader {
 
 		$inline = "document.addEventListener('DOMContentLoaded',function(){var a=window.WAB_PRELOAD_ACTIONS;if(!a||!window.AICommands)return;a.forEach(function(d){try{window.AICommands.registerAction(d);}catch(e){console.warn('[WAB]',e);}});});";
 		wp_add_inline_script( $handle, $inline, 'after' );
+
+		$api_base = esc_url( untrailingslashit( $opts['api_base_url'] ) );
+		$noscript_endpoint = home_url( '/wp-json/wab/v1/page-info' );
+		echo '<noscript>';
+		echo '<meta http-equiv="X-WAB-Protocol" content="1.0" />';
+		echo '<meta name="wab:discovery" content="' . esc_url( home_url( '/agent-bridge.json' ) ) . '" />';
+		echo '<meta name="wab:version" content="' . esc_attr( WAB_VERSION ) . '" />';
+		echo '<meta name="wab:api" content="' . esc_url( $noscript_endpoint ) . '" />';
+		echo '<link rel="alternate" type="application/json" href="' . esc_url( home_url( '/agent-bridge.json' ) ) . '" title="WAB Discovery" />';
+		echo '</noscript>' . "\n";
 	}
 
 	/**

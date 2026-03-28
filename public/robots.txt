@@ -1,0 +1,87 @@
+# Web Agent Bridge — robots.txt
+# https://webagentbridge.com
+
+User-agent: *
+Allow: /
+Allow: /docs
+Allow: /premium
+Allow: /privacy
+Allow: /terms
+Allow: /cookies
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /agent-bridge.json
+Allow: /.well-known/wab.json
+Allow: /.well-known/ai-assets.json
+Allow: /api/wab/discover
+Allow: /api/wab/ping
+Allow: /api/discovery/registry
+Allow: /api/plans
+Disallow: /api/admin/
+Disallow: /api/auth/
+Disallow: /api/billing/
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /premium-dashboard
+
+# AI Crawlers — Welcome! We have structured data for you.
+User-agent: GPTBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /agent-bridge.json
+Allow: /sitemap.xml
+Crawl-delay: 2
+
+User-agent: ChatGPT-User
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Crawl-delay: 2
+
+User-agent: Claude-Web
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Crawl-delay: 2
+
+User-agent: Anthropic-AI
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Crawl-delay: 2
+
+User-agent: Google-Extended
+Allow: /
+Crawl-delay: 2
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: PerplexityBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Crawl-delay: 2
+
+User-agent: YouBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Crawl-delay: 2
+
+User-agent: CCBot
+Allow: /
+Crawl-delay: 5
+
+# Sitemap
+Sitemap: https://webagentbridge.com/sitemap.xml
+
+# AI-readable resources
+# llms.txt: https://webagentbridge.com/llms.txt
+# llms-full.txt: https://webagentbridge.com/llms-full.txt
+# Discovery: https://webagentbridge.com/agent-bridge.json
+# AI Assets: https://webagentbridge.com/.well-known/ai-assets.json
+# OpenAPI: https://webagentbridge.com/openapi.json

@@ -10,6 +10,18 @@
 	font-weight: 600;
 }
 
+.wab-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	font-size: 12px;
+	font-weight: 600;
+	color: #fff;
+	background: #2271b1;
+	border-radius: 3px;
+	vertical-align: middle;
+	margin-left: 6px;
+}
+
 .wab-widget-list {
 	margin: 0 0 12px;
 	list-style: disc;
@@ -18,4 +30,11 @@
 
 .wab-widget-list li {
 	margin-bottom: 4px;
+}
+
+.wab-widget-list code {
+	font-size: 11px;
+	background: #f0f0f1;
+	padding: 2px 5px;
+	border-radius: 2px;
 }
