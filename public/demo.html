@@ -3,450 +3,570 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WAB Protocol Demo — Real AI Agent ↔ Store Interaction</title>
-  <meta name="description" content="Watch a real AI agent interact with a remote WAB-enabled store via HTTP protocol. Discovery, cart management, checkout — all through structured commands.">
+  <title>WAB Protocol Demo — Full Shopping Experience via Protocol</title>
+  <meta name="description" content="Browse products, add to cart, and checkout — all via WAB Protocol HTTP calls to a remote store. See every request live.">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Inter',sans-serif;background:#080c14;color:#e2e8f0;min-height:100vh;overflow-x:hidden}
+    :root{--bg:#080c14;--bg2:#0c1220;--bg3:#0f1629;--bg4:#111827;--border:#1e293b;--border2:#293548;--text:#e2e8f0;--muted:#64748b;--dim:#475569;--blue:#3b82f6;--purple:#8b5cf6;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--cyan:#22d3ee}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden}
 
-    .demo-nav{padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e293b;background:#0a0f1a}
-    .demo-nav a{color:#94a3b8;text-decoration:none;font-size:0.85rem}
-    .demo-nav a:hover{color:#f1f5f9}
-    .demo-nav .title{font-weight:800;font-size:1rem;color:#f1f5f9;display:flex;align-items:center;gap:8px}
-    .demo-nav .title span{background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    /* NAV */
+    .nav{padding:10px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:#0a0f1a;height:46px}
+    .nav .title{font-weight:800;font-size:0.95rem;display:flex;align-items:center;gap:8px}
+    .nav .title span{background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .nav a{color:var(--muted);text-decoration:none;font-size:0.8rem}.nav a:hover{color:var(--text)}
+    .nav-links{display:flex;gap:14px;align-items:center}
 
-    .main-grid{display:grid;grid-template-columns:420px 1fr;height:calc(100vh - 50px);overflow:hidden}
-    @media(max-width:900px){.main-grid{grid-template-columns:1fr;height:auto}}
+    /* LAYOUT: 3-column */
+    .layout{display:grid;grid-template-columns:320px 1fr 380px;height:calc(100vh - 46px)}
+    @media(max-width:1100px){.layout{grid-template-columns:1fr 380px}}
+    @media(max-width:700px){.layout{grid-template-columns:1fr;height:auto}}
+
+    /* PANEL SHARED */
+    .panel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+    .panel:last-child{border-right:none}
+    .panel-head{padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:0.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;display:flex;align-items:center;justify-content:space-between}
+    .panel-head .live{color:var(--green);display:flex;align-items:center;gap:5px;font-size:0.68rem}
+    .panel-head .live::before{content:'';width:5px;height:5px;background:var(--green);border-radius:50%;animation:blink 2s infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
 
     /* LEFT: Store iframe */
-    .store-panel{border-right:1px solid #1e293b;display:flex;flex-direction:column}
-    .store-panel .panel-label{padding:10px 16px;background:#0f1629;border-bottom:1px solid #1e293b;font-size:0.75rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between}
-    .store-panel .panel-label .live{color:#10b981;display:flex;align-items:center;gap:6px;font-size:0.7rem}
-    .store-panel .panel-label .live::before{content:'';width:6px;height:6px;background:#10b981;border-radius:50%;animation:blink 2s infinite}
-    @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
-    .store-panel iframe{flex:1;border:none;background:#f8fafc;min-height:500px}
+    .store-panel iframe{flex:1;border:none;background:#f8fafc;min-height:400px}
+    @media(max-width:1100px){.store-panel{display:none}}
 
-    /* RIGHT: Agent Panel */
-    .agent-panel{display:flex;flex-direction:column;overflow:hidden}
-    .agent-header{padding:16px 20px;background:#0f1629;border-bottom:1px solid #1e293b}
-    .agent-header h2{font-size:1rem;font-weight:700;margin-bottom:4px}
-    .agent-header .subtitle{font-size:0.78rem;color:#64748b}
-    .agent-header .target{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:#3b82f6;margin-top:6px;word-break:break-all}
+    /* MIDDLE: Shopping via protocol */
+    .shop-panel{overflow-y:auto}
+    .shop-panel::-webkit-scrollbar{width:4px}.shop-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+    .shop-content{padding:16px}
 
-    .agent-controls{padding:12px 20px;background:#0c1220;border-bottom:1px solid #1e293b;display:flex;gap:8px;flex-wrap:wrap}
-    .ctrl-btn{padding:7px 14px;border-radius:6px;border:1px solid #1e293b;background:#0f1629;color:#e2e8f0;font-family:inherit;font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap}
-    .ctrl-btn:hover{border-color:#3b82f6;background:#111d33}
-    .ctrl-btn.primary{background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-color:transparent;color:#fff}
-    .ctrl-btn.primary:hover{opacity:0.9}
+    /* Tabs */
+    .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg2)}
+    .tab{padding:10px 18px;font-size:0.78rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s}
+    .tab:hover{color:var(--text)}
+    .tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+    .tab-body{display:none;flex:1;overflow-y:auto}
+    .tab-body.active{display:flex;flex-direction:column}
+
+    /* Product cards */
+    .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;padding:16px}
+    .p-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;transition:all 0.15s;cursor:default}
+    .p-card:hover{border-color:var(--blue);transform:translateY(-1px)}
+    .p-card .emoji{font-size:2.2rem;margin-bottom:8px;display:block}
+    .p-card h4{font-size:0.82rem;font-weight:600;margin-bottom:2px}
+    .p-card .rating{color:var(--amber);font-size:0.7rem;margin-bottom:4px}
+    .p-card .price{font-size:1.15rem;font-weight:800;margin:6px 0}
+    .p-card .stock{font-size:0.68rem;color:var(--green)}.p-card .stock.low{color:var(--amber)}
+    .p-card .add{width:100%;padding:7px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-weight:600;font-size:0.78rem;cursor:pointer;margin-top:8px;transition:opacity 0.15s}
+    .p-card .add:hover{opacity:0.85}
+    .p-card .add:disabled{opacity:0.3;cursor:not-allowed}
+
+    /* Cart */
+    .cart-section{padding:16px}
+    .cart-empty{text-align:center;padding:40px 16px;color:var(--muted);font-size:0.85rem}
+    .cart-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .cart-item .ci-emoji{font-size:1.6rem}
+    .cart-item .ci-info{flex:1}
+    .cart-item .ci-name{font-size:0.82rem;font-weight:600}
+    .cart-item .ci-meta{font-size:0.72rem;color:var(--muted)}
+    .cart-item .ci-price{font-weight:700;font-size:0.9rem;white-space:nowrap}
+    .cart-item .ci-remove{background:none;border:none;color:var(--red);cursor:pointer;font-size:0.75rem;padding:4px 8px;border-radius:4px}
+    .cart-item .ci-remove:hover{background:rgba(239,68,68,0.1)}
+    .cart-total{display:flex;justify-content:space-between;align-items:center;padding:14px 0;font-weight:700;font-size:1rem;border-top:2px solid var(--border)}
+    .checkout-form{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+    .checkout-form input{background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-family:inherit;font-size:0.85rem;outline:none}
+    .checkout-form input:focus{border-color:var(--blue)}
+    .checkout-btn{padding:12px;background:linear-gradient(135deg,var(--green),#059669);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:0.9rem;cursor:pointer;transition:opacity 0.15s}
+    .checkout-btn:hover{opacity:0.9}
+    .checkout-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+    /* Order confirmation */
+    .order-done{text-align:center;padding:30px 16px}
+    .order-done .check{font-size:3rem;margin-bottom:12px}
+    .order-done h3{font-size:1.1rem;margin-bottom:6px;color:var(--green)}
+    .order-done .oid{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--blue);margin:8px 0}
+    .order-done p{font-size:0.82rem;color:var(--muted);line-height:1.5}
+    .order-done .reset-btn{margin-top:16px;padding:10px 24px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-weight:600;cursor:pointer}
+
+    /* AI Agent tab */
+    .agent-controls{padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap}
+    .ctrl-btn{padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-family:inherit;font-size:0.74rem;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+    .ctrl-btn:hover{border-color:var(--blue);background:var(--bg4)}
+    .ctrl-btn.primary{background:linear-gradient(135deg,var(--blue),var(--purple));border-color:transparent;color:#fff}
     .ctrl-btn:disabled{opacity:0.4;cursor:not-allowed}
+    .chat-row{padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;gap:6px}
+    .chat-input{flex:1;background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.78rem;outline:none}
+    .chat-input:focus{border-color:var(--blue)}
+    .send-btn{background:var(--blue);color:#fff;border:none;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:0.78rem}
+    .agent-log{flex:1;overflow-y:auto;padding:0}
+    .agent-log::-webkit-scrollbar{width:4px}.agent-log::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
-    .chat-row{padding:10px 20px;background:#0c1220;border-bottom:1px solid #1e293b;display:flex;gap:8px}
-    .chat-input{flex:1;background:#111827;border:1px solid #1e293b;border-radius:6px;padding:9px 12px;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:0.82rem;outline:none}
-    .chat-input:focus{border-color:#3b82f6}
-    .send-btn{background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:9px 16px;font-weight:600;cursor:pointer;font-family:inherit;font-size:0.82rem}
+    /* Phase indicator */
+    .phases{padding:6px 16px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+    .ph-dot{width:7px;height:7px;border-radius:50%;background:var(--border)}
+    .ph-dot.active{background:var(--blue);box-shadow:0 0 8px rgba(59,130,246,0.5)}
+    .ph-dot.done{background:var(--green)}
+    .ph-lbl{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+    .ph-lbl.active{color:var(--blue);font-weight:600}.ph-lbl.done{color:var(--green)}
+    .ph-sep{color:var(--border);font-size:0.6rem}
 
-    /* Network Log */
-    .network-log{flex:1;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:0.75rem;line-height:1.7;padding:0}
-    .network-log::-webkit-scrollbar{width:5px}
-    .network-log::-webkit-scrollbar-thumb{background:#1e293b;border-radius:4px}
+    /* RIGHT: Network log */
+    .net-panel{overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:0.72rem;line-height:1.6}
+    .net-panel::-webkit-scrollbar{width:4px}.net-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+    .net-count{font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--dim);font-weight:400}
 
-    .log-group{border-bottom:1px solid #111827;padding:0}
-    .log-group-header{padding:8px 20px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background 0.1s}
-    .log-group-header:hover{background:#0f1629}
-    .log-group-header .method{font-weight:700;min-width:40px}
-    .log-group-header .method.GET{color:#10b981}
-    .log-group-header .method.POST{color:#f59e0b}
-    .log-group-header .url{color:#94a3b8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .log-group-header .status{min-width:32px;text-align:right}
-    .log-group-header .status.s2{color:#10b981}
-    .log-group-header .status.s4{color:#ef4444}
-    .log-group-header .timing{color:#64748b;min-width:50px;text-align:right}
-    .log-group-header .arrow{color:#475569;font-size:0.65rem;transition:transform 0.2s}
+    .log-group{border-bottom:1px solid #111827}
+    .log-group-header{padding:7px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:background 0.1s}
+    .log-group-header:hover{background:var(--bg3)}
+    .log-group-header .method{font-weight:700;min-width:36px;font-size:0.7rem}
+    .log-group-header .method.GET{color:var(--green)}.log-group-header .method.POST{color:var(--amber)}
+    .log-group-header .url{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .log-group-header .status{min-width:28px;text-align:right}
+    .log-group-header .status.s2{color:var(--green)}.log-group-header .status.s4{color:var(--red)}
+    .log-group-header .timing{color:var(--dim);min-width:44px;text-align:right}
+    .log-group-header .arrow{color:var(--dim);font-size:0.6rem;transition:transform 0.2s}
     .log-group-header .arrow.open{transform:rotate(90deg)}
-
-    .log-group-body{display:none;padding:0 20px 12px;background:#0a0f1a}
+    .log-group-body{display:none;padding:0 14px 10px;background:#0a0f1a}
     .log-group-body.open{display:block}
-    .log-section{margin-top:8px}
-    .log-section-title{color:#475569;font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-    .log-json{background:#080c14;border:1px solid #1e293b;border-radius:6px;padding:10px 12px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;color:#cbd5e1;max-height:200px;overflow-y:auto}
-    .log-json .key{color:#8b5cf6}
-    .log-json .str{color:#10b981}
-    .log-json .num{color:#f59e0b}
-    .log-json .bool{color:#3b82f6}
+    .log-sec{margin-top:6px}
+    .log-sec-title{color:var(--dim);font-size:0.6rem;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px}
+    .log-json{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 10px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;color:#cbd5e1;max-height:180px;overflow-y:auto;font-size:0.7rem}
+    .log-json .key{color:var(--purple)}.log-json .str{color:var(--green)}.log-json .num{color:var(--amber)}.log-json .bool{color:var(--blue)}
 
-    .agent-msg{padding:8px 20px;border-bottom:1px solid #111827}
-    .agent-msg.think{color:#8b5cf6;font-style:italic}
-    .agent-msg.system{color:#475569}
+    .agent-msg{padding:6px 14px;border-bottom:1px solid #111827;font-size:0.75rem}
+    .agent-msg.think{color:var(--purple);font-style:italic}
+    .agent-msg.system{color:var(--dim)}
     .agent-msg.user{color:#60a5fa}
-    .agent-msg.result{color:#10b981}
-    .agent-msg.error{color:#ef4444}
-
-    .phase-indicator{padding:6px 20px;background:#0f172a;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:8px}
-    .phase-dot{width:8px;height:8px;border-radius:50%;background:#1e293b}
-    .phase-dot.active{background:#3b82f6;box-shadow:0 0 8px rgba(59,130,246,0.5)}
-    .phase-dot.done{background:#10b981}
-    .phase-label{font-size:0.7rem;color:#64748b;text-transform:uppercase;letter-spacing:0.5px}
-    .phase-label.active{color:#3b82f6;font-weight:600}
-    .phase-label.done{color:#10b981}
-    .phase-sep{color:#1e293b}
+    .agent-msg.result{color:var(--green)}
+    .agent-msg.error{color:var(--red)}
   </style>
 </head>
 <body>
 
-<div class="demo-nav">
+<div class="nav">
   <div class="title">⚡ <span>WAB</span> Protocol Demo</div>
-  <div style="display:flex;gap:16px;align-items:center">
+  <div class="nav-links">
     <a href="/">Home</a>
     <a href="/docs">Docs</a>
     <a href="https://github.com/abokenan444/web-agent-bridge" target="_blank">GitHub</a>
   </div>
 </div>
 
-<div class="main-grid">
-  <!-- LEFT: Remote Store -->
-  <div class="store-panel">
-    <div class="panel-label">
-      <span>Remote WAB Store</span>
-      <span class="live">Live on Railway</span>
+<div class="layout">
+  <!-- LEFT: Store iframe -->
+  <div class="panel store-panel">
+    <div class="panel-head">
+      <span>Remote Store</span>
+      <span class="live">Railway</span>
     </div>
     <iframe id="store-frame" src="https://web-agent-bridge-production.up.railway.app"></iframe>
   </div>
 
-  <!-- RIGHT: Agent -->
-  <div class="agent-panel">
-    <div class="agent-header">
-      <h2>🤖 WAB Agent</h2>
-      <div class="subtitle">Interacting with remote store via WAB Protocol over HTTP</div>
-      <div class="target">Target: https://web-agent-bridge-production.up.railway.app</div>
+  <!-- MIDDLE: Interactive shopping + AI Agent -->
+  <div class="panel" style="border-right:1px solid var(--border)">
+    <div class="tabs">
+      <div class="tab active" data-tab="shop">🛒 Shop via Protocol</div>
+      <div class="tab" data-tab="agent">🤖 AI Agent</div>
     </div>
 
-    <!-- Phase Indicator -->
-    <div class="phase-indicator" id="phases">
-      <div class="phase-dot" id="ph-discover"></div><span class="phase-label" id="pl-discover">Discover</span>
-      <span class="phase-sep">→</span>
-      <div class="phase-dot" id="ph-plan"></div><span class="phase-label" id="pl-plan">Plan</span>
-      <span class="phase-sep">→</span>
-      <div class="phase-dot" id="ph-execute"></div><span class="phase-label" id="pl-execute">Execute</span>
-      <span class="phase-sep">→</span>
-      <div class="phase-dot" id="ph-confirm"></div><span class="phase-label" id="pl-confirm">Confirm</span>
+    <!-- SHOP TAB -->
+    <div class="tab-body active" id="tab-shop">
+      <div class="shop-panel" id="shop-scroll">
+        <div id="shop-view">
+          <div class="products-grid" id="products-grid">
+            <div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--muted)">Loading products via WAB Protocol...</div>
+          </div>
+          <div id="cart-area" style="display:none">
+            <div style="padding:0 16px"><h3 style="font-size:0.9rem;margin-bottom:4px">🛒 Your Cart</h3></div>
+            <div class="cart-section" id="cart-items"></div>
+            <div class="cart-section">
+              <div class="cart-total"><span>Total</span><span id="cart-total-val">$0.00</span></div>
+              <div class="checkout-form">
+                <input type="email" id="checkout-email" placeholder="Email for order confirmation" value="demo@webagentbridge.com">
+                <button class="checkout-btn" id="btn-checkout">Complete Purchase via WAB Protocol</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="order-view" style="display:none"></div>
+      </div>
     </div>
 
-    <!-- Controls -->
-    <div class="agent-controls">
-      <button class="ctrl-btn primary" id="btn-full">▶ Run Full Shopping Agent</button>
-      <button class="ctrl-btn" id="btn-discover">Discover</button>
-      <button class="ctrl-btn" id="btn-list">List Products</button>
-      <button class="ctrl-btn" id="btn-search">Search</button>
-      <button class="ctrl-btn" id="btn-cart">View Cart</button>
-      <button class="ctrl-btn" id="btn-clear">Clear Log</button>
+    <!-- AGENT TAB -->
+    <div class="tab-body" id="tab-agent">
+      <div class="phases" id="phases">
+        <div class="ph-dot" id="ph-discover"></div><span class="ph-lbl" id="pl-discover">Discover</span>
+        <span class="ph-sep">→</span>
+        <div class="ph-dot" id="ph-plan"></div><span class="ph-lbl" id="pl-plan">Plan</span>
+        <span class="ph-sep">→</span>
+        <div class="ph-dot" id="ph-execute"></div><span class="ph-lbl" id="pl-execute">Execute</span>
+        <span class="ph-sep">→</span>
+        <div class="ph-dot" id="ph-confirm"></div><span class="ph-lbl" id="pl-confirm">Confirm</span>
+      </div>
+      <div class="agent-controls">
+        <button class="ctrl-btn primary" id="btn-full">▶ Run Full Shopping Agent</button>
+        <button class="ctrl-btn" id="btn-discover">Discover</button>
+        <button class="ctrl-btn" id="btn-list">List Products</button>
+        <button class="ctrl-btn" id="btn-search">Search</button>
+        <button class="ctrl-btn" id="btn-viewcart">View Cart</button>
+      </div>
+      <div class="chat-row">
+        <input class="chat-input" id="cmd-input" placeholder='Try: "buy cheapest" or {"action":"listProducts"}'>
+        <button class="send-btn" id="btn-send">Send</button>
+      </div>
+      <div class="agent-log" id="agent-log"></div>
     </div>
+  </div>
 
-    <div class="chat-row">
-      <input class="chat-input" id="cmd-input" placeholder='Try: "buy the cheapest item" or {"action":"listProducts"}'>
-      <button class="send-btn" id="btn-send">Send</button>
+  <!-- RIGHT: Network log -->
+  <div class="panel" style="border-right:none">
+    <div class="panel-head">
+      <span>Network Log</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="net-count" id="req-count">0 requests</span>
+        <button style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:2px 8px;font-size:0.65rem;cursor:pointer" id="btn-clear">Clear</button>
+      </div>
     </div>
-
-    <!-- Network Log -->
-    <div class="network-log" id="log"></div>
+    <div class="net-panel" id="net-log"></div>
   </div>
 </div>
 
 <script>
 (function() {
   const STORE = 'https://web-agent-bridge-production.up.railway.app';
-  const logEl = document.getElementById('log');
-  let requestId = 0;
+  const netLog = document.getElementById('net-log');
+  const agentLog = document.getElementById('agent-log');
+  let reqCount = 0;
   let busy = false;
+  let cartData = { items: [], total: '$0.00', itemCount: 0 };
+  let productsCache = [];
+
+  // ── Tabs ──────────────────────────────────────────
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', function() {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.tab-body').forEach(x => x.classList.remove('active'));
+      this.classList.add('active');
+      document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+    });
+  });
 
   // ── Phase management ──────────────────────────────
-  function setPhase(name, state) {
-    const dot = document.getElementById('ph-' + name);
-    const label = document.getElementById('pl-' + name);
-    dot.className = 'phase-dot' + (state ? ' ' + state : '');
-    label.className = 'phase-label' + (state ? ' ' + state : '');
+  function setPhase(n, s) {
+    const d = document.getElementById('ph-' + n), l = document.getElementById('pl-' + n);
+    if (d) d.className = 'ph-dot' + (s ? ' ' + s : '');
+    if (l) l.className = 'ph-lbl' + (s ? ' ' + s : '');
   }
-  function resetPhases() {
-    ['discover','plan','execute','confirm'].forEach(p => setPhase(p, ''));
-  }
+  function resetPhases() { ['discover','plan','execute','confirm'].forEach(p => setPhase(p, '')); }
 
   // ── Logging ───────────────────────────────────────
-  function addMessage(text, type) {
+  function agentMsg(text, type) {
     const div = document.createElement('div');
     div.className = 'agent-msg ' + (type || 'system');
     div.textContent = text;
-    logEl.appendChild(div);
-    logEl.scrollTop = logEl.scrollHeight;
+    agentLog.appendChild(div);
+    agentLog.scrollTop = agentLog.scrollHeight;
   }
 
-  function syntaxHighlight(json) {
+  function syntaxHL(json) {
     if (typeof json !== 'string') json = JSON.stringify(json, null, 2);
-    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(match) {
-      let cls = 'num';
-      if (/^"/.test(match)) { cls = /:$/.test(match) ? 'key' : 'str'; }
-      else if (/true|false/.test(match)) { cls = 'bool'; }
-      return '<span class="' + cls + '">' + match + '</span>';
+    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(m) {
+      let c = 'num';
+      if (/^"/.test(m)) c = /:$/.test(m) ? 'key' : 'str';
+      else if (/true|false/.test(m)) c = 'bool';
+      return '<span class="' + c + '">' + m + '</span>';
     });
   }
 
-  function addNetworkEntry(method, url, reqBody, resBody, status, duration) {
-    const id = ++requestId;
-    const group = document.createElement('div');
-    group.className = 'log-group';
-
-    const statusClass = status >= 200 && status < 300 ? 's2' : 's4';
-    const shortUrl = url.replace(STORE, '');
-
-    group.innerHTML =
-      '<div class="log-group-header" data-id="' + id + '">' +
-        '<span class="arrow" id="arrow-' + id + '">▶</span>' +
+  function addNetEntry(method, url, reqBody, resBody, status, duration) {
+    const id = ++reqCount;
+    document.getElementById('req-count').textContent = reqCount + ' request' + (reqCount > 1 ? 's' : '');
+    const g = document.createElement('div');
+    g.className = 'log-group';
+    const sc = status >= 200 && status < 300 ? 's2' : 's4';
+    const short = url.replace(STORE, '');
+    g.innerHTML =
+      '<div class="log-group-header">' +
+        '<span class="arrow" id="arr-' + id + '">▶</span>' +
         '<span class="method ' + method + '">' + method + '</span>' +
-        '<span class="url">' + shortUrl + '</span>' +
-        '<span class="status ' + statusClass + '">' + status + '</span>' +
+        '<span class="url">' + short + '</span>' +
+        '<span class="status ' + sc + '">' + status + '</span>' +
         '<span class="timing">' + duration + 'ms</span>' +
       '</div>' +
-      '<div class="log-group-body" id="body-' + id + '">' +
-        (reqBody ? '<div class="log-section"><div class="log-section-title">Request Body</div><div class="log-json">' + syntaxHighlight(reqBody) + '</div></div>' : '') +
-        '<div class="log-section"><div class="log-section-title">Response · ' + status + ' · ' + duration + 'ms</div><div class="log-json">' + syntaxHighlight(resBody) + '</div></div>' +
+      '<div class="log-group-body" id="nb-' + id + '">' +
+        (reqBody ? '<div class="log-sec"><div class="log-sec-title">Request</div><div class="log-json">' + syntaxHL(reqBody) + '</div></div>' : '') +
+        '<div class="log-sec"><div class="log-sec-title">Response · ' + status + '</div><div class="log-json">' + syntaxHL(resBody) + '</div></div>' +
       '</div>';
-
-    group.querySelector('.log-group-header').addEventListener('click', function() {
-      const body = document.getElementById('body-' + id);
-      const arrow = document.getElementById('arrow-' + id);
-      body.classList.toggle('open');
-      arrow.classList.toggle('open');
+    g.querySelector('.log-group-header').addEventListener('click', function() {
+      document.getElementById('nb-' + id).classList.toggle('open');
+      document.getElementById('arr-' + id).classList.toggle('open');
     });
-
-    logEl.appendChild(group);
-    logEl.scrollTop = logEl.scrollHeight;
+    netLog.appendChild(g);
+    netLog.scrollTop = netLog.scrollHeight;
     return resBody;
   }
 
-  // ── HTTP calls ────────────────────────────────────
+  // ── HTTP ──────────────────────────────────────────
   async function wabGet(path) {
-    const url = STORE + path;
-    const start = performance.now();
-    const res = await fetch(url);
-    const data = await res.json();
-    const duration = Math.round(performance.now() - start);
-    addNetworkEntry('GET', url, null, data, res.status, duration);
-    return data;
+    const url = STORE + path, s = performance.now();
+    const r = await fetch(url);
+    const d = await r.json();
+    addNetEntry('GET', url, null, d, r.status, Math.round(performance.now() - s));
+    return d;
   }
-
-  async function wabExecute(action, params) {
-    const url = STORE + '/wab/execute';
-    const body = { action, params: params || {} };
-    const start = performance.now();
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    const duration = Math.round(performance.now() - start);
-    addNetworkEntry('POST', url, body, data, res.status, duration);
-    return data;
+  async function wabExec(action, params) {
+    const url = STORE + '/wab/execute', body = { action, params: params || {} };
+    const s = performance.now();
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json();
+    addNetEntry('POST', url, body, d, r.status, Math.round(performance.now() - s));
+    return d;
   }
-
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function refreshStore() {
+    const f = document.getElementById('store-frame');
+    try { f.contentWindow.postMessage({ source: 'wab-agent', type: 'refresh' }, '*'); } catch(e) {}
+    setTimeout(() => { f.src = STORE + '?t=' + Date.now(); }, 300);
+  }
 
-  // ── Agent Actions ─────────────────────────────────
+  // ── SHOP: Load products ───────────────────────────
+  async function loadProducts() {
+    const d = await wabExec('listProducts');
+    if (!d.success) return;
+    productsCache = d.result.products;
+    renderProducts();
+  }
+
+  function renderProducts() {
+    const grid = document.getElementById('products-grid');
+    grid.innerHTML = productsCache.map(p => {
+      let stars = '';
+      for (let i = 0; i < 5; i++) stars += i < Math.round(p.rating) ? '★' : '☆';
+      const sc = p.stock <= 5 ? 'stock low' : 'stock';
+      const st = p.stock <= 0 ? 'Out of stock' : (p.stock <= 5 ? p.stock + ' left' : p.stock + ' in stock');
+      return '<div class="p-card">' +
+        '<span class="emoji">' + p.image + '</span>' +
+        '<h4>' + p.name + '</h4>' +
+        '<div class="rating">' + stars + '</div>' +
+        '<div class="price">' + p.priceFormatted + '</div>' +
+        '<div class="' + sc + '">' + st + '</div>' +
+        '<button class="add" data-id="' + p.id + '" data-name="' + p.name + '"' + (p.stock <= 0 ? ' disabled' : '') + '>+ Add to Cart</button>' +
+      '</div>';
+    }).join('');
+    grid.querySelectorAll('.add').forEach(btn => {
+      btn.addEventListener('click', () => shopAddToCart(parseInt(btn.dataset.id), btn.dataset.name));
+    });
+  }
+
+  // ── SHOP: Cart management ─────────────────────────
+  async function shopAddToCart(id, name) {
+    const d = await wabExec('addToCart', { productId: id, quantity: 1 });
+    if (d.success) {
+      await shopRefreshCart();
+      await loadProducts();
+      refreshStore();
+    }
+  }
+
+  async function shopRemoveFromCart(id) {
+    const d = await wabExec('removeFromCart', { productId: id });
+    if (d.success) {
+      await shopRefreshCart();
+      await loadProducts();
+      refreshStore();
+    }
+  }
+
+  async function shopRefreshCart() {
+    const d = await wabExec('viewCart');
+    if (!d.success) return;
+    cartData = d.result;
+    renderCart();
+  }
+
+  function renderCart() {
+    const area = document.getElementById('cart-area');
+    const items = document.getElementById('cart-items');
+    const totalEl = document.getElementById('cart-total-val');
+
+    if (cartData.itemCount === 0) {
+      area.style.display = 'none';
+      return;
+    }
+    area.style.display = 'block';
+    items.innerHTML = cartData.items.map(c => {
+      const prod = productsCache.find(p => p.id === c.productId) || {};
+      return '<div class="cart-item">' +
+        '<span class="ci-emoji">' + (prod.image || '📦') + '</span>' +
+        '<div class="ci-info"><div class="ci-name">' + c.name + '</div><div class="ci-meta">Qty: ' + c.quantity + ' × ' + c.priceFormatted + '</div></div>' +
+        '<div class="ci-price">' + c.subtotal + '</div>' +
+        '<button class="ci-remove" data-id="' + c.productId + '">✕</button>' +
+      '</div>';
+    }).join('');
+    totalEl.textContent = cartData.total;
+
+    items.querySelectorAll('.ci-remove').forEach(btn => {
+      btn.addEventListener('click', () => shopRemoveFromCart(parseInt(btn.dataset.id)));
+    });
+  }
+
+  // ── SHOP: Checkout ────────────────────────────────
+  document.getElementById('btn-checkout').addEventListener('click', async function() {
+    const email = document.getElementById('checkout-email').value;
+    if (!email) return;
+    this.disabled = true;
+    this.textContent = 'Processing...';
+
+    const d = await wabExec('checkout', { email });
+    if (d.success) {
+      const statusD = await wabExec('getOrderStatus', { orderId: d.result.orderId });
+      document.getElementById('shop-view').style.display = 'none';
+      document.getElementById('order-view').style.display = 'block';
+      document.getElementById('order-view').innerHTML =
+        '<div class="order-done">' +
+          '<div class="check">✅</div>' +
+          '<h3>Order Confirmed!</h3>' +
+          '<div class="oid">' + d.result.orderId + '</div>' +
+          '<p>Total: <strong>' + d.result.total + '</strong><br>' + d.result.itemCount + ' item(s) purchased<br>Confirmation sent to ' + d.result.email + '</p>' +
+          '<p style="margin-top:12px;font-size:0.75rem;color:var(--muted)">Status: ' + (statusD.success ? statusD.result.status : 'confirmed') + '</p>' +
+          '<p style="margin-top:16px;font-size:0.75rem;color:var(--dim)">Every action above was a real HTTP request to the remote Railway store via WAB Protocol. Check the Network Log →</p>' +
+          '<button class="reset-btn" id="btn-reset-shop">Shop Again</button>' +
+        '</div>';
+      document.getElementById('btn-reset-shop').addEventListener('click', async () => {
+        document.getElementById('shop-view').style.display = 'block';
+        document.getElementById('order-view').style.display = 'none';
+        cartData = { items: [], total: '$0.00', itemCount: 0 };
+        renderCart();
+        await loadProducts();
+        refreshStore();
+      });
+      refreshStore();
+    } else {
+      this.disabled = false;
+      this.textContent = 'Complete Purchase via WAB Protocol';
+      alert(d.result.error || 'Checkout failed');
+    }
+  });
+
+  // ── AI Agent ──────────────────────────────────────
   async function doDiscover() {
     setPhase('discover', 'active');
-    addMessage('Fetching discovery document from remote store...', 'think');
+    agentMsg('Fetching discovery document from remote store...', 'think');
     const doc = await wabGet('/.well-known/wab.json');
-    addMessage('Discovered ' + doc.actions.length + ' actions on "' + doc.site.name + '" (' + doc.site.category + ')', 'result');
+    agentMsg('Discovered ' + doc.actions.length + ' actions on "' + doc.site.name + '" (' + doc.site.category + ')', 'result');
     setPhase('discover', 'done');
     return doc;
   }
 
-  async function doListProducts() {
-    return await wabExecute('listProducts');
-  }
-
-  async function doSearch(query) {
-    return await wabExecute('searchProducts', { query });
-  }
-
-  async function doViewCart() {
-    return await wabExecute('viewCart');
-  }
-
-  // ── Full Shopping Agent ───────────────────────────
   async function runFullAgent() {
     if (busy) return;
     busy = true;
     document.getElementById('btn-full').disabled = true;
     resetPhases();
-    logEl.innerHTML = '';
-
-    addMessage('Agent session started', 'system');
-    addMessage('Target: ' + STORE, 'system');
+    agentLog.innerHTML = '';
+    agentMsg('Agent session started', 'system');
+    agentMsg('Target: ' + STORE, 'system');
     await sleep(300);
 
-    // Phase 1: Discover
     const doc = await doDiscover();
-    await sleep(500);
+    await sleep(400);
 
-    // Phase 2: Plan
     setPhase('plan', 'active');
-    addMessage('Planning: I have ' + doc.actions.length + ' actions available. Goal: find the cheapest product and purchase it.', 'think');
-    await sleep(600);
-    addMessage('Step 1: listProducts → find cheapest', 'think');
-    addMessage('Step 2: addToCart → add to cart', 'think');
-    addMessage('Step 3: checkout → complete order', 'think');
+    agentMsg('Planning: ' + doc.actions.length + ' actions available. Goal: find cheapest product and buy it.', 'think');
+    await sleep(500);
+    agentMsg('Plan: listProducts → analyze → addToCart → viewCart → checkout → verify', 'think');
     setPhase('plan', 'done');
-    await sleep(400);
+    await sleep(300);
 
-    // Phase 3: Execute
     setPhase('execute', 'active');
+    agentMsg('Listing all products...', 'think');
+    const list = await wabExec('listProducts');
+    const prods = list.result.products;
+    agentMsg('Found ' + prods.length + ' products', 'result');
+    await sleep(300);
 
-    addMessage('Executing step 1: Listing all products...', 'think');
-    const listData = await wabExecute('listProducts');
-    const products = listData.result.products;
-    addMessage('Found ' + products.length + ' products', 'result');
-    await sleep(400);
+    const cheap = prods.reduce((a, b) => a.price < b.price ? a : b);
+    agentMsg('Cheapest: "' + cheap.name + '" at ' + cheap.priceFormatted, 'think');
+    await sleep(300);
 
-    const cheapest = products.reduce((a, b) => a.price < b.price ? a : b);
-    addMessage('Analysis: cheapest is "' + cheapest.name + '" at ' + cheapest.priceFormatted + ' (stock: ' + cheapest.stock + ')', 'think');
-    await sleep(400);
+    agentMsg('Adding "' + cheap.name + '" to cart...', 'think');
+    const addD = await wabExec('addToCart', { productId: cheap.id, quantity: 1 });
+    agentMsg(addD.success ? 'Added. Cart: ' + addD.result.cartTotal : 'Failed: ' + addD.result.error, addD.success ? 'result' : 'error');
+    await sleep(300);
 
-    addMessage('Executing step 2: Adding "' + cheapest.name + '" to cart...', 'think');
-    const addData = await wabExecute('addToCart', { productId: cheapest.id, quantity: 1 });
-    if (addData.success) {
-      addMessage('Added to cart. Total: ' + addData.result.cartTotal, 'result');
-    } else {
-      addMessage('Failed: ' + addData.result.error, 'error');
-    }
-    await sleep(400);
+    agentMsg('Verifying cart...', 'think');
+    const cartD = await wabExec('viewCart');
+    agentMsg('Cart: ' + cartD.result.itemCount + ' item(s), ' + cartD.result.total, 'result');
+    await sleep(300);
 
-    addMessage('Verifying cart before checkout...', 'think');
-    const cartData = await wabExecute('viewCart');
-    addMessage('Cart: ' + cartData.result.itemCount + ' item(s), total ' + cartData.result.total, 'result');
-    await sleep(400);
-
-    addMessage('Executing step 3: Checkout...', 'think');
-    const orderData = await wabExecute('checkout', { email: 'agent@webagentbridge.com' });
-    if (orderData.success) {
-      addMessage('Order placed! ID: ' + orderData.result.orderId + ' — Total: ' + orderData.result.total, 'result');
-    } else {
-      addMessage('Checkout failed: ' + orderData.result.error, 'error');
-    }
+    agentMsg('Checking out...', 'think');
+    const orderD = await wabExec('checkout', { email: 'agent@webagentbridge.com' });
+    agentMsg(orderD.success ? 'Order: ' + orderD.result.orderId + ' — ' + orderD.result.total : 'Failed: ' + orderD.result.error, orderD.success ? 'result' : 'error');
     setPhase('execute', 'done');
-    await sleep(400);
+    await sleep(300);
 
-    // Phase 4: Confirm
     setPhase('confirm', 'active');
-    if (orderData.success) {
-      addMessage('Confirming order status...', 'think');
-      const statusData = await wabExecute('getOrderStatus', { orderId: orderData.result.orderId });
-      addMessage('Order ' + statusData.result.orderId + ' status: ' + statusData.result.status, 'result');
+    if (orderD.success) {
+      agentMsg('Verifying order...', 'think');
+      const st = await wabExec('getOrderStatus', { orderId: orderD.result.orderId });
+      agentMsg('Status: ' + st.result.status, 'result');
     }
-
-    addMessage('Fetching audit log to verify all actions were recorded...', 'think');
     await wabGet('/wab/audit');
-    addMessage('All actions confirmed in audit log', 'result');
+    agentMsg('Audit log verified', 'result');
     setPhase('confirm', 'done');
 
-    await sleep(300);
-    addMessage('✅ Agent session complete — 4 lifecycle phases, ' + requestId + ' real HTTP requests to remote store', 'system');
-
+    agentMsg('✅ Complete — ' + reqCount + ' real HTTP requests', 'system');
     refreshStore();
-
+    await loadProducts();
     busy = false;
     document.getElementById('btn-full').disabled = false;
   }
 
-  function refreshStore() {
-    const frame = document.getElementById('store-frame');
-    try { frame.contentWindow.postMessage({ source: 'wab-agent', type: 'refresh' }, '*'); } catch(e) {}
-    setTimeout(function() { frame.src = STORE + '?t=' + Date.now(); }, 300);
-  }
-
-  // ── Natural language handler ──────────────────────
   async function handleInput(text) {
     if (busy) return;
     text = text.trim();
     if (!text) return;
     busy = true;
-
-    // Try as raw JSON
     if (text.startsWith('{')) {
       try {
-        const parsed = JSON.parse(text);
-        if (parsed.action) {
-          addMessage('Executing raw command: ' + parsed.action, 'user');
-          await wabExecute(parsed.action, parsed.params);
-          if (['addToCart','removeFromCart','checkout'].includes(parsed.action)) refreshStore();
-          busy = false;
-          return;
-        }
+        const p = JSON.parse(text);
+        if (p.action) { agentMsg('Execute: ' + p.action, 'user'); await wabExec(p.action, p.params); if (['addToCart','removeFromCart','checkout'].includes(p.action)) { refreshStore(); await loadProducts(); } busy = false; return; }
       } catch(e) {}
     }
-
-    addMessage('User: ' + text, 'user');
-    const lower = text.toLowerCase();
-
-    if (lower.includes('discover') || lower.includes('what can')) {
-      await doDiscover();
-    } else if (lower.includes('list') || lower.includes('products') || lower.includes('catalog') || lower.includes('show')) {
-      addMessage('Agent: Listing products...', 'think');
-      const d = await doListProducts();
-      if (d.success) addMessage('Found ' + d.result.total + ' products', 'result');
-    } else if (lower.includes('search') || lower.includes('find')) {
-      const q = text.replace(/^.*?(search|find)\s*(for)?\s*/i, '').trim() || 'keyboard';
-      addMessage('Agent: Searching for "' + q + '"...', 'think');
-      const d = await doSearch(q);
-      if (d.success) addMessage('Found ' + d.result.total + ' results for "' + d.result.query + '"', 'result');
-    } else if (lower.includes('cart') || lower.includes('basket')) {
-      addMessage('Agent: Checking cart...', 'think');
-      const d = await doViewCart();
-      addMessage('Cart: ' + d.result.itemCount + ' items, total ' + d.result.total, 'result');
-    } else if (lower.includes('buy') || lower.includes('purchase') || lower.includes('cheapest') || lower.includes('order')) {
-      await runFullAgent();
-      busy = false;
-      return;
-    } else if (lower.includes('ping') || lower.includes('health')) {
-      await wabGet('/wab/ping');
-    } else if (lower.includes('audit') || lower.includes('log')) {
-      await wabGet('/wab/audit');
-    } else {
-      addMessage('Agent: I can handle: discover, list products, search [term], view cart, buy cheapest, ping, audit log, or raw JSON like {"action":"listProducts"}', 'think');
-    }
+    agentMsg('User: ' + text, 'user');
+    const l = text.toLowerCase();
+    if (l.includes('discover')) { await doDiscover(); }
+    else if (l.includes('list') || l.includes('product') || l.includes('catalog')) { agentMsg('Listing...', 'think'); const d = await wabExec('listProducts'); if (d.success) agentMsg(d.result.total + ' products', 'result'); }
+    else if (l.includes('search') || l.includes('find')) { const q = text.replace(/^.*?(search|find)\s*(for)?\s*/i, '').trim() || 'keyboard'; agentMsg('Searching: ' + q, 'think'); const d = await wabExec('searchProducts', { query: q }); if (d.success) agentMsg(d.result.total + ' results', 'result'); }
+    else if (l.includes('cart')) { agentMsg('Checking cart...', 'think'); const d = await wabExec('viewCart'); agentMsg(d.result.itemCount + ' items, ' + d.result.total, 'result'); }
+    else if (l.includes('buy') || l.includes('purchase') || l.includes('cheapest')) { await runFullAgent(); busy = false; return; }
+    else if (l.includes('ping')) { await wabGet('/wab/ping'); }
+    else if (l.includes('audit')) { await wabGet('/wab/audit'); }
+    else { agentMsg('Try: discover, list products, search keyboard, view cart, buy cheapest, or raw JSON', 'think'); }
     busy = false;
   }
 
-  // ── Store ↔ Agent sync via postMessage ─────────────
+  // ── Event bindings ────────────────────────────────
+  document.getElementById('btn-full').addEventListener('click', runFullAgent);
+  document.getElementById('btn-discover').addEventListener('click', () => { if (!busy) { busy = true; doDiscover().then(() => { busy = false; }); }});
+  document.getElementById('btn-list').addEventListener('click', () => { if (!busy) { busy = true; agentMsg('Listing...', 'think'); wabExec('listProducts').then(() => { busy = false; }); }});
+  document.getElementById('btn-search').addEventListener('click', () => { const q = prompt('Search:'); if (q && !busy) { busy = true; wabExec('searchProducts', { query: q }).then(() => { busy = false; }); }});
+  document.getElementById('btn-viewcart').addEventListener('click', () => { if (!busy) { busy = true; wabExec('viewCart').then(() => { busy = false; }); }});
+  document.getElementById('btn-clear').addEventListener('click', () => { netLog.innerHTML = ''; reqCount = 0; document.getElementById('req-count').textContent = '0 requests'; });
+  document.getElementById('btn-send').addEventListener('click', () => { const i = document.getElementById('cmd-input'); handleInput(i.value); i.value = ''; });
+  document.getElementById('cmd-input').addEventListener('keydown', function(e) { if (e.key === 'Enter') { handleInput(this.value); this.value = ''; }});
+
+  // ── postMessage sync ──────────────────────────────
   window.addEventListener('message', function(e) {
     if (!e.data || e.data.source !== 'wab-store') return;
-    const d = e.data;
-    if (d.type === 'cart-update') {
-      addMessage('🛒 [Store UI] User added "' + d.detail.product + '" to cart → ' + d.detail.cartItems + ' item(s), total ' + d.detail.cartTotal, 'result');
-    } else if (d.type === 'cart-error') {
-      addMessage('⚠ [Store UI] Failed to add "' + d.detail.product + '": ' + d.detail.error, 'error');
-    } else if (d.type === 'store-ready') {
-      addMessage('Store connected: ' + d.detail.name, 'system');
+    if (e.data.type === 'action-executed' || e.data.type === 'cart-update') {
+      loadProducts();
+      shopRefreshCart();
     }
   });
 
-  // ── Event bindings ────────────────────────────────
-  document.getElementById('btn-full').addEventListener('click', runFullAgent);
-  document.getElementById('btn-discover').addEventListener('click', function() { if (!busy) { busy = true; doDiscover().then(function() { busy = false; }); }});
-  document.getElementById('btn-list').addEventListener('click', function() { if (!busy) { busy = true; addMessage('Listing products...', 'think'); doListProducts().then(function() { busy = false; }); }});
-  document.getElementById('btn-search').addEventListener('click', function() {
-    const q = prompt('Search query:');
-    if (q && !busy) { busy = true; addMessage('Searching: ' + q, 'think'); doSearch(q).then(function() { busy = false; }); }
-  });
-  document.getElementById('btn-cart').addEventListener('click', function() { if (!busy) { busy = true; doViewCart().then(function() { busy = false; }); }});
-  document.getElementById('btn-clear').addEventListener('click', function() { logEl.innerHTML = ''; resetPhases(); requestId = 0; });
-  document.getElementById('btn-send').addEventListener('click', function() {
-    const input = document.getElementById('cmd-input');
-    handleInput(input.value);
-    input.value = '';
-  });
-  document.getElementById('cmd-input').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') { handleInput(this.value); this.value = ''; }
-  });
+  // ── Init ──────────────────────────────────────────
+  loadProducts();
 })();
 </script>
 </body>
