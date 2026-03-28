@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechStore — WAB-Enabled Demo Store</title>
+  <link rel="alternate" type="application/json" href="/agent-bridge.json" title="WAB Discovery">
+  <meta name="wab:version" content="1.2.0">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;color:#1e293b;min-height:100vh}
+    .topbar{background:#0f172a;color:#f1f5f9;padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
+    .topbar h1{font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:8px}
+    .wab-badge{background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;font-size:0.65rem;padding:3px 8px;border-radius:20px;font-weight:600;letter-spacing:0.5px}
+    .cart-icon{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:6px 12px;color:#f1f5f9;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px}
+    .container{max-width:960px;margin:0 auto;padding:24px}
+    .hero{text-align:center;padding:32px 0 24px}
+    .hero h2{font-size:1.6rem;font-weight:800;margin-bottom:6px}
+    .hero p{color:#64748b;font-size:0.95rem}
+    .products{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:24px}
+    .product-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;transition:all 0.2s;position:relative}
+    .product-card:hover{border-color:#3b82f6;box-shadow:0 4px 20px rgba(59,130,246,0.1);transform:translateY(-2px)}
+    .product-card .emoji{font-size:3rem;margin-bottom:12px;display:block}
+    .product-card h3{font-size:0.95rem;font-weight:600;margin-bottom:4px}
+    .product-card .price{font-size:1.3rem;font-weight:800;color:#0f172a;margin:8px 0}
+    .product-card .meta{font-size:0.75rem;color:#94a3b8;margin-bottom:12px}
+    .product-card .stock{font-size:0.75rem;color:#10b981}
+    .product-card .stock.low{color:#f59e0b}
+    .add-btn{width:100%;padding:8px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:0.85rem;cursor:pointer;transition:background 0.2s;margin-top:8px}
+    .add-btn:hover{background:#1e293b}
+    .rating{color:#f59e0b;font-size:0.8rem;margin-bottom:4px}
+    .footer-info{margin-top:40px;padding:24px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;text-align:center}
+    .footer-info h3{font-size:1rem;margin-bottom:8px}
+    .footer-info p{color:#64748b;font-size:0.85rem;line-height:1.6}
+    .footer-info code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:0.8rem;color:#3b82f6}
+    .protocol-bar{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:10px 16px;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;font-size:0.8rem;color:#64748b}
+    .protocol-bar a{color:#3b82f6;text-decoration:none;font-weight:500}
+    .protocol-bar a:hover{text-decoration:underline}
+    .dot{width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+    .toast{position:fixed;bottom:24px;right:24px;background:#0f172a;color:#fff;padding:12px 20px;border-radius:10px;font-size:0.85rem;transform:translateY(100px);opacity:0;transition:all 0.3s;z-index:100}
+    .toast.show{transform:translateY(0);opacity:1}
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <h1>🛒 TechStore <span class="wab-badge">WAB ENABLED</span></h1>
+    <div class="cart-icon" id="cart-btn">🛒 Cart (<span id="cart-count">0</span>)</div>
+  </div>
+
+  <div class="container">
+    <div class="hero">
+      <h2>Welcome to TechStore</h2>
+      <p>This is a real WAB-enabled store. AI agents can discover products, add to cart, and checkout via the WAB protocol.</p>
+    </div>
+
+    <div class="protocol-bar">
+      <span><span class="dot"></span> WAB Protocol Active</span>
+      <a href="/.well-known/wab.json" target="_blank">Discovery Document</a>
+      <a href="/wab/actions" target="_blank">Available Actions</a>
+      <a href="/wab/ping" target="_blank">Ping</a>
+      <a href="/wab/audit" target="_blank">Audit Log</a>
+    </div>
+
+    <div class="products" id="products"></div>
+
+    <div class="footer-info">
+      <h3>🤖 How AI Agents Use This Store</h3>
+      <p>
+        Agents fetch <code>/.well-known/wab.json</code> to discover available actions, 
+        then call <code>POST /wab/execute</code> with structured commands like 
+        <code>{"action":"listProducts"}</code> or <code>{"action":"addToCart","params":{"productId":1}}</code>.
+        No scraping needed — the protocol handles everything.
+      </p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  (function() {
+    var productsEl = document.getElementById('products');
+    var cartCount = document.getElementById('cart-count');
+    var toastEl = document.getElementById('toast');
+    var toastTimer;
+
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function() { toastEl.classList.remove('show'); }, 2500);
+    }
+
+    function loadProducts() {
+      fetch('/wab/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'listProducts' })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success) return;
+        productsEl.innerHTML = data.result.products.map(function(p) {
+          var stars = '';
+          for (var i = 0; i < 5; i++) stars += i < Math.round(p.rating) ? '★' : '☆';
+          var stockClass = p.stock <= 5 ? 'stock low' : 'stock';
+          var stockText = p.stock <= 0 ? '✗ Out of stock' : (p.stock <= 5 ? '⚠ Only ' + p.stock + ' left' : '✓ ' + p.stock + ' in stock');
+          return '<div class="product-card">' +
+            '<span class="emoji">' + p.image + '</span>' +
+            '<h3>' + p.name + '</h3>' +
+            '<div class="rating">' + stars + ' ' + p.rating + '</div>' +
+            '<div class="price">' + p.priceFormatted + '</div>' +
+            '<div class="' + stockClass + '">' + stockText + '</div>' +
+            '<button class="add-btn" onclick="addToCart(' + p.id + ',\'' + p.name.replace(/'/g, "\\'") + '\')"' + (p.stock <= 0 ? ' disabled' : '') + '>Add to Cart</button>' +
+          '</div>';
+        }).join('');
+      });
+    }
+
+    window.addToCart = function(id, name) {
+      fetch('/wab/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'addToCart', params: { productId: id, quantity: 1 } })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          cartCount.textContent = data.result.cartItems;
+          showToast('✓ ' + name + ' added to cart — ' + data.result.cartTotal);
+          loadProducts();
+        } else {
+          showToast('✗ ' + (data.result.error || 'Failed'));
+        }
+      });
+    };
+
+    loadProducts();
+  })();
+  </script>
+</body>
+</html>
