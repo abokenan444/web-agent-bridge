@@ -1,6 +1,6 @@
 {
   "name": "web-agent-bridge",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Open-source middleware that bridges AI agents and websites — providing a standardized command interface for intelligent automation",
   "main": "server/index.js",
   "bin": {

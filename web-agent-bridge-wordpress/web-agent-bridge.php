@@ -3,7 +3,7 @@
  * Plugin Name:       Web Agent Bridge
  * Plugin URI:        https://webagentbridge.com
  * Description:       Open protocol for AI agent-website interaction. WAB Discovery, REST API, structured commands, NoScript fallback, and MCP compatibility.
- * Version:           1.2.0
+ * Version:           2.0.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Web Agent Bridge
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WAB_VERSION', '1.2.0' );
+define( 'WAB_VERSION', '2.0.0' );
 define( 'WAB_PLUGIN_FILE', __FILE__ );
 define( 'WAB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WAB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

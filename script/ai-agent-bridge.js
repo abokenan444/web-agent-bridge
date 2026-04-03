@@ -1,5 +1,5 @@
 /**
- * Web Agent Bridge v1.0.0
+ * Web Agent Bridge v2.0.0
  * Open-source middleware for AI agent ↔ website interaction
  * https://github.com/web-agent-bridge
  * License: MIT
@@ -7,7 +7,7 @@
 (function (global) {
   'use strict';
 
-  const VERSION = '1.0.0';
+  const VERSION = '2.0.0';
   const LICENSING_SERVER = 'https://api.webagentbridge.com';
 
   // ─── Default Configuration ────────────────────────────────────────────
