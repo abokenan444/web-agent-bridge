@@ -150,30 +150,6 @@ class WABAgent {
   }
 
   /**
-   * Get the WAB discovery document for the current page.
-   * @returns {Promise<object>}
-   */
-  async discover() {
-    if (this.useBiDi) {
-      const result = await this._bidiSend('wab.discover');
-      return result.result || result;
-    }
-    return this.page.evaluate(() => window.AICommands.discover());
-  }
-
-  /**
-   * Ping the bridge for a health check.
-   * @returns {Promise<object>}
-   */
-  async ping() {
-    if (this.useBiDi) {
-      const result = await this._bidiSend('wab.ping');
-      return result.result || result;
-    }
-    return this.page.evaluate(() => window.AICommands.ping());
-  }
-
-  /**
    * Get BiDi context (only available when useBiDi is true).
    * @returns {Promise<object>}
    */
@@ -182,15 +158,93 @@ class WABAgent {
   }
 
   /**
-   * Get the WAB protocol interface data.
+   * Check if the page has granted consent for agent interactions.
+   * @returns {Promise<boolean>}
+   */
+  async hasConsent() {
+    return this.page.evaluate(() => {
+      if (typeof window.WABConsent !== 'undefined') return window.WABConsent.hasConsent();
+      // If no consent script, treat as allowed
+      return true;
+    });
+  }
+
+  /**
+   * Wait until consent is granted (blocks until user clicks Allow).
+   * @param {number} [pollMs=500]
+   * @returns {Promise<boolean>}
+   */
+  async waitForConsent(pollMs = 500) {
+    return this.page.waitForFunction(
+      () => {
+        if (typeof window.WABConsent === 'undefined') return true;
+        return window.WABConsent.hasConsent();
+      },
+      { timeout: this.timeout, polling: pollMs }
+    ).then(() => true);
+  }
+
+  /**
+   * Discover the page and return the list of actions.
+   * Combines bridge discovery with runtime getActions().
    * @returns {Promise<object>}
    */
-  async getProtocolInfo() {
-    return this.page.evaluate(() => window.__wab_protocol ? {
-      version: window.__wab_protocol.version,
-      protocol: window.__wab_protocol.protocol,
-      discovery: window.__wab_protocol.discover()
-    } : null);
+  async discover() {
+    return this.page.evaluate(() => {
+      if (window.WAB && typeof window.WAB.discover === 'function') return window.WAB.discover();
+      if (window.AICommands && typeof window.AICommands.getActions === 'function') {
+        return { actions: window.AICommands.getActions(), meta: window.AICommands.getPageInfo ? window.AICommands.getPageInfo() : {} };
+      }
+      return { actions: [] };
+    });
+  }
+
+  /**
+   * Run a sequence of actions, stopping on the first failure.
+   * @param {Array<{name: string, params?: object}>} steps
+   * @param {{ stopOnError?: boolean }} [options]
+   * @returns {Promise<Array<{ name: string, ok: boolean, result?: any, error?: string }>>}
+   */
+  async runPipeline(steps, options = {}) {
+    const stopOnError = options.stopOnError !== false;
+    const results = [];
+    for (const step of steps) {
+      try {
+        const res = await this.execute(step.name, step.params);
+        results.push({ name: step.name, ok: true, result: res });
+      } catch (err) {
+        results.push({ name: step.name, ok: false, error: err.message || String(err) });
+        if (stopOnError) break;
+      }
+    }
+    return results;
+  }
+
+  /**
+   * Execute multiple actions in parallel.
+   * @param {Array<{name: string, params?: object}>} actions
+   * @returns {Promise<Array<{ name: string, status: string, value?: any, reason?: string }>>}
+   */
+  async executeParallel(actions) {
+    const promises = actions.map((a) =>
+      this.execute(a.name, a.params)
+        .then((value) => ({ name: a.name, status: 'fulfilled', value }))
+        .catch((err) => ({ name: a.name, status: 'rejected', reason: err.message || String(err) }))
+    );
+    return Promise.all(promises);
+  }
+
+  /**
+   * Take a screenshot and return as base64 (useful for vision agents).
+   * @param {{ fullPage?: boolean }} [opts]
+   * @returns {Promise<string>}
+   */
+  async screenshot(opts = {}) {
+    const buf = await this.page.screenshot({
+      encoding: 'base64',
+      fullPage: opts.fullPage || false
+    });
+    return buf;
   }
 
   /** @private */

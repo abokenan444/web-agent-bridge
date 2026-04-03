@@ -1,0 +1,25 @@
+{
+  "name": "@web-agent-bridge/svelte",
+  "version": "1.0.0",
+  "description": "Svelte stores and helpers for Web Agent Bridge (WAB) browser client",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "svelte": "index.js",
+  "sideEffects": false,
+  "peerDependencies": {
+    "svelte": ">=3.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anthropics/web-agent-bridge.git",
+    "directory": "packages/svelte"
+  },
+  "keywords": [
+    "wab",
+    "web-agent-bridge",
+    "ai-agent",
+    "svelte",
+    "store"
+  ]
+}

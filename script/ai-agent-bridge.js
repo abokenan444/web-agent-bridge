@@ -1,16 +1,14 @@
 /**
- * Web Agent Bridge v1.1.2
- * Open protocol + runtime for AI agent ↔ website interaction
+ * Web Agent Bridge v1.0.0
+ * Open-source middleware for AI agent ↔ website interaction
  * https://github.com/web-agent-bridge
  * License: MIT
  */
 (function (global) {
   'use strict';
 
-  const VERSION = '1.2.0';
-  const PROTOCOL_VERSION = '1.0';
+  const VERSION = '1.0.0';
   const LICENSING_SERVER = 'https://api.webagentbridge.com';
-  const DISCOVERY_PATHS = ['/agent-bridge.json', '/.well-known/wab.json'];
 
   // ─── Default Configuration ────────────────────────────────────────────
   const DEFAULT_CONFIG = {
@@ -578,11 +576,9 @@
       this.authenticated = false;
       this.agentInfo = null;
       this._licenseVerified = null;
-      this._discoveryDoc = null;
       this._ready = false;
       this._readyCallbacks = [];
       this._mutationObserver = null;
-      this._eventSubscriptions = new Map();
 
       // Enable stealth mode if configured (requires consent: true)
       if (this.config.stealth?.enabled && this.config.stealth?.consent === true) {
@@ -594,8 +590,6 @@
 
     // ── Initialization ──────────────────────────────────────────────────
     async _init() {
-      await this._fetchDiscoveryDocument();
-
       if (this.config.configEndpoint && (this.config.siteId || this.config._licenseKey || this.config.licenseKey)) {
         await this._secureLicenseExchange();
       } else if (this.config.licenseKey) {
@@ -610,23 +604,8 @@
       this._ready = true;
       this._readyCallbacks.forEach(cb => cb());
       this._readyCallbacks = [];
-      this.events.emit('ready', { version: VERSION, protocol: PROTOCOL_VERSION, tier: this.getEffectiveTier() });
-      this.logger.log('init', { version: VERSION, protocol: PROTOCOL_VERSION, tier: this.getEffectiveTier(), security: 'sandbox-active' });
-    }
-
-    async _fetchDiscoveryDocument() {
-      var base = this._getLicenseApiBase();
-      for (var i = 0; i < DISCOVERY_PATHS.length; i++) {
-        try {
-          var res = await fetch(base + DISCOVERY_PATHS[i], { method: 'GET', credentials: 'omit' });
-          if (res.ok) {
-            this._discoveryDoc = await res.json();
-            this.logger.log('discovery', { path: DISCOVERY_PATHS[i], provider: this._discoveryDoc.provider });
-            this.events.emit('discovery', this._discoveryDoc);
-            return;
-          }
-        } catch (_) {}
-      }
+      this.events.emit('ready', { version: VERSION, tier: this.getEffectiveTier() });
+      this.logger.log('init', { version: VERSION, tier: this.getEffectiveTier(), security: 'sandbox-active' });
     }
 
     // Secure license exchange: POST license key to server, get session token back
@@ -845,6 +824,196 @@
           });
         }
       });
+
+      this._autoDiscoverCommerceAndBookingActions();
+      this._autoDiscoverStructuredActions();
+    }
+
+    _autoDiscoverCommerceAndBookingActions() {
+      const clickable = safeQuerySelectorAll('button, [role="button"], a, input[type="submit"], input[type="button"]');
+      clickable.forEach((el, i) => {
+        const text = (el.textContent || el.value || el.getAttribute('aria-label') || '').trim();
+        if (!text) return;
+
+        const intent = this._inferActionIntent(text);
+        if (!intent) return;
+
+        const selector = this._generateSelector(el);
+        if (!selector || !isElementAllowed(selector, this.config)) return;
+
+        const name = `${intent}_${this._slugify(text) || i}`;
+        if (this.registry.get(name)) return;
+
+        this.registry.register({
+          name,
+          description: `${intent.replace(/_/g, ' ')}: ${text}`,
+          trigger: 'click',
+          selector,
+          category: intent.startsWith('book') ? 'booking' : 'commerce',
+          metadata: { discoveredBy: 'intent' }
+        });
+      });
+
+      const forms = safeQuerySelectorAll('form');
+      forms.forEach((form, i) => {
+        const formText = `${form.id || ''} ${form.name || ''} ${form.className || ''} ${(form.getAttribute('aria-label') || '')}`.toLowerCase();
+        const hasBookingSignals = /(book|reservation|reserve|appointment|schedule)/.test(formText)
+          || !!form.querySelector('input[type="date"], input[type="time"], input[name*="date" i], input[name*="time" i]');
+        if (!hasBookingSignals) return;
+
+        const formSelector = this._generateSelector(form);
+        if (!formSelector || !isElementAllowed(formSelector, this.config)) return;
+
+        const fields = Array.from(form.querySelectorAll('input, textarea, select'))
+          .filter(f => f.type !== 'hidden' && f.type !== 'submit')
+          .map(f => ({
+            name: f.name || f.id || f.placeholder || `field_${Math.random().toString(36).slice(2, 6)}`,
+            selector: this._generateSelector(f),
+            type: f.type || 'text',
+            required: f.required,
+            placeholder: f.placeholder || ''
+          }));
+
+        const submitBtn = form.querySelector('[type="submit"], button:not([type])');
+        const actionName = `book_${this._slugify(form.id || form.name || `form_${i}`)}`;
+        if (this.registry.get(actionName)) return;
+
+        this.registry.register({
+          name: actionName,
+          description: `Book or reserve via form: ${form.id || form.name || `form_${i}`}`,
+          trigger: 'fill_and_submit',
+          selector: formSelector,
+          fields,
+          submitSelector: submitBtn ? this._generateSelector(submitBtn) : null,
+          category: 'booking',
+          metadata: { discoveredBy: 'booking-form-signals' }
+        });
+      });
+    }
+
+    _autoDiscoverStructuredActions() {
+      const products = this._scanStructuredProducts();
+      if (!products.length) return;
+
+      if (!this.registry.get('get_structured_products')) {
+        this.registry.register({
+          name: 'get_structured_products',
+          description: 'Return product entities discovered from schema.org and microdata',
+          trigger: 'read',
+          category: 'structured-data',
+          params: [
+            { name: 'limit', type: 'number', required: false }
+          ],
+          handler: (params) => {
+            const limit = Number(params?.limit || products.length);
+            const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.min(limit, products.length) : products.length;
+            return { success: true, count: products.length, products: products.slice(0, safeLimit) };
+          },
+          metadata: { discoveredBy: 'schema' }
+        });
+      }
+
+      if (!this.registry.get('get_structured_prices')) {
+        this.registry.register({
+          name: 'get_structured_prices',
+          description: 'Return normalized offer prices discovered from structured product data',
+          trigger: 'read',
+          category: 'structured-data',
+          handler: () => {
+            const prices = products
+              .map(p => ({
+                name: p.name || null,
+                sku: p.sku || null,
+                price: p.price || null,
+                priceCurrency: p.priceCurrency || null,
+                availability: p.availability || null,
+                source: p.source
+              }))
+              .filter(p => p.price != null || p.availability != null);
+            return { success: true, count: prices.length, offers: prices };
+          },
+          metadata: { discoveredBy: 'schema' }
+        });
+      }
+    }
+
+    _scanStructuredProducts() {
+      const products = [];
+
+      const jsonLdScripts = safeQuerySelectorAll('script[type="application/ld+json"]');
+      jsonLdScripts.forEach((script, idx) => {
+        const text = script.textContent;
+        if (!text || !text.trim()) return;
+        try {
+          const parsed = JSON.parse(text);
+          const graph = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.['@graph']) ? parsed['@graph'] : [parsed]);
+          graph.forEach(node => {
+            if (!node || typeof node !== 'object') return;
+            const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+            if (!types.includes('Product')) return;
+            const offer = Array.isArray(node.offers) ? node.offers[0] : node.offers;
+            products.push({
+              name: node.name || null,
+              sku: node.sku || null,
+              price: offer?.price || null,
+              priceCurrency: offer?.priceCurrency || null,
+              availability: offer?.availability || null,
+              source: `jsonld:${idx}`
+            });
+          });
+        } catch (e) {
+          // Ignore invalid JSON-LD blocks.
+        }
+      });
+
+      const microProducts = safeQuerySelectorAll('[itemtype*="schema.org/Product"]');
+      microProducts.forEach((el, idx) => {
+        const readProp = (prop) => {
+          const propEl = el.querySelector(`[itemprop="${prop}"]`);
+          if (!propEl) return null;
+          if (propEl.content) return propEl.content;
+          if (propEl.getAttribute('content')) return propEl.getAttribute('content');
+          if (propEl.value) return propEl.value;
+          return (propEl.textContent || '').trim() || null;
+        };
+
+        const offerRoot = el.querySelector('[itemprop="offers"]');
+        const readOfferProp = (prop) => {
+          if (!offerRoot) return null;
+          const node = offerRoot.querySelector(`[itemprop="${prop}"]`);
+          if (!node) return null;
+          return node.getAttribute('content') || node.content || (node.textContent || '').trim() || null;
+        };
+
+        products.push({
+          name: readProp('name'),
+          sku: readProp('sku'),
+          price: readOfferProp('price') || readProp('price'),
+          priceCurrency: readOfferProp('priceCurrency'),
+          availability: readOfferProp('availability'),
+          source: `microdata:${idx}`
+        });
+      });
+
+      const unique = [];
+      const seen = new Set();
+      for (const item of products) {
+        const key = `${item.name || ''}|${item.sku || ''}|${item.price || ''}|${item.source}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        unique.push(item);
+      }
+      return unique;
+    }
+
+    _inferActionIntent(text) {
+      const t = String(text || '').toLowerCase();
+      if (!t) return null;
+      if (/(add\s*to\s*cart|buy\s*now|add\s*bag|add\s*basket)/.test(t)) return 'add_to_cart';
+      if (/(checkout|proceed\s*to\s*checkout|pay\s*now)/.test(t)) return 'checkout';
+      if (/(book\s*now|reserve|reservation|schedule|appointment)/.test(t)) return 'book_now';
+      if (/(get\s*price|check\s*price|view\s*price)/.test(t)) return 'get_price';
+      return null;
     }
 
     _generateSelector(el) {
@@ -1197,50 +1366,6 @@
       this.events.emit('action:unregistered', { name });
     }
 
-    // ── Protocol Discovery ──────────────────────────────────────────────
-    discover() {
-      return {
-        wab_version: PROTOCOL_VERSION,
-        runtime_version: VERSION,
-        discovery_document: this._discoveryDoc,
-        page: this.getPageInfo(),
-        actions: this.getActions(),
-        fairness: this._discoveryDoc ? this._discoveryDoc.fairness : null,
-        transport: {
-          js_global: { enabled: true, interface: 'window.AICommands' },
-          bidi: { enabled: true, interface: 'window.__wab_bidi' },
-          noscript: { enabled: !!(this.config.siteId) }
-        }
-      };
-    }
-
-    subscribe(eventName, callback) {
-      if (typeof callback !== 'function') return { success: false, error: 'callback must be a function' };
-      var id = 'sub_' + (++this.security._commandCounter);
-      this._eventSubscriptions.set(id, { event: eventName, callback });
-      this.events.on(eventName, callback);
-      return { success: true, subscriptionId: id, event: eventName };
-    }
-
-    unsubscribe(subscriptionId) {
-      var sub = this._eventSubscriptions.get(subscriptionId);
-      if (!sub) return { success: false, error: 'Subscription not found' };
-      this.events.off(sub.event, sub.callback);
-      this._eventSubscriptions.delete(subscriptionId);
-      return { success: true };
-    }
-
-    ping() {
-      return {
-        pong: true,
-        version: VERSION,
-        protocol: PROTOCOL_VERSION,
-        timestamp: Date.now(),
-        ready: this._ready,
-        locked: this.security.isLocked
-      };
-    }
-
     // ── Discovery / Info ────────────────────────────────────────────────
     getActions(category) {
       if (category) return this.registry.getByCategory(category);
@@ -1318,13 +1443,8 @@
     toJSON() {
       return {
         version: VERSION,
-        protocol: PROTOCOL_VERSION,
         page: this.getPageInfo(),
-        actions: this.getActions(),
-        discovery: this._discoveryDoc ? {
-          provider: this._discoveryDoc.provider,
-          fairness: this._discoveryDoc.fairness
-        } : null
+        actions: this.getActions()
       };
     }
 
@@ -1334,7 +1454,6 @@
       return {
         type: 'wab:context',
         version: VERSION,
-        protocol: PROTOCOL_VERSION,
         context: {
           url: location.href,
           title: document.title,
@@ -1349,9 +1468,7 @@
           })),
           permissions: this._getEffectivePermissions(),
           tier: this.getEffectiveTier()
-        },
-        discovery: this._discoveryDoc || null,
-        fairness: this._discoveryDoc ? this._discoveryDoc.fairness : null
+        }
       };
     }
 
@@ -1393,24 +1510,6 @@
         case 'wab.getPageInfo':
           return { ...responseBase, result: this.getPageInfo() };
 
-        case 'wab.discover':
-          return { ...responseBase, result: this.discover() };
-
-        case 'wab.authenticate':
-          if (!command.params?.key) {
-            return { id: command.id, error: { code: 'invalid argument', message: 'Agent key required' } };
-          }
-          return { ...responseBase, result: this.authenticate(command.params.key, command.params.meta || {}) };
-
-        case 'wab.subscribe':
-          if (!command.params?.event) {
-            return { id: command.id, error: { code: 'invalid argument', message: 'Event name required' } };
-          }
-          return { ...responseBase, result: this.subscribe(command.params.event, command.params.callback || function() {}) };
-
-        case 'wab.ping':
-          return { ...responseBase, result: this.ping() };
-
         default:
           return { id: command.id, error: { code: 'unknown command', message: `Unknown method: ${command.method}` } };
       }
@@ -1438,70 +1537,16 @@
     global.AICommands = bridge;
     global.WebAgentBridge = WebAgentBridge;
 
-    // WAB Protocol interface
-    global.__wab_protocol = {
-      version: VERSION,
-      protocol: PROTOCOL_VERSION,
-      discover: () => bridge.discover(),
-      ping: () => bridge.ping()
-    };
-
     // WebDriver BiDi compatibility: expose via __wab_bidi channel
     global.__wab_bidi = {
       version: VERSION,
-      protocol: PROTOCOL_VERSION,
       send: async (command) => bridge.executeBiDi(command),
       getContext: () => bridge.toBiDi()
     };
 
-    // Inject NoJS fallback elements for pages that might disable JS later or
-    // for hybrid environments (SSR, partial hydration, headless crawlers).
-    if (config.siteId) {
-      injectNoScriptFallback(config);
-    }
-
     if (typeof CustomEvent !== 'undefined') {
       document.dispatchEvent(new CustomEvent('wab:ready', { detail: { version: VERSION } }));
     }
-  }
-
-  function injectNoScriptFallback(config) {
-    try {
-      var siteId = config.siteId;
-      var base = config.apiBaseUrl || '';
-
-      // Add <noscript> block if not already present
-      if (!document.querySelector('noscript [src*="noscript/pixel/' + siteId + '"]')) {
-        var ns = document.createElement('noscript');
-        ns.innerHTML =
-          '<link rel="stylesheet" href="' + base + '/api/noscript/css/' + siteId + '">' +
-          '<img src="' + base + '/api/noscript/pixel/' + siteId + '?action=pageview&t=noscript" width="1" height="1" alt="" style="position:absolute;opacity:0">';
-        document.body.appendChild(ns);
-      }
-
-      // Expose noscript endpoints on the bridge for AI agents
-      global.__wab_noscript = {
-        pixel: base + '/api/noscript/pixel/' + siteId,
-        css: base + '/api/noscript/css/' + siteId,
-        bridge: base + '/api/noscript/bridge/' + siteId,
-        embed: base + '/api/noscript/embed/' + siteId,
-        serverTrack: base + '/api/noscript/server-track',
-        status: base + '/api/noscript/status/' + siteId
-      };
-
-      // Add meta tags for crawlers/agents that read HTML
-      if (!document.querySelector('meta[name="wab:noscript"]')) {
-        var meta1 = document.createElement('meta');
-        meta1.name = 'wab:noscript';
-        meta1.content = 'true';
-        document.head.appendChild(meta1);
-
-        var meta2 = document.createElement('meta');
-        meta2.name = 'wab:bridge';
-        meta2.content = base + '/api/noscript/bridge/' + siteId;
-        document.head.appendChild(meta2);
-      }
-    } catch (_) {}
   }
 
   if (document.readyState === 'loading') {

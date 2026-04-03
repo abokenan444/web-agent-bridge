@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WAB Protocol Demo — Full Shopping Experience via Protocol</title>
-  <meta name="description" content="Browse products, add to cart, and checkout — all via WAB Protocol HTTP calls to a remote store. See every request live.">
+  <meta name="description" content="WAB demo: shop, AI agent, and network log. Uses live Railway store when available; falls back to an in-browser protocol simulator (no external server required).">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -139,6 +139,20 @@
     .agent-msg.user{color:#60a5fa}
     .agent-msg.result{color:var(--green)}
     .agent-msg.error{color:var(--red)}
+
+    .demo-banner{display:none;padding:8px 16px;font-size:0.78rem;line-height:1.45;border-bottom:1px solid var(--border)}
+    .demo-banner--ok{background:rgba(16,185,129,0.12);color:#a7f3d0}
+    .demo-banner--warn{background:rgba(245,158,11,0.12);color:#fcd34d}
+    .demo-banner--info{background:rgba(59,130,246,0.12);color:#93c5fd}
+    .demo-banner code{font-family:'JetBrains Mono',monospace;font-size:0.72rem;background:rgba(0,0,0,0.2);padding:1px 6px;border-radius:4px}
+    .demo-banner a{color:var(--cyan);text-decoration:underline}
+
+    .net-local{display:inline-block;background:var(--purple);color:#fff;font-size:0.58rem;padding:1px 5px;border-radius:3px;font-weight:700;margin-right:4px;vertical-align:middle}
+    .retry-btn{margin-top:8px;padding:6px 14px;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.78rem}
+
+    .store-offline{flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:var(--bg3);min-height:280px}
+    .store-offline p{color:var(--muted);font-size:0.8rem;max-width:260px;line-height:1.5;margin-top:8px}
+    .store-offline a{color:var(--blue);margin-top:12px;font-size:0.82rem}
   </style>
 </head>
 <body>
@@ -148,18 +162,27 @@
   <div class="nav-links">
     <a href="/">Home</a>
     <a href="/docs">Docs</a>
-    <a href="https://github.com/abokenan444/web-agent-bridge" target="_blank">GitHub</a>
+    <a href="https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener noreferrer">GitHub</a>
   </div>
 </div>
+<div id="demo-mode-banner" class="demo-banner demo-banner--info" style="display:none"></div>
 
 <div class="layout">
-  <!-- LEFT: Store iframe -->
+  <!-- LEFT: Store iframe (live) or offline notice -->
   <div class="panel store-panel">
     <div class="panel-head">
-      <span>Remote Store</span>
+      <span>Live store preview</span>
       <span class="live">Railway</span>
     </div>
-    <iframe id="store-frame" src="https://web-agent-bridge-production.up.railway.app"></iframe>
+    <div id="store-live-wrap" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <iframe id="store-frame" src="https://web-agent-bridge-production.up.railway.app" title="TechStore on Railway"></iframe>
+    </div>
+    <div id="store-offline-placeholder" class="store-offline">
+      <span style="font-size:2.5rem">📡</span>
+      <strong style="font-size:0.88rem">Live iframe hidden</strong>
+      <p>In offline mode the demo runs entirely in your browser. Open the real TechStore when you want the iframe in sync.</p>
+      <a href="https://web-agent-bridge-production.up.railway.app" target="_blank" rel="noopener">Open TechStore →</a>
+    </div>
   </div>
 
   <!-- MIDDLE: Interactive shopping + AI Agent -->
@@ -231,343 +254,6 @@
   </div>
 </div>
 
-<script>
-(function() {
-  const STORE = 'https://web-agent-bridge-production.up.railway.app';
-  const netLog = document.getElementById('net-log');
-  const agentLog = document.getElementById('agent-log');
-  let reqCount = 0;
-  let busy = false;
-  let cartData = { items: [], total: '$0.00', itemCount: 0 };
-  let productsCache = [];
-
-  // ── Tabs ──────────────────────────────────────────
-  document.querySelectorAll('.tab').forEach(t => {
-    t.addEventListener('click', function() {
-      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-      document.querySelectorAll('.tab-body').forEach(x => x.classList.remove('active'));
-      this.classList.add('active');
-      document.getElementById('tab-' + this.dataset.tab).classList.add('active');
-    });
-  });
-
-  // ── Phase management ──────────────────────────────
-  function setPhase(n, s) {
-    const d = document.getElementById('ph-' + n), l = document.getElementById('pl-' + n);
-    if (d) d.className = 'ph-dot' + (s ? ' ' + s : '');
-    if (l) l.className = 'ph-lbl' + (s ? ' ' + s : '');
-  }
-  function resetPhases() { ['discover','plan','execute','confirm'].forEach(p => setPhase(p, '')); }
-
-  // ── Logging ───────────────────────────────────────
-  function agentMsg(text, type) {
-    const div = document.createElement('div');
-    div.className = 'agent-msg ' + (type || 'system');
-    div.textContent = text;
-    agentLog.appendChild(div);
-    agentLog.scrollTop = agentLog.scrollHeight;
-  }
-
-  function syntaxHL(json) {
-    if (typeof json !== 'string') json = JSON.stringify(json, null, 2);
-    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(m) {
-      let c = 'num';
-      if (/^"/.test(m)) c = /:$/.test(m) ? 'key' : 'str';
-      else if (/true|false/.test(m)) c = 'bool';
-      return '<span class="' + c + '">' + m + '</span>';
-    });
-  }
-
-  function addNetEntry(method, url, reqBody, resBody, status, duration) {
-    const id = ++reqCount;
-    document.getElementById('req-count').textContent = reqCount + ' request' + (reqCount > 1 ? 's' : '');
-    const g = document.createElement('div');
-    g.className = 'log-group';
-    const sc = status >= 200 && status < 300 ? 's2' : 's4';
-    const short = url.replace(STORE, '');
-    g.innerHTML =
-      '<div class="log-group-header">' +
-        '<span class="arrow" id="arr-' + id + '">▶</span>' +
-        '<span class="method ' + method + '">' + method + '</span>' +
-        '<span class="url">' + short + '</span>' +
-        '<span class="status ' + sc + '">' + status + '</span>' +
-        '<span class="timing">' + duration + 'ms</span>' +
-      '</div>' +
-      '<div class="log-group-body" id="nb-' + id + '">' +
-        (reqBody ? '<div class="log-sec"><div class="log-sec-title">Request</div><div class="log-json">' + syntaxHL(reqBody) + '</div></div>' : '') +
-        '<div class="log-sec"><div class="log-sec-title">Response · ' + status + '</div><div class="log-json">' + syntaxHL(resBody) + '</div></div>' +
-      '</div>';
-    g.querySelector('.log-group-header').addEventListener('click', function() {
-      document.getElementById('nb-' + id).classList.toggle('open');
-      document.getElementById('arr-' + id).classList.toggle('open');
-    });
-    netLog.appendChild(g);
-    netLog.scrollTop = netLog.scrollHeight;
-    return resBody;
-  }
-
-  // ── HTTP ──────────────────────────────────────────
-  async function wabGet(path) {
-    const url = STORE + path, s = performance.now();
-    const r = await fetch(url);
-    const d = await r.json();
-    addNetEntry('GET', url, null, d, r.status, Math.round(performance.now() - s));
-    return d;
-  }
-  async function wabExec(action, params) {
-    const url = STORE + '/wab/execute', body = { action, params: params || {} };
-    const s = performance.now();
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const d = await r.json();
-    addNetEntry('POST', url, body, d, r.status, Math.round(performance.now() - s));
-    return d;
-  }
-  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-  function refreshStore() {
-    const f = document.getElementById('store-frame');
-    try { f.contentWindow.postMessage({ source: 'wab-agent', type: 'refresh' }, '*'); } catch(e) {}
-    setTimeout(() => { f.src = STORE + '?t=' + Date.now(); }, 300);
-  }
-
-  // ── SHOP: Load products ───────────────────────────
-  async function loadProducts() {
-    const d = await wabExec('listProducts');
-    if (!d.success) return;
-    productsCache = d.result.products;
-    renderProducts();
-  }
-
-  function renderProducts() {
-    const grid = document.getElementById('products-grid');
-    grid.innerHTML = productsCache.map(p => {
-      let stars = '';
-      for (let i = 0; i < 5; i++) stars += i < Math.round(p.rating) ? '★' : '☆';
-      const sc = p.stock <= 5 ? 'stock low' : 'stock';
-      const st = p.stock <= 0 ? 'Out of stock' : (p.stock <= 5 ? p.stock + ' left' : p.stock + ' in stock');
-      return '<div class="p-card">' +
-        '<span class="emoji">' + p.image + '</span>' +
-        '<h4>' + p.name + '</h4>' +
-        '<div class="rating">' + stars + '</div>' +
-        '<div class="price">' + p.priceFormatted + '</div>' +
-        '<div class="' + sc + '">' + st + '</div>' +
-        '<button class="add" data-id="' + p.id + '" data-name="' + p.name + '"' + (p.stock <= 0 ? ' disabled' : '') + '>+ Add to Cart</button>' +
-      '</div>';
-    }).join('');
-    grid.querySelectorAll('.add').forEach(btn => {
-      btn.addEventListener('click', () => shopAddToCart(parseInt(btn.dataset.id), btn.dataset.name));
-    });
-  }
-
-  // ── SHOP: Cart management ─────────────────────────
-  async function shopAddToCart(id, name) {
-    const d = await wabExec('addToCart', { productId: id, quantity: 1 });
-    if (d.success) {
-      await shopRefreshCart();
-      await loadProducts();
-      refreshStore();
-    }
-  }
-
-  async function shopRemoveFromCart(id) {
-    const d = await wabExec('removeFromCart', { productId: id });
-    if (d.success) {
-      await shopRefreshCart();
-      await loadProducts();
-      refreshStore();
-    }
-  }
-
-  async function shopRefreshCart() {
-    const d = await wabExec('viewCart');
-    if (!d.success) return;
-    cartData = d.result;
-    renderCart();
-  }
-
-  function renderCart() {
-    const area = document.getElementById('cart-area');
-    const items = document.getElementById('cart-items');
-    const totalEl = document.getElementById('cart-total-val');
-
-    if (cartData.itemCount === 0) {
-      area.style.display = 'none';
-      return;
-    }
-    area.style.display = 'block';
-    items.innerHTML = cartData.items.map(c => {
-      const prod = productsCache.find(p => p.id === c.productId) || {};
-      return '<div class="cart-item">' +
-        '<span class="ci-emoji">' + (prod.image || '📦') + '</span>' +
-        '<div class="ci-info"><div class="ci-name">' + c.name + '</div><div class="ci-meta">Qty: ' + c.quantity + ' × ' + c.priceFormatted + '</div></div>' +
-        '<div class="ci-price">' + c.subtotal + '</div>' +
-        '<button class="ci-remove" data-id="' + c.productId + '">✕</button>' +
-      '</div>';
-    }).join('');
-    totalEl.textContent = cartData.total;
-
-    items.querySelectorAll('.ci-remove').forEach(btn => {
-      btn.addEventListener('click', () => shopRemoveFromCart(parseInt(btn.dataset.id)));
-    });
-  }
-
-  // ── SHOP: Checkout ────────────────────────────────
-  document.getElementById('btn-checkout').addEventListener('click', async function() {
-    const email = document.getElementById('checkout-email').value;
-    if (!email) return;
-    this.disabled = true;
-    this.textContent = 'Processing...';
-
-    const d = await wabExec('checkout', { email });
-    if (d.success) {
-      const statusD = await wabExec('getOrderStatus', { orderId: d.result.orderId });
-      document.getElementById('shop-view').style.display = 'none';
-      document.getElementById('order-view').style.display = 'block';
-      document.getElementById('order-view').innerHTML =
-        '<div class="order-done">' +
-          '<div class="check">✅</div>' +
-          '<h3>Order Confirmed!</h3>' +
-          '<div class="oid">' + d.result.orderId + '</div>' +
-          '<p>Total: <strong>' + d.result.total + '</strong><br>' + d.result.itemCount + ' item(s) purchased<br>Confirmation sent to ' + d.result.email + '</p>' +
-          '<p style="margin-top:12px;font-size:0.75rem;color:var(--muted)">Status: ' + (statusD.success ? statusD.result.status : 'confirmed') + '</p>' +
-          '<p style="margin-top:16px;font-size:0.75rem;color:var(--dim)">Every action above was a real HTTP request to the remote Railway store via WAB Protocol. Check the Network Log →</p>' +
-          '<button class="reset-btn" id="btn-reset-shop">Shop Again</button>' +
-        '</div>';
-      document.getElementById('btn-reset-shop').addEventListener('click', async () => {
-        document.getElementById('shop-view').style.display = 'block';
-        document.getElementById('order-view').style.display = 'none';
-        cartData = { items: [], total: '$0.00', itemCount: 0 };
-        renderCart();
-        await loadProducts();
-        refreshStore();
-      });
-      refreshStore();
-    } else {
-      this.disabled = false;
-      this.textContent = 'Complete Purchase via WAB Protocol';
-      alert(d.result.error || 'Checkout failed');
-    }
-  });
-
-  // ── AI Agent ──────────────────────────────────────
-  async function doDiscover() {
-    setPhase('discover', 'active');
-    agentMsg('Fetching discovery document from remote store...', 'think');
-    const doc = await wabGet('/.well-known/wab.json');
-    agentMsg('Discovered ' + doc.actions.length + ' actions on "' + doc.site.name + '" (' + doc.site.category + ')', 'result');
-    setPhase('discover', 'done');
-    return doc;
-  }
-
-  async function runFullAgent() {
-    if (busy) return;
-    busy = true;
-    document.getElementById('btn-full').disabled = true;
-    resetPhases();
-    agentLog.innerHTML = '';
-    agentMsg('Agent session started', 'system');
-    agentMsg('Target: ' + STORE, 'system');
-    await sleep(300);
-
-    const doc = await doDiscover();
-    await sleep(400);
-
-    setPhase('plan', 'active');
-    agentMsg('Planning: ' + doc.actions.length + ' actions available. Goal: find cheapest product and buy it.', 'think');
-    await sleep(500);
-    agentMsg('Plan: listProducts → analyze → addToCart → viewCart → checkout → verify', 'think');
-    setPhase('plan', 'done');
-    await sleep(300);
-
-    setPhase('execute', 'active');
-    agentMsg('Listing all products...', 'think');
-    const list = await wabExec('listProducts');
-    const prods = list.result.products;
-    agentMsg('Found ' + prods.length + ' products', 'result');
-    await sleep(300);
-
-    const cheap = prods.reduce((a, b) => a.price < b.price ? a : b);
-    agentMsg('Cheapest: "' + cheap.name + '" at ' + cheap.priceFormatted, 'think');
-    await sleep(300);
-
-    agentMsg('Adding "' + cheap.name + '" to cart...', 'think');
-    const addD = await wabExec('addToCart', { productId: cheap.id, quantity: 1 });
-    agentMsg(addD.success ? 'Added. Cart: ' + addD.result.cartTotal : 'Failed: ' + addD.result.error, addD.success ? 'result' : 'error');
-    await sleep(300);
-
-    agentMsg('Verifying cart...', 'think');
-    const cartD = await wabExec('viewCart');
-    agentMsg('Cart: ' + cartD.result.itemCount + ' item(s), ' + cartD.result.total, 'result');
-    await sleep(300);
-
-    agentMsg('Checking out...', 'think');
-    const orderD = await wabExec('checkout', { email: 'agent@webagentbridge.com' });
-    agentMsg(orderD.success ? 'Order: ' + orderD.result.orderId + ' — ' + orderD.result.total : 'Failed: ' + orderD.result.error, orderD.success ? 'result' : 'error');
-    setPhase('execute', 'done');
-    await sleep(300);
-
-    setPhase('confirm', 'active');
-    if (orderD.success) {
-      agentMsg('Verifying order...', 'think');
-      const st = await wabExec('getOrderStatus', { orderId: orderD.result.orderId });
-      agentMsg('Status: ' + st.result.status, 'result');
-    }
-    await wabGet('/wab/audit');
-    agentMsg('Audit log verified', 'result');
-    setPhase('confirm', 'done');
-
-    agentMsg('✅ Complete — ' + reqCount + ' real HTTP requests', 'system');
-    refreshStore();
-    await loadProducts();
-    busy = false;
-    document.getElementById('btn-full').disabled = false;
-  }
-
-  async function handleInput(text) {
-    if (busy) return;
-    text = text.trim();
-    if (!text) return;
-    busy = true;
-    if (text.startsWith('{')) {
-      try {
-        const p = JSON.parse(text);
-        if (p.action) { agentMsg('Execute: ' + p.action, 'user'); await wabExec(p.action, p.params); if (['addToCart','removeFromCart','checkout'].includes(p.action)) { refreshStore(); await loadProducts(); } busy = false; return; }
-      } catch(e) {}
-    }
-    agentMsg('User: ' + text, 'user');
-    const l = text.toLowerCase();
-    if (l.includes('discover')) { await doDiscover(); }
-    else if (l.includes('list') || l.includes('product') || l.includes('catalog')) { agentMsg('Listing...', 'think'); const d = await wabExec('listProducts'); if (d.success) agentMsg(d.result.total + ' products', 'result'); }
-    else if (l.includes('search') || l.includes('find')) { const q = text.replace(/^.*?(search|find)\s*(for)?\s*/i, '').trim() || 'keyboard'; agentMsg('Searching: ' + q, 'think'); const d = await wabExec('searchProducts', { query: q }); if (d.success) agentMsg(d.result.total + ' results', 'result'); }
-    else if (l.includes('cart')) { agentMsg('Checking cart...', 'think'); const d = await wabExec('viewCart'); agentMsg(d.result.itemCount + ' items, ' + d.result.total, 'result'); }
-    else if (l.includes('buy') || l.includes('purchase') || l.includes('cheapest')) { await runFullAgent(); busy = false; return; }
-    else if (l.includes('ping')) { await wabGet('/wab/ping'); }
-    else if (l.includes('audit')) { await wabGet('/wab/audit'); }
-    else { agentMsg('Try: discover, list products, search keyboard, view cart, buy cheapest, or raw JSON', 'think'); }
-    busy = false;
-  }
-
-  // ── Event bindings ────────────────────────────────
-  document.getElementById('btn-full').addEventListener('click', runFullAgent);
-  document.getElementById('btn-discover').addEventListener('click', () => { if (!busy) { busy = true; doDiscover().then(() => { busy = false; }); }});
-  document.getElementById('btn-list').addEventListener('click', () => { if (!busy) { busy = true; agentMsg('Listing...', 'think'); wabExec('listProducts').then(() => { busy = false; }); }});
-  document.getElementById('btn-search').addEventListener('click', () => { const q = prompt('Search:'); if (q && !busy) { busy = true; wabExec('searchProducts', { query: q }).then(() => { busy = false; }); }});
-  document.getElementById('btn-viewcart').addEventListener('click', () => { if (!busy) { busy = true; wabExec('viewCart').then(() => { busy = false; }); }});
-  document.getElementById('btn-clear').addEventListener('click', () => { netLog.innerHTML = ''; reqCount = 0; document.getElementById('req-count').textContent = '0 requests'; });
-  document.getElementById('btn-send').addEventListener('click', () => { const i = document.getElementById('cmd-input'); handleInput(i.value); i.value = ''; });
-  document.getElementById('cmd-input').addEventListener('keydown', function(e) { if (e.key === 'Enter') { handleInput(this.value); this.value = ''; }});
-
-  // ── postMessage sync ──────────────────────────────
-  window.addEventListener('message', function(e) {
-    if (!e.data || e.data.source !== 'wab-store') return;
-    if (e.data.type === 'action-executed' || e.data.type === 'cart-update') {
-      loadProducts();
-      shopRefreshCart();
-    }
-  });
-
-  // ── Init ──────────────────────────────────────────
-  loadProducts();
-})();
-</script>
+<script src="/js/wab-demo-page.js"></script>
 </body>
 </html>

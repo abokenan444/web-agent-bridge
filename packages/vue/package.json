@@ -1,0 +1,24 @@
+{
+  "name": "@web-agent-bridge/vue",
+  "version": "1.0.0",
+  "description": "Vue 3 composables for Web Agent Bridge (WAB) browser client",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "sideEffects": false,
+  "peerDependencies": {
+    "vue": ">=3.2.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anthropics/web-agent-bridge.git",
+    "directory": "packages/vue"
+  },
+  "keywords": [
+    "wab",
+    "web-agent-bridge",
+    "ai-agent",
+    "vue",
+    "composable"
+  ]
+}

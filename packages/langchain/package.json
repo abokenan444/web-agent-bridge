@@ -1,0 +1,26 @@
+{
+  "name": "@web-agent-bridge/langchain",
+  "version": "1.0.0",
+  "description": "LangChain tool wrapper for Web Agent Bridge — lets LLM agents call WAB actions as LangChain tools",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anthropics/web-agent-bridge.git",
+    "directory": "packages/langchain"
+  },
+  "peerDependencies": {
+    "@langchain/core": ">=0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@langchain/core": { "optional": true }
+  },
+  "keywords": [
+    "wab",
+    "web-agent-bridge",
+    "langchain",
+    "ai-agent",
+    "tool"
+  ]
+}

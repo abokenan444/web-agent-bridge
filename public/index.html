@@ -3,152 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Web Agent Bridge — Open Protocol for AI Agent ↔ Website Interaction</title>
-  <meta name="description" content="Open protocol and runtime for AI agent ↔ website interaction. Discovery protocol, fairness engine, MCP integration, and standardized commands for the Agentic Web.">
-  <meta name="keywords" content="AI agent, web automation, browser bridge, MCP, open protocol, fairness engine, discovery protocol, agentic web, OpenAPI for websites, web scraping alternative">
-  <meta name="author" content="Web Agent Bridge">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://webagentbridge.com/">
-  <link rel="alternate" type="application/atom+xml" title="WAB Changelog" href="/feed.xml">
-  <link rel="alternate" type="application/json" title="WAB Discovery" href="/agent-bridge.json">
-  <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Web Agent Bridge — Open Protocol for AI Agent ↔ Website Interaction">
-  <meta property="og:description" content="Open protocol that replaces fragile DOM scraping with structured, permission-aware commands for AI agents. Discovery protocol, fairness engine, and MCP integration.">
-  <meta property="og:url" content="https://webagentbridge.com/">
-  <meta property="og:site_name" content="Web Agent Bridge">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Web Agent Bridge — Open Protocol for AI Agents">
-  <meta name="twitter:description" content="robots.txt told bots what NOT to do. WAB tells AI agents what they CAN do. Open protocol for the Agentic Web.">
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Web Agent Bridge",
-    "alternateName": "WAB",
-    "applicationCategory": "DeveloperApplication",
-    "applicationSubCategory": "AI Agent Protocol",
-    "operatingSystem": "Cross-platform",
-    "url": "https://webagentbridge.com",
-    "downloadUrl": "https://www.npmjs.com/package/web-agent-bridge",
-    "softwareVersion": "1.2.0",
-    "license": "https://opensource.org/licenses/MIT",
-    "description": "Open protocol and runtime for AI agent-website interaction. Provides discovery protocol (agent-bridge.json), command protocol, lifecycle protocol, fairness engine for equitable AI discovery, and MCP integration. The OpenAPI for human-facing web pages.",
-    "keywords": "AI agent, web protocol, browser automation, MCP, fairness engine, discovery protocol, agentic web, open standard",
-    "codeRepository": "https://github.com/abokenan444/web-agent-bridge",
-    "programmingLanguage": ["JavaScript", "Node.js"],
-    "offers": [
-      {
-        "@type": "Offer",
-        "name": "Free Tier",
-        "price": "0",
-        "priceCurrency": "USD",
-        "description": "1 site, 1000 actions/month, basic commands"
-      },
-      {
-        "@type": "Offer",
-        "name": "Starter",
-        "price": "9",
-        "priceCurrency": "USD",
-        "description": "3 sites, 10000 actions/month, form filling, analytics"
-      },
-      {
-        "@type": "Offer",
-        "name": "Pro",
-        "price": "29",
-        "priceCurrency": "USD",
-        "description": "10 sites, 100000 actions/month, API access, CRM, CDN"
-      }
-    ],
-    "featureList": [
-      "Discovery Protocol (agent-bridge.json)",
-      "Command Protocol with standardized JSON format",
-      "Lifecycle Protocol: Discover, Authenticate, Plan, Execute, Confirm",
-      "Fairness Engine preventing AI bias toward large platforms",
-      "MCP (Model Context Protocol) integration via wab-mcp-adapter",
-      "NoScript fallback for HTTP-only agents",
-      "WordPress plugin with one-click integration",
-      "Permission model with granular access control",
-      "Real-time analytics via WebSocket",
-      "Docker and CLI deployment options"
-    ],
-    "sameAs": [
-      "https://www.npmjs.com/package/web-agent-bridge",
-      "https://github.com/abokenan444/web-agent-bridge",
-      "https://socket.dev/npm/package/web-agent-bridge",
-      "https://youtube.com/@abokenan4"
-    ],
-    "maintainer": {
-      "@type": "Organization",
-      "name": "Web Agent Bridge",
-      "url": "https://webagentbridge.com",
-      "email": "support@webagentbridge.com"
-    }
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "Web Agent Bridge",
-    "alternateName": "WAB",
-    "url": "https://webagentbridge.com",
-    "description": "Open protocol for AI agent-website interaction",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": "https://webagentbridge.com/api/discovery/search?q={search_term}",
-      "query-input": "required name=search_term"
-    }
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "What is Web Agent Bridge (WAB)?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Web Agent Bridge is an open protocol for AI agent-website interaction. It provides a standardized way for websites to declare their capabilities (via agent-bridge.json) and for AI agents to interact with them using structured commands instead of fragile DOM scraping."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "How does WAB compare to web scraping?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "WAB replaces scraping with declared, permission-aware actions. Sites publish what they support (click, fill, navigate, etc.) through a discovery document. This is reliable, fast, and respects site permissions — unlike scraping which breaks when UI changes and has no permission model."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Does WAB work with MCP (Model Context Protocol)?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Yes. The wab-mcp-adapter package converts WAB commands into MCP tools, so any MCP-enabled AI agent (Claude, GPT, LangChain) can interact with WAB-enabled websites natively."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "What is the WAB Fairness Engine?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "The Fairness Engine is a built-in system that prevents AI agents from favoring large platforms over small businesses. It uses neutrality scoring, anti-monopoly bias correction, and commission transparency to ensure equitable discovery."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Is there a WordPress plugin for WAB?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Yes. The official Web Agent Bridge WordPress plugin adds the discovery protocol, REST API endpoints, NoScript fallback, and protocol status page with one-click activation."
-        }
-      }
-    ]
-  }
-  </script>
+  <title>Web Agent Bridge — AI Agent Middleware for the Web</title>
+  <meta name="description" content="Open-source middleware that bridges AI agents and websites. Standardized commands, permissions, and analytics for intelligent automation.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -167,9 +23,7 @@
         <li><a href="#features">Features</a></li>
         <li><a href="#how-it-works">How It Works</a></li>
         <li><a href="#pricing">Pricing</a></li>
-        <li><a href="/premium">Premium</a></li>
         <li><a href="/docs">Docs</a></li>
-        <li><a href="/ai">AI</a></li>
       </ul>
       <div class="navbar-actions">
         <a href="/login" class="btn btn-ghost" data-wab-auth="guest">Sign In</a>
@@ -185,33 +39,31 @@
     <div class="container">
       <div class="hero-content fade-in">
         <div class="hero-badge">
-          🚀 Open Protocol &middot; v1.2.0
+          🚀 Open Source &middot; v1.0.0
         </div>
         <h1>
-          Stop Scraping.<br>
-          <span class="gradient-text">Let AI Agents</span> <span class="gradient-text-accent">Execute Directly.</span>
+          Bridge the Gap Between<br>
+          <span class="gradient-text">AI Agents</span> &amp; <span class="gradient-text-accent">Websites</span>
         </h1>
         <p>
-          Add one script and your website becomes AI-native. AI agents discover actions, read data, and 
-          execute commands through a structured protocol — no DOM scraping, no guesswork, no breakage.
+          An open-source middleware script that gives AI agents a standardized command interface 
+          to interact with any website — with permissions, rate limiting, and full control for site owners.
         </p>
         <div class="hero-actions">
-          <a href="/demo" class="btn btn-primary btn-lg">Try Live Demo</a>
-          <a href="#get-started" class="btn btn-secondary btn-lg">Get Started</a>
+          <a href="/register" class="btn btn-primary btn-lg">Start Free</a>
+          <a href="/docs" class="btn btn-secondary btn-lg">Read the Docs</a>
         </div>
 
         <div class="hero-code fade-in fade-in-delay-2">
           <code>
-            <span class="comment">// Make your website AI-ready in 30 seconds</span><br>
-            &lt;<span class="keyword">script</span> <span class="property">src</span>=<span class="string">"https://webagentbridge.com/script/wab.min.js"</span>&gt;&lt;/<span class="keyword">script</span>&gt;<br>
+            <span class="comment">// Add the bridge to your website</span><br>
             &lt;<span class="keyword">script</span>&gt;<br>
-            &nbsp;&nbsp;<span class="property">WAB</span>.<span class="fn">init</span>({<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<span class="property">actions</span>: {<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="property">buy</span>: () =&gt; document.<span class="fn">querySelector</span>(<span class="string">"#buy"</span>).<span class="fn">click</span>(),<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="property">getPrice</span>: () =&gt; ({ <span class="property">price</span>: document.<span class="fn">querySelector</span>(<span class="string">"#price"</span>).<span class="property">innerText</span> })<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;}<br>
-            &nbsp;&nbsp;});<br>
-            &lt;/<span class="keyword">script</span>&gt;
+            &nbsp;&nbsp;window.<span class="property">AIBridgeConfig</span> = {<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="property">licenseKey</span>: <span class="string">"WAB-XXXXX-XXXXX"</span>,<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="property">agentPermissions</span>: { <span class="property">click</span>: <span class="boolean">true</span>, <span class="property">fillForms</span>: <span class="boolean">true</span> }<br>
+            &nbsp;&nbsp;};<br>
+            &lt;/<span class="keyword">script</span>&gt;<br>
+            &lt;<span class="keyword">script</span> <span class="property">src</span>=<span class="string">"/script/ai-agent-bridge.js"</span>&gt;&lt;/<span class="keyword">script</span>&gt;
           </code>
         </div>
       </div>
@@ -319,187 +171,66 @@ console.<span class="fn">log</span>(actions);
     </div>
   </section>
 
-  <!-- ═══════════ GET STARTED IN 30 SECONDS ═══════════ -->
-  <section class="section" id="get-started">
-    <div class="container">
-      <div class="section-header">
-        <span class="label">Get Started</span>
-        <h2>AI-Ready in 30 Seconds</h2>
-        <p>No APIs. No scraping. No setup. Just add a script and your website becomes AI-native.</p>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:40px;">
-        <div class="card" style="padding:0;overflow:hidden;">
-          <div style="padding:12px 20px;background:var(--bg-surface);border-bottom:1px solid var(--border-color);font-weight:600;font-size:0.85rem;display:flex;align-items:center;gap:8px;">
-            <span style="color:var(--accent-blue);">Method 1</span> — Script Tag (Zero Setup)
-          </div>
-          <div style="padding:20px;">
-            <div class="code-block" style="margin:0;">
-              <div class="code-header">
-                <div class="code-dots"><span></span><span></span><span></span></div>
-                <span class="code-lang">HTML — Copy &amp; Paste</span>
-              </div>
-              <div class="code-body">
-<pre><span class="cm">&lt;!-- 1. Load WAB --&gt;</span>
-<span class="kw">&lt;script</span> <span class="prop">src</span>=<span class="str">"https://webagentbridge.com/script/wab.min.js"</span><span class="kw">&gt;&lt;/script&gt;</span>
-
-<span class="cm">&lt;!-- 2. Define actions --&gt;</span>
-<span class="kw">&lt;script&gt;</span>
-WAB.<span class="fn">init</span>({
-  <span class="prop">actions</span>: {
-    <span class="prop">buy</span>: {
-      <span class="prop">description</span>: <span class="str">"Buy the product"</span>,
-      <span class="prop">run</span>: () =&gt; {
-        document.<span class="fn">querySelector</span>(<span class="str">"#buy"</span>).<span class="fn">click</span>()
-        <span class="kw">return</span> { <span class="prop">success</span>: <span class="bool">true</span> }
-      }
-    },
-    <span class="prop">getPrice</span>: {
-      <span class="prop">description</span>: <span class="str">"Get product price"</span>,
-      <span class="prop">run</span>: () =&gt; ({
-        <span class="prop">price</span>: document.<span class="fn">querySelector</span>(<span class="str">"#price"</span>).<span class="prop">innerText</span>
-      })
-    }
-  }
-})
-<span class="kw">&lt;/script&gt;</span></pre>
-              </div>
-            </div>
-            <p style="color:var(--text-secondary);font-size:0.85rem;margin-top:12px;">Works without backend. Protocol auto-generates discovery endpoints.</p>
-          </div>
-        </div>
-
-        <div class="card" style="padding:0;overflow:hidden;">
-          <div style="padding:12px 20px;background:var(--bg-surface);border-bottom:1px solid var(--border-color);font-weight:600;font-size:0.85rem;display:flex;align-items:center;gap:8px;">
-            <span style="color:var(--accent-purple);">Method 2</span> — HTTP Protocol (Backend)
-          </div>
-          <div style="padding:20px;">
-            <div class="code-block" style="margin:0;">
-              <div class="code-header">
-                <div class="code-dots"><span></span><span></span><span></span></div>
-                <span class="code-lang">Node.js — Server-side</span>
-              </div>
-              <div class="code-body">
-<pre><span class="cm">// 1. Discovery endpoint</span>
-app.<span class="fn">get</span>(<span class="str">"/.well-known/wab.json"</span>, (req, res) =&gt; {
-  res.<span class="fn">json</span>({
-    <span class="prop">wab_version</span>: <span class="str">"1.0"</span>,
-    <span class="prop">name</span>: <span class="str">"My Store"</span>,
-    <span class="prop">actions</span>: [
-      { <span class="prop">name</span>: <span class="str">"buy"</span>, <span class="prop">description</span>: <span class="str">"Buy product"</span> },
-      { <span class="prop">name</span>: <span class="str">"getPrice"</span>, <span class="prop">description</span>: <span class="str">"Get price"</span> }
-    ]
-  })
-})
-
-<span class="cm">// 2. Execute endpoint</span>
-app.<span class="fn">post</span>(<span class="str">"/wab/execute"</span>, (req, res) =&gt; {
-  <span class="kw">const</span> { action, params } = req.<span class="prop">body</span>
-  <span class="kw">if</span> (action === <span class="str">"getPrice"</span>)
-    <span class="kw">return</span> res.<span class="fn">json</span>({ <span class="prop">price</span>: <span class="str">"$49"</span> })
-  <span class="kw">if</span> (action === <span class="str">"buy"</span>)
-    <span class="kw">return</span> res.<span class="fn">json</span>({ <span class="prop">success</span>: <span class="bool">true</span> })
-})</pre>
-              </div>
-            </div>
-            <p style="color:var(--text-secondary);font-size:0.85rem;margin-top:12px;">Full HTTP protocol. Works with remote agents, MCP, cURL. No JS needed on client.</p>
-          </div>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:40px;">
-        <!-- Before/After -->
-        <div class="card" style="background:rgba(239,68,68,0.04);border-color:rgba(239,68,68,0.15);">
-          <h3 style="font-size:1rem;margin-bottom:12px;">❌ Without WAB</h3>
-          <div style="font-family:var(--font-mono);font-size:0.82rem;color:var(--text-secondary);line-height:1.8;">
-            AI → Parse entire DOM tree<br>
-            AI → Guess <code>#app &gt; div:nth(3) &gt; button</code><br>
-            AI → Click... hope it works<br>
-            UI changes → <span style="color:var(--accent-red);">Everything breaks</span>
-          </div>
-        </div>
-        <div class="card" style="background:rgba(16,185,129,0.04);border-color:rgba(16,185,129,0.15);">
-          <h3 style="font-size:1rem;margin-bottom:12px;">✅ With WAB</h3>
-          <div style="font-family:var(--font-mono);font-size:0.82rem;color:var(--text-secondary);line-height:1.8;">
-            AI → <code>discover()</code> → list of actions<br>
-            AI → <code>execute("getPrice")</code> → <code>{ price: "$49" }</code><br>
-            AI → <code>execute("buy")</code> → <code>{ success: true }</code><br>
-            UI changes → <span style="color:var(--accent-green);">Protocol still works</span>
-          </div>
-        </div>
-      </div>
-
-      <div style="text-align:center;">
-        <a href="/demo" class="btn btn-primary btn-lg" style="font-size:1.1rem;padding:16px 40px;">
-          ▶ Try the Live Demo
-        </a>
-        <div style="margin-top:12px;color:var(--text-muted);font-size:0.85rem;">
-          Watch an AI agent discover, read prices, and purchase — all via WAB protocol
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- ═══════════ PRICING ═══════════ -->
   <section class="section" id="pricing">
     <div class="container">
       <div class="section-header">
         <span class="label">Pricing</span>
         <h2>Simple, Transparent Pricing</h2>
-        <p>Start free, upgrade when you need advanced features. Open source core forever.</p>
+        <p>Start free, upgrade when you need advanced features. Open source forever.</p>
       </div>
 
-      <div class="grid-4" id="pricingGrid">
-        <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);">Loading plans...</div>
-      </div>
-      <script>
-      (function(){
-        fetch('/api/plans').then(function(r){return r.json()}).then(function(d){
-          var grid=document.getElementById('pricingGrid');
-          if(!d.plans||!d.plans.length){grid.innerHTML='<p>No plans available.</p>';return;}
-          grid.innerHTML=d.plans.map(function(p){
-            var price=p.is_contact_sales?'Custom':('$'+(p.price/100).toFixed(0)+' <span>/mo</span>');
-            var feats=(p.features||[]).map(function(f){return '<li>'+f+'</li>';}).join('');
-            var dis=(p.disabled_features||[]).map(function(f){return '<li class="disabled">'+f+'</li>';}).join('');
-            var btnClass=p.is_featured?'btn btn-primary':'btn btn-secondary';
-            var isMailto=p.cta_url&&p.cta_url.indexOf('mailto:')===0;
-            return '<div class="pricing-card'+(p.is_featured?' featured':'')+'">'+
-              '<div class="pricing-tier">'+p.name+'</div>'+
-              '<div class="pricing-price">'+price+'</div>'+
-              '<div class="pricing-desc">'+p.description+'</div>'+
-              '<ul class="pricing-features">'+feats+dis+'</ul>'+
-              '<a href="'+(p.cta_url||'/register')+'" class="'+btnClass+'" style="width:100%;">'+p.cta_text+'</a>'+
-            '</div>';
-          }).join('');
-        }).catch(function(){});
-      })();
-      </script>
+      <div class="grid-3">
+        <div class="pricing-card">
+          <div class="pricing-tier">Free</div>
+          <div class="pricing-price">$0 <span>/mo</span></div>
+          <div class="pricing-desc">Perfect for personal projects and experimentation.</div>
+          <ul class="pricing-features">
+            <li>Auto-discovery of actions</li>
+            <li>Click &amp; scroll permissions</li>
+            <li>Rate limiting (60/min)</li>
+            <li>Basic logging</li>
+            <li>1 site</li>
+            <li class="disabled">Form filling</li>
+            <li class="disabled">API access</li>
+            <li class="disabled">Analytics dashboard</li>
+          </ul>
+          <a href="/register" class="btn btn-secondary" style="width:100%;">Get Started Free</a>
+        </div>
 
-      <div style="text-align:center;margin-top:40px;">
-        <a href="/premium" class="btn btn-ghost" style="color:var(--accent-purple);">
-          View all 12 premium services in detail &rarr;
-        </a>
-      </div>
-    </div>
-  </section>
+        <div class="pricing-card featured">
+          <div class="pricing-tier">Pro</div>
+          <div class="pricing-price">$29 <span>/mo</span></div>
+          <div class="pricing-desc">For businesses that want full AI agent integration.</div>
+          <ul class="pricing-features">
+            <li>Everything in Free</li>
+            <li>Form filling &amp; submission</li>
+            <li>Internal API access</li>
+            <li>Advanced analytics</li>
+            <li>Up to 10 sites</li>
+            <li>Automated login support</li>
+            <li>Data extraction</li>
+            <li>Priority support</li>
+          </ul>
+          <a href="/register" class="btn btn-primary" style="width:100%;">Start Pro Trial</a>
+        </div>
 
-  <!-- ═══════════ VIDEO TUTORIAL ═══════════ -->
-  <section class="section" id="tutorial">
-    <div class="container" style="text-align:center;">
-      <div class="section-header">
-        <span class="label">Tutorial</span>
-        <h2>See It in Action</h2>
-        <p>Watch how Web Agent Bridge connects AI agents to websites using structured commands — no scraping required.</p>
-      </div>
-      <div style="max-width:800px;margin:0 auto;border-radius:var(--radius-lg);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);border:1px solid var(--border-color);">
-        <video controls preload="metadata" poster="" style="width:100%;display:block;background:#000;" playsinline>
-          <source src="/video/tutorial.mp4" type="video/mp4">
-          Your browser does not support the video tag.
-        </video>
-      </div>
-      <div style="margin-top:24px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
-        <a href="https://youtube.com/@abokenan4?si=5LgA9MuT5xtb8Z0g" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" style="color:var(--accent-red);">▶ Subscribe on YouTube</a>
-        <a href="/docs#quick-start" class="btn btn-ghost" style="color:var(--accent-blue);">Read the Quick Start Guide →</a>
+        <div class="pricing-card">
+          <div class="pricing-tier">Enterprise</div>
+          <div class="pricing-price">Custom</div>
+          <div class="pricing-desc">Custom solutions for large-scale deployments.</div>
+          <ul class="pricing-features">
+            <li>Everything in Pro</li>
+            <li>Unlimited sites</li>
+            <li>Custom rate limits</li>
+            <li>Webhook integrations</li>
+            <li>SSO / SAML</li>
+            <li>Dedicated support</li>
+            <li>SLA guarantee</li>
+            <li>Custom development</li>
+          </ul>
+          <a href="mailto:sales@webagentbridge.com" class="btn btn-secondary" style="width:100%;">Contact Sales</a>
+        </div>
       </div>
     </div>
   </section>
@@ -509,7 +240,7 @@ app.<span class="fn">post</span>(<span class="str">"/wab/execute"</span>, (req, 
     <div class="container">
       <h2 style="margin-bottom:16px;">Ready to Make Your Site <span class="gradient-text">AI-Ready</span>?</h2>
       <p style="color:var(--text-secondary); max-width:540px; margin:0 auto 32px; font-size:1.1rem;">
-        Join the open standard that's powering the next generation of AI agent ↔ website interaction.
+        Join the open-source movement that's bridging the gap between AI agents and the web.
       </p>
       <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
         <a href="/register" class="btn btn-primary btn-lg">Create Free Account</a>
@@ -527,13 +258,12 @@ app.<span class="fn">post</span>(<span class="str">"/wab/execute"</span>, (req, 
             <div class="brand-icon">⚡</div>
             <span>Web Agent Bridge</span>
           </a>
-          <p>Open protocol + runtime for AI agent ↔ website interaction. Built for the Agentic Web.</p>
+          <p>Open-source middleware for AI agent and website interaction. Built for the future of intelligent automation.</p>
         </div>
         <div class="footer-col">
           <h4>Product</h4>
           <ul>
             <li><a href="#features">Features</a></li>
-            <li><a href="/premium">Premium Services</a></li>
             <li><a href="#pricing">Pricing</a></li>
             <li><a href="/docs">Documentation</a></li>
             <li data-wab-auth="signed-in" style="display:none"><a href="/dashboard">Dashboard</a></li>
@@ -545,7 +275,8 @@ app.<span class="fn">post</span>(<span class="str">"/wab/execute"</span>, (req, 
             <li><a href="/docs#quick-start">Quick Start</a></li>
             <li><a href="/docs#api-reference">API Reference</a></li>
             <li><a href="/docs#examples">Examples</a></li>
-            <li><a href="#">GitHub</a></li>
+            <li><a href="https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            <li><a href="https://github.com/abokenan444/web-agent-bridge/issues" target="_blank" rel="noopener noreferrer">Report an issue</a></li>
           </ul>
         </div>
         <div class="footer-col">
@@ -554,15 +285,6 @@ app.<span class="fn">post</span>(<span class="str">"/wab/execute"</span>, (req, 
             <li><a href="/privacy">Privacy Policy</a></li>
             <li><a href="/terms">Terms of Service</a></li>
             <li><a href="/cookies">Cookie Policy</a></li>
-          </ul>
-        </div>
-        <div class="footer-col">
-          <h4>Contact</h4>
-          <ul>
-            <li><a href="mailto:support@webagentbridge.com">support@webagentbridge.com</a></li>
-            <li><a href="mailto:sales@webagentbridge.com">sales@webagentbridge.com</a></li>
-            <li><a href="https://youtube.com/@abokenan4?si=5LgA9MuT5xtb8Z0g" target="_blank" rel="noopener noreferrer">▶ YouTube Channel</a></li>
-            <li><a href="https://github.com/anthropics/web-agent-bridge/issues" target="_blank" rel="noopener noreferrer">Report an Issue</a></li>
           </ul>
         </div>
       </div>

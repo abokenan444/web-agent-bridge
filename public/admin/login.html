@@ -18,7 +18,7 @@
         <p style="color:var(--text-muted);">Web Agent Bridge Administration</p>
       </div>
       <div class="alert alert-error" id="loginError" style="display:none;"></div>
-      <form id="loginForm">
+      <form id="loginForm" onsubmit="return handleLogin(event)">
         <div class="form-group">
           <label>Email</label>
           <input type="email" class="form-input" id="email" required autofocus placeholder="admin@webagentbridge.com">
@@ -40,24 +40,24 @@
       window.location.href = '/admin';
     }
 
-    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    async function handleLogin(e) {
       e.preventDefault();
-      var email = document.getElementById('email').value;
-      var password = document.getElementById('password').value;
-      var errEl = document.getElementById('loginError');
-      var btn = document.getElementById('submitBtn');
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errEl = document.getElementById('loginError');
+      const btn = document.getElementById('submitBtn');
 
       errEl.style.display = 'none';
       btn.disabled = true;
       btn.textContent = 'Signing in...';
 
       try {
-        var res = await fetch('/api/admin/login', {
+        const res = await fetch('/api/admin/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email, password: password })
+          body: JSON.stringify({ email, password })
         });
-        var data = await res.json();
+        const data = await res.json();
 
         if (!res.ok) {
           errEl.textContent = data.error || 'Invalid credentials';
@@ -76,7 +76,8 @@
         btn.disabled = false;
         btn.textContent = 'Sign In';
       }
-    });
+      return false;
+    }
   </script>
   <script src="/js/cookie-consent.js"></script>
 </body>

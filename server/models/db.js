@@ -168,41 +168,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_stripe_subs_user ON stripe_subscriptions(user_id);
   CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
   CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications_log(user_id);
-
-  CREATE TABLE IF NOT EXISTS plans (
-    id TEXT PRIMARY KEY,
-    tier TEXT UNIQUE NOT NULL,
-    name TEXT NOT NULL,
-    price INTEGER NOT NULL DEFAULT 0,
-    currency TEXT DEFAULT 'usd',
-    billing_cycle TEXT DEFAULT 'monthly',
-    description TEXT,
-    features TEXT DEFAULT '[]',
-    disabled_features TEXT DEFAULT '[]',
-    max_sites INTEGER DEFAULT 1,
-    max_actions_per_month INTEGER DEFAULT 0,
-    rate_limit INTEGER DEFAULT 60,
-    is_featured INTEGER DEFAULT 0,
-    is_contact_sales INTEGER DEFAULT 0,
-    cta_text TEXT DEFAULT 'Get Started',
-    cta_url TEXT DEFAULT '/register',
-    sort_order INTEGER DEFAULT 0,
-    active INTEGER DEFAULT 1,
-    stripe_price_id TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-  );
 `);
-
-// Seed default plans if table is empty
-const planCount = db.prepare('SELECT COUNT(*) as c FROM plans').get().c;
-if (planCount === 0) {
-  const seedPlans = db.prepare(`INSERT INTO plans (id, tier, name, price, description, features, disabled_features, max_sites, max_actions_per_month, rate_limit, is_featured, is_contact_sales, cta_text, cta_url, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  seedPlans.run(uuidv4(), 'free', 'Free', 0, 'Personal projects and experimentation.', JSON.stringify(['Auto-discovery of actions','Click & scroll permissions','Rate limiting (60/min)','Basic logging','1 site','Community support']), JSON.stringify(['Form filling','Analytics dashboard']), 1, 1000, 60, 0, 0, 'Get Started Free', '/register', 0);
-  seedPlans.run(uuidv4(), 'starter', 'Starter', 900, 'Small sites with basic analytics & protection.', JSON.stringify(['Everything in Free','Form filling & submit','Agent Traffic Intelligence','Smart Actions (basic)','Up to 3 sites','Automated login support','Same-day email support']), JSON.stringify(['API access']), 3, 10000, 120, 0, 0, 'Start Starter', '/register', 1);
-  seedPlans.run(uuidv4(), 'pro', 'Pro', 2900, 'Full power for businesses and teams.', JSON.stringify(['Everything in Starter','Internal API access','Advanced Exploit Shield','CRM & Cloud Integrations','Up to 10 sites','Custom Bridge Script','Stealth Mode Pro','Private CDN + 1h support']), '[]', 10, 100000, 300, 1, 0, 'Start Pro Trial', '/register', 2);
-  seedPlans.run(uuidv4(), 'enterprise', 'Enterprise', 0, 'Unlimited scale with compliance & SLA.', JSON.stringify(['Everything in Pro','Unlimited sites & agents','Multi-tenant management','Extended Audit & Compliance','Virtual Sandbox','SSO / SAML','15-min SLA guarantee','Custom development']), '[]', -1, -1, 0, 0, 1, 'Contact Sales', 'mailto:sales@webagentbridge.com', 3);
-}
 
 function generateLicenseKey() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -530,80 +496,6 @@ function getUserFullDetails(userId) {
   return { ...user, sites, grants, payments, stripeCustomer };
 }
 
-// ─── Plans Management ────────────────────────────────────────────────
-function getAllPlans(includeInactive) {
-  const q = includeInactive ? 'SELECT * FROM plans ORDER BY sort_order ASC' : 'SELECT * FROM plans WHERE active = 1 ORDER BY sort_order ASC';
-  const rows = db.prepare(q).all();
-  return rows.map(r => ({
-    ...r,
-    features: JSON.parse(r.features || '[]'),
-    disabled_features: JSON.parse(r.disabled_features || '[]'),
-    price_display: r.is_contact_sales ? 'Custom' : ('$' + (r.price / 100).toFixed(0)),
-    is_featured: !!r.is_featured,
-    is_contact_sales: !!r.is_contact_sales,
-    active: !!r.active
-  }));
-}
-
-function getPlanByTier(tier) {
-  const r = db.prepare('SELECT * FROM plans WHERE tier = ?').get(tier);
-  if (!r) return null;
-  return {
-    ...r,
-    features: JSON.parse(r.features || '[]'),
-    disabled_features: JSON.parse(r.disabled_features || '[]'),
-    price_display: r.is_contact_sales ? 'Custom' : ('$' + (r.price / 100).toFixed(0)),
-    is_featured: !!r.is_featured,
-    is_contact_sales: !!r.is_contact_sales,
-    active: !!r.active
-  };
-}
-
-function updatePlan(planId, updates) {
-  const plan = db.prepare('SELECT * FROM plans WHERE id = ?').get(planId);
-  if (!plan) return null;
-  const fields = ['name', 'price', 'currency', 'billing_cycle', 'description', 'max_sites', 'max_actions_per_month', 'rate_limit', 'is_featured', 'is_contact_sales', 'cta_text', 'cta_url', 'sort_order', 'active', 'stripe_price_id'];
-  const sets = [];
-  const params = [];
-  for (const f of fields) {
-    if (updates[f] !== undefined) {
-      sets.push(f + ' = ?');
-      params.push(typeof updates[f] === 'boolean' ? (updates[f] ? 1 : 0) : updates[f]);
-    }
-  }
-  if (updates.features !== undefined) {
-    sets.push('features = ?');
-    params.push(JSON.stringify(updates.features));
-  }
-  if (updates.disabled_features !== undefined) {
-    sets.push('disabled_features = ?');
-    params.push(JSON.stringify(updates.disabled_features));
-  }
-  if (sets.length === 0) return getPlanByTier(plan.tier);
-  sets.push("updated_at = datetime('now')");
-  params.push(planId);
-  db.prepare('UPDATE plans SET ' + sets.join(', ') + ' WHERE id = ?').run(...params);
-  return getPlanByTier(plan.tier);
-}
-
-function createPlan({ tier, name, price, description, features, disabled_features, max_sites, max_actions_per_month, rate_limit, is_featured, is_contact_sales, cta_text, cta_url, sort_order, stripe_price_id }) {
-  const id = uuidv4();
-  db.prepare('INSERT INTO plans (id, tier, name, price, description, features, disabled_features, max_sites, max_actions_per_month, rate_limit, is_featured, is_contact_sales, cta_text, cta_url, sort_order, stripe_price_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-    id, tier, name, price || 0, description || '', JSON.stringify(features || []), JSON.stringify(disabled_features || []),
-    max_sites || 1, max_actions_per_month || 0, rate_limit || 60, is_featured ? 1 : 0, is_contact_sales ? 1 : 0,
-    cta_text || 'Get Started', cta_url || '/register', sort_order || 0, stripe_price_id || null
-  );
-  return getPlanByTier(tier);
-}
-
-function deletePlan(planId) {
-  const plan = db.prepare('SELECT tier FROM plans WHERE id = ?').get(planId);
-  if (!plan) return false;
-  if (plan.tier === 'free') return false;
-  db.prepare('DELETE FROM plans WHERE id = ?').run(planId);
-  return true;
-}
-
 // ─── Platform Settings ───────────────────────────────────────────────
 function getPlatformSetting(key) {
   const row = db.prepare(`SELECT value FROM platform_settings WHERE key = ?`).get(key);
@@ -665,11 +557,5 @@ module.exports = {
   getNotificationLogs,
   // Platform
   getPlatformSetting,
-  setPlatformSetting,
-  // Plans
-  getAllPlans,
-  getPlanByTier,
-  updatePlan,
-  createPlan,
-  deletePlan
+  setPlatformSetting
 };

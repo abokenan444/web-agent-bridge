@@ -6,112 +6,56 @@
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![Socket](https://img.shields.io/badge/Socket-Verified-brightgreen.svg)](https://socket.dev/npm/package/web-agent-bridge)
 
 > **robots.txt told bots what NOT to do. WAB tells AI agents what they CAN do.**
 
-**English** | **[العربية](README.ar.md)** | **[Protocol Spec](docs/SPEC.md)** | **[Socket Report](https://socket.dev/npm/package/web-agent-bridge)**
+**English** | **[العربية](README.ar.md)**
 
-WAB is an **open protocol + runtime** for AI agents to interact with websites — the **OpenAPI for human-facing pages**. It provides a standardized discovery format (`agent-bridge.json`), a command protocol, and a fairness layer that ensures small businesses get equal visibility alongside large platforms.
-
-WAB transforms websites from opaque HTML into **agent-readable endpoints** with declared capabilities, permissions, and actions. AI agents discover what a site offers, authenticate, and execute commands through a uniform protocol — no DOM scraping, no guesswork, no bias toward big brands.
-
-### Architecture: Protocol + Runtime + Ecosystem
-
-```
-┌──────────────────────────────────────────────────────────┐
-│                    WAB Protocol (Spec)                    │
-│  agent-bridge.json · Commands · Lifecycle · Fairness     │
-├────────────┬───────────────────┬─────────────────────────┤
-│ JS Runtime │  HTTP Transport   │  MCP Adapter            │
-│ AICommands │  REST + WebSocket │  WAB → MCP Tools        │
-├────────────┴───────────────────┴─────────────────────────┤
-│               Discovery Registry + Fairness Engine       │
-└──────────────────────────────────────────────────────────┘
-```
+WAB is an open-source middleware layer that bridges AI agents and websites — like **OpenAPI for human-facing pages**. Website owners embed a script that exposes a standardized `window.AICommands` interface. AI agents discover available actions, execute commands, and interact with sites accurately — no DOM parsing, no scraping, no guesswork.
 
 ### Three Paths to WAB
 
 | Path | For | How |
 |---|---|---|
-| **🏢 Website Owner** | Control how AI interacts with your site | Embed the script, publish `agent-bridge.json` |
-| **🤖 Agent Developer** | Build reliable agents that work on any WAB-enabled site | Use `window.AICommands`, the Agent SDK, or the MCP Adapter |
+| **🏢 Website Owner** | Control how AI interacts with your site | Embed the script, configure permissions |
+| **🤖 Agent Developer** | Build reliable agents that work on any WAB-enabled site | Use `window.AICommands` or the Agent SDK |
 | **🔧 Self-Hosting** | Run the full WAB platform for your organization | Clone, deploy, manage licenses & analytics |
-| **🔌 MCP Integration** | Connect WAB to Claude, GPT, or any MCP-compatible agent | Use `wab-mcp-adapter` |
-| **WordPress** | Sites powered by WP | Use the **[Web Agent Bridge WordPress plugin](web-agent-bridge-wordpress/README.md)** |
-
----
-
-## What's New in v1.1.0
-
-- **WAB Protocol Specification v1.0** — Formal protocol spec (`docs/SPEC.md`) with discovery format, command protocol, lifecycle, and fairness layer
-- **Discovery Protocol** — Sites publish `agent-bridge.json` or `/.well-known/wab.json` for agent discovery
-- **MCP Adapter** — `wab-mcp-adapter` converts WAB actions into MCP tools for Claude/GPT integration
-- **Fairness Engine** — Neutrality layer ensures equal visibility for small businesses and independent sites
-- **Discovery Registry** — Public searchable directory of WAB-enabled sites with fairness-weighted results
-- **9 Protocol Commands** — `wab.discover`, `wab.getContext`, `wab.getActions`, `wab.executeAction`, `wab.readContent`, `wab.getPageInfo`, `wab.authenticate`, `wab.subscribe`, `wab.ping`
+| **WordPress** | Sites powered by WP | Use the **[Web Agent Bridge WordPress plugin](web-agent-bridge-wordpress/README.md)** (settings, shortcode, per-page disable, hooks) |
 
 ---
 
 ## Features
 
-### Protocol Layer
-- **WAB Specification v1.0** — Formal protocol spec defining discovery, commands, lifecycle, and fairness ([docs/SPEC.md](docs/SPEC.md))
-- **Discovery Protocol** — Sites declare capabilities via `agent-bridge.json` or `/.well-known/wab.json`
-- **Command Protocol** — 9 standard methods with request/response format (transport-agnostic)
-- **Lifecycle Protocol** — Discover → Authenticate → Plan → Execute → Confirm
-- **MCP Compatibility** — Full adapter for Model Context Protocol (Claude, GPT, LangChain)
-
-### Fairness & Neutrality
-- **Fairness Engine** — Neutrality scoring ensures small businesses get equal agent visibility
-- **Discovery Registry** — Public directory of WAB-enabled sites with anti-bias ranking
-- **Commission Transparency** — Sites declare commission rates; agents can favor direct providers
-- **Independent Business Priority** — Self-declared independent sites get fairness scoring boost
-
-### Runtime
 - **Auto-Discovery** — Automatically detects buttons, forms, and navigation on the page
+- **Structured Auto-Discovery** — Detects schema.org JSON-LD + microdata products/offers and exposes read actions
+- **Commerce + Booking Intents** — Detects common actions like add-to-cart, checkout, and booking/reservation flows
 - **Permission System** — Granular control over what AI agents can do (click, fill forms, API access, etc.)
 - **Standardized Interface** — Unified `window.AICommands` object any agent can consume
-- **Self-Healing Selectors** — Resilient element resolution with 7-strategy fuzzy matching for SPAs
-- **Security Sandbox** — Origin validation, session tokens, command signing, audit logging, auto-lockdown
-- **Stealth Mode** — Human-like interaction patterns (requires explicit consent)
-- **NoJS Fallback** — CSS tracking, pixel tracking, and SSR bridge for JavaScript-disabled environments
-
-### Infrastructure
-- **Secure License Exchange** — Embed uses `siteId` + token exchange; keys stay in the dashboard
+- **Secure License Exchange** — Embed uses public `siteId` + `/api/license/token`; long-lived license keys stay in the owner dashboard, not in HTML
 - **Rate Limiting** — Multi-dimensional abuse protection (IP + license key + site)
 - **Analytics Dashboard** — Track how AI agents interact with your site
 - **Real-Time Analytics** — WebSocket-based live event streaming with auto-reconnection
+- **In-Memory Caching** — TTL-based cache layer reduces DB reads on hot paths
+- **Analytics Queue** — Batched writes with transaction support for high-throughput tracking
 - **WebDriver BiDi Compatible** — Standard protocol support via `window.__wab_bidi`
 - **CDN Versioning** — Serve scripts via versioned URLs (`/v1/ai-agent-bridge.js`, `/latest/ai-agent-bridge.js`)
 - **Docker Ready** — One-command deployment with Docker Compose
+- **DB Migrations** — Numbered SQL migration runner with tracking table
+- **Custom Actions** — Register your own actions with custom handlers
+- **Subscription Tiers** — Free core + paid premium features (API access, analytics, automated login)
+- **Event System** — Subscribe to bridge events for monitoring
+- **Security Sandbox** — Origin validation, session tokens, command signing, audit logging, auto-lockdown
+- **Self-Healing Selectors** — Resilient element resolution with fuzzy matching for dynamic SPAs
+- **Stealth Mode** — Human-like interaction patterns (requires explicit consent)
 - **Multi-Database** — SQLite (default), PostgreSQL, MySQL via pluggable adapters
 - **Agent SDK** — Built-in SDK for building AI agents with Puppeteer/Playwright
+- **React Package** — `@web-agent-bridge/react` with `WABProvider`, `useWAB`, `useWABAction`, and `useWABActions`
+- **Vue Package** — `@web-agent-bridge/vue` composables (`useWAB`, `useWABAction`, `useWABActions`) for Vue 3+
+- **Svelte Package** — `@web-agent-bridge/svelte` stores (`createWAB`, `createWABAction`) for Svelte 3+
+- **LangChain Adapter** — `@web-agent-bridge/langchain` wraps WAB actions as LangChain tools for LLM agents
+- **GDPR/CCPA Consent** — Optional `wab-consent.js` banner with `WABConsent.showBanner()` and `hasConsent()` gate
 - **Admin Dashboard** — User management, tier grants, system analytics
 - **Stripe Integration** — Payment processing with customer portal
-
----
-
-## Premium Services (webagentbridge.com)
-
-The open-source core is free forever. For teams and businesses that need more, **[webagentbridge.com](https://webagentbridge.com/premium)** offers paid add-ons and higher-tier plans:
-
-| # | Service | Plans |
-|---|---------|-------|
-| 1 | **Agent Traffic Intelligence** — Deep analytics: agent type, platform, country, behavioral classification, anomaly alerts | Starter+ |
-| 2 | **Advanced Exploit Shield** — Behavioral fingerprint blocking, unauthorized command detection, periodic security reports | Pro+ |
-| 3 | **Pre-built Smart Actions Library** — Ready-made action packs for WooCommerce, Shopify, WordPress, Salesforce with auto-updates | Starter+ |
-| 4 | **Custom AI Agents as a Service** — Visual agent builder, task scheduling, cloud-based execution | Pro+ |
-| 5 | **CRM & Cloud Integrations** — Salesforce, HubSpot, Zoho; export to BigQuery/Snowflake/Datadog; custom webhooks | Pro+ |
-| 6 | **Multi-Tenant Permission Management** — Sub-users, per-user quotas, central control panel for agencies | Enterprise |
-| 7 | **AI-Powered Priority Support** — Smart chatbot, live video sessions, SLA from 15 min (Enterprise) to same-day (Starter) | Starter+ |
-| 8 | **Custom Bridge Script** — Plugin-based custom actions, performance optimization, automatic zero-day patches | Pro+ |
-| 9 | **Stealth Mode Pro** — Customizable human-like behavior profiles, anti-detection bypass, monthly fingerprint updates | Pro+ |
-| 10 | **Private CDN** — Global edge network, custom domain (`bridge.yoursite.com`), geo performance stats | Pro+ |
-| 11 | **Extended Audit Logs & Compliance** — 7-year retention, HIPAA/GDPR/SOC2 settings, signed PDF/CSV exports | Enterprise |
-| 12 | **Virtual Sandbox Environment** — Isolated test environment, simulated agent traffic, before/after benchmarks | Enterprise |
-
-Plans: **Free** (open source) → **Starter $9/mo** → **Pro $29/mo** → **Enterprise (custom)**. Visit [webagentbridge.com/premium](https://webagentbridge.com/premium) for details.
 
 ---
 
@@ -171,239 +115,18 @@ const info = bridge.getPageInfo();          // get page metadata
 
 ---
 
-## Discovery Protocol (`agent-bridge.json`)
-
-Any website can declare its WAB capabilities by serving a discovery document at `/agent-bridge.json` or `/.well-known/wab.json`. AI agents fetch this file to understand what a site offers before interacting.
-
-```json
-{
-  "wab_version": "1.0",
-  "provider": {
-    "name": "Local Bookshop",
-    "domain": "localbookshop.com",
-    "category": "e-commerce",
-    "description": "Independent bookshop"
-  },
-  "capabilities": {
-    "commands": ["readContent", "click", "fillForms"],
-    "permissions": { "readContent": true, "click": true, "fillForms": true },
-    "tier": "starter",
-    "transport": ["js_global", "http"]
-  },
-  "agent_access": {
-    "bridge_script": "/script/ai-agent-bridge.js",
-    "api_base": "/api/license",
-    "selectors": { "search": "#search-input", "cart": ".add-to-cart" }
-  },
-  "fairness": {
-    "is_independent": true,
-    "commission_rate": 0,
-    "direct_benefit": "Owner is the producer",
-    "neutrality_score": 85
-  },
-  "security": {
-    "session_required": true,
-    "origin_validation": true,
-    "rate_limit": 60,
-    "sandbox": true
-  }
-}
-```
-
-WAB servers auto-generate this document from each site's configuration. No manual file creation needed — register your site and the discovery endpoint is live.
-
-### Discovery API Endpoints
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/.well-known/wab.json` | GET | Discovery document (domain-matched) |
-| `/agent-bridge.json` | GET | Alternative discovery location |
-| `/api/discovery/:siteId` | GET | Discovery document for a specific site |
-| `/api/discovery/registry` | GET | Public directory of WAB-enabled sites |
-| `/api/discovery/search` | GET | Fairness-weighted site search |
-| `/api/discovery/register` | POST | Register site in directory (authenticated) |
-
----
-
-## MCP Adapter (Model Context Protocol)
-
-The `wab-mcp-adapter` converts WAB capabilities into MCP tools, so Claude, GPT, LangChain, or any MCP-compatible agent can interact with WAB-enabled sites.
-
-```javascript
-const { WABMCPAdapter } = require('web-agent-bridge/wab-mcp-adapter');
-
-const adapter = new WABMCPAdapter({
-  siteUrl: 'https://example.com',
-  transport: 'http'
-});
-
-// Discover site capabilities
-const discovery = await adapter.discover();
-
-// Get all available MCP tools
-const tools = await adapter.getTools();
-// → [{ name: 'wab_discover', ... }, { name: 'wab_click_signup', ... }, ...]
-
-// Execute a tool (just like any MCP tool call)
-const result = await adapter.executeTool('wab_execute_action', {
-  name: 'signup',
-  data: { email: 'user@test.com' }
-});
-```
-
-### Built-in MCP Tools
-
-| Tool | Description |
-|---|---|
-| `wab_discover` | Discover site capabilities and fairness data |
-| `wab_get_actions` | List all available actions |
-| `wab_execute_action` | Execute any action by name |
-| `wab_read_content` | Read page content by CSS selector |
-| `wab_get_page_info` | Get page metadata and bridge status |
-| `wab_fairness_search` | Search WAB registry with fairness-weighted results |
-| `wab_authenticate` | Authenticate with a WAB site |
-
-See [`wab-mcp-adapter/README.md`](wab-mcp-adapter/README.md) for the full API reference.
-
----
-
-## Fairness Engine
-
-WAB includes a **Neutrality Layer** — a fairness engine that prevents AI agents from systematically favoring large platforms over small businesses.
-
-### How It Works
-
-1. **Neutrality Scoring** — Each site gets a score (0-100) based on config quality, trust signatures, and commission transparency — not brand recognition
-2. **Anti-Bias Ranking** — Search results are fairness-weighted: independent businesses get +15%, transparent commission sites get +10%
-3. **Position Rotation** — Top results are shuffled to prevent position lock-in
-4. **Monopoly Prevention** — No single provider can dominate more than 30% of top results
-
-### Register Your Site
-
-```bash
-# Register in the WAB discovery directory
-curl -X POST https://yourserver.com/api/discovery/register \
-  -H "Authorization: Bearer YOUR_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "siteId": "your-site-uuid",
-    "category": "e-commerce",
-    "is_independent": true,
-    "commission_rate": 0,
-    "direct_benefit": "Products from local artisans",
-    "tags": ["handmade", "local", "organic"]
-  }'
-```
-
----
-
-## Advanced Premium Features
-
-The following capabilities extend WAB with AI-powered intelligence layers. They require a **premium subscription** — see [webagentbridge.com/premium](https://webagentbridge.com/premium) for plans.
-
-### Agent Memory System
-
-Long-term memory for AI agents using vector embeddings. Agents remember user preferences, past interactions, and successful navigation paths across sessions.
-
-| Capability | Description |
-|---|---|
-| **Vector Embeddings** | TF-IDF based similarity search for intelligent recall |
-| **Memory Consolidation** | Auto-merges duplicate memories and decays stale ones |
-| **Session Tracking** | Maintains context across multiple agent sessions |
-| **Preference Management** | Stores and retrieves user preferences for personalized interactions |
-
-### Self-Healing Selectors (Premium)
-
-Automatic CSS/XPath selector repair when websites change their DOM structure. Goes beyond the built-in 7-strategy resolution with community-powered healing.
-
-| Strategy | Description |
-|---|---|
-| **Attribute Match** | Finds elements by matching known attributes |
-| **ID Match** | Resolves elements by ID similarity |
-| **Text Similarity** | Levenshtein-based fuzzy text matching |
-| **Structural Match** | Compares DOM tree position and hierarchy |
-| **Class Match** | Identifies elements by CSS class patterns |
-| **Community Corrections** | Shared selector fixes across the WAB ecosystem |
-
-Includes DOM drift detection and element snapshot comparison for proactive repair before selectors break.
-
-### Multimodal Vision
-
-Integrates local and cloud vision models so AI agents can "see" web pages as images instead of parsing raw DOM.
-
-| Model | Type |
-|---|---|
-| **Moondream** | Local (lightweight) |
-| **LLaVA** | Local (high quality) |
-| **GPT-4V** | Cloud (OpenAI) |
-| **Claude Vision** | Cloud (Anthropic) |
-
-- Automatic UI element extraction with bounding boxes and suggested selectors
-- Screenshot comparison for visual regression detection
-- Encrypted API key storage (AES-256-GCM)
-
-### Agent Swarm
-
-Multi-agent orchestration for complex tasks that benefit from parallel or collaborative execution.
-
-| Strategy | Description |
-|---|---|
-| **Parallel** | Run multiple agents simultaneously on independent subtasks |
-| **Sequential** | Chain agents in order, passing results forward |
-| **Competitive** | Race agents against each other, take the fastest result |
-| **Collaborative** | Agents share findings and build on each other's work |
-
-- Built-in fairness weighting to surface small/indie sites in swarm results
-- Real-time task monitoring and result merging
-- Automatic price/content extraction from target URLs
-- Consensus-based result validation across multiple agents
-
-### Plugin Marketplace
-
-Extensible hook system with 16 integration points for customizing WAB behavior.
-
-| Official Plugin | Description |
-|---|---|
-| `fairness-boost` | Amplifies fairness scoring for indie sites |
-| `security-monitor` | Real-time threat detection and alerts |
-| `analytics-enhanced` | Extended analytics with behavioral classification |
-| `auto-healer` | Proactive selector repair using DOM monitoring |
-| `memory-optimizer` | Memory consolidation and cleanup scheduling |
-
-- JSON Schema config validation for all plugins
-- Community plugin ratings and download tracking
-- Sandboxed handler execution via `Function()` constructor
-
-### Premium API Endpoints
-
-| Route Group | Feature | Endpoints |
-|---|---|---|
-| `/api/premium/memory/*` | Agent Memory | 13 |
-| `/api/premium/healing/*` | Self-Healing | 9 |
-| `/api/premium/vision/*` | Vision Inference | 9 |
-| `/api/premium/swarm/*` | Agent Swarm | 10 |
-| `/api/premium/plugins/*` | Plugin Marketplace | 12 |
-
----
-
 ## Project Structure
 
 ```
 web-agent-bridge/
-├── docs/
-│   └── SPEC.md             # WAB Protocol Specification v1.0
 ├── server/                 # Express.js backend
 │   ├── index.js            # Server entry point
 │   ├── routes/
 │   │   ├── auth.js         # Authentication (register/login)
 │   │   ├── api.js          # Sites, config, analytics API
-│   │   ├── license.js      # License verification & token exchange
-│   │   ├── discovery.js    # Discovery protocol endpoints
-│   │   ├── noscript.js     # NoJS fallback (pixel, CSS, SSR)
+│   │   ├── license.js      # License verification, token exchange & tracking
 │   │   ├── admin.js        # Admin dashboard API
 │   │   └── billing.js      # Stripe billing integration
-│   ├── services/
-│   │   └── fairness.js     # Fairness engine & neutrality layer
 │   ├── middleware/
 │   │   └── auth.js         # JWT authentication middleware
 │   ├── models/
@@ -412,20 +135,24 @@ web-agent-bridge/
 │   └── utils/
 │       ├── cache.js        # In-memory cache + analytics queue
 │       └── migrate.js      # Migration runner
-├── wab-mcp-adapter/        # MCP adapter for WAB → Claude/GPT
-│   ├── index.js            # WABMCPAdapter class
-│   ├── package.json
-│   └── README.md
 ├── public/                 # Frontend
 │   ├── index.html          # Landing page
 │   ├── dashboard.html      # Management dashboard
 │   ├── docs.html           # Documentation
+│   ├── login.html          # Sign in
+│   ├── register.html       # Sign up
 │   ├── admin/              # Admin panel
-│   ├── js/                 # Client-side utilities
+│   ├── js/
+│   │   └── ws-client.js    # WebSocket client with auto-reconnect
 │   └── css/styles.css      # Design system
 ├── script/
 │   └── ai-agent-bridge.js  # The bridge script (embed in websites)
-├── examples/               # Agent examples (Puppeteer, BiDi, MCP, Vision)
+├── examples/               # Agent examples (Puppeteer, BiDi, Vision)
+├── packages/               # Framework wrappers
+│   ├── react/              # @web-agent-bridge/react
+│   ├── vue/                # @web-agent-bridge/vue
+│   ├── svelte/             # @web-agent-bridge/svelte
+│   └── langchain/          # @web-agent-bridge/langchain
 ├── sdk/                    # Agent SDK for Puppeteer/Playwright
 ├── .env                    # Environment variables
 └── package.json
@@ -462,16 +189,6 @@ web-agent-bridge/
 | `/api/license/session` | POST | Validate session token (domain-locked) |
 | `/api/license/track` | POST | Record analytics (`sessionToken` + Origin; legacy `licenseKey` only if `ALLOW_LEGACY_LICENSE_TRACK`) |
 
-### Discovery Protocol (Public)
-| Endpoint | Method | Description |
-|---|---|---|
-| `/.well-known/wab.json` | GET | Discovery document for the requesting domain |
-| `/agent-bridge.json` | GET | Alternative discovery location |
-| `/api/discovery/:siteId` | GET | Discovery document for a specific site |
-| `/api/discovery/registry` | GET | Public directory of WAB-enabled sites |
-| `/api/discovery/search?q=&category=` | GET | Fairness-weighted site search |
-| `/api/discovery/register` | POST | Register site in directory (authenticated) |
-
 ---
 
 ## Bridge Script API
@@ -480,22 +197,18 @@ Once loaded, `window.AICommands` exposes:
 
 | Method | Description |
 |---|---|
-| `discover()` | Get full discovery document with protocol info and fairness data |
-| `ping()` | Health check — returns version, protocol, ready state |
 | `getActions(category?)` | List available actions |
 | `getAction(name)` | Get a specific action |
 | `execute(name, params?)` | Execute an action |
 | `readContent(selector)` | Read element content |
 | `getPageInfo()` | Get page and bridge metadata |
-| `subscribe(event, callback)` | Subscribe to events with subscription ID |
-| `unsubscribe(subscriptionId)` | Unsubscribe from events |
 | `waitForElement(selector, timeout?)` | Wait for DOM element |
 | `waitForNavigation(timeout?)` | Wait for URL change |
 | `registerAction(def)` | Register a custom action |
 | `authenticate(key, meta?)` | Authenticate an agent |
 | `refresh()` | Re-scan the page |
 | `onReady(callback)` | Callback when bridge is ready |
-| `events.on(event, cb)` | Subscribe to raw events |
+| `events.on(event, cb)` | Subscribe to events |
 
 ---
 
@@ -551,17 +264,15 @@ window.AIBridgeConfig = {
 
 ## Tech Stack
 
-- **Protocol**: WAB Specification v1.0 with RFC 2119 conformance levels
 - **Backend**: Node.js + Express + WebSocket (ws)
 - **Database**: SQLite (via better-sqlite3) with migration runner
 - **Auth**: JWT + bcrypt + session tokens (domain-locked)
-- **MCP**: WAB-to-MCP adapter for Claude, GPT, LangChain integration
-- **Fairness**: Neutrality engine with anti-bias ranking and monopoly prevention
-- **Discovery**: Auto-generated `agent-bridge.json` + public registry
 - **Caching**: In-memory TTL cache + batched analytics queue
 - **Payments**: Stripe integration with billing portal
 - **Frontend**: Vanilla HTML/CSS/JS (no framework dependencies)
-- **Security**: Helmet, CORS, CSP, multi-layer rate limiting, sandbox
+- **Framework Wrappers**: React, Vue 3, Svelte (optional)
+- **LLM Integration**: LangChain adapter, MCP adapter
+- **Security**: Helmet, CORS, CSP, multi-layer rate limiting
 - **Containers**: Docker + Docker Compose
 - **CI/CD**: GitHub Actions (test + auto-publish to npm)
 - **Testing**: Jest + Supertest
@@ -584,8 +295,7 @@ const result = await window.__wab_bidi.send({
 });
 
 // Supported methods:
-// wab.discover, wab.getContext, wab.getActions, wab.executeAction,
-// wab.readContent, wab.getPageInfo, wab.authenticate, wab.subscribe, wab.ping
+// wab.getContext, wab.getActions, wab.executeAction, wab.readContent, wab.getPageInfo
 ```
 
 ---
@@ -711,6 +421,134 @@ await agent.execute('signup', { email: 'user@test.com' });
 await browser.close();
 ```
 
+### SDK Extras
+
+The SDK now includes additional helpers for advanced agent workflows:
+
+```javascript
+// Wait for GDPR consent before proceeding
+await agent.waitForConsent();
+
+// Discover all actions + page meta
+const disc = await agent.discover();
+console.log(disc.actions, disc.meta);
+
+// Run a sequence of actions (stops on first failure by default)
+const results = await agent.runPipeline([
+  { name: 'login', params: { email: 'a@b.com', pass: 'secret' } },
+  { name: 'addToCart', params: { sku: 'ABC123' } },
+  { name: 'checkout' }
+]);
+
+// Run actions in parallel
+const parallel = await agent.executeParallel([
+  { name: 'getCartCount' },
+  { name: 'getWishlistCount' }
+]);
+
+// Capture screenshot (base64) for vision agents
+const b64 = await agent.screenshot({ fullPage: true });
+```
+
+---
+
+## Framework Packages
+
+### Vue 3
+
+```bash
+npm install @web-agent-bridge/vue
+```
+
+```javascript
+import { useWAB, useWABAction } from '@web-agent-bridge/vue';
+
+// In setup()
+const { ready, execute } = useWAB({ siteUrl: 'https://example.com' });
+const cart = useWABAction('addToCart');
+
+// In template handler
+await cart.run({ sku: 'ABC123' });
+console.log(cart.result.value);
+```
+
+### Svelte
+
+```bash
+npm install @web-agent-bridge/svelte
+```
+
+```svelte
+<script>
+  import { createWAB, createWABAction } from '@web-agent-bridge/svelte';
+
+  const wab = createWAB();
+  const cart = createWABAction('addToCart');
+
+  async function add() {
+    await cart.run({ sku: 'ABC123' });
+  }
+</script>
+
+{#if $cart.loading}Adding...{/if}
+{#if $cart.result}Added!{/if}
+<button on:click={add}>Add to Cart</button>
+```
+
+### LangChain / LangGraph
+
+```bash
+npm install @web-agent-bridge/langchain
+```
+
+```javascript
+const { WABToolkit } = require('@web-agent-bridge/langchain');
+const { ChatOpenAI } = require('@langchain/openai');
+const { AgentExecutor, createOpenAIToolsAgent } = require('langchain/agents');
+
+// HTTP mode — discover + execute via the WAB server
+const toolkit = new WABToolkit({ siteUrl: 'https://shop.example.com' });
+const tools = await toolkit.getTools();
+
+// Browser mode — use with Puppeteer/Playwright
+const { WABAgent } = require('web-agent-bridge/sdk');
+const toolkit2 = new WABToolkit({ agent: new WABAgent(page) });
+const tools2 = await toolkit2.getTools();
+
+// Pass tools to any LangChain agent
+const llm = new ChatOpenAI({ model: 'gpt-4o' });
+const agent = await createOpenAIToolsAgent({ llm, tools, prompt });
+const executor = new AgentExecutor({ agent, tools });
+await executor.invoke({ input: 'Add the first product to my cart' });
+```
+
+---
+
+## GDPR / CCPA Consent
+
+Load the consent script after `wab.min.js` to gate agent actions behind user consent:
+
+```html
+<script src="/script/wab.min.js"></script>
+<script src="/script/wab-consent.js"></script>
+<script>
+  WABConsent.showBanner({
+    policyUrl: '/privacy',
+    message: 'Allow AI agents to interact with this page?',
+    onAccept: () => WAB.init({ siteUrl: location.origin }),
+    onDecline: () => console.log('Agent access declined')
+  });
+</script>
+```
+
+SDK agents can check consent programmatically:
+
+```javascript
+const agent = new WABAgent(page);
+const ok = await agent.hasConsent();      // true | false
+await agent.waitForConsent();             // blocks until Allow is clicked
+```
+
 ---
 
 ## Agent Examples
@@ -721,13 +559,22 @@ Ready-to-run agent examples in the [`examples/`](examples/) directory:
 |---|---|
 | `puppeteer-agent.js` | Basic agent using Puppeteer + `window.AICommands` |
 | `bidi-agent.js` | Agent using WebDriver BiDi protocol via `window.__wab_bidi` |
-| `mcp-agent.js` | MCP adapter demo — WAB actions as MCP tools for Claude/GPT |
 | `vision-agent.js` | Vision/NLP agent — resolves natural language intents to actions using a local keyword-based resolver (no external API) |
+
+## Framework + CMS Examples
+
+Additional integration examples are available in:
+
+| Path | Description |
+|---|---|
+| `examples/next-app-router/` | Next.js App Router integration with `@web-agent-bridge/react` |
+| `examples/shopify-hydrogen/` | Hydrogen storefront integration with practical cart actions |
+| `examples/wordpress-elementor/` | WordPress + Elementor setup with schema-assisted actions |
+| `examples/saas-dashboard/` | Notion-style SaaS dashboard actions for KPI read + workflow triggers |
 
 ```bash
 node examples/puppeteer-agent.js http://localhost:3000
 node examples/bidi-agent.js http://localhost:3000
-node examples/mcp-agent.js http://localhost:3000
 node examples/vision-agent.js http://localhost:3000
 ```
 

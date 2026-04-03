@@ -4,16 +4,8 @@ const { authenticateToken } = require('../middleware/auth');
 const {
   addSite, findSitesByUser, findSiteById,
   updateSiteConfig, updateSiteTier, deleteSite,
-  getAnalyticsBySite, getAnalyticsTimeline,
-  getAllPlans
+  getAnalyticsBySite, getAnalyticsTimeline
 } = require('../models/db');
-
-// ─── Plans (public) ─────────────────────────────────────────────────────
-
-router.get('/plans', (req, res) => {
-  const plans = getAllPlans(false);
-  res.json({ plans });
-});
 
 // ─── Sites ──────────────────────────────────────────────────────────────
 
@@ -120,7 +112,8 @@ router.get('/sites/:id/snippet', authenticateToken, (req, res) => {
   }
 
   const config = JSON.parse(site.config || '{}');
-  const snippet = `<!-- Web Agent Bridge (Secure Mode + NoJS Fallback) -->
+  // Public site id + token endpoint only — long-lived license key stays in dashboard, not in embed
+  const snippet = `<!-- Web Agent Bridge (Secure Mode) -->
 <script>
 window.AIBridgeConfig = {
   siteId: "${site.id}",
@@ -130,15 +123,7 @@ window.AIBridgeConfig = {
   logging: ${JSON.stringify(config.logging || {}, null, 4)}
 };
 </script>
-<script src="/script/ai-agent-bridge.js"></script>
-<noscript>
-  <!-- Automatic NoJS Fallback: tracking + CSS analytics + SSR bridge -->
-  <link rel="stylesheet" href="/api/noscript/css/${site.id}">
-  <img src="/api/noscript/pixel/${site.id}?action=pageview&t=noscript" width="1" height="1" alt="" style="position:absolute;opacity:0;">
-  <meta name="wab:site-id" content="${site.id}">
-  <meta name="wab:noscript" content="true">
-  <meta name="wab:bridge" content="/api/noscript/bridge/${site.id}">
-</noscript>`;
+<script src="/script/ai-agent-bridge.js"></script>`;
 
   res.json({ snippet, siteId: site.id });
 });

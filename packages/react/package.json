@@ -1,0 +1,27 @@
+{
+  "name": "@web-agent-bridge/react",
+  "version": "1.2.0",
+  "description": "React hooks and provider for Web Agent Bridge (WAB) browser client",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "sideEffects": false,
+  "peerDependencies": {
+    "react": ">=17.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abokenan444/web-agent-bridge.git",
+    "directory": "packages/react"
+  },
+  "bugs": {
+    "url": "https://github.com/abokenan444/web-agent-bridge/issues"
+  },
+  "keywords": [
+    "wab",
+    "web-agent-bridge",
+    "ai-agent",
+    "react",
+    "hook"
+  ]
+}

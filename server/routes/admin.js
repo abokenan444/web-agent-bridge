@@ -16,8 +16,7 @@ const {
   findUserByEmail,
   findSiteById,
   getAnalyticsBySite,
-  getAnalyticsTimeline,
-  getAllPlans, getPlanByTier, updatePlan, createPlan, deletePlan
+  getAnalyticsTimeline
 } = require('../models/db');
 const { sendEmail } = require('../services/email');
 const { createCheckoutSession, createPortalSession, isStripeConfigured, getStripePrices } = require('../services/stripe');
@@ -243,36 +242,6 @@ router.post('/notifications/send', authenticateAdmin, (req, res) => {
   }).catch(err => {
     res.status(500).json({ success: false, error: err.message });
   });
-});
-
-// ─── Plans Management ─────────────────────────────────────────────────
-
-router.get('/plans', authenticateAdmin, (req, res) => {
-  const plans = getAllPlans(true);
-  res.json({ plans });
-});
-
-router.put('/plans/:id', authenticateAdmin, (req, res) => {
-  const updated = updatePlan(req.params.id, req.body);
-  if (!updated) return res.status(404).json({ error: 'Plan not found' });
-  res.json({ plan: updated });
-});
-
-router.post('/plans', authenticateAdmin, (req, res) => {
-  const { tier, name, price } = req.body;
-  if (!tier || !name) return res.status(400).json({ error: 'tier and name required' });
-  try {
-    const plan = createPlan(req.body);
-    res.json({ plan });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-router.delete('/plans/:id', authenticateAdmin, (req, res) => {
-  const ok = deletePlan(req.params.id);
-  if (!ok) return res.status(400).json({ error: 'Cannot delete this plan' });
-  res.json({ success: true });
 });
 
 module.exports = router;
