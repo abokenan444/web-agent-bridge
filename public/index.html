@@ -21,6 +21,8 @@
       </a>
       <ul class="navbar-links">
         <li><a href="#features">Features</a></li>
+        <li><a href="#packages">Packages</a></li>
+        <li><a href="#integrations">Integrations</a></li>
         <li><a href="#how-it-works">How It Works</a></li>
         <li><a href="#pricing">Pricing</a></li>
         <li><a href="/docs">Docs</a></li>
@@ -39,7 +41,7 @@
     <div class="container">
       <div class="hero-content fade-in">
         <div class="hero-badge">
-          🚀 Open Source &middot; v1.0.0
+          🚀 Open Source &middot; React &middot; Vue &middot; Svelte &middot; LangChain
         </div>
         <h1>
           Bridge the Gap Between<br>
@@ -109,6 +111,36 @@
           <div class="card-icon pink">🔌</div>
           <h3>Custom Actions</h3>
           <p>Register your own actions with custom handlers. Create complex workflows that AI agents can trigger with a single command.</p>
+        </div>
+        <div class="card fade-in">
+          <div class="card-icon cyan">🛒</div>
+          <h3>Commerce &amp; Booking Intents</h3>
+          <p>Automatically detects add-to-cart, checkout, booking, and reservation flows — mapping them to named actions agents can call directly.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-1">
+          <div class="card-icon blue">📦</div>
+          <h3>Structured Data Scanning</h3>
+          <p>Reads schema.org JSON-LD and microdata (Products, Offers, Prices) and exposes them as queryable actions — zero manual setup.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-2">
+          <div class="card-icon green">🩹</div>
+          <h3>Self-Healing Selectors</h3>
+          <p>7-strategy resilient element resolution. When the DOM changes, selectors auto-heal via ARIA, text similarity, and position heuristics.</p>
+        </div>
+        <div class="card fade-in">
+          <div class="card-icon purple">🔏</div>
+          <h3>GDPR / CCPA Consent</h3>
+          <p>Optional consent banner gates agent actions behind user approval. SDK agents can check <code>hasConsent()</code> or <code>waitForConsent()</code> programmatically.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-1">
+          <div class="card-icon orange">🤖</div>
+          <h3>Agent SDK</h3>
+          <p>Built-in SDK for Puppeteer and Playwright: <code>runPipeline()</code>, <code>executeParallel()</code>, <code>screenshot()</code>, and consent-aware workflows.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-2">
+          <div class="card-icon pink">🌐</div>
+          <h3>WebDriver BiDi</h3>
+          <p>Standard WebDriver BiDi protocol support via <code>window.__wab_bidi</code> — compatible with any automation framework that speaks the standard.</p>
         </div>
       </div>
     </div>
@@ -235,8 +267,161 @@ console.<span class="fn">log</span>(actions);
     </div>
   </section>
 
+  <!-- ═══════════ FRAMEWORK PACKAGES ═══════════ -->
+  <section class="section" id="packages" style="background: var(--bg-secondary);">
+    <div class="container">
+      <div class="section-header">
+        <span class="label">Packages</span>
+        <h2>Use WAB with Your Favorite Framework</h2>
+        <p>Official packages for React, Vue, Svelte, and LangChain — with full TypeScript support.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card fade-in" style="text-align:center;">
+          <div style="font-size:2.5rem; margin-bottom:16px;">⚛️</div>
+          <h3>React</h3>
+          <p><code>@web-agent-bridge/react</code></p>
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin-top:8px;">Hooks: <code>useWAB</code>, <code>useWABAction</code>, <code>useWABActions</code> + <code>WABProvider</code> for auto-loading the script.</p>
+          <div class="code-block" style="margin-top:16px; text-align:left;">
+            <div class="code-body" style="padding:12px; font-size:0.82rem;">
+<pre><span class="kw">const</span> { run, result } = <span class="fn">useWABAction</span>(<span class="str">'addToCart'</span>);
+<span class="kw">await</span> <span class="fn">run</span>({ <span class="prop">sku</span>: <span class="str">'ABC123'</span> });</pre>
+            </div>
+          </div>
+        </div>
+        <div class="card fade-in fade-in-delay-1" style="text-align:center;">
+          <div style="font-size:2.5rem; margin-bottom:16px;">💚</div>
+          <h3>Vue 3</h3>
+          <p><code>@web-agent-bridge/vue</code></p>
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin-top:8px;">Composables: <code>useWAB</code>, <code>useWABAction</code>, <code>useWABActions</code> — reactive refs with loading/error/result state.</p>
+          <div class="code-block" style="margin-top:16px; text-align:left;">
+            <div class="code-body" style="padding:12px; font-size:0.82rem;">
+<pre><span class="kw">const</span> cart = <span class="fn">useWABAction</span>(<span class="str">'addToCart'</span>);
+<span class="kw">await</span> cart.<span class="fn">run</span>({ <span class="prop">sku</span>: <span class="str">'ABC123'</span> });
+<span class="cm">// cart.result.value, cart.loading.value</span></pre>
+            </div>
+          </div>
+        </div>
+        <div class="card fade-in fade-in-delay-2" style="text-align:center;">
+          <div style="font-size:2.5rem; margin-bottom:16px;">🔥</div>
+          <h3>Svelte</h3>
+          <p><code>@web-agent-bridge/svelte</code></p>
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin-top:8px;">Stores: <code>createWAB</code>, <code>createWABAction</code> — subscribe to <code>$store</code> for reactive state.</p>
+          <div class="code-block" style="margin-top:16px; text-align:left;">
+            <div class="code-body" style="padding:12px; font-size:0.82rem;">
+<pre><span class="kw">const</span> cart = <span class="fn">createWABAction</span>(<span class="str">'addToCart'</span>);
+<span class="kw">await</span> cart.<span class="fn">run</span>({ <span class="prop">sku</span>: <span class="str">'ABC123'</span> });
+<span class="cm">// {#if $cart.loading}Adding...{/if}</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ LLM / AGENT INTEGRATION ═══════════ -->
+  <section class="section" id="integrations">
+    <div class="container">
+      <div class="section-header">
+        <span class="label">Agent Integrations</span>
+        <h2>Connect Any AI Agent Framework</h2>
+        <p>Use WAB with LangChain, MCP, or build your own agent — every action becomes a tool the LLM can call.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card fade-in" style="text-align:center;">
+          <div style="font-size:2.5rem; margin-bottom:16px;">🦜</div>
+          <h3>LangChain / LangGraph</h3>
+          <p><code>@web-agent-bridge/langchain</code></p>
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin-top:8px;">WABToolkit wraps every WAB action as a LangChain <code>StructuredTool</code>. Works in HTTP mode (server) or browser mode (Puppeteer).</p>
+          <div class="code-block" style="margin-top:16px; text-align:left;">
+            <div class="code-body" style="padding:12px; font-size:0.82rem;">
+<pre><span class="kw">const</span> tk = <span class="kw">new</span> <span class="fn">WABToolkit</span>({ <span class="prop">siteUrl</span>: <span class="str">'https://shop.example.com'</span> });
+<span class="kw">const</span> tools = <span class="kw">await</span> tk.<span class="fn">getTools</span>();
+<span class="cm">// Pass tools to any LangChain agent</span></pre>
+            </div>
+          </div>
+        </div>
+        <div class="card fade-in fade-in-delay-1" style="text-align:center;">
+          <div style="font-size:2.5rem; margin-bottom:16px;">🔗</div>
+          <h3>MCP Adapter</h3>
+          <p><code>wab-mcp-adapter</code></p>
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin-top:8px;">Converts WAB actions into MCP tools so any MCP-compatible agent (Claude, etc.) can interact with WAB sites through MCP.</p>
+          <div class="code-block" style="margin-top:16px; text-align:left;">
+            <div class="code-body" style="padding:12px; font-size:0.82rem;">
+<pre><span class="kw">const</span> adapter = <span class="kw">new</span> <span class="fn">WABMCPAdapter</span>({ <span class="prop">siteUrl</span>: <span class="str">'...'</span> });
+<span class="kw">const</span> tools = adapter.<span class="fn">listTools</span>();
+<span class="cm">// Built-in: discover, execute, read, search</span></pre>
+            </div>
+          </div>
+        </div>
+        <div class="card fade-in fade-in-delay-2" style="text-align:center;">
+          <div style="font-size:2.5rem; margin-bottom:16px;">🧰</div>
+          <h3>Agent SDK</h3>
+          <p><code>web-agent-bridge/sdk</code></p>
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin-top:8px;">First-class Puppeteer/Playwright SDK with pipeline execution, parallel actions, screenshot capture, and consent-aware workflows.</p>
+          <div class="code-block" style="margin-top:16px; text-align:left;">
+            <div class="code-body" style="padding:12px; font-size:0.82rem;">
+<pre><span class="kw">const</span> agent = <span class="kw">new</span> <span class="fn">WABAgent</span>(page);
+<span class="kw">await</span> agent.<span class="fn">waitForConsent</span>();
+<span class="kw">await</span> agent.<span class="fn">runPipeline</span>([...steps]);</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ EXAMPLES ═══════════ -->
+  <section class="section" id="examples" style="background: var(--bg-secondary);">
+    <div class="container">
+      <div class="section-header">
+        <span class="label">Examples</span>
+        <h2>Framework &amp; CMS Integration Examples</h2>
+        <p>Ready-to-use examples for popular platforms — see how WAB fits into your stack.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card fade-in" style="text-align:center;">
+          <div style="font-size:2.2rem; margin-bottom:12px;">▲</div>
+          <h3>Next.js App Router</h3>
+          <p style="color:var(--text-secondary); font-size:0.9rem;">React Server Components + WABProvider for client-side bridge with <code>useWABAction</code> hooks.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-1" style="text-align:center;">
+          <div style="font-size:2.2rem; margin-bottom:12px;">🛍️</div>
+          <h3>Shopify Hydrogen</h3>
+          <p style="color:var(--text-secondary); font-size:0.9rem;">Hydrogen storefront with cart actions: <code>getCartCount</code>, <code>addFirstVisibleProductToCart</code>.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-2" style="text-align:center;">
+          <div style="font-size:2.2rem; margin-bottom:12px;">📝</div>
+          <h3>WordPress + Elementor</h3>
+          <p style="color:var(--text-secondary); font-size:0.9rem;">Elementor page builder + WAB schema scanner for auto-discovered product and form actions.</p>
+        </div>
+        <div class="card fade-in" style="text-align:center;">
+          <div style="font-size:2.2rem; margin-bottom:12px;">📊</div>
+          <h3>SaaS Dashboard</h3>
+          <p style="color:var(--text-secondary); font-size:0.9rem;">Notion-style SaaS with KPI reads, customer lookup, and invoice workflow triggers.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-1" style="text-align:center;">
+          <div style="font-size:2.2rem; margin-bottom:12px;">🤖</div>
+          <h3>Puppeteer Agent</h3>
+          <p style="color:var(--text-secondary); font-size:0.9rem;">Headless browser agent that discovers and executes actions automatically via the SDK.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-2" style="text-align:center;">
+          <div style="font-size:2.2rem; margin-bottom:12px;">👁️</div>
+          <h3>Vision Agent</h3>
+          <p style="color:var(--text-secondary); font-size:0.9rem;">Natural language intent resolution — "add product to cart" maps to the right WAB action.</p>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top:32px;">
+        <a href="https://github.com/abokenan444/web-agent-bridge/tree/master/examples" class="btn btn-secondary" target="_blank" rel="noopener">View All Examples on GitHub →</a>
+      </div>
+    </div>
+  </section>
+
   <!-- ═══════════ CTA ═══════════ -->
-  <section class="section" style="background: var(--bg-secondary); text-align:center;">
+  <section class="section" style="text-align:center;">
     <div class="container">
       <h2 style="margin-bottom:16px;">Ready to Make Your Site <span class="gradient-text">AI-Ready</span>?</h2>
       <p style="color:var(--text-secondary); max-width:540px; margin:0 auto 32px; font-size:1.1rem;">
@@ -244,6 +429,7 @@ console.<span class="fn">log</span>(actions);
       </p>
       <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
         <a href="/register" class="btn btn-primary btn-lg">Create Free Account</a>
+        <a href="https://github.com/abokenan444/web-agent-bridge" class="btn btn-secondary btn-lg" target="_blank" rel="noopener">⭐ Star on GitHub</a>
         <a href="/docs" class="btn btn-secondary btn-lg">View Documentation</a>
       </div>
     </div>
@@ -264,6 +450,8 @@ console.<span class="fn">log</span>(actions);
           <h4>Product</h4>
           <ul>
             <li><a href="#features">Features</a></li>
+            <li><a href="#packages">Framework Packages</a></li>
+            <li><a href="#integrations">Agent Integrations</a></li>
             <li><a href="#pricing">Pricing</a></li>
             <li><a href="/docs">Documentation</a></li>
             <li data-wab-auth="signed-in" style="display:none"><a href="/dashboard">Dashboard</a></li>
@@ -274,9 +462,8 @@ console.<span class="fn">log</span>(actions);
           <ul>
             <li><a href="/docs#quick-start">Quick Start</a></li>
             <li><a href="/docs#api-reference">API Reference</a></li>
-            <li><a href="/docs#examples">Examples</a></li>
-            <li><a href="https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-            <li><a href="https://github.com/abokenan444/web-agent-bridge/issues" target="_blank" rel="noopener noreferrer">Report an issue</a></li>
+            <li><a href="#examples">Examples</a></li>
+            <li><a href="https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener">GitHub</a></li>
           </ul>
         </div>
         <div class="footer-col">
