@@ -1,5 +1,5 @@
 {
-  "name": "@web-agent-bridge/react",
+  "name": "web-agent-bridge-react",
   "version": "2.0.0",
   "description": "React hooks and provider for Web Agent Bridge (WAB) browser client",
   "main": "index.js",

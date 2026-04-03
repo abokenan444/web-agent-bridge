@@ -1,5 +1,5 @@
 {
-  "name": "@anthropic-wab/agent-sdk",
+  "name": "web-agent-bridge-sdk",
   "version": "2.0.0",
   "description": "SDK for building AI agents that interact with Web Agent Bridge (WAB)",
   "main": "index.js",
