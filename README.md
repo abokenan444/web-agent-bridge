@@ -65,6 +65,7 @@ WAB is an open-source middleware layer that bridges AI agents and websites — l
 - **Sovereign Dashboard** — Real-time command center with fairness radar, privacy shield, negotiation logs, verification checks, and AI model switcher
 - **Community Agent Hub** — 11 pre-built YAML agent templates (hotel booking, grocery comparison, artisan marketplace, flight deals, etc.) with CLI runner: `npx wab-agent run template.yaml`
 - **AI Brain Swapping** — Switch between Llama 3, GPT-4, Claude, Gemini, Mistral, or Ollama (local) without reconfiguration
+- **Cross-Site Agent Orchestration** — One agent manages multiple WAB-enabled sites simultaneously via `WABMultiAgent`. Compare prices across stores, aggregate data, run parallel actions, and find the best deal automatically
 
 ---
 

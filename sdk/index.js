@@ -254,4 +254,6 @@ class WABAgent {
   }
 }
 
-module.exports = { WABAgent };
+const { WABMultiAgent } = require('./multi-agent');
+
+module.exports = { WABAgent, WABMultiAgent };

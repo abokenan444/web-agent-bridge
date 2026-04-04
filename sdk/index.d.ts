@@ -116,3 +116,96 @@ export declare class WABAgent {
   /** Take a screenshot and return as base64. */
   screenshot(opts?: { fullPage?: boolean }): Promise<string>;
 }
+
+// ─── WABMultiAgent — Cross-Site Agent Orchestration ────────────────────
+
+export interface WABMultiAgentOptions {
+  /** Per-site timeout in ms (default 15000). */
+  timeout?: number;
+  /** Launch headless browsers (default true). */
+  headless?: boolean;
+  /** Puppeteer launch options. */
+  launchOptions?: Record<string, unknown>;
+  /** Use BiDi protocol. */
+  useBiDi?: boolean;
+}
+
+export interface MultiAgentLaunchResult {
+  connected: string[];
+  failed: string[];
+}
+
+export interface MultiAgentSiteResult {
+  site: string;
+  status: 'fulfilled' | 'rejected';
+  value?: any;
+  error?: string;
+}
+
+export interface MultiAgentDiscovery {
+  site: string;
+  actions: WABActionDescriptor[];
+  meta: Record<string, unknown>;
+  error?: string;
+}
+
+export interface PriceResult {
+  site: string;
+  product?: string;
+  price?: number;
+  currency?: string;
+  error?: string;
+}
+
+export interface PriceComparison {
+  results: PriceResult[];
+  cheapest: PriceResult | null;
+  savings: number | null;
+}
+
+export interface MultiAgentNavigateResult {
+  site: string;
+  ok: boolean;
+  error?: string;
+}
+
+export interface MultiAgentScreenshotResult {
+  site: string;
+  screenshot?: string;
+  error?: string;
+}
+
+export declare class WABMultiAgent {
+  constructor(sites: string[], options?: WABMultiAgentOptions);
+
+  /** Launch browsers and connect to all sites. */
+  launch(): Promise<MultiAgentLaunchResult>;
+
+  /** Discover all sites — return actions and metadata per site. */
+  discoverAll(): Promise<MultiAgentDiscovery[]>;
+
+  /** Execute an action on all connected sites in parallel. */
+  executeAll(actionName: string, params?: Record<string, unknown>): Promise<MultiAgentSiteResult[]>;
+
+  /** Compare prices for a product across all sites. */
+  comparePrices(sku: string): Promise<PriceComparison>;
+
+  /** Compare a specific action result across all sites with optional ranking. */
+  compareAction(
+    actionName: string,
+    params?: Record<string, unknown>,
+    rankFn?: (results: MultiAgentSiteResult[]) => MultiAgentSiteResult[]
+  ): Promise<{ results: MultiAgentSiteResult[]; ranked: MultiAgentSiteResult[] }>;
+
+  /** Navigate all sessions to a new path. */
+  navigateAll(path: string): Promise<MultiAgentNavigateResult[]>;
+
+  /** Take screenshots from all sites. */
+  screenshotAll(opts?: { fullPage?: boolean }): Promise<MultiAgentScreenshotResult[]>;
+
+  /** Get a summary of all sessions. */
+  status(): { total: number; connected: string[] };
+
+  /** Close all browser sessions. */
+  close(): Promise<void>;
+}
