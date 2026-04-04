@@ -1,0 +1,317 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Premium Services Page Styles
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.active-link {
+  color: var(--accent-purple) !important;
+}
+
+/* ─── Premium Hero ────────────────────────────────────────────────── */
+.premium-hero {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  text-align: center;
+  background: var(--gradient-hero);
+  position: relative;
+  overflow: hidden;
+  padding-top: 120px;
+  padding-bottom: 80px;
+}
+
+.premium-hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(139,92,246,0.08) 0%, transparent 50%),
+    radial-gradient(circle at 70% 70%, rgba(236,72,153,0.06) 0%, transparent 50%);
+  animation: heroGlow 15s ease-in-out infinite alternate;
+}
+
+.premium-hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.premium-hero h1 {
+  margin-bottom: 24px;
+}
+
+.premium-hero p {
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+  max-width: 640px;
+  margin: 0 auto 36px;
+  line-height: 1.7;
+}
+
+/* ─── Tier Pills ──────────────────────────────────────────────────── */
+.tier-pills {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.tier-pill {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px 24px;
+  min-width: 220px;
+  transition: all var(--transition-normal);
+}
+
+.tier-pill.active {
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 20px rgba(139,92,246,0.15);
+}
+
+.tier-pill:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+}
+
+.tier-pill-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.tier-pill strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.tier-pill span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ─── Service Row ─────────────────────────────────────────────────── */
+.service-row {
+  display: flex;
+  gap: 32px;
+  padding: 48px 0;
+  border-bottom: 1px solid var(--border-color);
+  align-items: flex-start;
+}
+
+.service-row:last-child {
+  border-bottom: none;
+}
+
+.service-number {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(59,130,246,0.1));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  min-width: 70px;
+  text-align: center;
+  line-height: 1;
+  padding-top: 8px;
+}
+
+.service-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.service-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.service-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.service-head h3 {
+  margin-bottom: 4px;
+  font-size: 1.35rem;
+}
+
+.service-tiers {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.service-body > p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.7;
+  margin-bottom: 24px;
+  max-width: 700px;
+}
+
+/* ─── Service Feature Grid ────────────────────────────────────────── */
+.service-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.sf-item {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast);
+}
+
+.sf-item:hover {
+  border-color: var(--border-hover);
+}
+
+.sf-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+  padding-top: 2px;
+}
+
+.sf-item strong {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.sf-item span {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ─── Comparison Table ────────────────────────────────────────────── */
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: 14px 20px;
+  font-size: 0.88rem;
+}
+
+.compare-table th {
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.78rem;
+}
+
+.compare-table td {
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.compare-table tr:last-child td {
+  border-bottom: none;
+}
+
+.compare-table tr:hover td {
+  background: rgba(59,130,246,0.03);
+}
+
+.tc {
+  text-align: center !important;
+}
+
+.highlight-col {
+  background: rgba(139,92,246,0.04);
+}
+
+.compare-table .check {
+  color: var(--accent-green);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.compare-table .cross {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ─── Premium CTA ─────────────────────────────────────────────────── */
+.premium-cta {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.premium-cta h2 {
+  margin-bottom: 16px;
+}
+
+.premium-cta p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .service-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .service-number {
+    min-width: auto;
+    font-size: 2.2rem;
+  }
+
+  .service-features {
+    grid-template-columns: 1fr;
+  }
+
+  .tier-pills {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .tier-pill {
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .compare-table th,
+  .compare-table td {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+}

@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium Services — Web Agent Bridge</title>
+  <meta name="description" content="Advanced premium services for Web Agent Bridge: AI traffic intelligence, exploit protection, custom agents, CRM integrations, and more.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/premium.css">
+</head>
+<body>
+
+  <!-- ═══════════ NAVBAR ═══════════ -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <div class="brand-icon">⚡</div>
+        <span>WAB</span>
+      </a>
+      <ul class="navbar-links">
+        <li><a href="/#features">Features</a></li>
+        <li><a href="/premium" class="active-link">Premium</a></li>
+        <li><a href="/#pricing">Pricing</a></li>
+        <li><a href="/docs">Docs</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <a href="/login" class="btn btn-ghost" data-wab-auth="guest">Sign In</a>
+        <a href="/dashboard" class="btn btn-ghost" data-wab-auth="signed-in" style="display:none">Dashboard</a>
+        <a href="/register" class="btn btn-primary btn-sm" data-wab-auth="guest">Get Started</a>
+      </div>
+      <button class="mobile-menu-btn" onclick="document.querySelector('.navbar-links').classList.toggle('active')">☰</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════ HERO ═══════════ -->
+  <section class="premium-hero">
+    <div class="container">
+      <div class="premium-hero-content fade-in">
+        <div class="hero-badge" style="border-color:rgba(139,92,246,0.3);background:rgba(139,92,246,0.1);color:var(--accent-purple);">
+          ✦ Premium Services
+        </div>
+        <h1>
+          Unlock the Full Power of<br>
+          <span class="gradient-text-accent">Intelligent Automation</span>
+        </h1>
+        <p>
+          Enterprise-grade add-ons that extend Web Agent Bridge with advanced analytics, 
+          security, custom agents, CRM integrations, and more.
+        </p>
+        <div class="hero-actions">
+          <a href="#services" class="btn btn-primary btn-lg">Explore Services</a>
+          <a href="mailto:sales@webagentbridge.com" class="btn btn-secondary btn-lg">Contact Sales</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ TIERS OVERVIEW ═══════════ -->
+  <section class="section" style="background:var(--bg-secondary);">
+    <div class="container">
+      <div class="section-header">
+        <span class="label">Plans</span>
+        <h2>Choose Your Level</h2>
+        <p>Premium services are available as add-ons or bundled into higher-tier plans.</p>
+      </div>
+      <div class="tier-pills">
+        <div class="tier-pill">
+          <span class="tier-pill-icon" style="background:rgba(100,116,139,0.15);color:var(--text-muted);">◆</span>
+          <div>
+            <strong>Free</strong>
+            <span>Open-source core</span>
+          </div>
+        </div>
+        <div class="tier-pill">
+          <span class="tier-pill-icon" style="background:rgba(59,130,246,0.15);color:var(--accent-blue);">◆</span>
+          <div>
+            <strong>Starter — $9/mo</strong>
+            <span>Analytics + basic protection</span>
+          </div>
+        </div>
+        <div class="tier-pill active">
+          <span class="tier-pill-icon" style="background:rgba(139,92,246,0.15);color:var(--accent-purple);">◆</span>
+          <div>
+            <strong>Pro — $29/mo</strong>
+            <span>Full features + integrations</span>
+          </div>
+        </div>
+        <div class="tier-pill">
+          <span class="tier-pill-icon" style="background:rgba(245,158,11,0.15);color:var(--accent-orange);">◆</span>
+          <div>
+            <strong>Enterprise — Custom</strong>
+            <span>Unlimited + dedicated support</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ ALL 12 SERVICES ═══════════ -->
+  <section class="section" id="services">
+    <div class="container">
+      <div class="section-header">
+        <span class="label">Premium Services</span>
+        <h2>12 Powerful Add-Ons</h2>
+        <p>Each service can be added individually or comes bundled with higher plans.</p>
+      </div>
+
+      <!-- 1. Agent Traffic Intelligence -->
+      <div class="service-row fade-in">
+        <div class="service-number">01</div>
+        <div class="service-body">
+          <div class="service-head">
+            <div class="service-icon" style="background:linear-gradient(135deg,#3b82f6,#06b6d4);">📊</div>
+            <div>
+              <h3>Agent Traffic Intelligence</h3>
+              <div class="service-tiers">
+                <span class="badge badge-starter">Starter</span>
+                <span class="badge badge-pro">Pro</span>
+                <span class="badge badge-enterprise">Enterprise</span>
+              </div>
+            </div>
+          </div>
+          <p>Deep analytics dashboard that reveals who your AI visitors really are.</p>
+          <div class="service-features">
+            <div class="sf-item">
+              <span class="sf-icon">🔍</span>
+              <div>
+                <strong>Agent Source Identification</strong>
+                <span>See agent type, platform, country of origin, and request patterns in real time.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">🏷️</span>
+              <div>
+                <strong>Behavioral Classification</strong>
+                <span>Agents automatically classified as friendly, aggressive, or potentially dangerous based on interaction patterns.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">🔔</span>
+              <div>
+                <strong>Anomaly Alerts</strong>
+                <span>Instant notifications when unusual activity spikes (e.g. 1,000+ requests/minute from a single agent).</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Advanced Exploit Shield -->
+      <div class="service-row fade-in">
+        <div class="service-number">02</div>
+        <div class="service-body">
+          <div class="service-head">
+            <div class="service-icon" style="background:linear-gradient(135deg,#ef4444,#f59e0b);">🛡️</div>
+            <div>
+              <h3>Advanced Exploit Shield</h3>
+              <div class="service-tiers">
+                <span class="badge badge-pro">Pro</span>
+                <span class="badge badge-enterprise">Enterprise</span>
+              </div>
+            </div>
+          </div>
+          <p>Intelligent protection that goes far beyond IP blocking.</p>
+          <div class="service-features">
+            <div class="sf-item">
+              <span class="sf-icon">🚨</span>
+              <div>
+                <strong>Unauthorized Command Detection</strong>
+                <span>Automatic detection of privilege escalation attempts and unauthorized command execution.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">🧬</span>
+              <div>
+                <strong>Behavioral Fingerprint Blocking</strong>
+                <span>Block malicious agents by behavioral signature, not just IP — evading VPN-based circumvention.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">📧</span>
+              <div>
+                <strong>Periodic Security Reports</strong>
+                <span>Weekly/monthly security digests delivered to your inbox with threat summaries and recommendations.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Smart Actions Library -->
+      <div class="service-row fade-in">
+        <div class="service-number">03</div>
+        <div class="service-body">
+          <div class="service-head">
+            <div class="service-icon" style="background:linear-gradient(135deg,#10b981,#3b82f6);">📦</div>
+            <div>
+              <h3>Pre-built Smart Actions Library</h3>
+              <div class="service-tiers">
+                <span class="badge badge-starter">Starter</span>
+                <span class="badge badge-pro">Pro</span>
+                <span class="badge badge-enterprise">Enterprise</span>
+              </div>
+            </div>
+          </div>
+          <p>Ready-made action packs for the platforms your business already uses.</p>
+          <div class="service-features">
+            <div class="sf-item">
+              <span class="sf-icon">🛒</span>
+              <div>
+                <strong>Platform Action Packs</strong>
+                <span>Pre-built actions for WooCommerce, Shopify, WordPress, Salesforce — install in one click.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">🔄</span>
+              <div>
+                <strong>Auto-Update When Platforms Change</strong>
+                <span>Actions automatically update when the target platform's UI or API changes.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">⚙️</span>
+              <div>
+                <strong>Complex Workflows</strong>
+                <span>Multi-step actions like "complete a full purchase" or "create account with verification" — ready to go.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Custom AI Agents as a Service -->
+      <div class="service-row fade-in">
+        <div class="service-number">04</div>
+        <div class="service-body">
+          <div class="service-head">
+            <div class="service-icon" style="background:linear-gradient(135deg,#8b5cf6,#ec4899);">🤖</div>
+            <div>
+              <h3>Custom AI Agents as a Service</h3>
+              <div class="service-tiers">
+                <span class="badge badge-pro">Pro</span>
+                <span class="badge badge-enterprise">Enterprise</span>
+              </div>
+            </div>
+          </div>
+          <p>Build, schedule, and deploy agents without writing a single line of code.</p>
+          <div class="service-features">
+            <div class="sf-item">
+              <span class="sf-icon">🎨</span>
+              <div>
+                <strong>Visual Agent Builder</strong>
+                <span>Drag-and-drop interface to create custom agents — no programming required.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">⏰</span>
+              <div>
+                <strong>Task Scheduling</strong>
+                <span>"Fetch the sales report every day at 8 AM" — set it and forget it.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">☁️</span>
+              <div>
+                <strong>Cloud-Based Execution</strong>
+                <span>Agents run in the cloud — no local infrastructure required. Scale to thousands of concurrent tasks.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. CRM & Cloud Integrations -->
+      <div class="service-row fade-in">
+        <div class="service-number">05</div>
+        <div class="service-body">
+          <div class="service-head">
+            <div class="service-icon" style="background:linear-gradient(135deg,#06b6d4,#8b5cf6);">🔗</div>
+            <div>
+              <h3>CRM &amp; Cloud Integrations</h3>
+              <div class="service-tiers">
+                <span class="badge badge-pro">Pro</span>
+                <span class="badge badge-enterprise">Enterprise</span>
+              </div>
+            </div>
+          </div>
+          <p>Connect agent activity directly into the tools your team already uses.</p>
+          <div class="service-features">
+            <div class="sf-item">
+              <span class="sf-icon">📇</span>
+              <div>
+                <strong>CRM Direct Link</strong>
+                <span>Salesforce, HubSpot, Zoho — agent actions automatically logged as CRM events.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">📤</span>
+              <div>
+                <strong>Data Warehouse Export</strong>
+                <span>Stream analytics to BigQuery, Snowflake, or Datadog for advanced reporting.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">🪝</span>
+              <div>
+                <strong>Custom Webhooks</strong>
+                <span>Route events to any internal system via configurable webhook endpoints.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Multi-tenant Permission Management -->
+      <div class="service-row fade-in">
+        <div class="service-number">06</div>
+        <div class="service-body">
+          <div class="service-head">
+            <div class="service-icon" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">👥</div>
+            <div>
+              <h3>Multi-Tenant Permission Management</h3>
+              <div class="service-tiers">
+                <span class="badge badge-enterprise">Enterprise</span>
+              </div>
+            </div>
+          </div>
+          <p>Enterprise-grade team management for organizations running multiple sites.</p>
+          <div class="service-features">
+            <div class="sf-item">
+              <span class="sf-icon">🔑</span>
+              <div>
+                <strong>Sub-Users &amp; Roles</strong>
+                <span>Add team members with viewer, editor, or admin roles — per site or globally.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">📊</span>
+              <div>
+                <strong>Per-User Reports &amp; Quotas</strong>
+                <span>Track usage per team member; set usage quotas to control costs.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">🏢</span>
+              <div>
+                <strong>Central Control Panel</strong>
+                <span>One dashboard to rule all sites — perfect for agencies and enterprise IT.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. AI-Powered Priority Support -->
+      <div class="service-row fade-in">
+        <div class="service-number">07</div>
+        <div class="service-body">
+          <div class="service-head">
+            <div class="service-icon" style="background:linear-gradient(135deg,#3b82f6,#10b981);">💬</div>
+            <div>
+              <h3>AI-Powered Priority Support</h3>
+              <div class="service-tiers">
+                <span class="badge badge-starter">Starter</span>
+                <span class="badge badge-pro">Pro</span>
+                <span class="badge badge-enterprise">Enterprise</span>
+              </div>
+            </div>
+          </div>
+          <p>Get help fast — from AI-assisted troubleshooting to live video sessions.</p>
+          <div class="service-features">
+            <div class="sf-item">
+              <span class="sf-icon">🤖</span>
+              <div>
+                <strong>Smart Support Bot</strong>
+                <span>AI chatbot trained on WAB docs — resolves common issues instantly, 24/7.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">📹</span>
+              <div>
+                <strong>Live Video Support</strong>
+                <span>Screen-share sessions with our engineers for complex integration issues.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">⏱️</span>
+              <div>
+                <strong>SLA Guarantee</strong>
+                <span>Enterprise: 15-minute response time. Pro: 1-hour response. Starter: same-day.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Custom Bridge Script -->
+      <div class="service-row fade-in">
+        <div class="service-number">08</div>
+        <div class="service-body">
+          <div class="service-head">
+            <div class="service-icon" style="background:linear-gradient(135deg,#ec4899,#8b5cf6);">📝</div>
+            <div>
+              <h3>Custom Bridge Script</h3>
+              <div class="service-tiers">
+                <span class="badge badge-pro">Pro</span>
+                <span class="badge badge-enterprise">Enterprise</span>
+              </div>
+            </div>
+          </div>
+          <p>A tailored version of the bridge script built for your exact requirements.</p>
+          <div class="service-features">
+            <div class="sf-item">
+              <span class="sf-icon">🧩</span>
+              <div>
+                <strong>Plugin-Based Custom Actions</strong>
+                <span>Add custom actions without modifying the core script — clean, maintainable, upgradeable.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">🚀</span>
+              <div>
+                <strong>Performance Optimization</strong>
+                <span>Minified builds, tree-shaking, AMP support — optimized for your exact use case.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">🔒</span>
+              <div>
+                <strong>Instant Security Patches</strong>
+                <span>Zero-day patches applied automatically — your script is always up to date.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. Stealth Mode Pro -->
+      <div class="service-row fade-in">
+        <div class="service-number">09</div>
+        <div class="service-body">
+          <div class="service-head">
+            <div class="service-icon" style="background:linear-gradient(135deg,#1e293b,#475569);">🥷</div>
+            <div>
+              <h3>Stealth Mode Pro</h3>
+              <div class="service-tiers">
+                <span class="badge badge-pro">Pro</span>
+                <span class="badge badge-enterprise">Enterprise</span>
+              </div>
+            </div>
+          </div>
+          <p>Advanced human-like interaction patterns for sites with aggressive bot detection.</p>
+          <div class="service-features">
+            <div class="sf-item">
+              <span class="sf-icon">🖱️</span>
+              <div>
+                <strong>Customizable Behavior Profiles</strong>
+                <span>Tune typing speed, mouse movement curves, scroll patterns — down to millisecond precision.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">🌐</span>
+              <div>
+                <strong>Anti-Detection Bypass</strong>
+                <span>Tested against Cloudflare, PerimeterX, Akamai, and DataDome protection layers.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">🔄</span>
+              <div>
+                <strong>Continuous Updates</strong>
+                <span>Behavioral profiles updated monthly to match the latest real-browser fingerprints.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. Private CDN -->
+      <div class="service-row fade-in">
+        <div class="service-number">10</div>
+        <div class="service-body">
+          <div class="service-head">
+            <div class="service-icon" style="background:linear-gradient(135deg,#06b6d4,#10b981);">🌍</div>
+            <div>
+              <h3>Private CDN for Bridge Script</h3>
+              <div class="service-tiers">
+                <span class="badge badge-pro">Pro</span>
+                <span class="badge badge-enterprise">Enterprise</span>
+              </div>
+            </div>
+          </div>
+          <p>Your own globally distributed script delivery network.</p>
+          <div class="service-features">
+            <div class="sf-item">
+              <span class="sf-icon">⚡</span>
+              <div>
+                <strong>Global Edge Network</strong>
+                <span>Script served from 200+ PoPs worldwide — sub-50ms load times everywhere.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">🔗</span>
+              <div>
+                <strong>Custom Domain</strong>
+                <span>Serve from <code>bridge.yoursite.com</code> — builds trust and improves brand consistency.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">📈</span>
+              <div>
+                <strong>Geo Performance Stats</strong>
+                <span>See load times, cache hit ratios, and bandwidth per region in real time.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11. Extended Audit Logs & Compliance -->
+      <div class="service-row fade-in">
+        <div class="service-number">11</div>
+        <div class="service-body">
+          <div class="service-head">
+            <div class="service-icon" style="background:linear-gradient(135deg,#f59e0b,#10b981);">📋</div>
+            <div>
+              <h3>Extended Audit Logs &amp; Compliance</h3>
+              <div class="service-tiers">
+                <span class="badge badge-enterprise">Enterprise</span>
+              </div>
+            </div>
+          </div>
+          <p>Meet the strictest regulatory requirements with immutable, long-term audit trails.</p>
+          <div class="service-features">
+            <div class="sf-item">
+              <span class="sf-icon">🗄️</span>
+              <div>
+                <strong>7-Year Retention</strong>
+                <span>Interaction logs stored up to 7 years — essential for finance, healthcare, and government.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">✅</span>
+              <div>
+                <strong>HIPAA / GDPR / SOC2 Ready</strong>
+                <span>Pre-configured compliance settings with one-click activation per standard.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">📄</span>
+              <div>
+                <strong>Legal Export Formats</strong>
+                <span>Signed PDFs, timestamped CSVs, and chain-of-custody reports for auditors.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 12. Virtual Sandbox -->
+      <div class="service-row fade-in">
+        <div class="service-number">12</div>
+        <div class="service-body">
+          <div class="service-head">
+            <div class="service-icon" style="background:linear-gradient(135deg,#8b5cf6,#3b82f6);">🧪</div>
+            <div>
+              <h3>Virtual Sandbox Environment</h3>
+              <div class="service-tiers">
+                <span class="badge badge-enterprise">Enterprise</span>
+              </div>
+            </div>
+          </div>
+          <p>Test everything safely before going live.</p>
+          <div class="service-features">
+            <div class="sf-item">
+              <span class="sf-icon">🏗️</span>
+              <div>
+                <strong>Full Test Environment</strong>
+                <span>Mirror your production setup in an isolated sandbox — test permissions, configs, and limits risk-free.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">🤖</span>
+              <div>
+                <strong>Simulated Agent Traffic</strong>
+                <span>Generate synthetic agent traffic to stress-test rate limits and performance thresholds.</span>
+              </div>
+            </div>
+            <div class="sf-item">
+              <span class="sf-icon">📊</span>
+              <div>
+                <strong>Before/After Benchmarks</strong>
+                <span>Compare performance metrics before and after enabling premium features.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════ COMPARISON TABLE ═══════════ -->
+  <section class="section" style="background:var(--bg-secondary);">
+    <div class="container">
+      <div class="section-header">
+        <span class="label">Compare</span>
+        <h2>Feature Availability by Plan</h2>
+      </div>
+      <div class="table-wrapper" style="overflow-x:auto;">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th class="tc">Free</th>
+              <th class="tc">Starter</th>
+              <th class="tc highlight-col">Pro</th>
+              <th class="tc">Enterprise</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Open-Source Core</td>
+              <td class="tc"><span class="check">✓</span></td>
+              <td class="tc"><span class="check">✓</span></td>
+              <td class="tc highlight-col"><span class="check">✓</span></td>
+              <td class="tc"><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Agent Traffic Intelligence</td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc"><span class="check">✓</span></td>
+              <td class="tc highlight-col"><span class="check">✓</span></td>
+              <td class="tc"><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Advanced Exploit Shield</td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc highlight-col"><span class="check">✓</span></td>
+              <td class="tc"><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Smart Actions Library</td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc">Basic</td>
+              <td class="tc highlight-col"><span class="check">Full</span></td>
+              <td class="tc"><span class="check">Full</span></td>
+            </tr>
+            <tr>
+              <td>Custom AI Agents</td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc highlight-col">3 agents</td>
+              <td class="tc">Unlimited</td>
+            </tr>
+            <tr>
+              <td>CRM &amp; Cloud Integrations</td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc highlight-col"><span class="check">✓</span></td>
+              <td class="tc"><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Multi-Tenant Management</td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc highlight-col"><span class="cross">—</span></td>
+              <td class="tc"><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Priority Support</td>
+              <td class="tc">Community</td>
+              <td class="tc">Same-day</td>
+              <td class="tc highlight-col">1 hour</td>
+              <td class="tc">15 min SLA</td>
+            </tr>
+            <tr>
+              <td>Custom Bridge Script</td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc highlight-col"><span class="check">✓</span></td>
+              <td class="tc"><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Stealth Mode Pro</td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc highlight-col"><span class="check">✓</span></td>
+              <td class="tc"><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Private CDN</td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc highlight-col"><span class="check">✓</span></td>
+              <td class="tc"><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Extended Audit &amp; Compliance</td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc highlight-col"><span class="cross">—</span></td>
+              <td class="tc"><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Virtual Sandbox</td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc"><span class="cross">—</span></td>
+              <td class="tc highlight-col"><span class="cross">—</span></td>
+              <td class="tc"><span class="check">✓</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ CTA ═══════════ -->
+  <section class="section" style="text-align:center;">
+    <div class="container">
+      <div class="premium-cta fade-in">
+        <h2>Ready to Supercharge Your<br><span class="gradient-text-accent">AI Agent Infrastructure</span>?</h2>
+        <p>Start with the free open-source core, then add premium services as you grow.</p>
+        <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:32px;">
+          <a href="/register" class="btn btn-primary btn-lg">Start Free</a>
+          <a href="mailto:sales@webagentbridge.com" class="btn btn-secondary btn-lg">Talk to Sales</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="navbar-brand">
+            <div class="brand-icon">⚡</div>
+            <span>Web Agent Bridge</span>
+          </a>
+          <p>Open protocol + runtime for AI agent ↔ website interaction. Built for the Agentic Web.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="/#features">Features</a></li>
+            <li><a href="/premium">Premium</a></li>
+            <li><a href="/#pricing">Pricing</a></li>
+            <li><a href="/docs">Documentation</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Developers</h4>
+          <ul>
+            <li><a href="/docs#quick-start">Quick Start</a></li>
+            <li><a href="/docs#api-reference">API Reference</a></li>
+            <li><a href="/docs#examples">Examples</a></li>
+            <li><a href="https://github.com/abokenan444/web-agent-bridge">GitHub</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="/privacy">Privacy Policy</a></li>
+            <li><a href="/terms">Terms of Service</a></li>
+            <li><a href="/cookies">Cookie Policy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 Web Agent Bridge. MIT License (core). Operated from the Netherlands.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/auth-nav.js"></script>
+  <script>
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.style.background = window.scrollY > 50 
+        ? 'rgba(10, 14, 26, 0.95)' 
+        : 'rgba(10, 14, 26, 0.8)';
+    });
+  </script>
+  <script src="/js/cookie-consent.js"></script>
+</body>
+</html>

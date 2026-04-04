@@ -1,0 +1,2487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium Dashboard — Web Agent Bridge</title>
+  <script>
+    (function() {
+      try {
+        if (!localStorage.getItem('wab_token')) {
+          window.location.replace('/login?next=/premium-dashboard');
+        }
+      } catch(e) { window.location.replace('/login'); }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .view { display: none; }
+    .view.active { display: block; }
+    .prem-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 24px; }
+    .prem-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
+    .prem-grid-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-bottom: 24px; }
+    @media (max-width: 1200px) {
+      .prem-grid-3 { grid-template-columns: repeat(2, 1fr); }
+      .prem-grid-6 { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .prem-grid-2, .prem-grid-3 { grid-template-columns: 1fr; }
+      .prem-grid-6 { grid-template-columns: repeat(2, 1fr); }
+    }
+    .section-title { font-size: 1.1rem; font-weight: 700; margin: 28px 0 16px; color: var(--text-primary); }
+    .section-title:first-child { margin-top: 0; }
+    .site-select-bar { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+    .site-select-bar label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+    .site-select-bar select { width: auto; min-width: 240px; }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .actions-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+    .sev-critical { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+    .sev-high { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+    .sev-medium { background: rgba(234,179,8,0.15); color: #eab308; }
+    .sev-low { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+    .type-friendly { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+    .type-suspicious { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+    .type-aggressive { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+    .type-unknown { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+    .status-open { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+    .status-in_progress { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+    .status-waiting { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+    .status-resolved { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+    .status-closed { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+    .status-active { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+    .status-paused { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+    .status-running { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+    .status-success { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+    .status-failed { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+    .priority-low { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+    .priority-normal { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+    .priority-high { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+    .priority-urgent { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+    .role-admin { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+    .role-editor { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+    .role-viewer { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+    .msg-list { max-height: 400px; overflow-y: auto; margin-bottom: 16px; }
+    .msg-item { padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 8px; }
+    .msg-user { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15); }
+    .msg-bot { background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.15); }
+    .msg-item .msg-meta { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; display: flex; gap: 8px; align-items: center; }
+    .msg-item .msg-text { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; }
+    .slider-group { display: flex; align-items: center; gap: 12px; }
+    .slider-group input[type="range"] { flex: 1; accent-color: var(--accent-blue); }
+    .slider-group .slider-val { min-width: 50px; text-align: right; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-secondary); }
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 12px; }
+    .checkbox-group label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--text-secondary); cursor: pointer; }
+    .checkbox-group input[type="checkbox"] { accent-color: var(--accent-blue); width: 16px; height: 16px; }
+    .pack-card { cursor: pointer; }
+    .pack-card:hover { border-color: var(--accent-blue); }
+    .sidebar-nav a { font-size: 0.84rem; }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <a href="/" class="navbar-brand">
+          <div class="brand-icon">⚡</div>
+          <span>WAB</span>
+        </a>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="active" data-view="overview">📊 Overview</a>
+        <a href="#" data-view="traffic">🔍 Traffic Intelligence</a>
+        <a href="#" data-view="security">🛡️ Exploit Shield</a>
+        <a href="#" data-view="actions">📦 Actions Library</a>
+        <a href="#" data-view="agents">🤖 Custom Agents</a>
+        <a href="#" data-view="webhooks">🔗 Webhooks &amp; CRM</a>
+        <a href="#" data-view="team">👥 Team Management</a>
+        <a href="#" data-view="support">🎫 Support</a>
+        <a href="#" data-view="script">✏️ Script Builder</a>
+        <a href="#" data-view="stealth">👻 Stealth Mode</a>
+        <a href="#" data-view="cdn">🌐 CDN</a>
+        <a href="#" data-view="audit">📋 Audit &amp; Compliance</a>
+        <a href="#" data-view="sandbox">🧪 Sandbox</a>
+        <div style="border-top:1px solid var(--border);margin:12px 0;opacity:0.3;"></div>
+        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:4px 16px;margin-bottom:4px;">Advanced AI</div>
+        <a href="#" data-view="memory">🧠 Agent Memory</a>
+        <a href="#" data-view="healing">🩹 Self-Healing</a>
+        <a href="#" data-view="vision">👁️ Vision AI</a>
+        <a href="#" data-view="swarm">🐝 Agent Swarm</a>
+        <a href="#" data-view="marketplace">🔌 Plugins</a>
+        <a href="/dashboard" style="margin-top:20px;">← Back to Dashboard</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;" id="userName"></div>
+        <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%; justify-content:flex-start;">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+
+      <!-- ══════ OVERVIEW ══════ -->
+      <div id="view-overview" class="view active">
+        <div class="page-header"><h1>Premium Overview</h1></div>
+        <div class="prem-grid-6" id="overviewStats">
+          <div class="stat-card"><div class="label">Active Alerts</div><div class="value" id="ovAlerts">0</div></div>
+          <div class="stat-card"><div class="label">Security Events (24h)</div><div class="value" id="ovSecurity">0</div></div>
+          <div class="stat-card"><div class="label">Installed Packs</div><div class="value" id="ovPacks">0</div></div>
+          <div class="stat-card"><div class="label">Active Agents</div><div class="value" id="ovAgents">0</div></div>
+          <div class="stat-card"><div class="label">Team Members</div><div class="value" id="ovTeam">0</div></div>
+          <div class="stat-card"><div class="label">Open Tickets</div><div class="value" id="ovTickets">0</div></div>
+        </div>
+        <div class="actions-bar">
+          <button class="btn btn-primary btn-sm" onclick="quickCheckAnomalies()">🔍 Check Anomalies</button>
+          <button class="btn btn-secondary btn-sm" onclick="quickSecurityReport()">🛡️ View Security Report</button>
+          <button class="btn btn-secondary btn-sm" onclick="switchView('agents')">🤖 Create Agent</button>
+          <button class="btn btn-secondary btn-sm" onclick="switchView('support')">🎫 Create Ticket</button>
+        </div>
+        <h3 class="section-title">Recent Alerts</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Type</th><th>Severity</th><th>Message</th><th>Time</th><th>Actions</th></tr></thead>
+            <tbody id="ovAlertsTable"><tr><td colspan="5" class="empty-state">No recent alerts</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════ TRAFFIC INTELLIGENCE ══════ -->
+      <div id="view-traffic" class="view">
+        <div class="page-header"><h1>Traffic Intelligence</h1></div>
+        <div class="site-select-bar">
+          <label>Site:</label>
+          <select class="form-input site-selector" onchange="loadTraffic()"></select>
+          <button class="btn btn-primary btn-sm" onclick="checkAnomalies()">Check Anomalies</button>
+        </div>
+        <div class="stats-grid" id="trafficStats">
+          <div class="stat-card"><div class="label">Total Agents</div><div class="value" id="tfTotal">0</div></div>
+          <div class="stat-card"><div class="label">Friendly</div><div class="value" id="tfFriendly" style="color:var(--accent-green)">0</div></div>
+          <div class="stat-card"><div class="label">Suspicious</div><div class="value" id="tfSuspicious" style="color:var(--accent-orange)">0</div></div>
+          <div class="stat-card"><div class="label">Aggressive</div><div class="value" id="tfAggressive" style="color:var(--accent-red)">0</div></div>
+        </div>
+        <h3 class="section-title">Agent Profiles</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Signature</th><th>Type</th><th>Platform</th><th>Country</th><th>Requests</th><th>Last Seen</th><th>Actions</th></tr></thead>
+            <tbody id="trafficTable"><tr><td colspan="7" class="empty-state">Select a site</td></tr></tbody>
+          </table>
+        </div>
+        <h3 class="section-title">Alerts</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Type</th><th>Severity</th><th>Message</th><th>Time</th><th>Actions</th></tr></thead>
+            <tbody id="trafficAlerts"><tr><td colspan="5" class="empty-state">No alerts</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════ EXPLOIT SHIELD ══════ -->
+      <div id="view-security" class="view">
+        <div class="page-header"><h1>Exploit Shield</h1></div>
+        <div class="site-select-bar">
+          <label>Site:</label>
+          <select class="form-input site-selector" onchange="loadSecurity()"></select>
+        </div>
+        <div class="stats-grid" id="securityStats">
+          <div class="stat-card"><div class="label">Total Events</div><div class="value" id="secTotal">0</div></div>
+          <div class="stat-card"><div class="label">Critical</div><div class="value" id="secCritical" style="color:var(--accent-red)">0</div></div>
+          <div class="stat-card"><div class="label">High</div><div class="value" id="secHigh" style="color:var(--accent-orange)">0</div></div>
+          <div class="stat-card"><div class="label">Blocked Agents</div><div class="value" id="secBlocked">0</div></div>
+        </div>
+        <h3 class="section-title">Security Events</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Type</th><th>Severity</th><th>Agent</th><th>Details</th><th>Time</th></tr></thead>
+            <tbody id="secEventsTable"><tr><td colspan="5" class="empty-state">Select a site</td></tr></tbody>
+          </table>
+        </div>
+        <h3 class="section-title">Blocked Agents</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Agent Signature</th><th>Reason</th><th>Blocked At</th><th>Expires</th><th>Actions</th></tr></thead>
+            <tbody id="secBlockedTable"><tr><td colspan="5" class="empty-state">No blocked agents</td></tr></tbody>
+          </table>
+        </div>
+        <h3 class="section-title">Block an Agent</h3>
+        <div class="card" style="max-width:500px;">
+          <div class="form-group">
+            <label>Agent Signature</label>
+            <input type="text" class="form-input" id="blockSig" placeholder="e.g. Scrapy">
+          </div>
+          <div class="form-group">
+            <label>Reason</label>
+            <input type="text" class="form-input" id="blockReason" placeholder="Reason for blocking">
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="blockAgent()">Block Agent</button>
+        </div>
+        <h3 class="section-title">Security Report</h3>
+        <div class="site-select-bar">
+          <label>Period:</label>
+          <select class="form-input" id="reportDays" style="width:auto;min-width:120px;">
+            <option value="7">7 days</option>
+            <option value="30" selected>30 days</option>
+            <option value="90">90 days</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="loadSecurityReport()">Generate Report</button>
+        </div>
+        <div id="secReportContent"></div>
+      </div>
+
+      <!-- ══════ ACTIONS LIBRARY ══════ -->
+      <div id="view-actions" class="view">
+        <div class="page-header"><h1>Actions Library</h1></div>
+        <div class="site-select-bar">
+          <label>Filter by platform:</label>
+          <select class="form-input" id="packPlatformFilter" onchange="loadPacks()" style="width:auto;min-width:160px;">
+            <option value="">All Platforms</option>
+          </select>
+          <label style="margin-left:16px;">Site for installs:</label>
+          <select class="form-input site-selector" onchange="loadInstalledPacks()" style="min-width:200px;"></select>
+        </div>
+        <h3 class="section-title">Available Packs</h3>
+        <div class="prem-grid-3" id="packsGrid"><div class="empty-state" style="grid-column:1/-1;">Loading packs...</div></div>
+        <h3 class="section-title">Installed Packs</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Pack</th><th>Platform</th><th>Version</th><th>Installed</th><th>Actions</th></tr></thead>
+            <tbody id="installedPacksTable"><tr><td colspan="5" class="empty-state">Select a site</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════ CUSTOM AGENTS ══════ -->
+      <div id="view-agents" class="view">
+        <div class="page-header">
+          <h1>Custom Agents</h1>
+          <button class="btn btn-primary btn-sm" onclick="openModal('createAgentModal')">+ Create Agent</button>
+        </div>
+        <div class="site-select-bar">
+          <label>Site:</label>
+          <select class="form-input site-selector" onchange="loadAgents()"></select>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Name</th><th>Status</th><th>Schedule</th><th>Runs</th><th>Last Run</th><th>Actions</th></tr></thead>
+            <tbody id="agentsTable"><tr><td colspan="6" class="empty-state">Select a site</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════ WEBHOOKS & CRM ══════ -->
+      <div id="view-webhooks" class="view">
+        <div class="page-header">
+          <h1>Webhooks &amp; CRM</h1>
+        </div>
+        <div class="site-select-bar">
+          <label>Site:</label>
+          <select class="form-input site-selector" onchange="loadWebhooksView()"></select>
+        </div>
+        <h3 class="section-title" style="display:flex;align-items:center;justify-content:space-between;">Webhooks <button class="btn btn-primary btn-sm" onclick="openModal('createWebhookModal')">+ Add Webhook</button></h3>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Name</th><th>URL</th><th>Events</th><th>Status</th><th>Failures</th><th>Actions</th></tr></thead>
+            <tbody id="webhooksTable"><tr><td colspan="6" class="empty-state">Select a site</td></tr></tbody>
+          </table>
+        </div>
+        <div id="webhookLogsSection" style="display:none;">
+          <h3 class="section-title">Webhook Logs</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Event</th><th>Status</th><th>Response</th><th>Time</th></tr></thead>
+              <tbody id="webhookLogsTable"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="actions-bar" style="margin-top:16px;">
+          <button class="btn btn-secondary btn-sm" onclick="testWebhook()">🧪 Test Webhooks</button>
+        </div>
+        <h3 class="section-title" style="display:flex;align-items:center;justify-content:space-between;">CRM Integrations <button class="btn btn-primary btn-sm" onclick="openModal('createCrmModal')">+ Add Integration</button></h3>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Provider</th><th>Status</th><th>Last Sync</th><th>Actions</th></tr></thead>
+            <tbody id="crmTable"><tr><td colspan="4" class="empty-state">No integrations</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════ TEAM MANAGEMENT ══════ -->
+      <div id="view-team" class="view">
+        <div class="page-header">
+          <h1>Team Management</h1>
+          <button class="btn btn-primary btn-sm" onclick="openModal('inviteTeamModal')">+ Invite Member</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Site Access</th><th>Quota</th><th>Usage</th><th>Actions</th></tr></thead>
+            <tbody id="teamTable"><tr><td colspan="7" class="empty-state">No team members</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════ SUPPORT ══════ -->
+      <div id="view-support" class="view">
+        <div class="page-header">
+          <h1>Support</h1>
+          <button class="btn btn-primary btn-sm" onclick="openModal('createTicketModal')">+ Create Ticket</button>
+        </div>
+        <div class="stats-grid" id="supportStats">
+          <div class="stat-card"><div class="label">Open</div><div class="value" id="supOpen" style="color:var(--accent-blue)">0</div></div>
+          <div class="stat-card"><div class="label">In Progress</div><div class="value" id="supProgress" style="color:var(--accent-orange)">0</div></div>
+          <div class="stat-card"><div class="label">Waiting</div><div class="value" id="supWaiting" style="color:var(--accent-purple)">0</div></div>
+          <div class="stat-card"><div class="label">Resolved</div><div class="value" id="supResolved" style="color:var(--accent-green)">0</div></div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Subject</th><th>Priority</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+            <tbody id="ticketsTable"><tr><td colspan="5" class="empty-state">No tickets</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════ SCRIPT BUILDER ══════ -->
+      <div id="view-script" class="view">
+        <div class="page-header"><h1>Script Builder</h1></div>
+        <div class="site-select-bar">
+          <label>Site:</label>
+          <select class="form-input site-selector" onchange="loadScriptConfig()"></select>
+        </div>
+        <div class="prem-grid-2">
+          <div>
+            <h3 class="section-title">Plugins</h3>
+            <div class="card" id="pluginsList" style="max-height:300px;overflow-y:auto;">Loading plugins...</div>
+            <h3 class="section-title">Options</h3>
+            <div class="card">
+              <div class="toggle-wrap">
+                <div class="toggle-label">Minified<small>Remove whitespace and comments</small></div>
+                <label class="toggle"><input type="checkbox" id="scriptMinified" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-wrap">
+                <div class="toggle-label">AMP Compatible<small>Remove document.write calls</small></div>
+                <label class="toggle"><input type="checkbox" id="scriptAmp"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-wrap">
+                <div class="toggle-label">Auto Patch<small>Auto-apply updates</small></div>
+                <label class="toggle"><input type="checkbox" id="scriptAutoPatch" checked><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3 class="section-title">Custom CSS</h3>
+            <textarea class="form-input" id="scriptCustomCss" rows="5" placeholder="/* Custom CSS for bridge overlay */"></textarea>
+            <h3 class="section-title">Custom JS</h3>
+            <textarea class="form-input" id="scriptCustomJs" rows="5" placeholder="// Custom JavaScript"></textarea>
+          </div>
+        </div>
+        <div class="actions-bar">
+          <button class="btn btn-primary btn-sm" onclick="buildScript()">🔨 Build Script</button>
+          <button class="btn btn-secondary btn-sm" onclick="saveScriptConfig()">💾 Save Config</button>
+        </div>
+        <div id="scriptPreviewSection" style="display:none;">
+          <h3 class="section-title">Built Script</h3>
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+            <span class="badge badge-active" id="scriptHash"></span>
+            <span style="font-size:0.85rem;color:var(--text-muted);" id="scriptSize"></span>
+          </div>
+          <div class="snippet-box" style="max-height:300px;overflow:auto;">
+            <button class="copy-btn" onclick="copyBuiltScript()">Copy</button>
+            <pre id="scriptPreview"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ STEALTH MODE ══════ -->
+      <div id="view-stealth" class="view">
+        <div class="page-header"><h1>Stealth Mode</h1></div>
+        <div class="site-select-bar">
+          <label>Site:</label>
+          <select class="form-input site-selector" onchange="loadStealth()"></select>
+        </div>
+        <div class="prem-grid-2">
+          <div class="card">
+            <h3 style="margin-bottom:20px;">Profile Settings</h3>
+            <div class="form-group">
+              <label>Typing Speed Min (ms)</label>
+              <div class="slider-group">
+                <input type="range" min="0" max="500" value="30" id="stTypingMin" oninput="document.getElementById('stTypingMinVal').textContent=this.value+'ms'">
+                <span class="slider-val" id="stTypingMinVal">30ms</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Typing Speed Max (ms)</label>
+              <div class="slider-group">
+                <input type="range" min="0" max="500" value="120" id="stTypingMax" oninput="document.getElementById('stTypingMaxVal').textContent=this.value+'ms'">
+                <span class="slider-val" id="stTypingMaxVal">120ms</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Mouse Speed</label>
+              <select class="form-input" id="stMouseSpeed">
+                <option value="slow">Slow</option>
+                <option value="natural" selected>Natural</option>
+                <option value="fast">Fast</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Scroll Behavior</label>
+              <select class="form-input" id="stScrollBehavior">
+                <option value="linear">Linear</option>
+                <option value="eased" selected>Eased</option>
+                <option value="natural">Natural</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Click Delay Min (ms)</label>
+              <div class="slider-group">
+                <input type="range" min="0" max="500" value="50" id="stClickMin" oninput="document.getElementById('stClickMinVal').textContent=this.value+'ms'">
+                <span class="slider-val" id="stClickMinVal">50ms</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Click Delay Max (ms)</label>
+              <div class="slider-group">
+                <input type="range" min="0" max="500" value="400" id="stClickMax" oninput="document.getElementById('stClickMaxVal').textContent=this.value+'ms'">
+                <span class="slider-val" id="stClickMaxVal">400ms</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:20px;">
+              <h3 style="margin-bottom:20px;">Anti-Detection Options</h3>
+              <div class="checkbox-group" style="flex-direction:column;">
+                <label><input type="checkbox" id="stHideWebdriver"> Hide WebDriver flag</label>
+                <label><input type="checkbox" id="stSpoofPlugins"> Plugin spoofing</label>
+                <label><input type="checkbox" id="stSpoofLang"> Language spoofing</label>
+              </div>
+            </div>
+            <div class="actions-bar">
+              <button class="btn btn-primary btn-sm" onclick="saveStealth()">💾 Save Profile</button>
+              <button class="btn btn-secondary btn-sm" onclick="generateStealthScript()">⚡ Generate Script</button>
+            </div>
+            <div id="stealthScriptSection" style="display:none;">
+              <h3 class="section-title">Generated Stealth Script</h3>
+              <div class="snippet-box" style="max-height:300px;overflow:auto;">
+                <button class="copy-btn" onclick="copyStealthScript()">Copy</button>
+                <pre id="stealthScriptPreview"></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ CDN ══════ -->
+      <div id="view-cdn" class="view">
+        <div class="page-header"><h1>CDN</h1></div>
+        <div class="site-select-bar">
+          <label>Site:</label>
+          <select class="form-input site-selector" onchange="loadCdn()"></select>
+        </div>
+        <div class="prem-grid-2">
+          <div class="card">
+            <h3 style="margin-bottom:20px;">CDN Configuration</h3>
+            <div class="form-group">
+              <label>Custom Domain</label>
+              <input type="text" class="form-input" id="cdnDomain" placeholder="cdn.yourdomain.com">
+            </div>
+            <div class="form-group">
+              <label>Cache TTL (seconds)</label>
+              <input type="number" class="form-input" id="cdnTtl" value="86400" min="60">
+            </div>
+            <div class="form-group">
+              <label>Edge Locations</label>
+              <div class="checkbox-group" id="cdnEdges">
+                <label><input type="checkbox" value="us-east" checked> US East</label>
+                <label><input type="checkbox" value="us-west"> US West</label>
+                <label><input type="checkbox" value="eu-west" checked> EU West</label>
+                <label><input type="checkbox" value="eu-central"> EU Central</label>
+                <label><input type="checkbox" value="ap-southeast"> AP Southeast</label>
+                <label><input type="checkbox" value="ap-northeast"> AP Northeast</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>SSL Status</label>
+              <span class="badge badge-active" id="cdnSslBadge">Pending</span>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="saveCdn()">Save CDN Config</button>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:20px;">
+              <h3 style="margin-bottom:20px;">CDN Stats</h3>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+                <div><div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Requests</div><div style="font-size:1.5rem;font-weight:700;" id="cdnStatReqs">0</div></div>
+                <div><div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Bandwidth</div><div style="font-size:1.5rem;font-weight:700;" id="cdnStatBw">0 B</div></div>
+                <div><div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Cache Hits</div><div style="font-size:1.5rem;font-weight:700;" id="cdnStatHits">0</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <h3 style="margin-bottom:12px;">CDN URL</h3>
+              <div class="snippet-box">
+                <button class="copy-btn" onclick="copyCdnUrl()">Copy</button>
+                <pre id="cdnUrlDisplay">Configure a site to see the CDN URL</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ AUDIT & COMPLIANCE ══════ -->
+      <div id="view-audit" class="view">
+        <div class="page-header"><h1>Audit &amp; Compliance</h1></div>
+        <div class="site-select-bar">
+          <label>Site:</label>
+          <select class="form-input site-selector" onchange="loadAudit()"></select>
+        </div>
+        <div class="prem-grid-2">
+          <div class="card">
+            <h3 style="margin-bottom:20px;">Compliance Settings</h3>
+            <div class="form-group">
+              <label>Retention Days</label>
+              <input type="number" class="form-input" id="auditRetention" value="90" min="1">
+            </div>
+            <div class="toggle-wrap">
+              <div class="toggle-label">HIPAA Mode<small>Enable HIPAA compliance</small></div>
+              <label class="toggle"><input type="checkbox" id="auditHipaa"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-wrap">
+              <div class="toggle-label">GDPR Mode<small>Enable GDPR compliance</small></div>
+              <label class="toggle"><input type="checkbox" id="auditGdpr"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-wrap">
+              <div class="toggle-label">SOC2 Mode<small>Enable SOC2 compliance</small></div>
+              <label class="toggle"><input type="checkbox" id="auditSoc2"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-wrap">
+              <div class="toggle-label">Auto-Purge<small>Automatically purge old logs</small></div>
+              <label class="toggle"><input type="checkbox" id="auditAutoPurge" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:10px;">
+              <button class="btn btn-primary btn-sm" onclick="saveCompliance()">Save Compliance</button>
+              <button class="btn btn-danger btn-sm" onclick="purgeAuditLogs()">Purge Old Logs</button>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <h3 style="margin-bottom:16px;">Export Logs</h3>
+              <div class="form-group"><label>From</label><input type="date" class="form-input" id="auditSince"></div>
+              <div class="form-group"><label>Until</label><input type="date" class="form-input" id="auditUntil"></div>
+              <div style="display:flex;gap:10px;">
+                <button class="btn btn-secondary btn-sm" onclick="exportAuditLogs('csv')">📥 Export CSV</button>
+                <button class="btn btn-secondary btn-sm" onclick="exportAuditLogs('json')">📥 Export JSON</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <h3 class="section-title">Audit Logs</h3>
+        <div class="site-select-bar">
+          <label>Filter:</label>
+          <select class="form-input" id="auditActionFilter" onchange="loadAuditLogs()" style="width:auto;min-width:150px;">
+            <option value="">All Actions</option>
+          </select>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Timestamp</th><th>Action</th><th>Resource</th><th>User</th><th>IP</th></tr></thead>
+            <tbody id="auditLogsTable"><tr><td colspan="5" class="empty-state">Select a site</td></tr></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;align-items:center;" id="auditPagination"></div>
+      </div>
+
+      <!-- ══════ SANDBOX ══════ -->
+      <div id="view-sandbox" class="view">
+        <div class="page-header">
+          <h1>Sandbox</h1>
+          <button class="btn btn-primary btn-sm" onclick="createSandbox()">+ Create Sandbox</button>
+        </div>
+        <div class="site-select-bar">
+          <label>Site:</label>
+          <select class="form-input site-selector" onchange="loadSandboxes()"></select>
+        </div>
+        <h3 class="section-title">Environments</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Name</th><th>Status</th><th>Traffic Generated</th><th>Created</th><th>Actions</th></tr></thead>
+            <tbody id="sandboxTable"><tr><td colspan="5" class="empty-state">Select a site</td></tr></tbody>
+          </table>
+        </div>
+        <div id="sandboxDetail" style="display:none;">
+          <h3 class="section-title">Simulate Traffic</h3>
+          <div class="card" style="max-width:500px;">
+            <div class="form-group">
+              <label>Agent Count</label>
+              <input type="number" class="form-input" id="simAgentCount" value="10" min="1" max="1000">
+            </div>
+            <div class="form-group">
+              <label>Duration (seconds)</label>
+              <input type="number" class="form-input" id="simDuration" value="60" min="1" max="3600">
+            </div>
+            <div class="form-group">
+              <label>Actions per Agent</label>
+              <input type="number" class="form-input" id="simActions" value="5" min="1" max="100">
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="simulateTraffic()">▶ Run Simulation</button>
+          </div>
+          <div id="simResults" style="display:none;">
+            <h3 class="section-title">Simulation Results</h3>
+            <div class="card" id="simResultsContent"></div>
+          </div>
+          <h3 class="section-title">Benchmarks</h3>
+          <div class="site-select-bar">
+            <label>Type:</label>
+            <select class="form-input" id="benchType" style="width:auto;min-width:180px;">
+              <option value="rate_limit">Rate Limit</option>
+              <option value="response_time">Response Time</option>
+              <option value="throughput">Throughput</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="runBenchmark()">▶ Run Benchmark</button>
+            <button class="btn btn-secondary btn-sm" onclick="compareBenchmarks()">📊 Compare</button>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Type</th><th>Before</th><th>After</th><th>Improvement</th><th>Date</th></tr></thead>
+              <tbody id="benchmarksTable"><tr><td colspan="5" class="empty-state">No benchmarks</td></tr></tbody>
+            </table>
+          </div>
+          <div id="benchCompare" style="display:none;">
+            <h3 class="section-title">Benchmark Comparison</h3>
+            <div class="card" id="benchCompareContent"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ ADVANCED AI VIEWS ═══════════ -->
+
+      <!-- ══════ AGENT MEMORY ══════ -->
+      <div id="view-memory" class="view">
+        <div class="page-header"><h1>🧠 Agent Memory</h1></div>
+        <div class="site-select-bar"><label>Site:</label><select class="form-input site-selector" onchange="loadMemoryView()"></select></div>
+        <div class="prem-grid-6" id="memoryStats"></div>
+        <div class="prem-grid-2">
+          <div class="card">
+            <h3 class="section-title">Store Memory</h3>
+            <div class="form-group"><label>Key</label><input type="text" class="form-input" id="memKey" placeholder="user_preference"></div>
+            <div class="form-group"><label>Value</label><textarea class="form-input" id="memValue" rows="3" placeholder='{"favorite_store":"Local Shop"}'></textarea></div>
+            <div class="form-group"><label>Type</label>
+              <select class="form-input" id="memType"><option>preference</option><option>interaction</option><option>correction</option><option>pattern</option></select>
+            </div>
+            <div class="form-group"><label>Category</label>
+              <select class="form-input" id="memCat"><option>navigation</option><option>purchase</option><option>search</option><option>form</option><option>custom</option></select>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="storeMemory()">💾 Store</button>
+          </div>
+          <div class="card">
+            <h3 class="section-title">Recall Memories</h3>
+            <div class="form-group"><label>Query (natural language)</label><input type="text" class="form-input" id="memQuery" placeholder="What does the user prefer?"></div>
+            <div class="form-group"><label>Filter by Type</label>
+              <select class="form-input" id="memFilterType"><option value="">All</option><option>preference</option><option>interaction</option><option>correction</option><option>pattern</option></select>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="recallMemories()">🔍 Search</button>
+            <div id="memResults" style="margin-top:16px;max-height:300px;overflow-y:auto;"></div>
+          </div>
+        </div>
+        <div class="prem-grid-2" style="margin-top:16px;">
+          <div class="card">
+            <h3 class="section-title">Preferences</h3>
+            <div id="memPreferences" style="max-height:250px;overflow-y:auto;"></div>
+          </div>
+          <div class="card">
+            <h3 class="section-title">Sessions</h3>
+            <div id="memSessions" style="max-height:250px;overflow-y:auto;"></div>
+            <button class="btn btn-secondary btn-sm" onclick="consolidateMemories()" style="margin-top:12px;">🔄 Consolidate</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ SELF-HEALING ══════ -->
+      <div id="view-healing" class="view">
+        <div class="page-header"><h1>🩹 Self-Healing Selectors</h1></div>
+        <div class="site-select-bar"><label>Site:</label><select class="form-input site-selector" onchange="loadHealingView()"></select></div>
+        <div class="prem-grid-6" id="healingStats"></div>
+        <div class="prem-grid-2">
+          <div class="card">
+            <h3 class="section-title">Register Selector</h3>
+            <div class="form-group"><label>Action Name</label><input type="text" class="form-input" id="healAction" placeholder="login_button"></div>
+            <div class="form-group"><label>CSS Selector</label><input type="text" class="form-input" id="healSelector" placeholder="#submit-btn"></div>
+            <div class="form-group"><label>Type</label>
+              <select class="form-input" id="healType"><option>css</option><option>xpath</option><option>aria</option><option>text</option><option>data-attr</option></select>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="registerSelector()">📝 Register</button>
+          </div>
+          <div class="card">
+            <h3 class="section-title">Heal Selector</h3>
+            <div class="form-group"><label>Action Name</label><input type="text" class="form-input" id="healTargetAction" placeholder="login_button"></div>
+            <div class="form-group"><label>Failed Selector</label><input type="text" class="form-input" id="healFailed" placeholder="#old-submit-btn"></div>
+            <button class="btn btn-primary btn-sm" onclick="healSelector()">🩹 Heal</button>
+            <div id="healResult" style="margin-top:16px;"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <h3 class="section-title">Healing History</h3>
+          <div class="table-wrapper"><table>
+            <thead><tr><th>Action</th><th>Old</th><th>New</th><th>Strategy</th><th>Confidence</th><th>Success</th><th>Date</th></tr></thead>
+            <tbody id="healingHistoryBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- ══════ VISION AI ══════ -->
+      <div id="view-vision" class="view">
+        <div class="page-header"><h1>👁️ Vision AI</h1></div>
+        <div class="site-select-bar"><label>Site:</label><select class="form-input site-selector" onchange="loadVisionView()"></select></div>
+        <div class="prem-grid-2">
+          <div class="card">
+            <h3 class="section-title">Configure Vision</h3>
+            <div class="form-group"><label>Provider</label>
+              <select class="form-input" id="visionProvider"><option value="local">Local (Ollama)</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option></select>
+            </div>
+            <div class="form-group"><label>Model</label><input type="text" class="form-input" id="visionModel" placeholder="moondream"></div>
+            <div class="form-group"><label>Endpoint (for local)</label><input type="text" class="form-input" id="visionEndpoint" placeholder="http://localhost:11434"></div>
+            <div class="form-group"><label>API Key</label><input type="password" class="form-input" id="visionApiKey" placeholder="sk-..."></div>
+            <button class="btn btn-primary btn-sm" onclick="configureVision()">💾 Save Config</button>
+          </div>
+          <div class="card">
+            <h3 class="section-title">Analyze Screenshot</h3>
+            <div class="form-group"><label>URL</label><input type="text" class="form-input" id="visionUrl" placeholder="https://example.com/page"></div>
+            <div class="form-group"><label>Custom Prompt (optional)</label><textarea class="form-input" id="visionPrompt" rows="2" placeholder="Find all purchase buttons"></textarea></div>
+            <div class="form-group"><label>Screenshot (Base64)</label><textarea class="form-input" id="visionScreenshot" rows="3" placeholder="Paste base64 encoded screenshot..."></textarea></div>
+            <button class="btn btn-primary btn-sm" onclick="analyzeScreenshot()">👁️ Analyze</button>
+            <div id="visionResult" style="margin-top:16px;max-height:400px;overflow-y:auto;"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <h3 class="section-title">Analysis History</h3>
+          <div class="table-wrapper"><table>
+            <thead><tr><th>URL</th><th>Provider</th><th>Elements</th><th>Tokens</th><th>Latency</th><th>Date</th></tr></thead>
+            <tbody id="visionHistoryBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- ══════ AGENT SWARM ══════ -->
+      <div id="view-swarm" class="view">
+        <div class="page-header"><h1>🐝 Agent Swarm</h1></div>
+        <div class="site-select-bar"><label>Site:</label><select class="form-input site-selector" onchange="loadSwarmView()"></select></div>
+        <div class="prem-grid-2">
+          <div class="card">
+            <h3 class="section-title">Swarm Configuration</h3>
+            <div class="form-group"><label>Strategy</label>
+              <select class="form-input" id="swarmStrategy"><option value="parallel">Parallel (all at once)</option><option value="sequential">Sequential (one by one)</option><option value="competitive">Competitive (best wins)</option><option value="collaborative">Collaborative (merge all)</option></select>
+            </div>
+            <div class="form-group"><label>Max Agents</label><input type="number" class="form-input" id="swarmMaxAgents" value="3" min="1" max="10"></div>
+            <div class="form-group"><label>Timeout (ms)</label><input type="number" class="form-input" id="swarmTimeout" value="30000" min="5000" max="120000"></div>
+            <button class="btn btn-primary btn-sm" onclick="configureSwarm()">💾 Save Config</button>
+          </div>
+          <div class="card">
+            <h3 class="section-title">Create Task</h3>
+            <div class="form-group"><label>Task Type</label>
+              <select class="form-input" id="swarmTaskType"><option>search</option><option>compare</option><option>monitor</option><option>scrape</option></select>
+            </div>
+            <div class="form-group"><label>Objective</label><input type="text" class="form-input" id="swarmObjective" placeholder="Find the cheapest hotel in Riyadh"></div>
+            <div class="form-group"><label>Targets (one URL per line)</label><textarea class="form-input" id="swarmTargets" rows="4" placeholder="https://booking.com&#10;https://localhotel.sa&#10;https://agoda.com"></textarea></div>
+            <button class="btn btn-primary btn-sm" onclick="createAndRunSwarm()">🐝 Launch Swarm</button>
+            <div id="swarmResult" style="margin-top:16px;max-height:400px;overflow-y:auto;"></div>
+          </div>
+        </div>
+        <div class="prem-grid-6" id="swarmStats"></div>
+        <div class="card" style="margin-top:16px;">
+          <h3 class="section-title">Task History</h3>
+          <div class="table-wrapper"><table>
+            <thead><tr><th>Task</th><th>Type</th><th>Objective</th><th>Agents</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody id="swarmHistoryBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- ══════ PLUGINS ══════ -->
+      <div id="view-marketplace" class="view">
+        <div class="page-header"><h1>🔌 Plugin Marketplace</h1></div>
+        <div class="site-select-bar"><label>Site:</label><select class="form-input site-selector" onchange="loadMarketplaceView()"></select></div>
+        <h3 class="section-title">Available Plugins</h3>
+        <div class="prem-grid-3" id="pluginCards"></div>
+        <h3 class="section-title">Installed Plugins</h3>
+        <div class="table-wrapper"><table>
+          <thead><tr><th>Plugin</th><th>Category</th><th>Version</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="installedPluginsBody"></tbody>
+        </table></div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ══════ MODALS ══════ -->
+
+  <div class="modal-overlay" id="createAgentModal">
+    <div class="modal" style="max-width:600px;">
+      <div class="modal-header"><h2>Create Agent</h2><button class="modal-close" onclick="closeModal('createAgentModal')">&times;</button></div>
+      <div class="modal-body">
+        <div class="alert alert-error" id="createAgentError"></div>
+        <div class="form-group"><label>Name</label><input type="text" class="form-input" id="agentName" placeholder="My Agent"></div>
+        <div class="form-group"><label>Description</label><input type="text" class="form-input" id="agentDesc" placeholder="What does this agent do?"></div>
+        <div class="form-group">
+          <label>Steps (JSON array)</label>
+          <textarea class="form-input" id="agentSteps" rows="6" placeholder='[{"action":"click","selector":"#login-btn","waitMs":1000},{"action":"fill","selector":"#email","value":"test@example.com"}]'></textarea>
+          <small style="color:var(--text-muted);display:block;margin-top:4px;">Each step: { action, selector, value, waitMs }</small>
+        </div>
+        <div class="form-group"><label>Schedule (optional)</label><input type="text" class="form-input" id="agentSchedule" placeholder="e.g. every 1h, daily 09:00, weekly mon 08:00"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('createAgentModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="createAgent()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="agentDetailModal">
+    <div class="modal" style="max-width:700px;">
+      <div class="modal-header"><h2 id="agentDetailTitle">Agent Details</h2><button class="modal-close" onclick="closeModal('agentDetailModal')">&times;</button></div>
+      <div class="modal-body" id="agentDetailBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-danger btn-sm" id="agentDeleteBtn">Delete</button>
+        <button class="btn btn-secondary btn-sm" id="agentRunBtn">▶ Run Now</button>
+        <button class="btn btn-secondary" onclick="closeModal('agentDetailModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="createWebhookModal">
+    <div class="modal">
+      <div class="modal-header"><h2>Add Webhook</h2><button class="modal-close" onclick="closeModal('createWebhookModal')">&times;</button></div>
+      <div class="modal-body">
+        <div class="alert alert-error" id="createWebhookError"></div>
+        <div class="form-group"><label>Name</label><input type="text" class="form-input" id="whName" placeholder="My Webhook"></div>
+        <div class="form-group"><label>URL</label><input type="url" class="form-input" id="whUrl" placeholder="https://example.com/webhook"></div>
+        <div class="form-group">
+          <label>Events</label>
+          <div class="checkbox-group" id="whEvents">
+            <label><input type="checkbox" value="action.executed" checked> action.executed</label>
+            <label><input type="checkbox" value="agent.detected"> agent.detected</label>
+            <label><input type="checkbox" value="security.alert"> security.alert</label>
+            <label><input type="checkbox" value="agent.blocked"> agent.blocked</label>
+          </div>
+        </div>
+        <div class="form-group"><label>Secret (optional)</label><input type="text" class="form-input" id="whSecret" placeholder="Auto-generated if empty"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('createWebhookModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="createWebhook()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="createCrmModal">
+    <div class="modal">
+      <div class="modal-header"><h2>Add CRM Integration</h2><button class="modal-close" onclick="closeModal('createCrmModal')">&times;</button></div>
+      <div class="modal-body">
+        <div class="alert alert-error" id="createCrmError"></div>
+        <div class="form-group">
+          <label>Provider</label>
+          <select class="form-input" id="crmProvider">
+            <option value="salesforce">Salesforce</option>
+            <option value="hubspot">HubSpot</option>
+            <option value="zoho">Zoho</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Config (JSON)</label><textarea class="form-input" id="crmConfig" rows="4" placeholder='{"apiKey":"...","instanceUrl":"..."}'></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('createCrmModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="createCrmIntegration()">Add Integration</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="inviteTeamModal">
+    <div class="modal">
+      <div class="modal-header"><h2>Invite Team Member</h2><button class="modal-close" onclick="closeModal('inviteTeamModal')">&times;</button></div>
+      <div class="modal-body">
+        <div class="alert alert-error" id="inviteTeamError"></div>
+        <div class="form-group"><label>Email</label><input type="email" class="form-input" id="teamEmail" placeholder="user@example.com"></div>
+        <div class="form-group"><label>Name</label><input type="text" class="form-input" id="teamName" placeholder="Full Name"></div>
+        <div class="form-group"><label>Password</label><input type="password" class="form-input" id="teamPassword" placeholder="Initial password"></div>
+        <div class="form-group">
+          <label>Role</label>
+          <select class="form-input" id="teamRole">
+            <option value="viewer">Viewer</option>
+            <option value="editor">Editor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Site Access</label>
+          <div class="checkbox-group" id="teamSiteAccess"></div>
+        </div>
+        <div class="form-group"><label>Monthly Quota (actions)</label><input type="number" class="form-input" id="teamQuota" placeholder="Leave empty for unlimited"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('inviteTeamModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="inviteTeamMember()">Invite</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="createTicketModal">
+    <div class="modal">
+      <div class="modal-header"><h2>Create Ticket</h2><button class="modal-close" onclick="closeModal('createTicketModal')">&times;</button></div>
+      <div class="modal-body">
+        <div class="alert alert-error" id="createTicketError"></div>
+        <div class="form-group"><label>Subject</label><input type="text" class="form-input" id="ticketSubject" placeholder="Describe your issue"></div>
+        <div class="form-group">
+          <label>Priority</label>
+          <select class="form-input" id="ticketPriority">
+            <option value="low">Low</option>
+            <option value="normal" selected>Normal</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select class="form-input" id="ticketCategory">
+            <option value="general">General</option>
+            <option value="billing">Billing</option>
+            <option value="technical">Technical</option>
+            <option value="feature">Feature Request</option>
+            <option value="bug">Bug Report</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('createTicketModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="createTicket()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="ticketDetailModal">
+    <div class="modal" style="max-width:700px;">
+      <div class="modal-header"><h2 id="ticketDetailTitle">Ticket</h2><button class="modal-close" onclick="closeModal('ticketDetailModal')">&times;</button></div>
+      <div class="modal-body">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;">
+          <label style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);">Status:</label>
+          <select class="form-input" id="ticketStatusSelect" style="width:auto;min-width:140px;" onchange="updateTicketStatus()">
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="waiting">Waiting</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <div class="msg-list" id="ticketMessages"></div>
+        <div class="form-group" style="margin-bottom:0;">
+          <textarea class="form-input" id="ticketReply" rows="3" placeholder="Type your reply..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('ticketDetailModal')">Close</button>
+        <button class="btn btn-primary" onclick="sendTicketReply()">Send Reply</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="packDetailModal">
+    <div class="modal" style="max-width:600px;">
+      <div class="modal-header"><h2 id="packDetailTitle">Pack Details</h2><button class="modal-close" onclick="closeModal('packDetailModal')">&times;</button></div>
+      <div class="modal-body" id="packDetailBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('packDetailModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PAPI = '/api/premium';
+    const API = '/api';
+    let token = localStorage.getItem('wab_token');
+    let user = JSON.parse(localStorage.getItem('wab_user') || 'null');
+    let sites = [];
+    let currentSandboxId = null;
+    let currentTicketId = null;
+    let auditPage = 0;
+    const AUDIT_LIMIT = 25;
+
+    if (!token) window.location.href = '/login';
+
+    function headers() {
+      return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('wab_token') };
+    }
+
+    function logout() {
+      localStorage.removeItem('wab_token');
+      localStorage.removeItem('wab_user');
+      window.location.href = '/login';
+    }
+
+    function esc(s) {
+      if (!s) return '';
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function fmtDate(d) {
+      if (!d) return '—';
+      try { return new Date(d).toLocaleString(); } catch { return d; }
+    }
+
+    function fmtBytes(b) {
+      if (!b || b === 0) return '0 B';
+      const u = ['B', 'KB', 'MB', 'GB'];
+      let i = 0;
+      while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+      return b.toFixed(i ? 1 : 0) + ' ' + u[i];
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function getSiteId() {
+      const view = document.querySelector('.view.active');
+      if (!view) return null;
+      const sel = view.querySelector('.site-selector');
+      return sel ? sel.value : null;
+    }
+
+    // ─── Navigation ──────────────────────────────────────────────────────
+    document.querySelectorAll('.sidebar-nav a[data-view]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchView(link.dataset.view);
+      });
+    });
+
+    function switchView(view) {
+      document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`.sidebar-nav a[data-view="${view}"]`);
+      if (link) link.classList.add('active');
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      const el = document.getElementById('view-' + view);
+      if (el) el.classList.add('active');
+      onViewActivated(view);
+    }
+
+    function onViewActivated(view) {
+      switch (view) {
+        case 'overview': loadOverview(); break;
+        case 'traffic': loadTraffic(); break;
+        case 'security': loadSecurity(); break;
+        case 'actions': loadPacks(); loadInstalledPacks(); break;
+        case 'agents': loadAgents(); break;
+        case 'webhooks': loadWebhooksView(); break;
+        case 'team': loadTeam(); break;
+        case 'support': loadSupport(); break;
+        case 'script': loadScriptPlugins(); loadScriptConfig(); break;
+        case 'stealth': loadStealth(); break;
+        case 'cdn': loadCdn(); break;
+        case 'audit': loadAudit(); break;
+        case 'sandbox': loadSandboxes(); break;
+        case 'memory': loadMemoryView(); break;
+        case 'healing': loadHealingView(); break;
+        case 'vision': loadVisionView(); break;
+        case 'swarm': loadSwarmView(); break;
+        case 'marketplace': loadMarketplaceView(); break;
+      }
+    }
+
+    // ─── Site Loading ────────────────────────────────────────────────────
+    async function loadSites() {
+      try {
+        const res = await fetch(API + '/sites', { headers: headers() });
+        if (res.status === 401 || res.status === 403) return logout();
+        const data = await res.json();
+        sites = data.sites || [];
+        populateSiteSelectors();
+      } catch (err) { console.error('loadSites:', err); }
+    }
+
+    function populateSiteSelectors() {
+      const opts = '<option value="">Select a site</option>' + sites.map(s => '<option value="' + s.id + '">' + esc(s.name) + ' (' + esc(s.domain) + ')</option>').join('');
+      document.querySelectorAll('.site-selector').forEach(sel => { sel.innerHTML = opts; });
+      const teamSA = document.getElementById('teamSiteAccess');
+      if (teamSA) {
+        teamSA.innerHTML = '<label><input type="checkbox" value="*" checked> All Sites</label>' + sites.map(s => '<label><input type="checkbox" value="' + s.id + '"> ' + esc(s.name) + '</label>').join('');
+      }
+    }
+
+    // ─── Overview ────────────────────────────────────────────────────────
+    async function loadOverview() {
+      const promises = [];
+      if (sites.length > 0) {
+        const sid = sites[0].id;
+        promises.push(
+          fetch(PAPI + '/traffic/' + sid + '/alerts?limit=10&acknowledged=false', { headers: headers() }).then(r => r.json()).catch(() => ({ alerts: [] })),
+          fetch(PAPI + '/security/' + sid + '/events?limit=50&since=' + new Date(Date.now() - 86400000).toISOString(), { headers: headers() }).then(r => r.json()).catch(() => ({ events: [] })),
+          fetch(PAPI + '/actions/' + sid + '/installed', { headers: headers() }).then(r => r.json()).catch(() => ({ installed: [] })),
+          fetch(PAPI + '/agents/' + sid, { headers: headers() }).then(r => r.json()).catch(() => ({ agents: [] }))
+        );
+      } else {
+        promises.push(Promise.resolve({ alerts: [] }), Promise.resolve({ events: [] }), Promise.resolve({ installed: [] }), Promise.resolve({ agents: [] }));
+      }
+      promises.push(
+        fetch(PAPI + '/team', { headers: headers() }).then(r => r.json()).catch(() => ({ subUsers: [] })),
+        fetch(PAPI + '/support/stats', { headers: headers() }).then(r => r.json()).catch(() => ({ stats: { open: 0 } }))
+      );
+
+      const [alertsData, eventsData, packsData, agentsData, teamData, ticketData] = await Promise.all(promises);
+
+      document.getElementById('ovAlerts').textContent = (alertsData.alerts || []).length;
+      document.getElementById('ovSecurity').textContent = (eventsData.events || []).length;
+      document.getElementById('ovPacks').textContent = (packsData.installed || []).length;
+      document.getElementById('ovAgents').textContent = (agentsData.agents || []).filter(a => a.status === 'active').length;
+      document.getElementById('ovTeam').textContent = (teamData.subUsers || []).length;
+      document.getElementById('ovTickets').textContent = (ticketData.stats || {}).open || 0;
+
+      const alerts = alertsData.alerts || [];
+      const tbody = document.getElementById('ovAlertsTable');
+      if (alerts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No recent alerts</td></tr>';
+      } else {
+        tbody.innerHTML = alerts.slice(0, 10).map(a => '<tr>' +
+          '<td>' + esc(a.alert_type) + '</td>' +
+          '<td><span class="badge sev-' + (a.severity || 'low') + '">' + esc(a.severity) + '</span></td>' +
+          '<td>' + esc(a.message) + '</td>' +
+          '<td>' + fmtDate(a.created_at) + '</td>' +
+          '<td><button class="btn btn-sm btn-secondary" onclick="ackAlertOverview(\'' + a.id + '\')">Acknowledge</button></td>' +
+          '</tr>').join('');
+      }
+    }
+
+    async function ackAlertOverview(alertId) {
+      if (!sites.length) return;
+      await fetch(PAPI + '/traffic/' + sites[0].id + '/alerts/' + alertId + '/acknowledge', { method: 'POST', headers: headers() });
+      loadOverview();
+    }
+
+    async function quickCheckAnomalies() {
+      if (!sites.length) { alert('No sites available'); return; }
+      const res = await fetch(PAPI + '/traffic/' + sites[0].id + '/check-anomalies', { method: 'POST', headers: headers() });
+      const data = await res.json();
+      alert('Anomaly check complete. ' + (data.alerts || []).length + ' new alerts found.');
+      loadOverview();
+    }
+
+    async function quickSecurityReport() {
+      if (!sites.length) { alert('No sites available'); return; }
+      switchView('security');
+      setTimeout(() => {
+        const sel = document.querySelector('#view-security .site-selector');
+        if (sel && sites.length) { sel.value = sites[0].id; loadSecurity(); loadSecurityReport(); }
+      }, 100);
+    }
+
+    // ─── Traffic Intelligence ────────────────────────────────────────────
+    async function loadTraffic() {
+      const sid = getSiteId();
+      if (!sid) return;
+      try {
+        const [profilesRes, statsRes, alertsRes] = await Promise.all([
+          fetch(PAPI + '/traffic/' + sid + '/profiles?limit=50', { headers: headers() }),
+          fetch(PAPI + '/traffic/' + sid + '/stats?days=30', { headers: headers() }),
+          fetch(PAPI + '/traffic/' + sid + '/alerts?limit=20', { headers: headers() })
+        ]);
+        const profiles = await profilesRes.json();
+        const stats = await statsRes.json();
+        const alerts = await alertsRes.json();
+
+        const s = stats.stats || {};
+        document.getElementById('tfTotal').textContent = s.totalAgents || 0;
+        const byType = s.byType || [];
+        document.getElementById('tfFriendly').textContent = (byType.find(t => t.agent_type === 'friendly') || {}).count || 0;
+        document.getElementById('tfSuspicious').textContent = (byType.find(t => t.agent_type === 'suspicious') || {}).count || 0;
+        document.getElementById('tfAggressive').textContent = (byType.find(t => t.agent_type === 'aggressive') || {}).count || 0;
+
+        const profs = profiles.profiles || [];
+        const tbody = document.getElementById('trafficTable');
+        if (profs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No agent profiles</td></tr>';
+        } else {
+          tbody.innerHTML = profs.map(p => '<tr>' +
+            '<td><strong style="color:var(--text-primary)">' + esc(p.agent_signature) + '</strong></td>' +
+            '<td><span class="badge type-' + (p.agent_type || 'unknown') + '">' + esc(p.agent_type) + '</span></td>' +
+            '<td>' + esc(p.platform) + '</td>' +
+            '<td>' + esc(p.country || '—') + '</td>' +
+            '<td>' + (p.total_requests || 0) + '</td>' +
+            '<td>' + fmtDate(p.last_seen) + '</td>' +
+            '<td><button class="btn btn-danger btn-sm" onclick="blockFromTraffic(\'' + esc(p.agent_signature) + '\')">Block</button></td>' +
+            '</tr>').join('');
+        }
+
+        const al = alerts.alerts || [];
+        const atbody = document.getElementById('trafficAlerts');
+        if (al.length === 0) {
+          atbody.innerHTML = '<tr><td colspan="5" class="empty-state">No alerts</td></tr>';
+        } else {
+          atbody.innerHTML = al.map(a => '<tr>' +
+            '<td>' + esc(a.alert_type) + '</td>' +
+            '<td><span class="badge sev-' + (a.severity || 'low') + '">' + esc(a.severity) + '</span></td>' +
+            '<td>' + esc(a.message) + '</td>' +
+            '<td>' + fmtDate(a.created_at) + '</td>' +
+            '<td>' + (a.acknowledged ? '<span class="badge badge-active">Ack</span>' : '<button class="btn btn-sm btn-secondary" onclick="ackAlert(\'' + a.id + '\')">Acknowledge</button>') + '</td>' +
+            '</tr>').join('');
+        }
+      } catch (err) { console.error('loadTraffic:', err); }
+    }
+
+    async function blockFromTraffic(sig) {
+      const sid = getSiteId();
+      if (!sid || !confirm('Block agent "' + sig + '"?')) return;
+      await fetch(PAPI + '/security/' + sid + '/block', { method: 'POST', headers: headers(), body: JSON.stringify({ agentSignature: sig, reason: 'Blocked from traffic view' }) });
+      alert('Agent blocked');
+    }
+
+    async function ackAlert(alertId) {
+      const sid = getSiteId();
+      if (!sid) return;
+      await fetch(PAPI + '/traffic/' + sid + '/alerts/' + alertId + '/acknowledge', { method: 'POST', headers: headers() });
+      loadTraffic();
+    }
+
+    async function checkAnomalies() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const res = await fetch(PAPI + '/traffic/' + sid + '/check-anomalies', { method: 'POST', headers: headers() });
+      const data = await res.json();
+      alert('Check complete. ' + (data.alerts || []).length + ' new alerts.');
+      loadTraffic();
+    }
+
+    // ─── Exploit Shield ──────────────────────────────────────────────────
+    async function loadSecurity() {
+      const sid = getSiteId();
+      if (!sid) return;
+      try {
+        const [eventsRes, blockedRes, reportRes] = await Promise.all([
+          fetch(PAPI + '/security/' + sid + '/events?limit=50', { headers: headers() }),
+          fetch(PAPI + '/security/' + sid + '/blocked', { headers: headers() }),
+          fetch(PAPI + '/security/' + sid + '/report?days=1', { headers: headers() })
+        ]);
+        const events = await eventsRes.json();
+        const blocked = await blockedRes.json();
+        const report = await reportRes.json();
+
+        const r = report.report || {};
+        document.getElementById('secTotal').textContent = r.totalEvents || 0;
+        const sevDist = r.severityDist || [];
+        document.getElementById('secCritical').textContent = (sevDist.find(s => s.severity === 'critical') || {}).count || 0;
+        document.getElementById('secHigh').textContent = (sevDist.find(s => s.severity === 'high') || {}).count || 0;
+        document.getElementById('secBlocked').textContent = r.activeBlocks || 0;
+
+        const ev = events.events || [];
+        const etbody = document.getElementById('secEventsTable');
+        if (ev.length === 0) {
+          etbody.innerHTML = '<tr><td colspan="5" class="empty-state">No security events</td></tr>';
+        } else {
+          etbody.innerHTML = ev.map(e => {
+            let details = '';
+            try { details = JSON.stringify(JSON.parse(e.details || '{}'), null, 0).substring(0, 80); } catch { details = e.details || ''; }
+            return '<tr>' +
+              '<td>' + esc(e.event_type) + '</td>' +
+              '<td><span class="badge sev-' + (e.severity || 'low') + '">' + esc(e.severity) + '</span></td>' +
+              '<td>' + esc(e.agent_signature || '—') + '</td>' +
+              '<td style="font-size:0.82rem;color:var(--text-muted)">' + esc(details) + '</td>' +
+              '<td>' + fmtDate(e.created_at) + '</td></tr>';
+          }).join('');
+        }
+
+        const bl = blocked.blocked || [];
+        const btbody = document.getElementById('secBlockedTable');
+        if (bl.length === 0) {
+          btbody.innerHTML = '<tr><td colspan="5" class="empty-state">No blocked agents</td></tr>';
+        } else {
+          btbody.innerHTML = bl.map(b => '<tr>' +
+            '<td><strong style="color:var(--text-primary)">' + esc(b.agent_signature) + '</strong></td>' +
+            '<td>' + esc(b.reason || '—') + '</td>' +
+            '<td>' + fmtDate(b.blocked_at) + '</td>' +
+            '<td>' + (b.expires_at ? fmtDate(b.expires_at) : 'Never') + '</td>' +
+            '<td><button class="btn btn-sm btn-secondary" onclick="unblockAgent(\'' + b.id + '\')">Unblock</button></td>' +
+            '</tr>').join('');
+        }
+      } catch (err) { console.error('loadSecurity:', err); }
+    }
+
+    async function blockAgent() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const sig = document.getElementById('blockSig').value.trim();
+      const reason = document.getElementById('blockReason').value.trim();
+      if (!sig) { alert('Agent signature is required'); return; }
+      await fetch(PAPI + '/security/' + sid + '/block', { method: 'POST', headers: headers(), body: JSON.stringify({ agentSignature: sig, reason: reason }) });
+      document.getElementById('blockSig').value = '';
+      document.getElementById('blockReason').value = '';
+      loadSecurity();
+    }
+
+    async function unblockAgent(blockId) {
+      const sid = getSiteId();
+      if (!sid) return;
+      await fetch(PAPI + '/security/' + sid + '/block/' + blockId, { method: 'DELETE', headers: headers() });
+      loadSecurity();
+    }
+
+    async function loadSecurityReport() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const days = document.getElementById('reportDays').value;
+      const res = await fetch(PAPI + '/security/' + sid + '/report?days=' + days, { headers: headers() });
+      const data = await res.json();
+      const r = data.report || {};
+      document.getElementById('secReportContent').innerHTML =
+        '<div class="card" style="margin-top:16px;">' +
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;">' +
+        '<div><div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Total Events</div><div style="font-size:1.5rem;font-weight:700;">' + (r.totalEvents || 0) + '</div></div>' +
+        '<div><div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Active Blocks</div><div style="font-size:1.5rem;font-weight:700;">' + (r.activeBlocks || 0) + '</div></div>' +
+        '<div><div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Event Types</div><div style="font-size:1.5rem;font-weight:700;">' + (r.eventsByType || []).length + '</div></div>' +
+        '</div>' +
+        '<h4 style="margin-bottom:8px;">Severity Distribution</h4>' +
+        '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">' +
+        (r.severityDist || []).map(s => '<span class="badge sev-' + s.severity + '">' + s.severity + ': ' + s.count + '</span>').join('') +
+        '</div>' +
+        '<h4 style="margin-bottom:8px;">Top Blocked Agents</h4>' +
+        ((r.topBlocked || []).length ? '<ul style="list-style:none;padding:0;">' + (r.topBlocked || []).map(b => '<li style="padding:4px 0;color:var(--text-secondary);">' + esc(b.agent_signature) + ' <span class="badge badge-free">' + b.count + 'x</span></li>').join('') + '</ul>' : '<p style="color:var(--text-muted);">None</p>') +
+        '</div>';
+    }
+
+    // ─── Actions Library ─────────────────────────────────────────────────
+    async function loadPacks() {
+      const platform = document.getElementById('packPlatformFilter').value;
+      const url = PAPI + '/actions/packs' + (platform ? '?platform=' + encodeURIComponent(platform) : '');
+      try {
+        const res = await fetch(url, { headers: headers() });
+        const data = await res.json();
+        const packs = data.packs || [];
+        const grid = document.getElementById('packsGrid');
+        if (packs.length === 0) {
+          grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">No packs available</div>';
+          return;
+        }
+        grid.innerHTML = packs.map(p => '<div class="card pack-card" onclick="showPackDetail(\'' + p.id + '\')">' +
+          '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">' +
+          '<h3 style="font-size:1rem;">' + esc(p.icon || '📦') + ' ' + esc(p.name) + '</h3>' +
+          '<span class="badge badge-' + (p.tier_required || 'free') + '">' + esc(p.tier_required || 'free') + '</span>' +
+          '</div>' +
+          '<p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:12px;">' + esc(p.description) + '</p>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<span style="font-size:0.8rem;color:var(--text-muted);">' + esc(p.platform || '—') + ' · v' + esc(p.version || '1.0') + '</span>' +
+          '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();installPack(\'' + p.id + '\')">Install</button>' +
+          '</div></div>').join('');
+
+        const platforms = [...new Set(packs.map(p => p.platform).filter(Boolean))];
+        const filterSel = document.getElementById('packPlatformFilter');
+        const current = filterSel.value;
+        filterSel.innerHTML = '<option value="">All Platforms</option>' + platforms.map(p => '<option value="' + esc(p) + '"' + (p === current ? ' selected' : '') + '>' + esc(p) + '</option>').join('');
+      } catch (err) { console.error('loadPacks:', err); }
+    }
+
+    async function showPackDetail(packId) {
+      try {
+        const [packRes, actionsRes] = await Promise.all([
+          fetch(PAPI + '/actions/packs/' + packId, { headers: headers() }),
+          fetch(PAPI + '/actions/packs/' + packId + '/actions', { headers: headers() })
+        ]);
+        const packData = await packRes.json();
+        const actionsData = await actionsRes.json();
+        const p = packData.pack;
+        const actions = actionsData.actions || [];
+        document.getElementById('packDetailTitle').textContent = (p.icon || '📦') + ' ' + (p.name || 'Pack');
+        document.getElementById('packDetailBody').innerHTML =
+          '<p style="color:var(--text-secondary);margin-bottom:16px;">' + esc(p.description) + '</p>' +
+          '<div style="display:flex;gap:12px;margin-bottom:16px;">' +
+          '<span class="badge badge-' + (p.tier_required || 'free') + '">' + esc(p.tier_required) + '</span>' +
+          '<span style="font-size:0.85rem;color:var(--text-muted);">' + esc(p.platform) + ' · v' + esc(p.version) + '</span></div>' +
+          '<h4 style="margin-bottom:8px;">Actions (' + actions.length + ')</h4>' +
+          (actions.length ? '<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th></tr></thead><tbody>' +
+          actions.map(a => '<tr><td>' + esc(a.name || a.action || '—') + '</td><td>' + esc(a.type || a.trigger_type || '—') + '</td></tr>').join('') +
+          '</tbody></table></div>' : '<p style="color:var(--text-muted);">No action details available</p>');
+        openModal('packDetailModal');
+      } catch (err) { console.error('showPackDetail:', err); }
+    }
+
+    async function installPack(packId) {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      try {
+        const res = await fetch(PAPI + '/actions/' + sid + '/install', { method: 'POST', headers: headers(), body: JSON.stringify({ packId: packId }) });
+        if (res.ok) { alert('Pack installed'); loadInstalledPacks(); } else { const d = await res.json(); alert(d.error || 'Install failed'); }
+      } catch (err) { alert('Connection error'); }
+    }
+
+    async function loadInstalledPacks() {
+      const sid = getSiteId();
+      if (!sid) return;
+      try {
+        const res = await fetch(PAPI + '/actions/' + sid + '/installed', { headers: headers() });
+        const data = await res.json();
+        const installed = data.installed || [];
+        const tbody = document.getElementById('installedPacksTable');
+        if (installed.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No packs installed</td></tr>';
+        } else {
+          tbody.innerHTML = installed.map(i => '<tr>' +
+            '<td><strong style="color:var(--text-primary)">' + esc(i.name) + '</strong></td>' +
+            '<td>' + esc(i.platform || '—') + '</td>' +
+            '<td>' + esc(i.version || '—') + '</td>' +
+            '<td>' + fmtDate(i.installed_at) + '</td>' +
+            '<td><button class="btn btn-danger btn-sm" onclick="uninstallPack(\'' + i.id + '\')">Uninstall</button></td>' +
+            '</tr>').join('');
+        }
+      } catch (err) { console.error('loadInstalledPacks:', err); }
+    }
+
+    async function uninstallPack(installId) {
+      const sid = getSiteId();
+      if (!sid || !confirm('Uninstall this pack?')) return;
+      await fetch(PAPI + '/actions/' + sid + '/install/' + installId, { method: 'DELETE', headers: headers() });
+      loadInstalledPacks();
+    }
+
+    // ─── Custom Agents ───────────────────────────────────────────────────
+    async function loadAgents() {
+      const sid = getSiteId();
+      if (!sid) return;
+      try {
+        const res = await fetch(PAPI + '/agents/' + sid, { headers: headers() });
+        const data = await res.json();
+        const agents = data.agents || [];
+        const tbody = document.getElementById('agentsTable');
+        if (agents.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No agents. Create one to get started.</td></tr>';
+        } else {
+          tbody.innerHTML = agents.map(a => '<tr>' +
+            '<td><strong style="color:var(--text-primary)">' + esc(a.name) + '</strong></td>' +
+            '<td><span class="badge status-' + (a.status || 'active') + '">' + esc(a.status || 'active') + '</span></td>' +
+            '<td style="font-family:var(--font-mono);font-size:0.82rem;">' + esc(a.schedule || '—') + '</td>' +
+            '<td>' + (a.run_count || 0) + '</td>' +
+            '<td>' + fmtDate(a.last_run) + '</td>' +
+            '<td><button class="btn btn-sm btn-secondary" onclick="showAgentDetail(\'' + a.id + '\')">Details</button></td>' +
+            '</tr>').join('');
+        }
+      } catch (err) { console.error('loadAgents:', err); }
+    }
+
+    async function createAgent() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const errEl = document.getElementById('createAgentError');
+      errEl.style.display = 'none';
+      const name = document.getElementById('agentName').value.trim();
+      const desc = document.getElementById('agentDesc').value.trim();
+      const schedule = document.getElementById('agentSchedule').value.trim();
+      let steps;
+      try { steps = JSON.parse(document.getElementById('agentSteps').value); } catch { errEl.textContent = 'Steps must be valid JSON'; errEl.style.display = 'block'; return; }
+      if (!name) { errEl.textContent = 'Name is required'; errEl.style.display = 'block'; return; }
+      try {
+        const res = await fetch(PAPI + '/agents/' + sid, { method: 'POST', headers: headers(), body: JSON.stringify({ name, description: desc, steps, schedule: schedule || undefined }) });
+        if (res.ok) {
+          closeModal('createAgentModal');
+          document.getElementById('agentName').value = '';
+          document.getElementById('agentDesc').value = '';
+          document.getElementById('agentSteps').value = '';
+          document.getElementById('agentSchedule').value = '';
+          loadAgents();
+        } else { const d = await res.json(); errEl.textContent = d.error || 'Failed'; errEl.style.display = 'block'; }
+      } catch { errEl.textContent = 'Connection error'; errEl.style.display = 'block'; }
+    }
+
+    async function showAgentDetail(agentId) {
+      const sid = getSiteId();
+      if (!sid) return;
+      try {
+        const [agentRes, runsRes] = await Promise.all([
+          fetch(PAPI + '/agents/' + sid + '/' + agentId, { headers: headers() }),
+          fetch(PAPI + '/agents/' + sid + '/' + agentId + '/runs?limit=10', { headers: headers() })
+        ]);
+        const agentData = await agentRes.json();
+        const runsData = await runsRes.json();
+        const a = agentData.agent;
+        const runs = runsData.runs || [];
+        document.getElementById('agentDetailTitle').textContent = a.name;
+        let steps = [];
+        try { steps = JSON.parse(a.steps_json || '[]'); } catch {}
+        document.getElementById('agentDetailBody').innerHTML =
+          '<p style="color:var(--text-secondary);margin-bottom:16px;">' + esc(a.description || 'No description') + '</p>' +
+          '<div style="display:flex;gap:12px;margin-bottom:16px;">' +
+          '<span class="badge status-' + (a.status || 'active') + '">' + esc(a.status) + '</span>' +
+          (a.schedule ? '<span style="font-size:0.85rem;color:var(--text-muted);">Schedule: ' + esc(a.schedule) + '</span>' : '') +
+          '<span style="font-size:0.85rem;color:var(--text-muted);">Runs: ' + (a.run_count || 0) + '</span></div>' +
+          '<h4 style="margin-bottom:8px;">Steps</h4>' +
+          '<div class="snippet-box" style="margin-bottom:20px;"><pre>' + esc(JSON.stringify(steps, null, 2)) + '</pre></div>' +
+          '<h4 style="margin-bottom:8px;">Run History</h4>' +
+          (runs.length ? '<div class="table-wrapper"><table><thead><tr><th>Status</th><th>Started</th><th>Finished</th></tr></thead><tbody>' +
+          runs.map(r => '<tr><td><span class="badge status-' + (r.status || 'running') + '">' + esc(r.status) + '</span></td><td>' + fmtDate(r.started_at) + '</td><td>' + fmtDate(r.finished_at) + '</td></tr>').join('') +
+          '</tbody></table></div>' : '<p style="color:var(--text-muted);">No runs yet</p>');
+
+        document.getElementById('agentRunBtn').onclick = async () => {
+          await fetch(PAPI + '/agents/' + sid + '/' + agentId + '/run', { method: 'POST', headers: headers() });
+          alert('Agent run started');
+          showAgentDetail(agentId);
+          loadAgents();
+        };
+        document.getElementById('agentDeleteBtn').onclick = async () => {
+          if (!confirm('Delete agent "' + a.name + '"?')) return;
+          await fetch(PAPI + '/agents/' + sid + '/' + agentId, { method: 'DELETE', headers: headers() });
+          closeModal('agentDetailModal');
+          loadAgents();
+        };
+        openModal('agentDetailModal');
+      } catch (err) { console.error('showAgentDetail:', err); }
+    }
+
+    // ─── Webhooks & CRM ─────────────────────────────────────────────────
+    async function loadWebhooksView() {
+      const sid = getSiteId();
+      if (!sid) return;
+      try {
+        const [whRes, crmRes] = await Promise.all([
+          fetch(PAPI + '/webhooks/' + sid, { headers: headers() }),
+          fetch(PAPI + '/crm/' + sid, { headers: headers() })
+        ]);
+        const whData = await whRes.json();
+        const crmData = await crmRes.json();
+
+        const wh = whData.webhooks || [];
+        const wtb = document.getElementById('webhooksTable');
+        if (wh.length === 0) {
+          wtb.innerHTML = '<tr><td colspan="6" class="empty-state">No webhooks</td></tr>';
+        } else {
+          wtb.innerHTML = wh.map(w => {
+            let events = [];
+            try { events = JSON.parse(w.events || '[]'); } catch {}
+            return '<tr>' +
+              '<td><strong style="color:var(--text-primary)">' + esc(w.name) + '</strong></td>' +
+              '<td style="font-family:var(--font-mono);font-size:0.8rem;">' + esc(w.url) + '</td>' +
+              '<td>' + events.map(e => '<span class="badge badge-free" style="margin:1px;">' + esc(e) + '</span>').join(' ') + '</td>' +
+              '<td><span class="badge ' + (w.active ? 'badge-active' : 'badge-inactive') + '">' + (w.active ? 'Active' : 'Inactive') + '</span></td>' +
+              '<td>' + (w.failure_count || 0) + '</td>' +
+              '<td style="display:flex;gap:4px;"><button class="btn btn-sm btn-secondary" onclick="viewWebhookLogs(\'' + w.id + '\')">Logs</button><button class="btn btn-sm btn-danger" onclick="deleteWebhook(\'' + w.id + '\')">Delete</button></td>' +
+              '</tr>';
+          }).join('');
+        }
+
+        const crm = crmData.integrations || [];
+        const ctb = document.getElementById('crmTable');
+        if (crm.length === 0) {
+          ctb.innerHTML = '<tr><td colspan="4" class="empty-state">No CRM integrations</td></tr>';
+        } else {
+          ctb.innerHTML = crm.map(c => '<tr>' +
+            '<td><strong style="color:var(--text-primary);text-transform:capitalize;">' + esc(c.provider) + '</strong></td>' +
+            '<td><span class="badge ' + (c.active ? 'badge-active' : 'badge-inactive') + '">' + (c.active ? 'Active' : 'Inactive') + '</span></td>' +
+            '<td>' + fmtDate(c.last_sync) + '</td>' +
+            '<td><button class="btn btn-sm btn-danger" onclick="deleteCrm(\'' + c.id + '\')">Delete</button></td>' +
+            '</tr>').join('');
+        }
+      } catch (err) { console.error('loadWebhooksView:', err); }
+    }
+
+    async function createWebhook() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const errEl = document.getElementById('createWebhookError');
+      errEl.style.display = 'none';
+      const name = document.getElementById('whName').value.trim();
+      const url = document.getElementById('whUrl').value.trim();
+      const secret = document.getElementById('whSecret').value.trim();
+      const events = [...document.querySelectorAll('#whEvents input:checked')].map(c => c.value);
+      if (!name || !url) { errEl.textContent = 'Name and URL are required'; errEl.style.display = 'block'; return; }
+      if (events.length === 0) { errEl.textContent = 'Select at least one event'; errEl.style.display = 'block'; return; }
+      const res = await fetch(PAPI + '/webhooks/' + sid, { method: 'POST', headers: headers(), body: JSON.stringify({ name, url, events, secret: secret || undefined }) });
+      if (res.ok) {
+        closeModal('createWebhookModal');
+        document.getElementById('whName').value = '';
+        document.getElementById('whUrl').value = '';
+        document.getElementById('whSecret').value = '';
+        loadWebhooksView();
+      } else { const d = await res.json(); errEl.textContent = d.error || 'Failed'; errEl.style.display = 'block'; }
+    }
+
+    async function deleteWebhook(whId) {
+      const sid = getSiteId();
+      if (!sid || !confirm('Delete this webhook?')) return;
+      await fetch(PAPI + '/webhooks/' + sid + '/' + whId, { method: 'DELETE', headers: headers() });
+      loadWebhooksView();
+    }
+
+    async function viewWebhookLogs(whId) {
+      const sid = getSiteId();
+      if (!sid) return;
+      const res = await fetch(PAPI + '/webhooks/' + sid + '/' + whId + '/logs?limit=20', { headers: headers() });
+      const data = await res.json();
+      const logs = data.logs || [];
+      document.getElementById('webhookLogsSection').style.display = 'block';
+      const tbody = document.getElementById('webhookLogsTable');
+      if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No logs</td></tr>';
+      } else {
+        tbody.innerHTML = logs.map(l => '<tr>' +
+          '<td>' + esc(l.event_type) + '</td>' +
+          '<td><span class="badge ' + (l.response_code < 400 ? 'badge-active' : 'badge-inactive') + '">' + l.response_code + '</span></td>' +
+          '<td style="font-size:0.8rem;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc((l.response_body || '').substring(0, 100)) + '</td>' +
+          '<td>' + fmtDate(l.created_at) + '</td></tr>').join('');
+      }
+    }
+
+    async function testWebhook() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const res = await fetch(PAPI + '/webhooks/' + sid + '/test', { method: 'POST', headers: headers(), body: JSON.stringify({ eventType: 'test.ping', payload: { test: true, timestamp: new Date().toISOString() } }) });
+      const data = await res.json();
+      const results = data.results || [];
+      alert('Test sent to ' + results.length + ' webhook(s). Success: ' + results.filter(r => r.success).length);
+      loadWebhooksView();
+    }
+
+    async function createCrmIntegration() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const errEl = document.getElementById('createCrmError');
+      errEl.style.display = 'none';
+      const provider = document.getElementById('crmProvider').value;
+      let config;
+      try { config = JSON.parse(document.getElementById('crmConfig').value || '{}'); } catch { errEl.textContent = 'Config must be valid JSON'; errEl.style.display = 'block'; return; }
+      const res = await fetch(PAPI + '/crm/' + sid, { method: 'POST', headers: headers(), body: JSON.stringify({ provider, config }) });
+      if (res.ok) { closeModal('createCrmModal'); document.getElementById('crmConfig').value = ''; loadWebhooksView(); }
+      else { const d = await res.json(); errEl.textContent = d.error || 'Failed'; errEl.style.display = 'block'; }
+    }
+
+    async function deleteCrm(intId) {
+      const sid = getSiteId();
+      if (!sid || !confirm('Delete this integration?')) return;
+      await fetch(PAPI + '/crm/' + sid + '/' + intId, { method: 'DELETE', headers: headers() });
+      loadWebhooksView();
+    }
+
+    // ─── Team Management ─────────────────────────────────────────────────
+    async function loadTeam() {
+      try {
+        const res = await fetch(PAPI + '/team', { headers: headers() });
+        const data = await res.json();
+        const members = data.subUsers || [];
+        const tbody = document.getElementById('teamTable');
+        if (members.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No team members. Invite someone to get started.</td></tr>';
+        } else {
+          tbody.innerHTML = members.map(m => {
+            let access = [];
+            try { access = JSON.parse(m.site_access || '[]'); } catch {}
+            return '<tr>' +
+              '<td>' + esc(m.email) + '</td>' +
+              '<td><strong style="color:var(--text-primary)">' + esc(m.name) + '</strong></td>' +
+              '<td><span class="badge role-' + (m.role || 'viewer') + '">' + esc(m.role) + '</span></td>' +
+              '<td style="font-size:0.82rem;">' + (access.includes('*') ? 'All' : access.length + ' site(s)') + '</td>' +
+              '<td>' + (m.quota_actions_month !== null ? m.quota_actions_month : '∞') + '</td>' +
+              '<td>' + (m.actions_used_month || 0) + '</td>' +
+              '<td><button class="btn btn-sm btn-danger" onclick="deleteTeamMember(\'' + m.id + '\')">Remove</button></td>' +
+              '</tr>';
+          }).join('');
+        }
+      } catch (err) { console.error('loadTeam:', err); }
+    }
+
+    async function inviteTeamMember() {
+      const errEl = document.getElementById('inviteTeamError');
+      errEl.style.display = 'none';
+      const email = document.getElementById('teamEmail').value.trim();
+      const name = document.getElementById('teamName').value.trim();
+      const password = document.getElementById('teamPassword').value;
+      const role = document.getElementById('teamRole').value;
+      const quota = document.getElementById('teamQuota').value;
+      const siteAccess = [...document.querySelectorAll('#teamSiteAccess input:checked')].map(c => c.value);
+      if (!email || !name || !password) { errEl.textContent = 'Email, name, and password are required'; errEl.style.display = 'block'; return; }
+      const res = await fetch(PAPI + '/team', { method: 'POST', headers: headers(), body: JSON.stringify({ email, name, password, role, siteAccess, quotaActionsMonth: quota ? parseInt(quota) : undefined }) });
+      if (res.ok) {
+        closeModal('inviteTeamModal');
+        document.getElementById('teamEmail').value = '';
+        document.getElementById('teamName').value = '';
+        document.getElementById('teamPassword').value = '';
+        document.getElementById('teamQuota').value = '';
+        loadTeam();
+      } else { const d = await res.json(); errEl.textContent = d.error || 'Failed'; errEl.style.display = 'block'; }
+    }
+
+    async function deleteTeamMember(subId) {
+      if (!confirm('Remove this team member?')) return;
+      await fetch(PAPI + '/team/' + subId, { method: 'DELETE', headers: headers() });
+      loadTeam();
+    }
+
+    // ─── Support ─────────────────────────────────────────────────────────
+    async function loadSupport() {
+      try {
+        const [statsRes, ticketsRes] = await Promise.all([
+          fetch(PAPI + '/support/stats', { headers: headers() }),
+          fetch(PAPI + '/support/tickets?limit=50', { headers: headers() })
+        ]);
+        const statsData = await statsRes.json();
+        const ticketsData = await ticketsRes.json();
+
+        const st = statsData.stats || {};
+        document.getElementById('supOpen').textContent = st.open || 0;
+        document.getElementById('supProgress').textContent = st.in_progress || 0;
+        document.getElementById('supWaiting').textContent = st.waiting || 0;
+        document.getElementById('supResolved').textContent = (st.resolved || 0) + (st.closed || 0);
+
+        const tickets = ticketsData.tickets || [];
+        const tbody = document.getElementById('ticketsTable');
+        if (tickets.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No tickets</td></tr>';
+        } else {
+          tbody.innerHTML = tickets.map(t => '<tr>' +
+            '<td><strong style="color:var(--text-primary)">' + esc(t.subject) + '</strong></td>' +
+            '<td><span class="badge priority-' + (t.priority || 'normal') + '">' + esc(t.priority) + '</span></td>' +
+            '<td><span class="badge status-' + (t.status || 'open') + '">' + esc(t.status) + '</span></td>' +
+            '<td>' + fmtDate(t.created_at) + '</td>' +
+            '<td><button class="btn btn-sm btn-secondary" onclick="showTicketDetail(\'' + t.id + '\')">View</button></td>' +
+            '</tr>').join('');
+        }
+      } catch (err) { console.error('loadSupport:', err); }
+    }
+
+    async function createTicket() {
+      const errEl = document.getElementById('createTicketError');
+      errEl.style.display = 'none';
+      const subject = document.getElementById('ticketSubject').value.trim();
+      const priority = document.getElementById('ticketPriority').value;
+      const category = document.getElementById('ticketCategory').value;
+      if (!subject) { errEl.textContent = 'Subject is required'; errEl.style.display = 'block'; return; }
+      const res = await fetch(PAPI + '/support/tickets', { method: 'POST', headers: headers(), body: JSON.stringify({ subject, priority, category }) });
+      if (res.ok) {
+        closeModal('createTicketModal');
+        document.getElementById('ticketSubject').value = '';
+        loadSupport();
+      } else { const d = await res.json(); errEl.textContent = d.error || 'Failed'; errEl.style.display = 'block'; }
+    }
+
+    async function showTicketDetail(ticketId) {
+      currentTicketId = ticketId;
+      try {
+        const res = await fetch(PAPI + '/support/tickets/' + ticketId, { headers: headers() });
+        const data = await res.json();
+        const t = data.ticket;
+        const msgs = data.messages || [];
+        document.getElementById('ticketDetailTitle').textContent = t.subject;
+        document.getElementById('ticketStatusSelect').value = t.status || 'open';
+        document.getElementById('ticketMessages').innerHTML = msgs.map(m => '<div class="msg-item msg-' + (m.sender_type || 'user') + '">' +
+          '<div class="msg-meta"><strong>' + (m.sender_type === 'bot' ? '🤖 Bot' : '👤 You') + '</strong><span>' + fmtDate(m.created_at) + '</span></div>' +
+          '<div class="msg-text">' + esc(m.message) + '</div></div>').join('');
+        openModal('ticketDetailModal');
+        const msgList = document.getElementById('ticketMessages');
+        msgList.scrollTop = msgList.scrollHeight;
+      } catch (err) { console.error('showTicketDetail:', err); }
+    }
+
+    async function updateTicketStatus() {
+      if (!currentTicketId) return;
+      const status = document.getElementById('ticketStatusSelect').value;
+      await fetch(PAPI + '/support/tickets/' + currentTicketId + '/status', { method: 'PUT', headers: headers(), body: JSON.stringify({ status }) });
+      loadSupport();
+    }
+
+    async function sendTicketReply() {
+      if (!currentTicketId) return;
+      const msg = document.getElementById('ticketReply').value.trim();
+      if (!msg) return;
+      await fetch(PAPI + '/support/tickets/' + currentTicketId + '/messages', { method: 'POST', headers: headers(), body: JSON.stringify({ message: msg }) });
+      document.getElementById('ticketReply').value = '';
+      showTicketDetail(currentTicketId);
+    }
+
+    // ─── Script Builder ──────────────────────────────────────────────────
+    let availablePlugins = [];
+
+    async function loadScriptPlugins() {
+      try {
+        const res = await fetch(PAPI + '/script/plugins', { headers: headers() });
+        const data = await res.json();
+        availablePlugins = data.plugins || [];
+        const container = document.getElementById('pluginsList');
+        container.innerHTML = availablePlugins.map(p => '<div class="toggle-wrap">' +
+          '<div class="toggle-label">' + esc(p.name) + '<small>' + esc(p.description) + '</small></div>' +
+          '<label class="toggle"><input type="checkbox" data-plugin="' + esc(p.id) + '"><span class="toggle-slider"></span></label>' +
+          '</div>').join('');
+      } catch (err) { console.error('loadScriptPlugins:', err); }
+    }
+
+    async function loadScriptConfig() {
+      const sid = getSiteId();
+      if (!sid) return;
+      try {
+        const res = await fetch(PAPI + '/script/' + sid + '/config', { headers: headers() });
+        const data = await res.json();
+        const c = data.config;
+        if (c) {
+          document.getElementById('scriptMinified').checked = !!c.minified;
+          document.getElementById('scriptAmp').checked = !!c.amp_compatible;
+          document.getElementById('scriptAutoPatch').checked = !!c.auto_patch;
+          document.getElementById('scriptCustomCss').value = c.custom_css || '';
+          document.getElementById('scriptCustomJs').value = c.custom_js || '';
+          let plugins = [];
+          try { plugins = JSON.parse(c.plugins_json || '[]'); } catch {}
+          document.querySelectorAll('#pluginsList input[data-plugin]').forEach(cb => { cb.checked = plugins.includes(cb.dataset.plugin); });
+        }
+      } catch (err) { console.error('loadScriptConfig:', err); }
+    }
+
+    async function saveScriptConfig() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const plugins = [...document.querySelectorAll('#pluginsList input[data-plugin]:checked')].map(c => c.dataset.plugin);
+      const body = {
+        plugins,
+        minified: document.getElementById('scriptMinified').checked,
+        ampCompatible: document.getElementById('scriptAmp').checked,
+        autoPatch: document.getElementById('scriptAutoPatch').checked,
+        customCss: document.getElementById('scriptCustomCss').value,
+        customJs: document.getElementById('scriptCustomJs').value
+      };
+      await fetch(PAPI + '/script/' + sid + '/config', { method: 'PUT', headers: headers(), body: JSON.stringify(body) });
+      alert('Script config saved');
+    }
+
+    async function buildScript() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      await saveScriptConfig();
+      const res = await fetch(PAPI + '/script/' + sid + '/build', { method: 'POST', headers: headers() });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      document.getElementById('scriptPreviewSection').style.display = 'block';
+      document.getElementById('scriptHash').textContent = 'Hash: ' + (data.hash || '—');
+      document.getElementById('scriptSize').textContent = data.size ? fmtBytes(data.size) : '';
+      document.getElementById('scriptPreview').textContent = data.script || '';
+    }
+
+    function copyBuiltScript() {
+      const text = document.getElementById('scriptPreview').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('#scriptPreviewSection .copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
+    }
+
+    // ─── Stealth Mode ────────────────────────────────────────────────────
+    async function loadStealth() {
+      const sid = getSiteId();
+      if (!sid) return;
+      try {
+        const res = await fetch(PAPI + '/stealth/' + sid, { headers: headers() });
+        const data = await res.json();
+        const p = data.profile;
+        if (p) {
+          document.getElementById('stTypingMin').value = p.typing_speed_min || 30;
+          document.getElementById('stTypingMinVal').textContent = (p.typing_speed_min || 30) + 'ms';
+          document.getElementById('stTypingMax').value = p.typing_speed_max || 120;
+          document.getElementById('stTypingMaxVal').textContent = (p.typing_speed_max || 120) + 'ms';
+          document.getElementById('stMouseSpeed').value = p.mouse_speed || 'natural';
+          document.getElementById('stScrollBehavior').value = p.scroll_behavior || 'eased';
+          document.getElementById('stClickMin').value = p.click_delay_min || 50;
+          document.getElementById('stClickMinVal').textContent = (p.click_delay_min || 50) + 'ms';
+          document.getElementById('stClickMax').value = p.click_delay_max || 400;
+          document.getElementById('stClickMaxVal').textContent = (p.click_delay_max || 400) + 'ms';
+          let ad = {};
+          try { ad = JSON.parse(p.anti_detection_json || '{}'); } catch {}
+          document.getElementById('stHideWebdriver').checked = !!ad.hideWebdriver;
+          document.getElementById('stSpoofPlugins').checked = !!ad.spoofPlugins;
+          document.getElementById('stSpoofLang').checked = !!ad.spoofLanguages;
+        }
+      } catch (err) { console.error('loadStealth:', err); }
+    }
+
+    async function saveStealth() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const body = {
+        typingSpeedMin: parseInt(document.getElementById('stTypingMin').value),
+        typingSpeedMax: parseInt(document.getElementById('stTypingMax').value),
+        mouseSpeed: document.getElementById('stMouseSpeed').value,
+        scrollBehavior: document.getElementById('stScrollBehavior').value,
+        clickDelayMin: parseInt(document.getElementById('stClickMin').value),
+        clickDelayMax: parseInt(document.getElementById('stClickMax').value),
+        antiDetection: {
+          hideWebdriver: document.getElementById('stHideWebdriver').checked,
+          spoofPlugins: document.getElementById('stSpoofPlugins').checked,
+          spoofLanguages: document.getElementById('stSpoofLang').checked
+        }
+      };
+      await fetch(PAPI + '/stealth/' + sid, { method: 'PUT', headers: headers(), body: JSON.stringify(body) });
+      alert('Stealth profile saved');
+    }
+
+    async function generateStealthScript() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const res = await fetch(PAPI + '/stealth/' + sid + '/script', { headers: headers() });
+      const data = await res.json();
+      document.getElementById('stealthScriptSection').style.display = 'block';
+      document.getElementById('stealthScriptPreview').textContent = data.script || '';
+    }
+
+    function copyStealthScript() {
+      const text = document.getElementById('stealthScriptPreview').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('#stealthScriptSection .copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
+    }
+
+    // ─── CDN ─────────────────────────────────────────────────────────────
+    async function loadCdn() {
+      const sid = getSiteId();
+      if (!sid) return;
+      try {
+        const res = await fetch(PAPI + '/cdn/' + sid, { headers: headers() });
+        const data = await res.json();
+        const c = data.config;
+        if (c) {
+          document.getElementById('cdnDomain').value = c.custom_domain || '';
+          document.getElementById('cdnTtl').value = c.cache_ttl || 86400;
+          document.getElementById('cdnSslBadge').textContent = c.ssl_status || 'Pending';
+          document.getElementById('cdnSslBadge').className = 'badge ' + (c.ssl_status === 'active' ? 'badge-active' : 'badge-free');
+          let edges = [];
+          try { edges = JSON.parse(c.edge_locations || '[]'); } catch {}
+          document.querySelectorAll('#cdnEdges input').forEach(cb => { cb.checked = edges.includes(cb.value); });
+          document.getElementById('cdnStatReqs').textContent = c.requests_count || 0;
+          document.getElementById('cdnStatBw').textContent = fmtBytes(c.bandwidth_used || 0);
+          const cdnUrl = c.custom_domain ? 'https://' + c.custom_domain + '/bridge/' + sid + '/ai-agent-bridge.js' : 'https://cdn.webagentbridge.com/bridge/' + sid + '/ai-agent-bridge.js';
+          document.getElementById('cdnUrlDisplay').textContent = cdnUrl;
+
+          try {
+            const statsRes = await fetch(PAPI + '/cdn/' + sid + '/stats?days=30', { headers: headers() });
+            if (statsRes.ok) {
+              const statsData = await statsRes.json();
+              const totals = (statsData.stats || {}).totals || {};
+              document.getElementById('cdnStatReqs').textContent = totals.requests || c.requests_count || 0;
+              document.getElementById('cdnStatBw').textContent = fmtBytes(totals.bandwidth || c.bandwidth_used || 0);
+              document.getElementById('cdnStatHits').textContent = totals.cache_hits || 0;
+            }
+          } catch {}
+        } else {
+          document.getElementById('cdnUrlDisplay').textContent = 'https://cdn.webagentbridge.com/bridge/' + sid + '/ai-agent-bridge.js';
+        }
+      } catch (err) { console.error('loadCdn:', err); }
+    }
+
+    async function saveCdn() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const edgeLocations = [...document.querySelectorAll('#cdnEdges input:checked')].map(c => c.value);
+      const body = {
+        customDomain: document.getElementById('cdnDomain').value.trim() || null,
+        cacheTtl: parseInt(document.getElementById('cdnTtl').value) || 86400,
+        edgeLocations
+      };
+      await fetch(PAPI + '/cdn/' + sid, { method: 'PUT', headers: headers(), body: JSON.stringify(body) });
+      alert('CDN config saved');
+      loadCdn();
+    }
+
+    function copyCdnUrl() {
+      const text = document.getElementById('cdnUrlDisplay').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('#view-cdn .copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
+    }
+
+    // ─── Audit & Compliance ──────────────────────────────────────────────
+    async function loadAudit() {
+      const sid = getSiteId();
+      if (!sid) return;
+      auditPage = 0;
+      try {
+        const res = await fetch(PAPI + '/audit/' + sid + '/compliance', { headers: headers() });
+        const data = await res.json();
+        const s = data.settings;
+        if (s) {
+          document.getElementById('auditRetention').value = s.retention_days || 90;
+          document.getElementById('auditHipaa').checked = !!s.hipaa_mode;
+          document.getElementById('auditGdpr').checked = !!s.gdpr_mode;
+          document.getElementById('auditSoc2').checked = !!s.soc2_mode;
+          document.getElementById('auditAutoPurge').checked = s.auto_purge !== undefined ? !!s.auto_purge : true;
+        }
+      } catch (err) { console.error('loadAudit:', err); }
+      loadAuditLogs();
+    }
+
+    async function loadAuditLogs() {
+      const sid = getSiteId();
+      if (!sid) return;
+      const action = document.getElementById('auditActionFilter').value;
+      let url = PAPI + '/audit/' + sid + '/logs?limit=' + AUDIT_LIMIT + '&offset=' + (auditPage * AUDIT_LIMIT);
+      if (action) url += '&action=' + encodeURIComponent(action);
+      try {
+        const res = await fetch(url, { headers: headers() });
+        const data = await res.json();
+        const rows = data.rows || [];
+        const total = data.total || 0;
+        const tbody = document.getElementById('auditLogsTable');
+        if (rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No audit logs</td></tr>';
+        } else {
+          tbody.innerHTML = rows.map(r => '<tr>' +
+            '<td style="font-size:0.82rem;">' + fmtDate(r.created_at) + '</td>' +
+            '<td>' + esc(r.action) + '</td>' +
+            '<td style="font-size:0.82rem;">' + esc(r.resource_type || '—') + (r.resource_id ? '/' + esc(r.resource_id).substring(0, 8) : '') + '</td>' +
+            '<td style="font-size:0.82rem;">' + esc(r.user_id || '—').substring(0, 8) + '</td>' +
+            '<td style="font-size:0.82rem;font-family:var(--font-mono);">' + esc(r.ip_address || '—') + '</td>' +
+            '</tr>').join('');
+        }
+        const totalPages = Math.ceil(total / AUDIT_LIMIT);
+        const pag = document.getElementById('auditPagination');
+        pag.innerHTML = '<span style="font-size:0.85rem;color:var(--text-muted);">Page ' + (auditPage + 1) + ' of ' + Math.max(totalPages, 1) + ' (' + total + ' total)</span>' +
+          '<button class="btn btn-sm btn-secondary" onclick="auditPrev()" ' + (auditPage <= 0 ? 'disabled' : '') + '>← Prev</button>' +
+          '<button class="btn btn-sm btn-secondary" onclick="auditNext()" ' + (auditPage >= totalPages - 1 ? 'disabled' : '') + '>Next →</button>';
+      } catch (err) { console.error('loadAuditLogs:', err); }
+    }
+
+    function auditPrev() { if (auditPage > 0) { auditPage--; loadAuditLogs(); } }
+    function auditNext() { auditPage++; loadAuditLogs(); }
+
+    async function saveCompliance() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const body = {
+        retentionDays: parseInt(document.getElementById('auditRetention').value) || 90,
+        hipaaMode: document.getElementById('auditHipaa').checked,
+        gdprMode: document.getElementById('auditGdpr').checked,
+        soc2Mode: document.getElementById('auditSoc2').checked,
+        autoPurge: document.getElementById('auditAutoPurge').checked
+      };
+      await fetch(PAPI + '/audit/' + sid + '/compliance', { method: 'PUT', headers: headers(), body: JSON.stringify(body) });
+      alert('Compliance settings saved');
+    }
+
+    async function exportAuditLogs(format) {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      let url = PAPI + '/audit/' + sid + '/export?format=' + format;
+      const since = document.getElementById('auditSince').value;
+      const until = document.getElementById('auditUntil').value;
+      if (since) url += '&since=' + since + 'T00:00:00.000Z';
+      if (until) url += '&until=' + until + 'T23:59:59.999Z';
+      try {
+        const res = await fetch(url, { headers: headers() });
+        const blob = await res.blob();
+        const disposition = res.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        const filename = match ? match[1] : 'audit-logs.' + format;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } catch (err) { alert('Export failed'); }
+    }
+
+    async function purgeAuditLogs() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      if (!confirm('Purge old audit logs beyond retention period? This cannot be undone.')) return;
+      const res = await fetch(PAPI + '/audit/' + sid + '/purge', { method: 'POST', headers: headers() });
+      const data = await res.json();
+      alert('Purged ' + (data.deleted || 0) + ' old log entries.');
+      loadAuditLogs();
+    }
+
+    // ─── Sandbox ─────────────────────────────────────────────────────────
+    async function loadSandboxes() {
+      const sid = getSiteId();
+      if (!sid) return;
+      try {
+        const res = await fetch(PAPI + '/sandbox/' + sid, { headers: headers() });
+        const data = await res.json();
+        const sandboxes = data.sandboxes || [];
+        const tbody = document.getElementById('sandboxTable');
+        if (sandboxes.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No sandboxes. Create one to get started.</td></tr>';
+          document.getElementById('sandboxDetail').style.display = 'none';
+        } else {
+          tbody.innerHTML = sandboxes.map(s => '<tr>' +
+            '<td><strong style="color:var(--text-primary)">' + esc(s.name) + '</strong></td>' +
+            '<td><span class="badge badge-active">Active</span></td>' +
+            '<td>' + (s.traffic_generated || 0) + '</td>' +
+            '<td>' + fmtDate(s.created_at) + '</td>' +
+            '<td style="display:flex;gap:4px;">' +
+            '<button class="btn btn-sm btn-secondary" onclick="selectSandbox(\'' + s.id + '\')">Select</button>' +
+            '<button class="btn btn-sm btn-danger" onclick="deleteSandbox(\'' + s.id + '\')">Delete</button></td>' +
+            '</tr>').join('');
+          if (!currentSandboxId && sandboxes.length > 0) selectSandbox(sandboxes[0].id);
+        }
+      } catch (err) { console.error('loadSandboxes:', err); }
+    }
+
+    async function createSandbox() {
+      const sid = getSiteId();
+      if (!sid) { alert('Select a site first'); return; }
+      const name = prompt('Sandbox name:');
+      if (!name) return;
+      await fetch(PAPI + '/sandbox/' + sid, { method: 'POST', headers: headers(), body: JSON.stringify({ name }) });
+      loadSandboxes();
+    }
+
+    async function deleteSandbox(sandboxId) {
+      const sid = getSiteId();
+      if (!sid || !confirm('Delete this sandbox?')) return;
+      await fetch(PAPI + '/sandbox/' + sid + '/' + sandboxId, { method: 'DELETE', headers: headers() });
+      if (currentSandboxId === sandboxId) currentSandboxId = null;
+      loadSandboxes();
+    }
+
+    function selectSandbox(sandboxId) {
+      currentSandboxId = sandboxId;
+      document.getElementById('sandboxDetail').style.display = 'block';
+      loadBenchmarks();
+    }
+
+    async function simulateTraffic() {
+      const sid = getSiteId();
+      if (!sid || !currentSandboxId) { alert('Select a site and sandbox first'); return; }
+      const body = {
+        agentCount: parseInt(document.getElementById('simAgentCount').value) || 10,
+        duration: parseInt(document.getElementById('simDuration').value) || 60,
+        actionsPerAgent: parseInt(document.getElementById('simActions').value) || 5
+      };
+      const res = await fetch(PAPI + '/sandbox/' + sid + '/' + currentSandboxId + '/simulate', { method: 'POST', headers: headers(), body: JSON.stringify(body) });
+      const data = await res.json();
+      const r = data.result || {};
+      document.getElementById('simResults').style.display = 'block';
+      document.getElementById('simResultsContent').innerHTML =
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">' +
+        '<div><div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Total Agents</div><div style="font-size:1.5rem;font-weight:700;">' + (r.agentCount || 0) + '</div></div>' +
+        '<div><div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Total Actions</div><div style="font-size:1.5rem;font-weight:700;">' + (r.totalActions || 0) + '</div></div>' +
+        '<div><div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;">Avg Actions/Agent</div><div style="font-size:1.5rem;font-weight:700;">' + (r.avgActionsPerAgent || 0) + '</div></div>' +
+        '</div>' +
+        (r.typeDist ? '<div style="margin-top:16px;"><h4 style="margin-bottom:8px;">Agent Distribution</h4><div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+        Object.entries(r.typeDist).map(([k, v]) => '<span class="badge type-' + k + '">' + k + ': ' + v + '</span>').join('') + '</div></div>' : '');
+      loadSandboxes();
+    }
+
+    async function runBenchmark() {
+      const sid = getSiteId();
+      if (!sid || !currentSandboxId) { alert('Select a site and sandbox first'); return; }
+      const benchmarkType = document.getElementById('benchType').value;
+      const res = await fetch(PAPI + '/sandbox/' + sid + '/' + currentSandboxId + '/benchmark', { method: 'POST', headers: headers(), body: JSON.stringify({ benchmarkType }) });
+      const data = await res.json();
+      const r = data.result || {};
+      alert('Benchmark complete: ' + r.benchmarkType + ' — Before: ' + r.beforeValue + ' ' + (r.unit || '') + ', After: ' + r.afterValue + ' ' + (r.unit || '') + ' (' + r.improvement + '% improvement)');
+      loadBenchmarks();
+    }
+
+    async function loadBenchmarks() {
+      const sid = getSiteId();
+      if (!sid || !currentSandboxId) return;
+      try {
+        const res = await fetch(PAPI + '/sandbox/' + sid + '/' + currentSandboxId + '/benchmarks', { headers: headers() });
+        const data = await res.json();
+        const benchmarks = data.benchmarks || [];
+        const tbody = document.getElementById('benchmarksTable');
+        if (benchmarks.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No benchmarks yet</td></tr>';
+        } else {
+          tbody.innerHTML = benchmarks.map(b => {
+            const imp = b.before_value > 0 ? (((b.before_value - b.after_value) / b.before_value) * 100).toFixed(1) : '—';
+            return '<tr>' +
+              '<td>' + esc(b.benchmark_type) + '</td>' +
+              '<td>' + (Math.round(b.before_value * 100) / 100) + '</td>' +
+              '<td>' + (Math.round(b.after_value * 100) / 100) + '</td>' +
+              '<td><span style="color:' + (parseFloat(imp) > 0 ? 'var(--accent-green)' : 'var(--accent-red)') + ';">' + imp + '%</span></td>' +
+              '<td>' + fmtDate(b.recorded_at) + '</td></tr>';
+          }).join('');
+        }
+      } catch (err) { console.error('loadBenchmarks:', err); }
+    }
+
+    async function compareBenchmarks() {
+      const sid = getSiteId();
+      if (!sid || !currentSandboxId) { alert('Select a sandbox first'); return; }
+      try {
+        const res = await fetch(PAPI + '/sandbox/' + sid + '/' + currentSandboxId + '/benchmarks', { headers: headers() });
+        const data = await res.json();
+        const benchmarks = data.benchmarks || [];
+        const types = ['rate_limit', 'response_time', 'throughput'];
+        let html = '';
+        for (const type of types) {
+          const typeData = benchmarks.filter(b => b.benchmark_type === type);
+          if (typeData.length >= 2) {
+            const latest = typeData[0];
+            const prev = typeData[1];
+            const delta = latest.after_value - prev.after_value;
+            const improved = type === 'throughput' ? delta > 0 : delta < 0;
+            html += '<div style="margin-bottom:16px;padding:12px;border-radius:var(--radius-md);background:var(--bg-surface);">' +
+              '<strong>' + type.replace(/_/g, ' ') + '</strong>' +
+              '<div style="display:flex;gap:20px;margin-top:8px;font-size:0.9rem;color:var(--text-secondary);">' +
+              '<span>Latest: ' + (Math.round(latest.after_value * 100) / 100) + '</span>' +
+              '<span>Previous: ' + (Math.round(prev.after_value * 100) / 100) + '</span>' +
+              '<span style="color:' + (improved ? 'var(--accent-green)' : 'var(--accent-red)') + ';">' + (improved ? '↑ Improved' : '↓ Regressed') + '</span></div></div>';
+          } else if (typeData.length === 1) {
+            html += '<div style="margin-bottom:16px;padding:12px;border-radius:var(--radius-md);background:var(--bg-surface);">' +
+              '<strong>' + type.replace(/_/g, ' ') + '</strong>' +
+              '<div style="font-size:0.9rem;color:var(--text-muted);margin-top:8px;">Only 1 benchmark — need at least 2 to compare</div></div>';
+          }
+        }
+        if (!html) html = '<p style="color:var(--text-muted);">No benchmarks to compare</p>';
+        document.getElementById('benchCompare').style.display = 'block';
+        document.getElementById('benchCompareContent').innerHTML = html;
+      } catch (err) { console.error('compareBenchmarks:', err); }
+    }
+
+    // ─── Init ────────────────────────────────────────────────────────────
+    async function init() {
+      if (user) {
+        document.getElementById('userName').textContent = user.name || user.email;
+      }
+      await loadSites();
+      loadOverview();
+    }
+
+    // ═══════════ ADVANCED AI FUNCTIONS ═══════════
+
+    function getSiteId() {
+      const sel = document.querySelector('.view.active .site-selector');
+      return sel ? sel.value : '';
+    }
+    function premStatCard(lbl, val, clr) {
+      return `<div class="stat-card"><div class="label">${lbl}</div><div class="value" style="color:${clr||'inherit'}">${val}</div></div>`;
+    }
+
+    // ── Memory ──
+    async function loadMemoryView() {
+      const sid = getSiteId(); if (!sid) return;
+      try {
+        const [stats, prefs, sessions] = await Promise.all([
+          fetch(`${PAPI}/memory/${sid}/stats`, { headers: headers() }).then(r=>r.json()),
+          fetch(`${PAPI}/memory/${sid}/preferences`, { headers: headers() }).then(r=>r.json()),
+          fetch(`${PAPI}/memory/${sid}/sessions`, { headers: headers() }).then(r=>r.json()),
+        ]);
+        const s = stats.stats || stats;
+        document.getElementById('memoryStats').innerHTML = [
+          premStatCard('Total', s.total||0, 'var(--accent-blue)'),
+          premStatCard('Preferences', s.byType?.preference||0, 'var(--accent-green)'),
+          premStatCard('Interactions', s.byType?.interaction||0),
+          premStatCard('Patterns', s.byType?.pattern||0, 'var(--accent-purple)'),
+          premStatCard('Avg Importance', ((s.avgImportance||0)*100).toFixed(0)+'%'),
+          premStatCard('Storage', ((s.storageBytesEstimate||0)/1024).toFixed(1)+' KB'),
+        ].join('');
+        const pl = prefs.preferences || prefs || [];
+        document.getElementById('memPreferences').innerHTML = pl.length ? pl.map(p=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="font-weight:600;">${esc(p.key)}</span><span style="color:var(--text-muted);font-size:0.85rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;">${esc(typeof p.value==='string'?p.value:JSON.stringify(p.value))}</span></div>`).join('') : '<p class="empty-state">No preferences stored</p>';
+        const sl = sessions.sessions || sessions || [];
+        document.getElementById('memSessions').innerHTML = sl.length ? sl.map(s=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);"><span style="font-size:0.85rem;">${esc(s.agent_id||'agent')}</span> <span style="font-size:0.8rem;color:var(--text-muted);">${s.started_at?new Date(s.started_at).toLocaleString():''}</span></div>`).join('') : '<p class="empty-state">No sessions</p>';
+      } catch(e) { console.error(e); }
+    }
+
+    async function storeMemory() {
+      const sid = getSiteId(); if (!sid) return alert('Select a site');
+      const key = document.getElementById('memKey').value;
+      const value = document.getElementById('memValue').value;
+      if (!key || !value) return alert('Key and Value required');
+      try {
+        let val; try { val = JSON.parse(value); } catch { val = value; }
+        await fetch(`${PAPI}/memory/${sid}/store`, { method:'POST', headers: headers(), body: JSON.stringify({ agentId:'dashboard', type:document.getElementById('memType').value, category:document.getElementById('memCat').value, key, value:val, importance:0.7 }) });
+        alert('Memory stored!'); loadMemoryView();
+      } catch(e) { alert('Error: '+e.message); }
+    }
+
+    async function recallMemories() {
+      const sid = getSiteId(); if (!sid) return;
+      try {
+        const r = await fetch(`${PAPI}/memory/${sid}/recall`, { method:'POST', headers: headers(), body: JSON.stringify({ agentId:'dashboard', query:document.getElementById('memQuery').value, type:document.getElementById('memFilterType').value||undefined, limit:20 }) });
+        const data = await r.json();
+        const memories = data.memories || data || [];
+        document.getElementById('memResults').innerHTML = memories.length ? memories.map(m=>`<div class="card" style="margin-bottom:8px;padding:12px;"><div style="display:flex;justify-content:space-between;"><strong>${esc(m.key)}</strong><span class="badge">${m.memory_type||m.type||''}</span></div><div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px;">${esc(typeof m.value==='string'?m.value:JSON.stringify(m.value))}</div><div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Importance: ${((m.importance||0)*100).toFixed(0)}% | Accessed: ${m.access_count||0}x</div></div>`).join('') : '<p class="empty-state">No memories found</p>';
+      } catch(e) { console.error(e); }
+    }
+
+    async function consolidateMemories() {
+      const sid = getSiteId(); if (!sid) return;
+      try {
+        const r = await fetch(`${PAPI}/memory/${sid}/consolidate`, { method:'POST', headers: headers(), body: JSON.stringify({ agentId:'dashboard' }) });
+        const d = await r.json(); const s = d.stats || d;
+        alert(`Consolidated! Merged:${s.merged||0} Boosted:${s.boosted||0} Decayed:${s.decayed||0} Expired:${s.expired||0}`);
+        loadMemoryView();
+      } catch(e) { alert('Error: '+e.message); }
+    }
+
+    // ── Self-Healing ──
+    async function loadHealingView() {
+      const sid = getSiteId(); if (!sid) return;
+      try {
+        const [health, history] = await Promise.all([
+          fetch(`${PAPI}/healing/${sid}/health`, { headers: headers() }).then(r=>r.json()),
+          fetch(`${PAPI}/healing/${sid}/history?limit=20`, { headers: headers() }).then(r=>r.json()),
+        ]);
+        const s = health.health || health;
+        document.getElementById('healingStats').innerHTML = [
+          premStatCard('Total Selectors', s.total||0, 'var(--accent-blue)'),
+          premStatCard('Verified', s.verified||0, 'var(--accent-green)'),
+          premStatCard('Healed', s.healed||0, 'var(--accent-yellow)'),
+          premStatCard('Avg Confidence', ((s.avgConfidence||0)*100).toFixed(0)+'%'),
+          premStatCard('Broken', (s.broken||[]).length, 'var(--accent-red)'),
+        ].join('');
+        const logs = history.history || history || [];
+        document.getElementById('healingHistoryBody').innerHTML = logs.length ? logs.map(l=>`<tr><td>${esc(l.action_name||'')}</td><td style="font-family:monospace;font-size:0.8rem;">${esc(l.old_selector||'')}</td><td style="font-family:monospace;font-size:0.8rem;">${esc(l.new_selector||'')}</td><td><span class="badge">${l.strategy||''}</span></td><td>${((l.confidence||0)*100).toFixed(0)}%</td><td style="color:${l.success?'var(--accent-green)':'var(--accent-red)'};">${l.success?'✓':'✗'}</td><td style="font-size:0.8rem;">${l.created_at?new Date(l.created_at).toLocaleString():''}</td></tr>`).join('') : '<tr><td colspan="7" class="empty-state">No healing history</td></tr>';
+      } catch(e) { console.error(e); }
+    }
+
+    async function registerSelector() {
+      const sid = getSiteId(); if (!sid) return alert('Select a site');
+      try {
+        await fetch(`${PAPI}/healing/${sid}/register`, { method:'POST', headers: headers(), body: JSON.stringify({ actionName:document.getElementById('healAction').value, selector:document.getElementById('healSelector').value, selectorType:document.getElementById('healType').value }) });
+        alert('Selector registered!'); loadHealingView();
+      } catch(e) { alert('Error: '+e.message); }
+    }
+
+    async function healSelector() {
+      const sid = getSiteId(); if (!sid) return alert('Select a site');
+      try {
+        const r = await fetch(`${PAPI}/healing/${sid}/heal`, { method:'POST', headers: headers(), body: JSON.stringify({ actionName:document.getElementById('healTargetAction').value, failedSelector:document.getElementById('healFailed').value, pageElements:[] }) });
+        const d = await r.json(); const res = d.result || d;
+        document.getElementById('healResult').innerHTML = res.healed
+          ? `<div class="alert" style="background:var(--accent-green);color:white;">✅ Healed! New: <code>${esc(res.newSelector)}</code> via <strong>${res.strategy}</strong> (${((res.confidence||0)*100).toFixed(0)}%)</div>`
+          : `<div class="alert alert-error">❌ Could not heal selector</div>`;
+        loadHealingView();
+      } catch(e) { alert('Error: '+e.message); }
+    }
+
+    // ── Vision ──
+    async function loadVisionView() {
+      const sid = getSiteId(); if (!sid) return;
+      try {
+        const [cfg, history] = await Promise.all([
+          fetch(`${PAPI}/vision/${sid}/config`, { headers: headers() }).then(r=>r.json()).catch(()=>({})),
+          fetch(`${PAPI}/vision/${sid}/history?limit=20`, { headers: headers() }).then(r=>r.json()),
+        ]);
+        const c = cfg.config || cfg;
+        if (c.provider) document.getElementById('visionProvider').value = c.provider;
+        if (c.model) document.getElementById('visionModel').value = c.model;
+        if (c.endpoint) document.getElementById('visionEndpoint').value = c.endpoint;
+        const logs = history.history || history || [];
+        document.getElementById('visionHistoryBody').innerHTML = logs.length ? logs.map(l=>`<tr><td style="font-size:0.85rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;">${esc(l.url||'')}</td><td><span class="badge">${l.provider||''}</span></td><td>${(JSON.parse(l.elements_found||'[]')).length}</td><td>${l.tokens_used||0}</td><td>${l.latency_ms||0}ms</td><td style="font-size:0.8rem;">${l.created_at?new Date(l.created_at).toLocaleString():''}</td></tr>`).join('') : '<tr><td colspan="6" class="empty-state">No analyses</td></tr>';
+      } catch(e) { console.error(e); }
+    }
+
+    async function configureVision() {
+      const sid = getSiteId(); if (!sid) return alert('Select a site');
+      try {
+        await fetch(`${PAPI}/vision/${sid}/config`, { method:'PUT', headers: headers(), body: JSON.stringify({ provider:document.getElementById('visionProvider').value, model:document.getElementById('visionModel').value, endpoint:document.getElementById('visionEndpoint').value, apiKey:document.getElementById('visionApiKey').value||undefined }) });
+        alert('Vision configured!');
+      } catch(e) { alert('Error: '+e.message); }
+    }
+
+    async function analyzeScreenshot() {
+      const sid = getSiteId(); if (!sid) return alert('Select a site');
+      const ss = document.getElementById('visionScreenshot').value;
+      if (!ss) return alert('Paste a base64 screenshot');
+      document.getElementById('visionResult').innerHTML = '<p style="color:var(--text-muted);">Analyzing...</p>';
+      try {
+        const r = await fetch(`${PAPI}/vision/${sid}/analyze`, { method:'POST', headers: headers(), body: JSON.stringify({ screenshotBase64:ss, url:document.getElementById('visionUrl').value, prompt:document.getElementById('visionPrompt').value }) });
+        const d = await r.json(); const res = d.result || d;
+        const els = res.elements || [];
+        document.getElementById('visionResult').innerHTML = `<div class="alert" style="background:var(--accent-blue);color:white;margin-bottom:12px;">${els.length} elements found | ${res.latency_ms||0}ms | ${res.tokens_used||0} tokens${res.cached?' (cached)':''}</div>` + els.map(e=>`<div class="card" style="margin-bottom:8px;padding:10px;"><div style="display:flex;justify-content:space-between;"><strong>${esc(e.label||e.description||'')}</strong><span class="badge">${e.element_type||e.type||''}</span></div>${e.suggested_selector?`<code style="font-size:0.8rem;color:var(--accent-blue);">${esc(e.suggested_selector)}</code>`:''}<div style="font-size:0.75rem;color:var(--text-muted);">Confidence: ${((e.confidence||0)*100).toFixed(0)}%${e.interactable?' | Interactable':''}</div></div>`).join('');
+        loadVisionView();
+      } catch(e) { document.getElementById('visionResult').innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+    }
+
+    // ── Swarm ──
+    async function loadSwarmView() {
+      const sid = getSiteId(); if (!sid) return;
+      try {
+        const [cfg, stats, history] = await Promise.all([
+          fetch(`${PAPI}/swarm/${sid}/config`, { headers: headers() }).then(r=>r.json()).catch(()=>({})),
+          fetch(`${PAPI}/swarm/${sid}/stats`, { headers: headers() }).then(r=>r.json()),
+          fetch(`${PAPI}/swarm/${sid}/history?limit=20`, { headers: headers() }).then(r=>r.json()),
+        ]);
+        const c = cfg.config || cfg;
+        if (c.strategy) document.getElementById('swarmStrategy').value = c.strategy;
+        if (c.max_agents) document.getElementById('swarmMaxAgents').value = c.max_agents;
+        if (c.timeout_ms) document.getElementById('swarmTimeout').value = c.timeout_ms;
+        const s = stats.stats || stats;
+        document.getElementById('swarmStats').innerHTML = [
+          premStatCard('Total Tasks', s.total||0, 'var(--accent-blue)'),
+          premStatCard('Success Rate', ((s.successRate||0)*100).toFixed(0)+'%', 'var(--accent-green)'),
+          premStatCard('Avg Agents', (s.avgAgents||0).toFixed(1)),
+          premStatCard('Avg Latency', (s.avgLatencyMs||0).toFixed(0)+' ms'),
+        ].join('');
+        const logs = history.history || history || [];
+        document.getElementById('swarmHistoryBody').innerHTML = logs.length ? logs.map(t=>`<tr><td style="font-family:monospace;font-size:0.8rem;">${esc((t.id||'').slice(0,8))}</td><td><span class="badge">${t.task_type||''}</span></td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${esc(t.objective||'')}</td><td>${t.agentCount||0}</td><td style="color:${t.status==='completed'?'var(--accent-green)':'var(--accent-red)'};">${t.status}</td><td style="font-size:0.8rem;">${t.created_at?new Date(t.created_at).toLocaleString():''}</td></tr>`).join('') : '<tr><td colspan="6" class="empty-state">No tasks</td></tr>';
+      } catch(e) { console.error(e); }
+    }
+
+    async function configureSwarm() {
+      const sid = getSiteId(); if (!sid) return alert('Select a site');
+      try {
+        await fetch(`${PAPI}/swarm/${sid}/config`, { method:'PUT', headers: headers(), body: JSON.stringify({ strategy:document.getElementById('swarmStrategy').value, maxAgents:+document.getElementById('swarmMaxAgents').value, timeoutMs:+document.getElementById('swarmTimeout').value }) });
+        alert('Swarm configured!');
+      } catch(e) { alert('Error: '+e.message); }
+    }
+
+    async function createAndRunSwarm() {
+      const sid = getSiteId(); if (!sid) return alert('Select a site');
+      const targets = document.getElementById('swarmTargets').value.split('\n').map(t=>t.trim()).filter(Boolean);
+      if (!targets.length) return alert('Add at least one target URL');
+      document.getElementById('swarmResult').innerHTML = '<p style="color:var(--text-muted);">🐝 Launching swarm...</p>';
+      try {
+        const taskRes = await fetch(`${PAPI}/swarm/${sid}/tasks`, { method:'POST', headers: headers(), body: JSON.stringify({ taskType:document.getElementById('swarmTaskType').value, objective:document.getElementById('swarmObjective').value, parameters:{ targets }, createdBy:'dashboard' }) });
+        const task = await taskRes.json();
+        const taskId = task.task?.id || task.id;
+        const agents = targets.map((t,i)=>({ role:i===0?'searcher_main':'searcher_indie', type:'http', target:t }));
+        await fetch(`${PAPI}/swarm/tasks/${taskId}/agents`, { method:'POST', headers: headers(), body: JSON.stringify({ agents }) });
+        const runRes = await fetch(`${PAPI}/swarm/tasks/${taskId}/run`, { method:'POST', headers: headers() });
+        const result = await runRes.json();
+        const r = result.result || result;
+        document.getElementById('swarmResult').innerHTML = `<div class="alert" style="background:var(--accent-green);color:white;margin-bottom:12px;">✅ Swarm complete! ${r.total_sources||targets.length} sources | Best: ${esc(r.best_source||'N/A')}</div><pre style="font-size:0.8rem;background:var(--bg-secondary);padding:12px;border-radius:8px;overflow-x:auto;max-height:300px;">${esc(JSON.stringify(r.merged_result||r,null,2))}</pre>`;
+        loadSwarmView();
+      } catch(e) { document.getElementById('swarmResult').innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+    }
+
+    // ── Marketplace ──
+    async function loadMarketplaceView() {
+      const sid = getSiteId();
+      try {
+        const [plugins, installed] = await Promise.all([
+          fetch(`${PAPI.replace('/premium','')}/plugins/marketplace`).then(r=>r.json()),
+          sid ? fetch(`${PAPI}/plugins/installed/${sid}`, { headers: headers() }).then(r=>r.json()) : Promise.resolve([]),
+        ]);
+        const pl = plugins.plugins || plugins || [];
+        const inst = installed.plugins || installed || [];
+        const instIds = new Set(inst.map(i=>i.plugin_id||i.id));
+        document.getElementById('pluginCards').innerHTML = pl.map(p=>`
+          <div class="card" style="padding:20px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+              <span style="font-size:2rem;">${p.icon||'🔌'}</span>
+              <div><h3 style="margin:0;font-size:1rem;">${esc(p.name)}</h3><span class="badge" style="font-size:0.65rem;">${p.category}</span>${p.is_official?'<span class="badge" style="margin-left:4px;background:var(--accent-purple);font-size:0.65rem;">Official</span>':''}</div>
+            </div>
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:12px;min-height:40px;">${esc(p.description)}</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:0.8rem;color:var(--text-muted);">${(p.rating||0).toFixed(1)} ⭐ · ${p.downloads||0} installs</span>
+              ${sid ? (instIds.has(p.id) ? `<button class="btn btn-danger btn-sm" onclick="uninstallPlugin('${p.id}')">Uninstall</button>` : `<button class="btn btn-primary btn-sm" onclick="installPlugin('${p.id}')">Install</button>`) : ''}
+            </div>
+          </div>
+        `).join('');
+        document.getElementById('installedPluginsBody').innerHTML = inst.length ? inst.map(i=>`<tr><td><strong>${esc(i.name||i.plugin_name||'')}</strong></td><td><span class="badge">${i.category||''}</span></td><td>${i.version||''}</td><td style="color:${i.enabled?'var(--accent-green)':'var(--accent-red)'};">${i.enabled?'Active':'Disabled'}</td><td><button class="btn btn-danger btn-sm" onclick="uninstallPlugin('${i.plugin_id||i.id}')">Remove</button></td></tr>`).join('') : `<tr><td colspan="5" class="empty-state">${sid?'No plugins installed':'Select a site'}</td></tr>`;
+      } catch(e) { console.error(e); }
+    }
+
+    async function installPlugin(pluginId) {
+      const sid = getSiteId(); if (!sid) return alert('Select a site');
+      try {
+        await fetch(`${PAPI}/plugins/${pluginId}/install/${sid}`, { method:'POST', headers: headers(), body: JSON.stringify({}) });
+        alert('Plugin installed!'); loadMarketplaceView();
+      } catch(e) { alert('Error: '+e.message); }
+    }
+
+    async function uninstallPlugin(pluginId) {
+      const sid = getSiteId(); if (!sid) return;
+      if (!confirm('Uninstall this plugin?')) return;
+      try {
+        await fetch(`${PAPI}/plugins/${pluginId}/uninstall/${sid}`, { method:'DELETE', headers: headers() });
+        loadMarketplaceView();
+      } catch(e) { alert('Error: '+e.message); }
+    }
+
+    init();
+  </script>
+  <script src="/js/cookie-consent.js"></script>
+</body>
+</html>
