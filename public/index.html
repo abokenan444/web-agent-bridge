@@ -25,6 +25,7 @@
         <li><a href="#integrations">Integrations</a></li>
         <li><a href="#how-it-works">How It Works</a></li>
         <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#v2-features">v2.0</a></li>
         <li><a href="/docs">Docs</a></li>
       </ul>
       <div class="navbar-actions">
@@ -142,6 +143,90 @@
           <h3>WebDriver BiDi</h3>
           <p>Standard WebDriver BiDi protocol support via <code>window.__wab_bidi</code> — compatible with any automation framework that speaks the standard.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ V2 FEATURES ═══════════ -->
+  <section class="section" id="v2-features" style="background: var(--bg-secondary);">
+    <div class="container">
+      <div class="section-header">
+        <span class="label">v2.0 — Digital Fortress</span>
+        <h2>Internet Sovereignty Features</h2>
+        <p>WAB v2.0 goes beyond bridging — it protects users with negotiation, verification, and decentralized trust.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card fade-in" style="border-left: 3px solid #f59e0b;">
+          <div class="card-icon orange">💰</div>
+          <h3>Real-time Negotiation Engine</h3>
+          <p>AI agents negotiate prices directly with WAB-enabled sites. Site owners define negotiation rules (bulk discounts, loyalty rewards, time-based offers). Agents submit counter-offers in multi-round sessions — no middleman, no hidden fees.</p>
+          <ul style="margin-top:12px;font-size:0.85rem;color:var(--text-secondary);list-style:disc;padding-left:20px;">
+            <li>8 condition types (bulk, loyalty, time, first-buy...)</li>
+            <li>4 discount types (percentage, fixed, free shipping, bundle)</li>
+            <li>Multi-round negotiation with counter-offers</li>
+            <li>Savings tracking per agent</li>
+          </ul>
+        </div>
+        <div class="card fade-in fade-in-delay-1" style="border-left: 3px solid #ef4444;">
+          <div class="card-icon pink">🛡️</div>
+          <h3>Anti-Hallucination Shield</h3>
+          <p>Cross-verification engine that catches AI lies before they reach users. Compares DOM values against vision screenshots, validates prices against market benchmarks, and checks temporal consistency across sessions.</p>
+          <ul style="margin-top:12px;font-size:0.85rem;color:var(--text-secondary);list-style:disc;padding-left:20px;">
+            <li>DOM vs Vision verification</li>
+            <li>Market benchmark price validation</li>
+            <li>Temporal consistency checks</li>
+            <li>Text similarity scoring (Levenshtein)</li>
+          </ul>
+        </div>
+        <div class="card fade-in fade-in-delay-2" style="border-left: 3px solid #10b981;">
+          <div class="card-icon green">⭐</div>
+          <h3>Decentralized Reputation</h3>
+          <p>Agents and sites build trust through cryptographic attestations. Every interaction gets scored — purchase success, data accuracy, delivery fulfillment. Scores are aggregated into transparent reputation profiles visible to all agents.</p>
+          <ul style="margin-top:12px;font-size:0.85rem;color:var(--text-secondary);list-style:disc;padding-left:20px;">
+            <li>Trust attestations from agent network</li>
+            <li>Weighted scoring by interaction type</li>
+            <li>Trust levels: emerging → verified → exemplary</li>
+            <li>Global leaderboard</li>
+          </ul>
+        </div>
+        <div class="card fade-in" style="border-left: 3px solid #3b82f6;">
+          <div class="card-icon blue">🏰</div>
+          <h3>Sovereign Dashboard</h3>
+          <p>A real-time command center showing your digital fortress status — protected sites, fairness radar, privacy shield, negotiation logs, and verification checks all in one beautiful dark-mode dashboard.</p>
+          <ul style="margin-top:12px;font-size:0.85rem;color:var(--text-secondary);list-style:disc;padding-left:20px;">
+            <li>Live fairness radar with safety scoring</li>
+            <li>Privacy shield metrics</li>
+            <li>AI model switcher (Llama, GPT-4, Claude...)</li>
+            <li>Protected sites table with trust levels</li>
+          </ul>
+        </div>
+        <div class="card fade-in fade-in-delay-1" style="border-left: 3px solid #8b5cf6;">
+          <div class="card-icon purple">📦</div>
+          <h3>Community Agent Hub</h3>
+          <p>Pre-built YAML agent templates for common use cases — hotel booking, grocery comparison, artisan marketplace, flight deals. Run any template with a single CLI command: <code>npx wab-agent run template.yaml</code>.</p>
+          <ul style="margin-top:12px;font-size:0.85rem;color:var(--text-secondary);list-style:disc;padding-left:20px;">
+            <li>11 production-ready templates</li>
+            <li>CLI runner with variable substitution</li>
+            <li>Fairness rules built into every template</li>
+            <li>Supports negotiation + verification</li>
+          </ul>
+        </div>
+        <div class="card fade-in fade-in-delay-2" style="border-left: 3px solid #06b6d4;">
+          <div class="card-icon cyan">🔄</div>
+          <h3>AI Brain Swapping</h3>
+          <p>WAB is the bridge — the AI model is your choice. Switch between Llama 3, GPT-4, Claude, Gemini, Mistral, or run fully local with Ollama. Your data, your model, your sovereignty.</p>
+          <ul style="margin-top:12px;font-size:0.85rem;color:var(--text-secondary);list-style:disc;padding-left:20px;">
+            <li>6 supported AI engines</li>
+            <li>Local-first with Ollama support</li>
+            <li>Hot-swap without reconfiguration</li>
+            <li>Your data never leaves your machine</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top:32px;">
+        <a href="/sovereign" class="btn btn-primary btn-lg">Open Sovereign Dashboard</a>
       </div>
     </div>
   </section>
@@ -454,6 +539,7 @@ console.<span class="fn">log</span>(actions);
             <li><a href="#integrations">Agent Integrations</a></li>
             <li><a href="#pricing">Pricing</a></li>
             <li><a href="/docs">Documentation</a></li>
+            <li><a href="/sovereign">Sovereign Dashboard</a></li>
             <li data-wab-auth="signed-in" style="display:none"><a href="/dashboard">Dashboard</a></li>
           </ul>
         </div>

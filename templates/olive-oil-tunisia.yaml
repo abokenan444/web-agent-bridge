@@ -1,0 +1,88 @@
+# WAB Agent Template — Tunisian Olive Oil Finder
+# Finds the best olive oil deals from small Tunisian producers
+# Run: npx wab-agent run olive-oil-tunisia.yaml
+
+name: olive-oil-tunisia
+version: 1.0.0
+description: Find premium olive oil from small Tunisian farms at fair prices
+author: WAB Community
+tags: [food, olive-oil, tunisia, fair-trade, agriculture]
+
+goal: >
+  Search WAB-enabled olive oil stores in Tunisia, compare prices and quality,
+  negotiate bulk discounts, and verify prices are genuine using anti-hallucination shield.
+
+target_sites:
+  discovery_method: wab-registry
+  category: food-olive-oil
+  region: tunisia
+  fallback_urls:
+    - https://example-olive-farm.tn
+    - https://sfax-olive-cooperative.tn
+
+actions:
+  - name: discover
+    description: Discover all available products from the site
+    wab_action: getProducts
+
+  - name: compare_prices
+    description: Compare olive oil prices across discovered sites
+    wab_action: getPrice
+    params:
+      category: extra-virgin-olive-oil
+    collect: true
+
+  - name: check_quality
+    description: Verify organic certification and harvest date
+    wab_action: getProductDetails
+    params:
+      fields: [certification, harvest_date, acidity_level, origin_farm]
+
+  - name: negotiate
+    description: Negotiate bulk order discount
+    wab_action: negotiate
+    strategy: bulk_order
+    conditions:
+      min_quantity: 5
+      proposed_discount: 15
+    fallback_strategy: first_time
+
+  - name: verify
+    description: Cross-check prices with anti-hallucination shield
+    wab_action: verifyPrice
+    require_pass: true
+
+  - name: purchase
+    description: Complete the purchase at negotiated price
+    wab_action: buy
+    requires: [verify, negotiate]
+
+fairness_rules:
+  prefer_local: true
+  prefer_small_business: true
+  max_price_per_liter: 25.00
+  currency: USD
+  min_reputation_score: 40
+  avoid_monopolies: true
+  require_organic: false
+
+negotiation:
+  enabled: true
+  max_rounds: 3
+  strategies:
+    - bulk_order
+    - first_time
+    - instant_payment
+  walk_away_threshold: 5
+
+verification:
+  anti_hallucination: true
+  cross_check_prices: true
+  require_vision_match: false
+  max_price_variance: 0.10
+
+output:
+  format: json
+  include: [site, product, price, negotiated_price, savings, quality_score, verification_status]
+  sort_by: price_per_liter
+  limit: 10

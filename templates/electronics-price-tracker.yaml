@@ -1,0 +1,108 @@
+# WAB Agent Template — Electronics Price Tracker
+# Monitors electronics prices and finds the best deal
+# Run: npx wab-agent run electronics-price-tracker.yaml --product "laptop" --max-price 1000
+
+name: electronics-price-tracker
+version: 1.0.0
+description: Track electronics prices across independent stores and find the best verified deal
+author: WAB Community
+tags: [electronics, price-tracking, shopping, deals, comparison]
+
+goal: >
+  Search WAB-enabled electronics retailers, track price history,
+  verify prices against screenshots, find the lowest verified price,
+  and negotiate bundle or loyalty discounts.
+
+target_sites:
+  discovery_method: wab-registry
+  category: electronics
+  region: auto
+  fallback_urls: []
+
+parameters:
+  - name: product
+    type: string
+    required: true
+    description: Product to search for
+  - name: max_price
+    type: number
+    required: true
+  - name: brand
+    type: string
+  - name: condition
+    type: string
+    default: new
+    enum: [new, refurbished, used]
+
+actions:
+  - name: discover
+    description: Find electronics stores
+    wab_action: discover
+
+  - name: search
+    description: Search for the product
+    wab_action: searchProducts
+    params:
+      query: "{{product}}"
+      brand: "{{brand}}"
+      condition: "{{condition}}"
+    collect: true
+
+  - name: verify_prices
+    description: Cross-verify all prices
+    wab_action: verifyPrice
+    require_pass: true
+
+  - name: check_specs
+    description: Verify product specifications match listing
+    wab_action: verifyText
+    params:
+      fields: [model, specs, warranty, condition]
+
+  - name: check_price_history
+    description: Check if current price is a real deal or inflated
+    wab_action: getPriceHistory
+    collect: true
+
+  - name: negotiate
+    description: Negotiate a discount
+    wab_action: negotiate
+    strategy: instant_payment
+    conditions:
+      proposed_discount: 7
+    fallback_strategy: first_time
+
+  - name: purchase
+    description: Buy at best verified price
+    wab_action: buy
+    requires: [verify_prices, check_specs]
+
+fairness_rules:
+  prefer_local: true
+  prefer_small_business: true
+  max_price: "{{max_price}}"
+  currency: USD
+  min_reputation_score: 45
+  avoid_monopolies: true
+
+negotiation:
+  enabled: true
+  max_rounds: 3
+  strategies:
+    - instant_payment
+    - first_time
+    - bulk_order
+  walk_away_threshold: 3
+
+verification:
+  anti_hallucination: true
+  cross_check_prices: true
+  require_vision_match: true
+  max_price_variance: 0.05
+  track_price_history: true
+
+output:
+  format: table
+  include: [store, product, brand, price, price_history_trend, negotiated_price, warranty, reputation, verified]
+  sort_by: price
+  limit: 15

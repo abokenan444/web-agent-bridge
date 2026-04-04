@@ -1,0 +1,93 @@
+# WAB Agent Template — Grocery Price Comparison
+# Compares grocery prices across local stores
+# Run: npx wab-agent run grocery-price-compare.yaml --items "milk,bread,eggs,rice"
+
+name: grocery-price-compare
+version: 1.0.0
+description: Compare grocery prices across WAB-enabled local stores and find the cheapest basket
+author: WAB Community
+tags: [grocery, price-comparison, local, shopping, savings]
+
+goal: >
+  Search WAB-enabled grocery stores and local markets, compare prices for a list
+  of items, verify prices are accurate, find the store with the lowest total basket
+  cost, and optionally negotiate bulk deals.
+
+target_sites:
+  discovery_method: wab-registry
+  category: grocery
+  region: auto
+  fallback_urls: []
+
+parameters:
+  - name: items
+    type: string[]
+    required: true
+    description: "Comma-separated list of grocery items to compare"
+  - name: radius_km
+    type: number
+    default: 10
+    description: Search radius in kilometers
+  - name: prefer_organic
+    type: boolean
+    default: false
+
+actions:
+  - name: discover
+    description: Find WAB-enabled grocery stores nearby
+    wab_action: discover
+
+  - name: search_items
+    description: Search for each item in the shopping list
+    wab_action: searchProducts
+    params:
+      query: "{{item}}"
+    loop_over: items
+    collect: true
+
+  - name: verify_prices
+    description: Verify displayed prices match DOM
+    wab_action: verifyPrice
+    require_pass: true
+
+  - name: negotiate_basket
+    description: Try to negotiate a bundle discount for the full basket
+    wab_action: negotiate
+    strategy: bulk_order
+    conditions:
+      proposed_discount: 8
+      argument: "Buying multiple items together"
+    fallback_strategy: loyalty
+
+  - name: build_optimal_basket
+    description: Calculate the cheapest combination across stores
+    internal: true
+    logic: minimize_total_cost
+
+fairness_rules:
+  prefer_local: true
+  prefer_small_business: true
+  currency: auto
+  min_reputation_score: 20
+  avoid_monopolies: true
+
+negotiation:
+  enabled: true
+  max_rounds: 2
+  strategies:
+    - bulk_order
+    - loyalty
+    - repeat_customer
+  walk_away_threshold: 3
+
+verification:
+  anti_hallucination: true
+  cross_check_prices: true
+  require_vision_match: false
+  max_price_variance: 0.08
+
+output:
+  format: table
+  include: [store_name, item, price, best_price, store_total, verification_status]
+  sort_by: store_total
+  summary: true

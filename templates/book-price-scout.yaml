@@ -1,0 +1,98 @@
+# WAB Agent Template — Book Price Scout
+# Finds the cheapest books directly from independent bookstores
+# Run: npx wab-agent run book-price-scout.yaml --title "Clean Code"
+
+name: book-price-scout
+version: 1.0.0
+description: Find books at the best price from independent bookstores, not just Amazon
+author: WAB Community
+tags: [books, price-comparison, indie-bookstore, shopping]
+
+goal: >
+  Search WAB-enabled independent bookstores for a specific book,
+  compare prices with Amazon, negotiate direct purchase discounts,
+  and verify book details are accurate.
+
+target_sites:
+  discovery_method: wab-registry
+  category: books
+  region: global
+  fallback_urls: []
+
+parameters:
+  - name: title
+    type: string
+    required: true
+  - name: author
+    type: string
+  - name: isbn
+    type: string
+  - name: format
+    type: string
+    default: paperback
+    enum: [paperback, hardcover, ebook]
+
+actions:
+  - name: discover
+    description: Find independent bookstores
+    wab_action: discover
+
+  - name: search_book
+    description: Search for the book
+    wab_action: searchProducts
+    params:
+      title: "{{title}}"
+      author: "{{author}}"
+      isbn: "{{isbn}}"
+    collect: true
+
+  - name: verify_details
+    description: Verify book title, author, edition match
+    wab_action: verifyText
+    require_pass: true
+
+  - name: verify_prices
+    description: Cross-check displayed prices
+    wab_action: verifyPrice
+    require_pass: true
+
+  - name: negotiate
+    description: Negotiate direct purchase discount
+    wab_action: negotiate
+    strategy: instant_payment
+    conditions:
+      proposed_discount: 8
+    fallback_strategy: first_time
+
+  - name: purchase
+    description: Buy the book
+    wab_action: buy
+    requires: [verify_details, verify_prices]
+
+fairness_rules:
+  prefer_local: true
+  prefer_small_business: true
+  currency: USD
+  min_reputation_score: 25
+  avoid_monopolies: true
+
+negotiation:
+  enabled: true
+  max_rounds: 2
+  strategies:
+    - instant_payment
+    - first_time
+    - bulk_order
+  walk_away_threshold: 3
+
+verification:
+  anti_hallucination: true
+  cross_check_prices: true
+  verify_descriptions: true
+  max_price_variance: 0.05
+
+output:
+  format: table
+  include: [bookstore, title, author, format, price, negotiated_price, shipping, total, reputation]
+  sort_by: total
+  limit: 10

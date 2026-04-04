@@ -1,0 +1,101 @@
+# WAB Agent Template — Organic Farm Fresh
+# Connects consumers directly with organic farms
+# Run: npx wab-agent run organic-farm-fresh.yaml --product "vegetables"
+
+name: organic-farm-fresh
+version: 1.0.0
+description: Buy organic produce directly from farms — no supermarket markup
+author: WAB Community
+tags: [organic, farming, fresh-produce, direct-buy, agriculture]
+
+goal: >
+  Find WAB-enabled organic farms and cooperatives, verify organic certification,
+  compare prices with supermarket equivalents, negotiate farm-direct pricing,
+  and support sustainable agriculture.
+
+target_sites:
+  discovery_method: wab-registry
+  category: organic-farming
+  region: auto
+  fallback_urls: []
+
+parameters:
+  - name: product
+    type: string
+    required: true
+    description: "Type of produce (vegetables, fruits, dairy, eggs, honey, herbs)"
+  - name: organic_only
+    type: boolean
+    default: true
+  - name: max_distance_km
+    type: number
+    default: 50
+
+actions:
+  - name: discover
+    description: Find organic farms and cooperatives
+    wab_action: discover
+
+  - name: browse_produce
+    description: See available seasonal produce
+    wab_action: getProducts
+    params:
+      category: "{{product}}"
+      organic: "{{organic_only}}"
+    collect: true
+
+  - name: verify_certification
+    description: Verify organic certification claims
+    wab_action: verifyText
+    params:
+      fields: [certification, certifier, valid_until]
+    require_pass: true
+
+  - name: verify_prices
+    description: Cross-check prices
+    wab_action: verifyPrice
+    require_pass: true
+
+  - name: negotiate
+    description: Negotiate farm-direct pricing
+    wab_action: negotiate
+    strategy: bulk_order
+    conditions:
+      proposed_discount: 12
+      argument: "Buying direct saves packaging and distribution costs"
+    fallback_strategy: repeat_customer
+
+  - name: order
+    description: Place order for pickup or delivery
+    wab_action: placeOrder
+    requires: [verify_certification, verify_prices]
+
+fairness_rules:
+  prefer_local: true
+  prefer_small_business: true
+  currency: auto
+  min_reputation_score: 20
+  avoid_monopolies: true
+  support_sustainable: true
+
+negotiation:
+  enabled: true
+  max_rounds: 2
+  strategies:
+    - bulk_order
+    - repeat_customer
+    - loyalty
+  walk_away_threshold: 0
+  respect_farmer_floor: true
+
+verification:
+  anti_hallucination: true
+  cross_check_prices: true
+  verify_certifications: true
+  max_price_variance: 0.10
+
+output:
+  format: table
+  include: [farm, product, unit, price, organic_certified, distance_km, reputation, freshness]
+  sort_by: distance_km
+  limit: 15

@@ -57,6 +57,15 @@ WAB is an open-source middleware layer that bridges AI agents and websites — l
 - **Admin Dashboard** — User management, tier grants, system analytics
 - **Stripe Integration** — Payment processing with customer portal
 
+### v2.0 — Digital Fortress Features
+
+- **Real-time Negotiation Engine** — AI agents negotiate prices directly with WAB-enabled sites using multi-round sessions, 8 condition types, and 4 discount types
+- **Anti-Hallucination Shield** — Cross-verification engine comparing DOM vs vision screenshots, market benchmark validation, temporal consistency checks, and Levenshtein text similarity scoring
+- **Decentralized Reputation System** — Cryptographic trust attestations from the agent network with weighted scoring, trust levels (emerging → verified → exemplary), and global leaderboard
+- **Sovereign Dashboard** — Real-time command center with fairness radar, privacy shield, negotiation logs, verification checks, and AI model switcher
+- **Community Agent Hub** — 11 pre-built YAML agent templates (hotel booking, grocery comparison, artisan marketplace, flight deals, etc.) with CLI runner: `npx wab-agent run template.yaml`
+- **AI Brain Swapping** — Switch between Llama 3, GPT-4, Claude, Gemini, Mistral, or Ollama (local) without reconfiguration
+
 ---
 
 ## Quick Start
@@ -126,7 +135,12 @@ web-agent-bridge/
 │   │   ├── api.js          # Sites, config, analytics API
 │   │   ├── license.js      # License verification, token exchange & tracking
 │   │   ├── admin.js        # Admin dashboard API
-│   │   └── billing.js      # Stripe billing integration
+│   │   ├── billing.js      # Stripe billing integration
+│   │   └── sovereign.js    # v2.0: negotiation, reputation, verification
+│   ├── services/
+│   │   ├── negotiation.js  # Real-time negotiation engine
+│   │   ├── verification.js # Anti-hallucination shield
+│   │   └── reputation.js   # Decentralized reputation system
 │   ├── middleware/
 │   │   └── auth.js         # JWT authentication middleware
 │   ├── models/
@@ -154,6 +168,10 @@ web-agent-bridge/
 │   ├── svelte/             # @web-agent-bridge/svelte
 │   └── langchain/          # @web-agent-bridge/langchain
 ├── sdk/                    # Agent SDK for Puppeteer/Playwright
+├── bin/
+│   ├── cli.js              # CLI entry point (wab-agent)
+│   └── agent-runner.js     # YAML template runner
+├── templates/              # Community Agent Hub YAML templates
 ├── .env                    # Environment variables
 └── package.json
 ```
@@ -188,6 +206,23 @@ web-agent-bridge/
 | `/api/license/token` | POST | Exchange `siteId` (Origin must match domain) or `licenseKey` for session token |
 | `/api/license/session` | POST | Validate session token (domain-locked) |
 | `/api/license/track` | POST | Record analytics (`sessionToken` + Origin; legacy `licenseKey` only if `ALLOW_LEGACY_LICENSE_TRACK`) |
+
+### Sovereign (v2.0)
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/sovereign/reputation/agents` | POST | Register a new agent |
+| `/api/sovereign/reputation/attestations` | POST | Submit a trust attestation |
+| `/api/sovereign/reputation/sites/:siteId` | GET | Get site reputation |
+| `/api/sovereign/reputation/leaderboard` | GET | Get reputation leaderboard |
+| `/api/sovereign/negotiation/rules` | POST | Create negotiation rule |
+| `/api/sovereign/negotiation/rules/:siteId` | GET | Get rules for a site |
+| `/api/sovereign/negotiation/sessions` | POST | Open negotiation session |
+| `/api/sovereign/negotiation/sessions/:id/propose` | POST | Submit counter-offer |
+| `/api/sovereign/negotiation/sessions/:id/confirm` | POST | Confirm a deal |
+| `/api/sovereign/verify/price` | POST | Verify price (DOM vs vision) |
+| `/api/sovereign/verify/text` | POST | Verify text accuracy |
+| `/api/sovereign/verify/page` | POST | Full page verification |
+| `/api/sovereign/dashboard/sovereign` | GET | Dashboard aggregate data |
 
 ---
 
@@ -772,6 +807,159 @@ DATABASE_URL=
 ```
 
 First admin: set `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` when the `admins` table is empty, or run `node scripts/create-admin.js <email> <password>`.
+
+---
+
+## Real-time Negotiation Engine
+
+Site owners define negotiation rules. AI agents negotiate prices in multi-round sessions:
+
+```javascript
+// Agent opens a negotiation session
+const session = await fetch('/api/sovereign/negotiation/sessions', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    siteId: 'site-uuid',
+    agentId: 'agent-id',
+    originalPrice: 49.99,
+    itemId: 'product-123',
+    itemName: 'Olive Oil 1L'
+  })
+}).then(r => r.json());
+
+// Agent makes a counter-offer
+const counter = await fetch(`/api/sovereign/negotiation/sessions/${session.sessionId}/propose`, {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    agentId: 'agent-id',
+    proposedPrice: 39.99
+  })
+}).then(r => r.json());
+// → { status: 'accepted', finalPrice: 42.49, message: 'Deal! ...' }
+```
+
+### Condition Types
+| Condition | Description |
+|---|---|
+| `bulk_quantity` | Discounts based on order quantity |
+| `loyalty` | Rewards for repeat customers |
+| `time_based` | Happy hour / flash sale windows |
+| `first_purchase` | Welcome discount for new buyers |
+| `cart_value` | Minimum cart value threshold |
+| `seasonal` | Date-range seasonal promotions |
+| `membership` | Member-only pricing |
+| `referral` | Referral-based discounts |
+
+---
+
+## Anti-Hallucination Shield
+
+Cross-verification engine that catches AI hallucinations before they reach users:
+
+```javascript
+// Verify a price
+const result = await fetch('/api/sovereign/verify/price', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    siteId: 'site-uuid',
+    domValue: 29.99,
+    visionValue: 29.99,
+    category: 'electronics',
+    itemName: 'USB Cable'
+  })
+}).then(r => r.json());
+// → { verified: true, confidence: 0.98, severity: 'none', layers: { dom_vision: { match: true }, ... } }
+
+// Verify text content
+const textResult = await fetch('/api/sovereign/verify/text', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    siteId: 'site-uuid',
+    source: 'dom',
+    value: 'Free shipping on orders over $50',
+    expected: 'Free shipping on orders over $50'
+  })
+}).then(r => r.json());
+// → { verified: true, similarity: 1.0 }
+```
+
+### Verification Layers
+1. **DOM vs Vision** — Compares DOM-extracted price with screenshot OCR value
+2. **Market Benchmark** — Validates against historical price benchmarks for the category
+3. **Temporal Consistency** — Checks if price changed suspiciously since last verification
+4. **Composite Score** — Weighted combination of all layers with severity classification
+
+---
+
+## Community Agent Hub
+
+Pre-built YAML agent templates for common use cases. Run any template from the CLI:
+
+```bash
+# List available templates
+npx wab-agent templates
+
+# Run a template
+npx wab-agent run olive-oil-tunisia --budget 50 --region tunis
+
+# Run with custom server
+npx wab-agent run hotel-direct-booking --server https://yourserver.com --checkin 2025-01-15
+```
+
+### Available Templates
+| Template | Description |
+|---|---|
+| `olive-oil-tunisia` | Find olive oil from small Tunisian farms |
+| `hotel-direct-booking` | Book hotels directly, bypass aggregators |
+| `artisan-marketplace` | Handmade products from independent artisans |
+| `grocery-price-compare` | Compare grocery prices across local stores |
+| `freelancer-direct` | Find freelancers without platform fees |
+| `restaurant-direct` | Order from restaurants without delivery apps |
+| `book-price-scout` | Find books from indie bookstores |
+| `flight-deal-hunter` | Find flights direct from airlines |
+| `electronics-price-tracker` | Track electronics prices with history |
+| `local-services` | Find local service providers |
+| `organic-farm-fresh` | Organic produce direct from farms |
+
+### Create Your Own Template
+
+```yaml
+name: my-custom-agent
+description: My custom agent template
+goal: Find the best deals on custom products
+version: "1.0"
+target_sites:
+  - https://example.com
+parameters:
+  budget:
+    type: number
+    default: 100
+    description: Maximum budget
+actions:
+  - name: discover
+    wab_action: discover
+  - name: search
+    wab_action: execute
+    action_name: search
+    params:
+      query: "{{keyword}}"
+  - name: negotiate
+    wab_action: negotiate
+    params:
+      item_id: "{{item_id}}"
+      max_price: "{{budget}}"
+negotiation:
+  enabled: true
+  max_rounds: 3
+  accept_threshold: 0.85
+fairness_rules:
+  - Prefer independent sellers over large platforms
+  - Verify all prices before purchase
+```
 
 ---
 

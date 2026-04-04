@@ -1,0 +1,104 @@
+# WAB Agent Template — Artisan Marketplace Scout
+# Discovers handmade products from small artisans worldwide
+# Run: npx wab-agent run artisan-marketplace.yaml
+
+name: artisan-marketplace
+version: 1.0.0
+description: Discover and buy handmade products directly from artisans, not intermediaries
+author: WAB Community
+tags: [artisan, handmade, fair-trade, crafts, direct-buy]
+
+goal: >
+  Find WAB-enabled artisan shops, evaluate product authenticity and craftsmanship,
+  compare prices against mass-produced alternatives, negotiate fair prices that
+  support artisans, and verify product descriptions are accurate.
+
+target_sites:
+  discovery_method: wab-registry
+  category: artisan-crafts
+  region: global
+  fallback_urls: []
+
+parameters:
+  - name: product_type
+    type: string
+    required: true
+    description: "Type of handmade product (e.g. pottery, textiles, jewelry, leather)"
+  - name: origin_country
+    type: string
+    description: Preferred country of origin
+  - name: max_price
+    type: number
+    default: 500
+
+actions:
+  - name: discover
+    description: Find artisan shops selling the target product type
+    wab_action: discover
+
+  - name: browse_products
+    description: Browse available handmade products
+    wab_action: getProducts
+    params:
+      category: "{{product_type}}"
+      handmade: true
+
+  - name: verify_authenticity
+    description: Check product descriptions against photos
+    wab_action: verifyText
+    params:
+      fields: [material, origin, technique, dimensions]
+
+  - name: check_artisan_profile
+    description: Verify the artisan is a real person/workshop
+    wab_action: getArtisanProfile
+
+  - name: compare_prices
+    description: Compare with mass-produced alternatives for fair pricing
+    wab_action: getPrice
+    collect: true
+
+  - name: negotiate
+    description: Negotiate a fair price supporting the artisan
+    wab_action: negotiate
+    strategy: first_time
+    conditions:
+      proposed_discount: 5
+    fallback_strategy: instant_payment
+
+  - name: purchase
+    description: Purchase at agreed price
+    wab_action: buy
+    requires: [verify_authenticity]
+
+fairness_rules:
+  prefer_local: false
+  prefer_small_business: true
+  max_price: "{{max_price}}"
+  currency: USD
+  min_reputation_score: 30
+  avoid_monopolies: true
+  support_artisans: true
+
+negotiation:
+  enabled: true
+  max_rounds: 2
+  strategies:
+    - first_time
+    - instant_payment
+    - bulk_order
+  walk_away_threshold: 3
+  respect_artisan_floor: true
+
+verification:
+  anti_hallucination: true
+  cross_check_prices: true
+  verify_descriptions: true
+  require_vision_match: true
+  max_price_variance: 0.15
+
+output:
+  format: json
+  include: [artisan_name, product, material, origin, price, negotiated_price, authenticity_score, reputation]
+  sort_by: authenticity_score
+  limit: 15

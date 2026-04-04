@@ -1,0 +1,116 @@
+# WAB Agent Template — Freelancer Finder
+# Finds freelancers directly from their portfolio sites
+# Run: npx wab-agent run freelancer-direct.yaml --skill "web-design" --budget 500
+
+name: freelancer-direct
+version: 1.0.0
+description: Find freelancers directly from their portfolio websites, bypassing Fiverr/Upwork fees
+author: WAB Community
+tags: [freelance, hiring, direct, anti-monopoly, services]
+
+goal: >
+  Discover WAB-enabled freelancer portfolio sites, evaluate their work samples,
+  verify portfolio authenticity, negotiate project rates directly (saving the
+  20-30% platform fee), and initiate contact.
+
+target_sites:
+  discovery_method: wab-registry
+  category: freelance-services
+  region: global
+  fallback_urls: []
+
+parameters:
+  - name: skill
+    type: string
+    required: true
+    description: "Skill to search for (e.g. web-design, copywriting, video-editing)"
+  - name: budget
+    type: number
+    required: true
+    description: Maximum budget in USD
+  - name: deadline_days
+    type: number
+    default: 14
+  - name: prefer_timezone
+    type: string
+    description: Preferred timezone (e.g. UTC+1, EST)
+
+actions:
+  - name: discover
+    description: Find freelancers with the required skill
+    wab_action: discover
+
+  - name: get_portfolio
+    description: Retrieve portfolio samples and past work
+    wab_action: getPortfolio
+    params:
+      skill: "{{skill}}"
+
+  - name: check_availability
+    description: Check freelancer availability
+    wab_action: checkAvailability
+    params:
+      start_date: today
+      duration_days: "{{deadline_days}}"
+
+  - name: get_rates
+    description: Get hourly or project rates
+    wab_action: getRates
+    params:
+      project_type: "{{skill}}"
+    collect: true
+
+  - name: verify_portfolio
+    description: Verify portfolio screenshots match descriptions
+    wab_action: verifyText
+    require_pass: true
+
+  - name: check_reputation
+    description: Check freelancer reputation in WAB network
+    wab_action: getReputation
+
+  - name: negotiate
+    description: Negotiate project rate directly
+    wab_action: negotiate
+    strategy: instant_payment
+    conditions:
+      proposed_discount: 15
+      argument: "No platform fees — you keep 100% of the payment"
+    fallback_strategy: first_time
+
+  - name: contact
+    description: Initiate contact with selected freelancer
+    wab_action: contact
+    requires: [verify_portfolio, check_reputation]
+
+fairness_rules:
+  prefer_local: false
+  prefer_small_business: true
+  max_price: "{{budget}}"
+  currency: USD
+  min_reputation_score: 35
+  avoid_monopolies: true
+
+negotiation:
+  enabled: true
+  max_rounds: 3
+  strategies:
+    - instant_payment
+    - first_time
+    - loyalty
+  walk_away_threshold: 5
+  pitch: >
+    On Fiverr/Upwork you'd lose 20-30% in fees. By working direct through WAB,
+    you keep 100%. Let's split the savings.
+
+verification:
+  anti_hallucination: true
+  verify_descriptions: true
+  require_vision_match: true
+  max_price_variance: 0.20
+
+output:
+  format: json
+  include: [freelancer, skill_match, rate, negotiated_rate, savings_vs_platform, reputation, portfolio_verified]
+  sort_by: rate
+  limit: 10

@@ -1,0 +1,98 @@
+# WAB Agent Template — Local Services Finder
+# Finds local service providers (plumber, electrician, etc.)
+# Run: npx wab-agent run local-services.yaml --service "plumber" --city "Tunis"
+
+name: local-services
+version: 1.0.0
+description: Find local service providers directly — no middleman platforms
+author: WAB Community
+tags: [services, local, plumber, electrician, handyman, direct]
+
+goal: >
+  Find WAB-enabled local service providers, check their reputation,
+  verify reviews and credentials, negotiate fair rates, and book directly.
+
+target_sites:
+  discovery_method: wab-registry
+  category: local-services
+  region: auto
+  fallback_urls: []
+
+parameters:
+  - name: service
+    type: string
+    required: true
+    description: "Service type (plumber, electrician, carpenter, painter, cleaner)"
+  - name: city
+    type: string
+    required: true
+  - name: urgency
+    type: string
+    default: normal
+    enum: [urgent, normal, flexible]
+
+actions:
+  - name: discover
+    description: Find service providers in the area
+    wab_action: discover
+
+  - name: check_services
+    description: Get list of services offered and rates
+    wab_action: getServices
+    params:
+      type: "{{service}}"
+    collect: true
+
+  - name: check_reputation
+    description: Check provider reputation
+    wab_action: getReputation
+
+  - name: verify_reviews
+    description: Verify reviews are genuine
+    wab_action: verifyText
+    require_pass: true
+
+  - name: check_availability
+    description: Check provider availability
+    wab_action: checkAvailability
+
+  - name: negotiate
+    description: Negotiate service rate
+    wab_action: negotiate
+    strategy: repeat_customer
+    conditions:
+      proposed_discount: 10
+    fallback_strategy: off_peak
+
+  - name: book
+    description: Book the service
+    wab_action: bookService
+    requires: [check_reputation, verify_reviews]
+
+fairness_rules:
+  prefer_local: true
+  prefer_small_business: true
+  currency: auto
+  min_reputation_score: 40
+  avoid_monopolies: true
+
+negotiation:
+  enabled: true
+  max_rounds: 2
+  strategies:
+    - repeat_customer
+    - off_peak
+    - instant_payment
+  walk_away_threshold: 5
+
+verification:
+  anti_hallucination: true
+  verify_descriptions: true
+  verify_reviews: true
+  max_price_variance: 0.15
+
+output:
+  format: table
+  include: [provider, service, rate, availability, reputation, reviews_verified, negotiated_rate]
+  sort_by: reputation
+  limit: 10

@@ -33,6 +33,15 @@
 - **قواعد بيانات متعددة** — SQLite + PostgreSQL + MySQL عبر محوّلات قابلة للتبديل
 - **SDK للوكلاء** — حزمة أدوات جاهزة لبناء وكلاء ذكاء اصطناعي
 
+### الإصدار 2.0 — ميزات الحصن الرقمي
+
+- **محرك التفاوض اللحظي** — يتفاوض وكيل الذكاء الاصطناعي على الأسعار مباشرة مع المواقع عبر جلسات متعددة الجولات، ٨ أنواع شروط، و٤ أنواع خصومات
+- **درع مقاومة التزييف** — محرك تحقق متقاطع يقارن DOM مع لقطات الشاشة، يتحقق من الأسعار مقابل المعايير السوقية، يفحص الاتساق الزمني، ويقيس تشابه النصوص
+- **نظام السمعة اللامركزي** — شهادات ثقة مشفرة من شبكة الوكلاء مع تقييم مرجح، مستويات ثقة (ناشئ ← موثق ← نموذجي)، ولوحة متصدرين عالمية
+- **لوحة السيادة** — مركز قيادة لحظي يعرض رادار العدالة، درع الخصوصية، سجل التفاوض، فحوصات التحقق، ومبدّل نماذج الذكاء الاصطناعي
+- **متجر قوالب الوكلاء** — ١١ قالب YAML جاهز (حجز فنادق، مقارنة بقالة، سوق حرفيين، صفقات طيران، إلخ) مع تشغيل من سطر الأوامر: `npx wab-agent run template.yaml`
+- **تبديل عقل الوكيل** — بدّل بين Llama 3، GPT-4، Claude، Gemini، Mistral، أو Ollama (محلي) بدون إعادة إعداد
+
 ---
 
 ## 🚀 البدء السريع
@@ -144,6 +153,22 @@ web-agent-bridge/
 |---|---|---|
 | `/api/license/verify` | POST | التحقق من مفتاح الترخيص |
 | `/api/license/track` | POST | تسجيل حدث تحليلي |
+
+### واجهات السيادة (الإصدار 2.0)
+| النقطة | الطريقة | الوصف |
+|---|---|---|
+| `/api/sovereign/reputation/agents` | POST | تسجيل وكيل جديد |
+| `/api/sovereign/reputation/attestations` | POST | إرسال شهادة ثقة |
+| `/api/sovereign/reputation/sites/:siteId` | GET | سمعة الموقع |
+| `/api/sovereign/reputation/leaderboard` | GET | لوحة المتصدرين |
+| `/api/sovereign/negotiation/rules` | POST | إنشاء قاعدة تفاوض |
+| `/api/sovereign/negotiation/sessions` | POST | فتح جلسة تفاوض |
+| `/api/sovereign/negotiation/sessions/:id/propose` | POST | تقديم عرض مضاد |
+| `/api/sovereign/negotiation/sessions/:id/confirm` | POST | تأكيد الصفقة |
+| `/api/sovereign/verify/price` | POST | التحقق من السعر |
+| `/api/sovereign/verify/text` | POST | التحقق من النص |
+| `/api/sovereign/verify/page` | POST | التحقق الشامل للصفحة |
+| `/api/sovereign/dashboard/sovereign` | GET | بيانات لوحة السيادة |
 
 ### WebSocket
 | النقطة | الوصف |
@@ -430,6 +455,107 @@ window.AIBridgeConfig = { stealth: { enabled: true } };
 - **الواجهة**: HTML/CSS/JS بدون أطر عمل
 - **الأمان**: Helmet, CORS, CSP, Rate Limiting, Security Sandbox
 - **الحاويات**: Docker + Docker Compose
+
+---
+
+## 💰 محرك التفاوض اللحظي
+
+يحدد أصحاب المواقع قواعد التفاوض. يتفاوض وكيل الذكاء الاصطناعي على الأسعار في جلسات متعددة الجولات:
+
+```javascript
+// فتح جلسة تفاوض
+const session = await fetch('/api/sovereign/negotiation/sessions', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    siteId: 'site-uuid',
+    agentId: 'agent-id',
+    originalPrice: 49.99,
+    itemId: 'product-123',
+    itemName: 'زيت زيتون ١ لتر'
+  })
+}).then(r => r.json());
+
+// تقديم عرض مضاد
+const counter = await fetch(`/api/sovereign/negotiation/sessions/${session.sessionId}/propose`, {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ agentId: 'agent-id', proposedPrice: 39.99 })
+}).then(r => r.json());
+// → { status: 'accepted', finalPrice: 42.49, message: 'صفقة! ...' }
+```
+
+### أنواع الشروط
+| الشرط | الوصف |
+|---|---|
+| `bulk_quantity` | خصم على الكميات الكبيرة |
+| `loyalty` | مكافأة للعملاء المتكررين |
+| `time_based` | عروض الساعة السعيدة |
+| `first_purchase` | خصم ترحيبي للمشترين الجدد |
+| `cart_value` | حد أدنى لقيمة السلة |
+| `seasonal` | عروض موسمية بتواريخ محددة |
+| `membership` | أسعار خاصة للأعضاء |
+| `referral` | خصومات الإحالة |
+
+---
+
+## 🛡️ درع مقاومة التزييف (Anti-Hallucination Shield)
+
+محرك تحقق متقاطع يكتشف أكاذيب الذكاء الاصطناعي قبل وصولها للمستخدم:
+
+```javascript
+// التحقق من سعر
+const result = await fetch('/api/sovereign/verify/price', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    siteId: 'site-uuid',
+    domValue: 29.99,
+    visionValue: 29.99,
+    category: 'electronics',
+    itemName: 'كابل USB'
+  })
+}).then(r => r.json());
+// → { verified: true, confidence: 0.98, severity: 'none' }
+```
+
+### طبقات التحقق
+١. **DOM مقابل الرؤية** — يقارن السعر المستخرج من DOM مع قراءة لقطة الشاشة
+٢. **المعيار السوقي** — يتحقق من السعر مقابل البيانات التاريخية للفئة
+٣. **الاتساق الزمني** — يفحص هل تغير السعر بشكل مريب منذ آخر تحقق
+٤. **النتيجة المركبة** — مزيج مرجح من جميع الطبقات مع تصنيف الخطورة
+
+---
+
+## 📦 متجر قوالب الوكلاء (Community Agent Hub)
+
+قوالب YAML جاهزة لحالات الاستخدام الشائعة. شغّل أي قالب من سطر الأوامر:
+
+```bash
+# عرض القوالب المتاحة
+npx wab-agent templates
+
+# تشغيل قالب
+npx wab-agent run olive-oil-tunisia --budget 50 --region tunis
+
+# تشغيل مع خادم مخصص
+npx wab-agent run hotel-direct-booking --server https://yourserver.com
+```
+
+### القوالب المتاحة
+| القالب | الوصف |
+|---|---|
+| `olive-oil-tunisia` | زيت زيتون من مزارع تونسية صغيرة |
+| `hotel-direct-booking` | حجز فنادق مباشر بدون وسطاء |
+| `artisan-marketplace` | منتجات يدوية من حرفيين مستقلين |
+| `grocery-price-compare` | مقارنة أسعار البقالة بين المتاجر المحلية |
+| `freelancer-direct` | مستقلون بدون رسوم منصات |
+| `restaurant-direct` | مطاعم بدون تطبيقات توصيل |
+| `book-price-scout` | كتب من مكتبات مستقلة |
+| `flight-deal-hunter` | رحلات مباشرة من شركات الطيران |
+| `electronics-price-tracker` | تتبع أسعار الإلكترونيات |
+| `local-services` | مزودي خدمات محليين |
+| `organic-farm-fresh` | منتجات عضوية مباشرة من المزارع |
 
 ---
 

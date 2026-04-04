@@ -1,0 +1,113 @@
+# WAB Agent Template — Flight Deal Hunter
+# Finds flights directly from airline websites
+# Run: npx wab-agent run flight-deal-hunter.yaml --from "TUN" --to "CDG" --date "2026-06-15"
+
+name: flight-deal-hunter
+version: 1.0.0
+description: Find flight deals directly from airline websites, bypassing aggregator markups
+author: WAB Community
+tags: [travel, flights, airline, direct-booking, savings]
+
+goal: >
+  Search WAB-enabled airline websites for direct flight bookings,
+  compare with aggregator prices, verify fares include all taxes,
+  and book at the best direct price.
+
+target_sites:
+  discovery_method: wab-registry
+  category: airlines
+  region: global
+  fallback_urls: []
+
+parameters:
+  - name: from
+    type: string
+    required: true
+    description: Departure airport code (IATA)
+  - name: to
+    type: string
+    required: true
+    description: Arrival airport code (IATA)
+  - name: date
+    type: date
+    required: true
+  - name: return_date
+    type: date
+  - name: passengers
+    type: number
+    default: 1
+  - name: class
+    type: string
+    default: economy
+    enum: [economy, business, first]
+
+actions:
+  - name: discover
+    description: Find airlines serving this route
+    wab_action: discover
+
+  - name: search_flights
+    description: Search for available flights
+    wab_action: searchFlights
+    params:
+      from: "{{from}}"
+      to: "{{to}}"
+      date: "{{date}}"
+      return_date: "{{return_date}}"
+      passengers: "{{passengers}}"
+      class: "{{class}}"
+    collect: true
+
+  - name: verify_fares
+    description: Verify displayed fares include all taxes and fees
+    wab_action: verifyPrice
+    require_pass: true
+
+  - name: check_total_price
+    description: Confirm total price matches breakdown
+    wab_action: verifyText
+    params:
+      fields: [base_fare, taxes, fees, total]
+    require_pass: true
+
+  - name: negotiate
+    description: Try to get a direct-booking discount
+    wab_action: negotiate
+    strategy: instant_payment
+    conditions:
+      proposed_discount: 3
+    fallback_strategy: off_peak
+
+  - name: book
+    description: Book the flight
+    wab_action: bookFlight
+    requires: [verify_fares, check_total_price]
+
+fairness_rules:
+  prefer_local: false
+  prefer_small_business: false
+  currency: auto
+  min_reputation_score: 60
+  avoid_monopolies: false
+  price_transparency: true
+
+negotiation:
+  enabled: true
+  max_rounds: 2
+  strategies:
+    - instant_payment
+    - off_peak
+  walk_away_threshold: 1
+
+verification:
+  anti_hallucination: true
+  cross_check_prices: true
+  require_vision_match: true
+  max_price_variance: 0.02
+  verify_tax_inclusion: true
+
+output:
+  format: table
+  include: [airline, flight_number, departure, arrival, duration, stops, fare, total_with_taxes, verification]
+  sort_by: total_with_taxes
+  limit: 20

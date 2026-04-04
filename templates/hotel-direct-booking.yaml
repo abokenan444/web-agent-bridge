@@ -1,0 +1,113 @@
+# WAB Agent Template — Local Hotel Finder
+# Finds hotels directly (bypassing Booking.com/Expedia monopoly)
+# Run: npx wab-agent run hotel-direct-booking.yaml
+
+name: hotel-direct-booking
+version: 1.0.0
+description: Find and book hotels directly from their own websites, bypassing aggregator commissions
+author: WAB Community
+tags: [travel, hotels, direct-booking, anti-monopoly, negotiation]
+
+goal: >
+  Search WAB-enabled hotels in the target city, compare rates with aggregator
+  prices, negotiate direct-booking discounts, and book at the best price while
+  supporting independent hoteliers.
+
+target_sites:
+  discovery_method: wab-registry
+  category: hotels
+  region: auto
+  fallback_urls: []
+
+parameters:
+  - name: city
+    type: string
+    required: true
+    description: City name to search hotels in
+  - name: checkin
+    type: date
+    required: true
+  - name: checkout
+    type: date
+    required: true
+  - name: guests
+    type: number
+    default: 2
+  - name: max_budget
+    type: number
+    description: Maximum price per night in USD
+    default: 200
+
+actions:
+  - name: discover
+    description: Find WAB-enabled hotels in target city
+    wab_action: discover
+
+  - name: check_availability
+    description: Check room availability for the given dates
+    wab_action: checkAvailability
+    params:
+      checkin: "{{checkin}}"
+      checkout: "{{checkout}}"
+      guests: "{{guests}}"
+
+  - name: get_rates
+    description: Get room rates from each hotel
+    wab_action: getRates
+    params:
+      checkin: "{{checkin}}"
+      checkout: "{{checkout}}"
+    collect: true
+
+  - name: verify_rates
+    description: Verify displayed rates match actual DOM values
+    wab_action: verifyPrice
+    require_pass: true
+
+  - name: negotiate
+    description: Negotiate direct-booking discount
+    wab_action: negotiate
+    strategy: instant_payment
+    conditions:
+      proposed_discount: 10
+      argument: "Direct booking saves you the 15-20% aggregator commission"
+    fallback_strategy: off_peak
+
+  - name: book
+    description: Book the room at negotiated rate
+    wab_action: bookRoom
+    requires: [verify_rates, negotiate]
+
+fairness_rules:
+  prefer_local: true
+  prefer_small_business: true
+  max_price_per_night: "{{max_budget}}"
+  currency: USD
+  min_reputation_score: 50
+  avoid_monopolies: true
+  boycott_sites: []
+
+negotiation:
+  enabled: true
+  max_rounds: 3
+  strategies:
+    - instant_payment
+    - off_peak
+    - repeat_customer
+    - loyalty
+  walk_away_threshold: 3
+  pitch: >
+    By booking direct, you save the 15-20% commission you'd pay Booking.com.
+    Pass some of that savings to me as a discount.
+
+verification:
+  anti_hallucination: true
+  cross_check_prices: true
+  require_vision_match: true
+  max_price_variance: 0.05
+
+output:
+  format: table
+  include: [hotel_name, room_type, original_rate, negotiated_rate, savings_pct, reputation, verification]
+  sort_by: negotiated_rate
+  limit: 20

@@ -5,7 +5,8 @@
   "main": "server/index.js",
   "bin": {
     "web-agent-bridge": "./bin/cli.js",
-    "wab": "./bin/cli.js"
+    "wab": "./bin/cli.js",
+    "wab-agent": "./bin/cli.js"
   },
   "scripts": {
     "start": "node server/index.js",
@@ -39,6 +40,7 @@
     "public/",
     "script/",
     "sdk/",
+    "templates/",
     "examples/",
     "README.md",
     "README.ar.md",
