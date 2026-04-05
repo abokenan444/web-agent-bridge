@@ -1428,132 +1428,140 @@
 
     // ── Agent Mesh Protocol (Client-Side) ───────────────────────────────
 
-    /**
-     * Join the agent mesh — register this agent and return its mesh identity.
-     */
-    async meshJoin(role, displayName, capabilities) {
+    async _meshPost(path, body) {
       const base = this._resolveApiBase();
-      const res = await fetch(`${base}/api/mesh/agents`, {
+      const res = await fetch(`${base}/api/mesh${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId: this.config.siteId, role, displayName, capabilities })
+        body: body ? JSON.stringify(body) : undefined
       });
-      const data = await res.json();
-      this._meshAgentId = data.id;
-      this.events.emit('mesh:joined', data);
-      return data;
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText); }
+      return res.json();
     }
 
-    /**
-     * Publish a message to a mesh channel.
-     */
+    async _meshGet(path) {
+      const base = this._resolveApiBase();
+      const res = await fetch(`${base}/api/mesh${path}`);
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText); }
+      return res.json();
+    }
+
+    async _meshDelete(path) {
+      const base = this._resolveApiBase();
+      const res = await fetch(`${base}/api/mesh${path}`, { method: 'DELETE' });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText); }
+      return res.json();
+    }
+
+    async meshJoin(role, displayName, capabilities) {
+      const data = await this._meshPost('/agents', { siteId: this.config.siteId, role, displayName, capabilities });
+      this._meshAgentId = data.agent.id;
+      this._meshHeartbeat = setInterval(() => {
+        this._meshPost(`/agents/${this._meshAgentId}/heartbeat`).catch(() => {});
+      }, 30000);
+      this.events.emit('mesh:joined', data.agent);
+      return data.agent;
+    }
+
+    async meshLeave() {
+      if (this._meshHeartbeat) { clearInterval(this._meshHeartbeat); this._meshHeartbeat = null; }
+      if (this._meshAgentId) {
+        await this._meshDelete(`/agents/${this._meshAgentId}`).catch(() => {});
+        this._meshAgentId = null;
+      }
+    }
+
     async meshPublish(channel, messageType, subject, payload, opts) {
       if (!this._meshAgentId) throw new Error('Must call meshJoin() first');
-      const base = this._resolveApiBase();
-      const res = await fetch(`${base}/api/mesh/channels/${encodeURIComponent(channel)}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderId: this._meshAgentId, messageType, subject, payload, ...opts })
-      });
-      return res.json();
+      return (await this._meshPost('/messages', {
+        channelName: channel || 'general', senderId: this._meshAgentId,
+        targetId: opts?.targetId, type: messageType, subject, payload,
+        priority: opts?.priority, ttl: opts?.ttl
+      })).message;
     }
 
-    /**
-     * Get unread mesh messages for this agent on a channel.
-     */
-    async meshReceive(channel, limit) {
+    async meshReceive(limit) {
       if (!this._meshAgentId) throw new Error('Must call meshJoin() first');
-      const base = this._resolveApiBase();
-      const res = await fetch(`${base}/api/mesh/agents/${this._meshAgentId}/messages/${encodeURIComponent(channel)}?limit=${limit || 20}`);
-      return res.json();
+      return (await this._meshGet(`/messages?agentId=${this._meshAgentId}&limit=${limit || 50}`)).messages;
     }
 
-    /**
-     * Share knowledge to the mesh.
-     */
-    async meshShareKnowledge(knowledgeType, domain, key, value, confidence) {
+    async meshAcknowledge(messageId) {
+      return this._meshPost(`/messages/${encodeURIComponent(messageId)}/acknowledge`);
+    }
+
+    async meshUnread() {
       if (!this._meshAgentId) throw new Error('Must call meshJoin() first');
-      const base = this._resolveApiBase();
-      const res = await fetch(`${base}/api/mesh/knowledge`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: this._meshAgentId, knowledgeType, domain, key, value, confidence })
-      });
-      return res.json();
+      return this._meshGet(`/agents/${this._meshAgentId}/unread`);
     }
 
-    /**
-     * Broadcast an alert to all mesh agents.
-     */
+    async meshShareKnowledge(type, key, value, opts) {
+      if (!this._meshAgentId) throw new Error('Must call meshJoin() first');
+      return (await this._meshPost('/knowledge', {
+        agentId: this._meshAgentId, type, domain: opts?.domain,
+        key, value, confidence: opts?.confidence, source: opts?.source
+      })).knowledge;
+    }
+
+    async meshQueryKnowledge(params) {
+      const qs = new URLSearchParams(params || {}).toString();
+      return (await this._meshGet(`/knowledge?${qs}`)).knowledge;
+    }
+
+    async meshSearchKnowledge(query, limit) {
+      return (await this._meshGet(`/knowledge/search/${encodeURIComponent(query)}?limit=${limit || 20}`)).knowledge;
+    }
+
     async meshAlert(subject, details, priority) {
       if (!this._meshAgentId) throw new Error('Must call meshJoin() first');
-      const base = this._resolveApiBase();
-      const res = await fetch(`${base}/api/mesh/alerts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderId: this._meshAgentId, subject, details, priority })
-      });
-      return res.json();
+      return (await this._meshPost('/alert', { senderId: this._meshAgentId, subject, details, priority })).message;
     }
 
-    /**
-     * Run a full symphony — orchestrate specialized agents for a task.
-     */
-    async symphonyPerform(task, taskType, inputData) {
-      const base = this._resolveApiBase();
-      const res = await fetch(`${base}/api/mesh/symphony/perform`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId: this.config.siteId, task, taskType, inputData })
+    async meshCreateVote(subject, options, deadlineSeconds) {
+      if (!this._meshAgentId) throw new Error('Must call meshJoin() first');
+      return (await this._meshPost('/votes', { senderId: this._meshAgentId, subject, options, deadlineSeconds })).vote;
+    }
+
+    async meshCastVote(voteMessageId, choice, weight, reason) {
+      if (!this._meshAgentId) throw new Error('Must call meshJoin() first');
+      return (await this._meshPost(`/votes/${encodeURIComponent(voteMessageId)}/cast`, {
+        voterId: this._meshAgentId, choice, weight, reason
+      })).result;
+    }
+
+    async meshTallyVote(voteMessageId) {
+      return (await this._meshGet(`/votes/${encodeURIComponent(voteMessageId)}/tally`)).tally;
+    }
+
+    async symphonyPerform(template, inputData, schema) {
+      const data = await this._meshPost('/symphony/compose', {
+        siteId: this.config.siteId, template, inputData, schema
       });
-      const data = await res.json();
       this.events.emit('symphony:completed', data);
       return data;
     }
 
-    /**
-     * Record a decision for the learning engine and get prediction.
-     */
     async learnRecord(domain, action, context, features) {
       if (!this._meshAgentId) throw new Error('Must call meshJoin() first');
-      const base = this._resolveApiBase();
-      const res = await fetch(`${base}/api/mesh/learning/decisions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId: this.config.siteId, agentId: this._meshAgentId, domain, action, context, features })
+      return this._meshPost('/learning/decisions', {
+        siteId: this.config.siteId, agentId: this._meshAgentId, domain, action, context, features
       });
-      return res.json();
     }
 
-    /**
-     * Provide feedback on a decision — the learning signal.
-     */
     async learnFeedback(decisionId, outcome, reward) {
-      const base = this._resolveApiBase();
-      const res = await fetch(`${base}/api/mesh/learning/decisions/${decisionId}/feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ outcome, reward })
-      });
-      return res.json();
+      return this._meshPost('/learning/feedback', { decisionId, outcome, reward });
     }
 
-    /**
-     * Get recommendation from learning engine.
-     */
     async learnRecommend(domain, actions, context) {
       if (!this._meshAgentId) throw new Error('Must call meshJoin() first');
-      const base = this._resolveApiBase();
-      const res = await fetch(`${base}/api/mesh/learning/recommend`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId: this.config.siteId, agentId: this._meshAgentId, domain, actions, context })
+      return this._meshPost('/learning/recommend', {
+        siteId: this.config.siteId, agentId: this._meshAgentId, domain, actions, context
       });
-      return res.json();
     }
 
     destroy() {
       this.events.emit('destroy');
+      if (this._meshHeartbeat) { clearInterval(this._meshHeartbeat); this._meshHeartbeat = null; }
+      this._meshAgentId = null;
       if (this._mutationObserver) {
         this._mutationObserver.disconnect();
         this._mutationObserver = null;

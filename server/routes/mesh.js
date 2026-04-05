@@ -1,8 +1,9 @@
 /**
- * Mesh API Routes
- * ════════════════════════════════════════════════════════════════════════
- * Routes for: Agent Mesh Protocol, Agent Learning Engine,
- * and Agent Symphony Orchestrator.
+ * Mesh Routes — REST API for the Private Agent Mesh
+ *
+ * Exposes the mesh, learning, and symphony services through
+ * RESTful endpoints. All routes are site-scoped and require
+ * no external authentication (local-only mesh).
  */
 
 const express = require('express');
@@ -12,289 +13,457 @@ const mesh = require('../services/agent-mesh');
 const learning = require('../services/agent-learning');
 const symphony = require('../services/agent-symphony');
 
-// ═══════════════════════════════════════════════════════════════════════
-// AGENT MESH PROTOCOL
-// ═══════════════════════════════════════════════════════════════════════
+// ─── Helpers ─────────────────────────────────────────────────────────
 
-// Register an agent in the mesh
+function ok(res, data) { res.json({ ok: true, ...data }); }
+function fail(res, status, message) { res.status(status).json({ ok: false, error: message }); }
+
+function requireBody(req, res, ...fields) {
+  for (const f of fields) {
+    if (req.body[f] === undefined || req.body[f] === null) {
+      fail(res, 400, `Missing required field: ${f}`);
+      return false;
+    }
+  }
+  return true;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MESH — Agent Registration & Messaging
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Register a new agent
 router.post('/agents', (req, res) => {
-  const { siteId, role, displayName, capabilities } = req.body;
-  if (!role) return res.status(400).json({ error: 'role is required' });
-  const result = mesh.registerAgent(siteId || 'default', role, displayName, capabilities);
-  res.json(result);
+  try {
+    if (!requireBody(req, res, 'role')) return;
+    const { siteId, role, displayName, capabilities } = req.body;
+    const agent = mesh.registerAgent(siteId || null, role, displayName, capabilities);
+    ok(res, { agent });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Get all active agents
+// Deregister an agent
+router.delete('/agents/:id', (req, res) => {
+  try {
+    mesh.deregisterAgent(req.params.id);
+    ok(res, { deregistered: req.params.id });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// Get active agents
 router.get('/agents', (req, res) => {
-  res.json(mesh.getActiveAgents());
+  try {
+    const agents = req.query.role
+      ? mesh.getAgentsByRole(req.query.role)
+      : mesh.getActiveAgents();
+    ok(res, { agents });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Get agents by role
-router.get('/agents/role/:role', (req, res) => {
-  res.json(mesh.getAgentsByRole(req.params.role));
+// Get single agent
+router.get('/agents/:id', (req, res) => {
+  try {
+    const agent = mesh.getAgent(req.params.id);
+    if (!agent) return fail(res, 404, 'Agent not found');
+    ok(res, { agent });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Agent heartbeat
-router.post('/agents/:agentId/heartbeat', (req, res) => {
-  mesh.heartbeat(req.params.agentId);
-  res.json({ ok: true });
+// Update agent metadata
+router.patch('/agents/:id/meta', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'metadata')) return;
+    mesh.updateAgentMeta(req.params.id, req.body.metadata);
+    ok(res, { updated: true });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// Heartbeat
+router.post('/agents/:id/heartbeat', (req, res) => {
+  try {
+    mesh.heartbeat(req.params.id);
+    ok(res, { alive: true });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
 // Set agent status
-router.patch('/agents/:agentId/status', (req, res) => {
-  const { status } = req.body;
-  if (!status) return res.status(400).json({ error: 'status is required' });
-  mesh.setAgentStatus(req.params.agentId, status);
-  res.json({ ok: true });
+router.put('/agents/:id/status', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'status')) return;
+    mesh.setAgentStatus(req.params.id, req.body.status);
+    ok(res, { status: req.body.status });
+  } catch (e) { fail(res, 500, e.message); }
 });
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MESH — Channels & Messaging
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // Get channels
 router.get('/channels', (req, res) => {
-  res.json(mesh.getChannels());
-});
-
-// Publish message to channel
-router.post('/channels/:channel/messages', (req, res) => {
-  const { senderId, messageType, subject, payload, priority, ttl, targetId } = req.body;
-  if (!senderId || !messageType || !subject) {
-    return res.status(400).json({ error: 'senderId, messageType, and subject are required' });
-  }
   try {
-    const msg = mesh.publish(senderId, req.params.channel, messageType, subject, payload || {}, { priority, ttl, targetId });
-    res.json(msg);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+    ok(res, { channels: mesh.getChannels() });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Get messages from channel
-router.get('/channels/:channel/messages', (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
-  res.json(mesh.getMessages(req.params.channel, limit));
+// Create channel
+router.post('/channels', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'name')) return;
+    const channel = mesh.createChannel(req.body.name, req.body.description, req.body.type);
+    ok(res, { channel });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Get unread messages for an agent
-router.get('/agents/:agentId/messages/:channel', (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-  res.json(mesh.getMessagesForAgent(req.params.agentId, req.params.channel, limit));
+// Publish message
+router.post('/messages', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'senderId', 'type', 'subject')) return;
+    const { channelName, senderId, targetId, type, subject, payload, priority, ttl } = req.body;
+    const msg = mesh.publish(channelName || 'general', senderId, targetId, type, subject, payload, priority, ttl);
+    ok(res, { message: msg });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Acknowledge a message
-router.post('/agents/:agentId/messages/:messageId/ack', (req, res) => {
-  mesh.acknowledge(req.params.agentId, req.params.messageId);
-  res.json({ ok: true });
+// Get messages (for a channel or for a specific agent)
+router.get('/messages', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    let messages;
+    if (req.query.agentId) {
+      messages = mesh.getMessagesForAgent(req.query.agentId, limit);
+    } else {
+      messages = mesh.getMessages(req.query.channel || 'general', limit);
+    }
+    ok(res, { messages });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Get unread count
-router.get('/agents/:agentId/unread', (req, res) => {
-  res.json({ count: mesh.getUnreadCount(req.params.agentId) });
+// Acknowledge message
+router.post('/messages/:id/acknowledge', (req, res) => {
+  try {
+    mesh.acknowledge(req.params.id);
+    ok(res, { acknowledged: true });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Broadcast alert
-router.post('/alerts', (req, res) => {
-  const { senderId, subject, details, priority } = req.body;
-  if (!senderId || !subject) return res.status(400).json({ error: 'senderId and subject are required' });
-  res.json(mesh.broadcastAlert(senderId, subject, details || {}, priority));
+// Unread count
+router.get('/agents/:id/unread', (req, res) => {
+  try {
+    const count = mesh.getUnreadCount(req.params.id);
+    const byChannel = mesh.getUnreadByChannel(req.params.id);
+    ok(res, { unreadCount: count, byChannel });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Share tactic
-router.post('/tactics', (req, res) => {
-  const { senderId, domain, tactic, confidence } = req.body;
-  if (!senderId || !domain || !tactic) {
-    return res.status(400).json({ error: 'senderId, domain, and tactic are required' });
-  }
-  res.json(mesh.shareTactic(senderId, domain, tactic, confidence));
+// Convenience: broadcast alert
+router.post('/alert', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'senderId', 'subject', 'details')) return;
+    const msg = mesh.broadcastAlert(req.body.senderId, req.body.subject, req.body.details, req.body.priority);
+    ok(res, { message: msg });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Request help from other agents
+// Convenience: share tactic
+router.post('/tactic', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'senderId', 'name', 'tactic')) return;
+    const msg = mesh.shareTactic(req.body.senderId, req.body.name, req.body.tactic);
+    ok(res, { message: msg });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// Convenience: request help
 router.post('/help', (req, res) => {
-  const { senderId, subject, question, targetRole } = req.body;
-  if (!senderId || !subject || !question) {
-    return res.status(400).json({ error: 'senderId, subject, and question are required' });
-  }
-  res.json(mesh.requestHelp(senderId, subject, question, targetRole));
+  try {
+    if (!requireBody(req, res, 'senderId', 'problem', 'context')) return;
+    const msg = mesh.requestHelp(req.body.senderId, req.body.problem, req.body.context);
+    ok(res, { message: msg });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// ═══════════════════════════════════════════════════════════════════════
-// KNOWLEDGE SHARING
-// ═══════════════════════════════════════════════════════════════════════
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MESH — Knowledge
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-// Share knowledge to the mesh
+// Share knowledge
 router.post('/knowledge', (req, res) => {
-  const { agentId, knowledgeType, domain, key, value, confidence } = req.body;
-  if (!agentId || !knowledgeType || !domain || !key || !value) {
-    return res.status(400).json({ error: 'agentId, knowledgeType, domain, key, and value are required' });
-  }
-  res.json(mesh.shareKnowledge(agentId, knowledgeType, domain, key, value, confidence));
+  try {
+    if (!requireBody(req, res, 'agentId', 'type', 'key', 'value')) return;
+    const { agentId, type, domain, key, value, confidence, source } = req.body;
+    const entry = mesh.shareKnowledge(agentId, type, domain, key, value, confidence, source);
+    ok(res, { knowledge: entry });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
 // Query knowledge
-router.get('/knowledge/:domain/:key', (req, res) => {
-  const result = mesh.queryKnowledge(req.params.domain, req.params.key);
-  if (!result) return res.status(404).json({ error: 'Knowledge not found' });
-  res.json(result);
+router.get('/knowledge', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20;
+    let results;
+    if (req.query.domain) {
+      results = mesh.queryKnowledge(req.query.domain, req.query.type, limit);
+    } else if (req.query.type) {
+      results = mesh.searchKnowledgeByType(req.query.type, limit);
+    } else if (req.query.agentId) {
+      results = mesh.searchKnowledgeByAgent(req.query.agentId, limit);
+    } else {
+      results = mesh.getRecentKnowledge(limit);
+    }
+    ok(res, { knowledge: results });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Search knowledge by domain
-router.get('/knowledge/:domain', (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-  res.json(mesh.searchKnowledge(req.params.domain, limit));
+// Get single knowledge entry
+router.get('/knowledge/:id', (req, res) => {
+  try {
+    const entry = mesh.getKnowledgeById(req.params.id);
+    if (!entry) return fail(res, 404, 'Knowledge entry not found');
+    ok(res, { knowledge: entry });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// Search knowledge
+router.get('/knowledge/search/:query', (req, res) => {
+  try {
+    const results = mesh.searchKnowledge(req.params.query, parseInt(req.query.limit) || 20);
+    ok(res, { knowledge: results });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// Knowledge domains
+router.get('/knowledge-domains', (req, res) => {
+  try {
+    ok(res, { domains: mesh.getKnowledgeDomains() });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// Recent knowledge
+router.get('/knowledge-recent', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20;
+    ok(res, { knowledge: mesh.getRecentKnowledge(limit) });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
 // Verify knowledge
-router.post('/knowledge/:knowledgeId/verify', (req, res) => {
-  const { verifierAgentId, confidence } = req.body;
-  if (!verifierAgentId) return res.status(400).json({ error: 'verifierAgentId is required' });
-  mesh.verifyKnowledge(req.params.knowledgeId, verifierAgentId, confidence || 1.0);
-  res.json({ ok: true });
+router.post('/knowledge/:id/verify', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'verifierId', 'confidence')) return;
+    mesh.verifyKnowledge(req.params.id, req.body.verifierId, req.body.confidence);
+    ok(res, { verified: true });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// ═══════════════════════════════════════════════════════════════════════
-// AGENT LEARNING ENGINE
-// ═══════════════════════════════════════════════════════════════════════
+// Update knowledge value
+router.put('/knowledge/:id', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'value')) return;
+    mesh.updateKnowledge(req.params.id, req.body.value);
+    ok(res, { updated: true });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MESH — Voting
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Create vote
+router.post('/votes', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'senderId', 'subject', 'options', 'deadlineSeconds')) return;
+    const { senderId, subject, options, deadlineSeconds } = req.body;
+    const vote = mesh.createVote(senderId, subject, options, deadlineSeconds);
+    ok(res, { vote });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// Cast vote
+router.post('/votes/:messageId/cast', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'voterId', 'choice')) return;
+    const { voterId, choice, weight, reason } = req.body;
+    const result = mesh.castVote(req.params.messageId, voterId, choice, weight, reason);
+    ok(res, { result });
+  } catch (e) { fail(res, 400, e.message); }
+});
+
+// Tally votes
+router.get('/votes/:messageId/tally', (req, res) => {
+  try {
+    const tally = mesh.tallyVotes(req.params.messageId);
+    ok(res, { tally });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MESH — Stats
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+router.get('/stats', (req, res) => {
+  try {
+    ok(res, { stats: mesh.getStats() });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// LEARNING — Decision Recording & Recommendations
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // Record a decision
 router.post('/learning/decisions', (req, res) => {
-  const { siteId, agentId, domain, action, context, features } = req.body;
-  if (!siteId || !agentId || !domain || !action) {
-    return res.status(400).json({ error: 'siteId, agentId, domain, and action are required' });
-  }
-  res.json(learning.recordDecision(siteId, agentId, domain, action, context, features));
+  try {
+    if (!requireBody(req, res, 'siteId', 'agentId', 'domain', 'action')) return;
+    const { siteId, agentId, domain, action, context, features } = req.body;
+    const result = learning.recordDecision(siteId, agentId, domain, action, context, features);
+    ok(res, result);
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Provide feedback on a decision
-router.post('/learning/decisions/:decisionId/feedback', (req, res) => {
-  const { outcome, reward } = req.body;
-  if (!outcome || reward === undefined) {
-    return res.status(400).json({ error: 'outcome and reward are required' });
-  }
+// Provide feedback
+router.post('/learning/feedback', (req, res) => {
   try {
-    res.json(learning.feedback(req.params.decisionId, outcome, reward));
-  } catch (err) {
-    res.status(404).json({ error: err.message });
-  }
+    if (!requireBody(req, res, 'decisionId', 'outcome', 'reward')) return;
+    const result = learning.feedback(req.body.decisionId, req.body.outcome, req.body.reward);
+    ok(res, result);
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// Batch feedback
+router.post('/learning/feedback/batch', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'feedbackList')) return;
+    const results = learning.batchFeedback(req.body.feedbackList);
+    ok(res, { results });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
 // Get recommendation
 router.post('/learning/recommend', (req, res) => {
-  const { siteId, agentId, domain, actions, context } = req.body;
-  if (!siteId || !agentId || !domain || !actions || !Array.isArray(actions)) {
-    return res.status(400).json({ error: 'siteId, agentId, domain, and actions (array) are required' });
-  }
-  res.json(learning.recommend(siteId, agentId, domain, actions, context));
+  try {
+    if (!requireBody(req, res, 'siteId', 'agentId', 'domain', 'actions')) return;
+    const { siteId, agentId, domain, actions, context } = req.body;
+    const result = learning.recommend(siteId, agentId, domain, actions, context);
+    ok(res, result);
+  } catch (e) { fail(res, 500, e.message); }
 });
 
 // Get preferences
-router.get('/learning/preferences/:siteId/:agentId/:domain', (req, res) => {
-  res.json(learning.getPreferences(req.params.siteId, req.params.agentId, req.params.domain));
+router.get('/learning/preferences', (req, res) => {
+  try {
+    const { siteId, agentId, domain } = req.query;
+    if (!siteId || !agentId || !domain) return fail(res, 400, 'Missing siteId, agentId, or domain');
+    const prefs = learning.getPreferences(siteId, agentId, domain);
+    ok(res, { preferences: prefs });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Start learning session
-router.post('/learning/sessions', (req, res) => {
-  const { siteId, agentId } = req.body;
-  if (!siteId || !agentId) return res.status(400).json({ error: 'siteId and agentId are required' });
-  res.json(learning.startSession(siteId, agentId));
+// Get reward history
+router.get('/learning/rewards', (req, res) => {
+  try {
+    const { siteId, agentId } = req.query;
+    if (!siteId || !agentId) return fail(res, 400, 'Missing siteId or agentId');
+    const history = learning.getRewardHistory(siteId, agentId, parseInt(req.query.limit) || 30);
+    ok(res, { rewardHistory: history });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// End learning session
-router.post('/learning/sessions/:sessionId/end', (req, res) => {
-  const { decisionsMade, correctPredictions } = req.body;
-  res.json(learning.endSession(req.params.sessionId, decisionsMade || 0, correctPredictions || 0));
+// Reset domain
+router.delete('/learning/domain', (req, res) => {
+  try {
+    const { siteId, agentId, domain } = req.query;
+    if (!siteId || !agentId || !domain) return fail(res, 400, 'Missing siteId, agentId, or domain');
+    const result = learning.resetDomain(siteId, agentId, domain);
+    ok(res, result);
+  } catch (e) { fail(res, 500, e.message); }
 });
 
 // Learning stats
-router.get('/learning/stats/:siteId/:agentId', (req, res) => {
-  res.json(learning.getStats(req.params.siteId, req.params.agentId));
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// AGENT SYMPHONY ORCHESTRATOR
-// ═══════════════════════════════════════════════════════════════════════
-
-// Perform a full symphony (end-to-end)
-router.post('/symphony/perform', (req, res) => {
-  const { siteId, task, taskType, inputData, agentIds } = req.body;
-  if (!siteId || !task || !taskType) {
-    return res.status(400).json({ error: 'siteId, task, and taskType are required' });
-  }
+router.get('/learning/stats', (req, res) => {
   try {
-    const result = symphony.perform(siteId, task, taskType, inputData, agentIds);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+    const { siteId, agentId } = req.query;
+    if (!siteId || !agentId) return fail(res, 400, 'Missing siteId or agentId');
+    const stats = learning.getStats(siteId, agentId);
+    ok(res, { stats });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
-// Compose a symphony (step-by-step)
+// Learning sessions
+router.post('/learning/sessions', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'siteId', 'agentId')) return;
+    const session = learning.startSession(req.body.siteId, req.body.agentId);
+    ok(res, session);
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+router.put('/learning/sessions/:id', (req, res) => {
+  try {
+    if (!requireBody(req, res, 'decisionsMade', 'correctPredictions')) return;
+    const result = learning.endSession(req.params.id, req.body.decisionsMade, req.body.correctPredictions);
+    ok(res, result);
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SYMPHONY — Composition Orchestration
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Execute composition
 router.post('/symphony/compose', (req, res) => {
-  const { siteId, task, taskType, agentIds } = req.body;
-  if (!siteId || !task || !taskType) {
-    return res.status(400).json({ error: 'siteId, task, and taskType are required' });
-  }
   try {
-    res.json(symphony.compose(siteId, task, taskType, agentIds));
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// Execute a single phase
-router.post('/symphony/:compositionId/phase', (req, res) => {
-  const { phase, input } = req.body;
-  if (!phase) return res.status(400).json({ error: 'phase is required' });
-  try {
-    res.json(symphony.executePhase(req.params.compositionId, phase, input));
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// Get composition details
-router.get('/symphony/:compositionId', (req, res) => {
-  const result = symphony.getComposition(req.params.compositionId);
-  if (!result) return res.status(404).json({ error: 'Composition not found' });
-  res.json(result);
-});
-
-// Get compositions for site
-router.get('/symphony/site/:siteId', (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-  res.json(symphony.getCompositions(req.params.siteId, limit));
+    if (!requireBody(req, res, 'siteId', 'template')) return;
+    const { siteId, template, inputData, schema } = req.body;
+    const result = symphony.perform(siteId, template, inputData, schema);
+    ok(res, result);
+  } catch (e) { fail(res, 400, e.message); }
 });
 
 // Get templates
-router.get('/symphony/templates/all', (req, res) => {
-  res.json(symphony.getTemplates());
+router.get('/symphony/templates', (req, res) => {
+  try {
+    ok(res, { templates: symphony.getTemplates() });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// Get composition by ID
+router.get('/symphony/compositions/:id', (req, res) => {
+  try {
+    const comp = symphony.getComposition(req.params.id);
+    if (!comp) return fail(res, 404, 'Composition not found');
+    ok(res, { composition: comp });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// Get compositions list
+router.get('/symphony/compositions', (req, res) => {
+  try {
+    const { siteId, template } = req.query;
+    if (!siteId) return fail(res, 400, 'Missing siteId');
+    const comps = template
+      ? symphony.getCompositionsByTemplate(siteId, template, parseInt(req.query.limit) || 10)
+      : symphony.getCompositions(siteId, parseInt(req.query.limit) || 20);
+    ok(res, { compositions: comps });
+  } catch (e) { fail(res, 500, e.message); }
+});
+
+// Get phase logs
+router.get('/symphony/compositions/:id/phases', (req, res) => {
+  try {
+    const logs = symphony.getPhaseLogs(req.params.id);
+    ok(res, { phases: logs });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
 // Symphony stats
-router.get('/symphony/stats/:siteId', (req, res) => {
-  res.json(symphony.getStats(req.params.siteId));
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// MESH STATISTICS
-// ═══════════════════════════════════════════════════════════════════════
-
-// Overall mesh stats
-router.get('/stats', (req, res) => {
-  const meshStats = mesh.getStats();
-  res.json(meshStats);
-});
-
-// Dashboard aggregate data
-router.get('/dashboard', (req, res) => {
-  const meshStats = mesh.getStats();
-  const channels = mesh.getChannels();
-  const agents = mesh.getActiveAgents();
-  const templates = symphony.getTemplates();
-
-  res.json({
-    mesh: meshStats,
-    channels,
-    agents,
-    symphonyTemplates: templates,
-  });
+router.get('/symphony/stats', (req, res) => {
+  try {
+    const { siteId } = req.query;
+    if (!siteId) return fail(res, 400, 'Missing siteId');
+    const stats = symphony.getStats(siteId);
+    ok(res, { stats });
+  } catch (e) { fail(res, 500, e.message); }
 });
 
 module.exports = router;

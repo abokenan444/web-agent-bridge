@@ -1,401 +1,328 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agent Mesh — Web Agent Bridge</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css">
-  <style>
-    :root { --mesh-green: #10b981; --mesh-blue: #3b82f6; --mesh-purple: #8b5cf6; --mesh-orange: #f59e0b; --mesh-red: #ef4444; }
-
-    .mesh-layout { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
-    .mesh-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
-    .mesh-header h1 { font-size: 1.8rem; font-weight: 800; }
-    .mesh-header h1 span { color: var(--mesh-purple); }
-    .mesh-subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; }
-
-    .mesh-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
-    .stat-card { background: var(--bg-card); border: 1px solid var(--border-primary); border-radius: 12px; padding: 20px; text-align: center; }
-    .stat-card .stat-value { font-size: 2rem; font-weight: 800; color: var(--text-primary); }
-    .stat-card .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
-    .stat-card.green .stat-value { color: var(--mesh-green); }
-    .stat-card.blue .stat-value { color: var(--mesh-blue); }
-    .stat-card.purple .stat-value { color: var(--mesh-purple); }
-    .stat-card.orange .stat-value { color: var(--mesh-orange); }
-
-    .mesh-tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--bg-card); border-radius: 10px; padding: 4px; border: 1px solid var(--border-primary); }
-    .mesh-tab { padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; color: var(--text-muted); border: none; background: transparent; transition: all 0.2s; }
-    .mesh-tab.active { background: var(--mesh-purple); color: white; }
-    .mesh-tab:hover:not(.active) { background: var(--bg-secondary); color: var(--text-primary); }
-
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-
-    .section-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 16px; }
-
-    .agents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .agent-card { background: var(--bg-card); border: 1px solid var(--border-primary); border-radius: 12px; padding: 20px; position: relative; overflow: hidden; }
-    .agent-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
-    .agent-card.researcher::before { background: var(--mesh-blue); }
-    .agent-card.negotiator::before { background: var(--mesh-orange); }
-    .agent-card.analyst::before { background: var(--mesh-purple); }
-    .agent-card.guardian::before { background: var(--mesh-green); }
-    .agent-card .agent-role { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; text-transform: capitalize; }
-    .agent-card .agent-name { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px; }
-    .agent-card .agent-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .agent-card .agent-stat { font-size: 0.75rem; color: var(--text-secondary); }
-    .agent-card .agent-stat strong { display: block; font-size: 1rem; color: var(--text-primary); }
-    .agent-status { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 0.7rem; font-weight: 600; }
-    .agent-status.active { background: rgba(16,185,129,0.15); color: var(--mesh-green); }
-    .agent-status.idle { background: rgba(100,116,139,0.15); color: var(--text-muted); }
-
-    .channels-list { display: grid; gap: 12px; margin-bottom: 24px; }
-    .channel-card { background: var(--bg-card); border: 1px solid var(--border-primary); border-radius: 10px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
-    .channel-name { font-weight: 700; font-size: 0.95rem; }
-    .channel-desc { color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
-    .channel-badge { background: var(--mesh-purple); color: white; padding: 4px 12px; border-radius: 100px; font-size: 0.75rem; font-weight: 600; }
-
-    .messages-list { max-height: 400px; overflow-y: auto; display: grid; gap: 8px; }
-    .message-item { background: var(--bg-card); border: 1px solid var(--border-primary); border-radius: 8px; padding: 12px 16px; }
-    .message-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    .message-type { font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 100px; }
-    .message-type.alert { background: rgba(239,68,68,0.15); color: var(--mesh-red); }
-    .message-type.discovery { background: rgba(59,130,246,0.15); color: var(--mesh-blue); }
-    .message-type.tactic { background: rgba(139,92,246,0.15); color: var(--mesh-purple); }
-    .message-type.request { background: rgba(245,158,11,0.15); color: var(--mesh-orange); }
-    .message-subject { font-weight: 600; font-size: 0.85rem; }
-    .message-sender { font-size: 0.75rem; color: var(--text-muted); }
-    .message-time { font-size: 0.7rem; color: var(--text-muted); }
-
-    .symphony-grid { display: grid; gap: 16px; margin-bottom: 24px; }
-    .symphony-card { background: var(--bg-card); border: 1px solid var(--border-primary); border-radius: 12px; padding: 20px; }
-    .symphony-name { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
-    .symphony-desc { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px; }
-    .symphony-phases { display: flex; gap: 8px; flex-wrap: wrap; }
-    .phase-tag { font-size: 0.7rem; padding: 3px 10px; border-radius: 100px; font-weight: 600; background: var(--bg-secondary); color: var(--text-secondary); }
-
-    .learning-chart { background: var(--bg-card); border: 1px solid var(--border-primary); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
-    .learning-bars { display: flex; gap: 4px; align-items: flex-end; height: 120px; }
-    .learning-bar { flex: 1; background: var(--mesh-purple); border-radius: 4px 4px 0 0; min-width: 8px; transition: height 0.3s; opacity: 0.7; }
-    .learning-bar:hover { opacity: 1; }
-
-    .knowledge-table { width: 100%; border-collapse: collapse; }
-    .knowledge-table th { text-align: left; font-size: 0.75rem; color: var(--text-muted); padding: 10px 12px; border-bottom: 1px solid var(--border-primary); }
-    .knowledge-table td { padding: 10px 12px; font-size: 0.85rem; border-bottom: 1px solid var(--border-primary); }
-    .confidence-bar { height: 6px; border-radius: 3px; background: var(--bg-secondary); overflow: hidden; width: 80px; display: inline-block; }
-    .confidence-fill { height: 100%; border-radius: 3px; }
-
-    .demo-btn { background: var(--mesh-purple); color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
-    .demo-btn:hover { opacity: 0.9; }
-    .demo-output { background: var(--bg-secondary); border-radius: 10px; padding: 16px; margin-top: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; max-height: 300px; overflow-y: auto; white-space: pre-wrap; }
-
-    @media (max-width: 768px) {
-      .mesh-stats { grid-template-columns: repeat(2, 1fr); }
-      .mesh-tabs { flex-wrap: wrap; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Private Agent Mesh — Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1117;color:#e1e4ea;min-height:100vh}
+.header{background:linear-gradient(135deg,#1a1d29 0%,#252a3a 100%);padding:24px 32px;border-bottom:1px solid #2a2f3f;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:22px;color:#a78bfa;font-weight:600}
+.header .meta{font-size:13px;color:#888;display:flex;gap:20px}
+.header .meta span{display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block}
+.tabs{display:flex;background:#1a1d29;border-bottom:1px solid #2a2f3f;padding:0 32px;gap:4px}
+.tab{padding:12px 20px;cursor:pointer;border-bottom:2px solid transparent;color:#888;transition:.2s;font-size:14px}
+.tab:hover{color:#e1e4ea;background:#ffffff08}
+.tab.active{color:#a78bfa;border-bottom-color:#a78bfa}
+.content{padding:24px 32px;max-width:1400px}
+.panel{display:none}
+.panel.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.card{background:#1a1d29;border:1px solid #2a2f3f;border-radius:10px;padding:18px}
+.card .label{font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.card .value{font-size:28px;font-weight:700;color:#e1e4ea}
+.card .sub{font-size:12px;color:#666;margin-top:4px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th{text-align:left;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;border-bottom:1px solid #2a2f3f}
+td{padding:10px 14px;border-bottom:1px solid #1e2230;font-size:14px}
+tr:hover{background:#ffffff05}
+.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:500}
+.badge-green{background:#10b98120;color:#10b981}
+.badge-yellow{background:#f59e0b20;color:#f59e0b}
+.badge-red{background:#ef444420;color:#ef4444}
+.badge-blue{background:#3b82f620;color:#3b82f6}
+.badge-purple{background:#a78bfa20;color:#a78bfa}
+.chart-bar{display:flex;align-items:flex-end;gap:3px;height:80px;margin-top:8px}
+.chart-bar .bar{flex:1;background:linear-gradient(to top,#a78bfa,#7c3aed);border-radius:3px 3px 0 0;min-width:4px;transition:height .3s}
+.section{margin-bottom:28px}
+.section h3{font-size:16px;color:#ccc;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.empty{color:#555;font-style:italic;padding:20px 0}
+.refresh-btn{background:#a78bfa20;border:1px solid #a78bfa40;color:#a78bfa;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px}
+.refresh-btn:hover{background:#a78bfa30}
+</style>
 </head>
 <body>
-  <nav class="nav-header">
-    <div class="nav-inner">
-      <a href="/" class="nav-logo">WAB</a>
-      <div class="nav-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/premium-dashboard">Sovereign</a>
-        <a href="/mesh-dashboard" class="nav-active">Agent Mesh</a>
-        <a href="/docs">Docs</a>
-      </div>
-    </div>
-  </nav>
+<div class="header">
+  <h1>&#128752; Private Agent Mesh</h1>
+  <div class="meta">
+    <span><span class="dot"></span> <span id="status-text">Connecting...</span></span>
+    <span>Last update: <span id="last-update">—</span></span>
+    <button class="refresh-btn" onclick="loadAll()">&#8635; Refresh</button>
+  </div>
+</div>
 
-  <div class="mesh-layout">
-    <div class="mesh-header">
-      <div>
-        <h1>Agent <span>Mesh</span></h1>
-        <div class="mesh-subtitle">Private Agent Communication, Autonomous Learning, and Symphony Orchestration</div>
-      </div>
-      <button class="demo-btn" onclick="runDemo()">Run Symphony Demo</button>
-    </div>
+<div class="tabs">
+  <div class="tab active" data-tab="agents">Agents</div>
+  <div class="tab" data-tab="messages">Messages</div>
+  <div class="tab" data-tab="knowledge">Knowledge</div>
+  <div class="tab" data-tab="learning">Learning</div>
+  <div class="tab" data-tab="symphony">Symphony</div>
+</div>
 
-    <!-- Stats -->
-    <div class="mesh-stats">
-      <div class="stat-card green"><div class="stat-value" id="stat-agents">0</div><div class="stat-label">Active Agents</div></div>
-      <div class="stat-card blue"><div class="stat-value" id="stat-messages">0</div><div class="stat-label">Active Messages</div></div>
-      <div class="stat-card purple"><div class="stat-value" id="stat-knowledge">0</div><div class="stat-label">Knowledge Items</div></div>
-      <div class="stat-card orange"><div class="stat-value" id="stat-domains">0</div><div class="stat-label">Known Domains</div></div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="mesh-tabs">
-      <button class="mesh-tab active" data-tab="agents">Agents</button>
-      <button class="mesh-tab" data-tab="channels">Channels</button>
-      <button class="mesh-tab" data-tab="knowledge">Knowledge</button>
-      <button class="mesh-tab" data-tab="symphony">Symphony</button>
-      <button class="mesh-tab" data-tab="learning">Learning</button>
-    </div>
-
-    <!-- Agents Tab -->
-    <div class="tab-content active" id="tab-agents">
-      <h3 class="section-title">Active Mesh Agents</h3>
-      <div class="agents-grid" id="agents-grid"></div>
-    </div>
-
-    <!-- Channels Tab -->
-    <div class="tab-content" id="tab-channels">
-      <h3 class="section-title">Communication Channels</h3>
-      <div class="channels-list" id="channels-list"></div>
-      <h3 class="section-title" style="margin-top: 24px">Recent Messages</h3>
-      <div class="messages-list" id="messages-list"></div>
-    </div>
-
-    <!-- Knowledge Tab -->
-    <div class="tab-content" id="tab-knowledge">
-      <h3 class="section-title">Shared Knowledge Base</h3>
-      <div style="background: var(--bg-card); border: 1px solid var(--border-primary); border-radius: 12px; overflow: hidden;">
-        <table class="knowledge-table" id="knowledge-table">
-          <thead>
-            <tr><th>Domain</th><th>Key</th><th>Type</th><th>Source</th><th>Confidence</th><th>Accessed</th></tr>
-          </thead>
-          <tbody id="knowledge-body"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Symphony Tab -->
-    <div class="tab-content" id="tab-symphony">
-      <h3 class="section-title">Symphony Templates</h3>
-      <div class="symphony-grid" id="symphony-templates"></div>
-      <h3 class="section-title" style="margin-top: 24px">Recent Compositions</h3>
-      <div class="symphony-grid" id="symphony-history"></div>
-    </div>
-
-    <!-- Learning Tab -->
-    <div class="tab-content" id="tab-learning">
-      <h3 class="section-title">Learning Performance</h3>
-      <div class="mesh-stats" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;">
-        <div class="stat-card green"><div class="stat-value" id="learn-accuracy">0%</div><div class="stat-label">Prediction Accuracy</div></div>
-        <div class="stat-card blue"><div class="stat-value" id="learn-decisions">0</div><div class="stat-label">Total Decisions</div></div>
-        <div class="stat-card purple"><div class="stat-value" id="learn-patterns">0</div><div class="stat-label">Patterns Discovered</div></div>
-      </div>
-      <div class="learning-chart">
-        <h3 class="section-title">Reward History</h3>
-        <div class="learning-bars" id="learning-bars"></div>
-      </div>
-    </div>
-
-    <!-- Demo Output -->
-    <div id="demo-output" style="display: none;">
-      <h3 class="section-title">Demo Output</h3>
-      <div class="demo-output" id="demo-log"></div>
+<div class="content">
+  <!-- AGENTS TAB -->
+  <div class="panel active" id="panel-agents">
+    <div class="grid" id="agent-stats"></div>
+    <div class="section">
+      <h3>Active Agents</h3>
+      <table><thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Capabilities</th><th>Sent</th><th>Recv</th><th>Knowledge</th><th>Last Heartbeat</th></tr></thead>
+      <tbody id="agents-table"></tbody></table>
     </div>
   </div>
 
-  <script>
-    const API = '';
+  <!-- MESSAGES TAB -->
+  <div class="panel" id="panel-messages">
+    <div class="grid" id="msg-stats"></div>
+    <div class="section">
+      <h3>Recent Messages</h3>
+      <table><thead><tr><th>Type</th><th>Subject</th><th>Sender</th><th>Channel</th><th>Priority</th><th>Time</th></tr></thead>
+      <tbody id="messages-table"></tbody></table>
+    </div>
+  </div>
 
-    // Tab switching
-    document.querySelectorAll('.mesh-tab').forEach(function(tab) {
-      tab.addEventListener('click', function() {
-        document.querySelectorAll('.mesh-tab').forEach(function(t) { t.classList.remove('active'); });
-        document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-        tab.classList.add('active');
-        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-      });
-    });
+  <!-- KNOWLEDGE TAB -->
+  <div class="panel" id="panel-knowledge">
+    <div class="grid" id="knowledge-stats"></div>
+    <div class="section">
+      <h3>Knowledge Domains</h3>
+      <div id="knowledge-domains"></div>
+    </div>
+    <div class="section">
+      <h3>Recent Knowledge</h3>
+      <table><thead><tr><th>Key</th><th>Type</th><th>Domain</th><th>Confidence</th><th>Verified</th><th>Agent</th><th>Updated</th></tr></thead>
+      <tbody id="knowledge-table"></tbody></table>
+    </div>
+  </div>
 
-    async function loadDashboard() {
-      try {
-        const res = await fetch(API + '/api/mesh/dashboard');
-        const data = await res.json();
+  <!-- LEARNING TAB -->
+  <div class="panel" id="panel-learning">
+    <div class="grid" id="learning-stats"></div>
+    <div class="section">
+      <h3>Reward History</h3>
+      <div class="chart-bar" id="reward-chart"></div>
+    </div>
+  </div>
 
-        // Stats
-        document.getElementById('stat-agents').textContent = data.mesh?.active_agents || 0;
-        document.getElementById('stat-messages').textContent = data.mesh?.active_messages || 0;
-        document.getElementById('stat-knowledge').textContent = data.mesh?.total_knowledge || 0;
-        document.getElementById('stat-domains').textContent = data.mesh?.known_domains || 0;
+  <!-- SYMPHONY TAB -->
+  <div class="panel" id="panel-symphony">
+    <div class="grid" id="symphony-stats"></div>
+    <div class="section">
+      <h3>Recent Compositions</h3>
+      <table><thead><tr><th>Template</th><th>Status</th><th>Phases</th><th>Duration</th><th>Agents</th><th>Created</th></tr></thead>
+      <tbody id="symphony-table"></tbody></table>
+    </div>
+  </div>
+</div>
 
-        // Agents
-        const agentsGrid = document.getElementById('agents-grid');
-        if (data.agents && data.agents.length > 0) {
-          agentsGrid.innerHTML = data.agents.map(function(a) {
-            return '<div class="agent-card ' + a.agent_role + '">' +
-              '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">' +
-              '<div class="agent-role">' + a.agent_role + '</div>' +
-              '<span class="agent-status ' + a.status + '">' + a.status + '</span></div>' +
-              '<div class="agent-name">' + (a.display_name || a.id.slice(0, 8)) + '</div>' +
-              '<div class="agent-stats">' +
-              '<div class="agent-stat"><strong>' + a.messages_sent + '</strong>Sent</div>' +
-              '<div class="agent-stat"><strong>' + a.messages_received + '</strong>Received</div>' +
-              '<div class="agent-stat"><strong>' + a.knowledge_count + '</strong>Knowledge</div>' +
-              '<div class="agent-stat"><strong>' + timeAgo(a.last_heartbeat) + '</strong>Last Seen</div></div></div>';
-          }).join('');
-        } else {
-          agentsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">No agents active. Run a demo or connect agents via SDK.</div>';
-        }
+<script>
+// XSS-safe text escaping
+function esc(str) {
+  if (str == null) return '';
+  const d = document.createElement('div');
+  d.textContent = String(str);
+  return d.innerHTML;
+}
 
-        // Channels
-        var channelsList = document.getElementById('channels-list');
-        channelsList.innerHTML = data.channels.map(function(ch) {
-          return '<div class="channel-card"><div><div class="channel-name">#' + ch.name + '</div>' +
-            '<div class="channel-desc">' + (ch.description || '') + '</div></div>' +
-            '<span class="channel-badge">' + ch.channel_type + '</span></div>';
-        }).join('');
+function badge(text, color) { return '<span class="badge badge-' + color + '">' + esc(text) + '</span>'; }
+function timeAgo(ts) {
+  if (!ts) return '—';
+  const d = Date.now() - new Date(ts).getTime();
+  if (d < 60000) return Math.floor(d / 1000) + 's ago';
+  if (d < 3600000) return Math.floor(d / 60000) + 'm ago';
+  return Math.floor(d / 3600000) + 'h ago';
+}
 
-        // Load messages for discoveries channel
-        loadMessages('discoveries');
+const BASE = '';
 
-        // Symphony templates
-        var templatesGrid = document.getElementById('symphony-templates');
-        templatesGrid.innerHTML = data.symphonyTemplates.map(function(t) {
-          return '<div class="symphony-card"><div class="symphony-name">' + t.name.replace(/_/g, ' ') + '</div>' +
-            '<div class="symphony-desc">' + (t.description || '') + '</div>' +
-            '<div class="symphony-phases">' + t.phase_order.map(function(p) {
-              return '<span class="phase-tag">' + p + '</span>';
-            }).join('') + '</div></div>';
-        }).join('');
+async function api(path) {
+  try {
+    const r = await fetch(BASE + '/api/mesh' + path);
+    if (!r.ok) return null;
+    return r.json();
+  } catch (_) { return null; }
+}
 
-      } catch (err) {
-        console.error('Failed to load dashboard:', err);
-      }
+// ─── Tab switching ──────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+  });
+});
+
+// ─── Load Agents Tab ────────────────────────────────────────────
+async function loadAgents() {
+  const [ad, sd] = await Promise.all([api('/agents'), api('/stats')]);
+  const agents = ad?.agents || [];
+  const stats = sd?.stats || {};
+
+  document.getElementById('agent-stats').innerHTML =
+    '<div class="card"><div class="label">Active Agents</div><div class="value">' + agents.length + '</div></div>' +
+    '<div class="card"><div class="label">Total Messages</div><div class="value">' + (stats.totalMessages || 0) + '</div></div>' +
+    '<div class="card"><div class="label">Knowledge Items</div><div class="value">' + (stats.totalKnowledge || 0) + '</div></div>' +
+    '<div class="card"><div class="label">Channels</div><div class="value">' + (stats.channelCount || 0) + '</div></div>';
+
+  let html = '';
+  for (const a of agents) {
+    const statusColor = a.status === 'active' ? 'green' : a.status === 'idle' ? 'yellow' : 'red';
+    const caps = JSON.parse(a.capabilities || '[]');
+    html += '<tr>' +
+      '<td>' + esc(a.display_name || a.id.slice(0, 8)) + '</td>' +
+      '<td>' + badge(a.agent_role, 'purple') + '</td>' +
+      '<td>' + badge(a.status, statusColor) + '</td>' +
+      '<td>' + caps.map(c => esc(c)).join(', ') + '</td>' +
+      '<td>' + a.messages_sent + '</td>' +
+      '<td>' + a.messages_received + '</td>' +
+      '<td>' + a.knowledge_count + '</td>' +
+      '<td>' + timeAgo(a.last_heartbeat) + '</td></tr>';
+  }
+  document.getElementById('agents-table').innerHTML = html || '<tr><td colspan="8" class="empty">No active agents</td></tr>';
+}
+
+// ─── Load Messages Tab ──────────────────────────────────────────
+async function loadMessages() {
+  const [md, sd] = await Promise.all([api('/messages?limit=50'), api('/stats')]);
+  const msgs = md?.messages || [];
+  const stats = sd?.stats || {};
+
+  document.getElementById('msg-stats').innerHTML =
+    '<div class="card"><div class="label">Total Messages</div><div class="value">' + (stats.totalMessages || 0) + '</div></div>' +
+    '<div class="card"><div class="label">Alerts</div><div class="value">' + msgs.filter(m => m.message_type === 'alert').length + '</div></div>';
+
+  let html = '';
+  for (const m of msgs) {
+    const typeColor = m.message_type === 'alert' ? 'red' : m.message_type === 'vote' ? 'blue' : 'green';
+    html += '<tr>' +
+      '<td>' + badge(m.message_type, typeColor) + '</td>' +
+      '<td>' + esc(m.subject) + '</td>' +
+      '<td>' + esc(m.sender_id?.slice(0, 8)) + '</td>' +
+      '<td>' + esc(m.channel_id?.slice(0, 8) || 'general') + '</td>' +
+      '<td>' + (m.priority || 0) + '</td>' +
+      '<td>' + timeAgo(m.created_at) + '</td></tr>';
+  }
+  document.getElementById('messages-table').innerHTML = html || '<tr><td colspan="6" class="empty">No messages yet</td></tr>';
+}
+
+// ─── Load Knowledge Tab ─────────────────────────────────────────
+async function loadKnowledge() {
+  const [kd, dd] = await Promise.all([api('/knowledge-recent?limit=30'), api('/knowledge-domains')]);
+  const items = kd?.knowledge || [];
+  const domains = dd?.domains || [];
+
+  document.getElementById('knowledge-stats').innerHTML =
+    '<div class="card"><div class="label">Knowledge Items</div><div class="value">' + items.length + '</div></div>' +
+    '<div class="card"><div class="label">Domains</div><div class="value">' + domains.length + '</div></div>' +
+    '<div class="card"><div class="label">Avg Confidence</div><div class="value">' +
+      (items.length ? (items.reduce((s, k) => s + k.confidence, 0) / items.length).toFixed(2) : '—') + '</div></div>';
+
+  // Domains cards
+  let domHtml = '<div class="grid">';
+  for (const d of domains) {
+    domHtml += '<div class="card"><div class="label">' + esc(d.domain || 'global') + '</div><div class="value">' + d.count + '</div>' +
+      '<div class="sub">avg conf: ' + (d.avg_confidence || 0).toFixed(2) + '</div></div>';
+  }
+  domHtml += '</div>';
+  document.getElementById('knowledge-domains').innerHTML = domHtml || '<div class="empty">No domains yet</div>';
+
+  // Knowledge table
+  let html = '';
+  for (const k of items) {
+    const confColor = k.confidence >= 0.8 ? 'green' : k.confidence >= 0.5 ? 'yellow' : 'red';
+    html += '<tr>' +
+      '<td>' + esc(k.key) + '</td>' +
+      '<td>' + badge(k.knowledge_type, 'blue') + '</td>' +
+      '<td>' + esc(k.domain || '—') + '</td>' +
+      '<td>' + badge((k.confidence || 0).toFixed(2), confColor) + '</td>' +
+      '<td>' + (k.verification_count || 0) + 'x</td>' +
+      '<td>' + esc(k.agent_id?.slice(0, 8)) + '</td>' +
+      '<td>' + timeAgo(k.updated_at) + '</td></tr>';
+  }
+  document.getElementById('knowledge-table').innerHTML = html || '<tr><td colspan="7" class="empty">No knowledge shared yet</td></tr>';
+}
+
+// ─── Load Learning Tab ──────────────────────────────────────────
+async function loadLearning() {
+  const [sd, rd] = await Promise.all([
+    api('/learning/stats?siteId=default&agentId=symphony'),
+    api('/learning/rewards?siteId=default&agentId=symphony&limit=30')
+  ]);
+  const stats = sd?.stats || {};
+  const rewards = rd?.rewardHistory || stats.rewardHistory || [];
+
+  document.getElementById('learning-stats').innerHTML =
+    '<div class="card"><div class="label">Total Decisions</div><div class="value">' + (stats.total_decisions || 0) + '</div></div>' +
+    '<div class="card"><div class="label">Accepted</div><div class="value">' + (stats.accepted || 0) + '</div></div>' +
+    '<div class="card"><div class="label">Rejected</div><div class="value">' + (stats.rejected || 0) + '</div></div>' +
+    '<div class="card"><div class="label">Accept Rate</div><div class="value">' + ((stats.acceptRate || 0) * 100).toFixed(0) + '%</div></div>' +
+    '<div class="card"><div class="label">Avg Reward</div><div class="value">' + (stats.avg_reward || 0).toFixed(2) + '</div></div>' +
+    '<div class="card"><div class="label">Policy Domains</div><div class="value">' + (stats.policy_domains || 0) + '</div></div>' +
+    '<div class="card"><div class="label">Patterns Found</div><div class="value">' + (stats.total_patterns || 0) + '</div></div>' +
+    '<div class="card"><div class="label">Accuracy</div><div class="value">' + ((stats.recentAccuracy || 0) * 100).toFixed(0) + '%</div></div>';
+
+  // Reward chart
+  let chartHtml = '';
+  if (rewards.length > 0) {
+    const maxR = Math.max(...rewards.map(r => Math.abs(r.reward)), 0.1);
+    for (const r of rewards) {
+      const h = Math.max(2, Math.round((Math.abs(r.reward) / maxR) * 70));
+      const color = r.reward >= 0 ? 'linear-gradient(to top,#10b981,#059669)' : 'linear-gradient(to top,#ef4444,#dc2626)';
+      chartHtml += '<div class="bar" style="height:' + h + 'px;background:' + color + '" title="' + esc(r.reward) + '"></div>';
     }
+  } else {
+    chartHtml = '<div class="empty" style="height:80px;display:flex;align-items:center">No reward data yet</div>';
+  }
+  document.getElementById('reward-chart').innerHTML = chartHtml;
+}
 
-    async function loadMessages(channel) {
-      try {
-        var res = await fetch(API + '/api/mesh/channels/' + channel + '/messages?limit=20');
-        var messages = await res.json();
-        var list = document.getElementById('messages-list');
+// ─── Load Symphony Tab ──────────────────────────────────────────
+async function loadSymphony() {
+  const [cd, sd] = await Promise.all([
+    api('/symphony/compositions?siteId=default&limit=20'),
+    api('/symphony/stats?siteId=default')
+  ]);
+  const comps = cd?.compositions || [];
+  const stats = sd?.stats || {};
 
-        if (messages.length > 0) {
-          list.innerHTML = messages.map(function(m) {
-            return '<div class="message-item"><div class="message-header">' +
-              '<div><span class="message-type ' + m.message_type + '">' + m.message_type + '</span> ' +
-              '<span class="message-subject">' + escapeHtml(m.subject) + '</span></div>' +
-              '<span class="message-time">' + timeAgo(m.created_at) + '</span></div>' +
-              '<div class="message-sender">From: ' + (m.sender_name || m.sender_role || m.sender_id?.slice(0, 8)) + '</div></div>';
-          }).join('');
-        } else {
-          list.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-muted);">No messages yet</div>';
-        }
-      } catch (e) {
-        console.error('Failed to load messages:', e);
-      }
-    }
+  document.getElementById('symphony-stats').innerHTML =
+    '<div class="card"><div class="label">Total Compositions</div><div class="value">' + (stats.total || 0) + '</div></div>' +
+    '<div class="card"><div class="label">Completed</div><div class="value">' + (stats.completed || 0) + '</div></div>' +
+    '<div class="card"><div class="label">Failed</div><div class="value">' + (stats.failed || 0) + '</div></div>' +
+    '<div class="card"><div class="label">Success Rate</div><div class="value">' + ((stats.successRate || 0) * 100).toFixed(0) + '%</div></div>' +
+    '<div class="card"><div class="label">Avg Duration</div><div class="value">' + (stats.avgDuration || 0) + 'ms</div></div>' +
+    '<div class="card"><div class="label">Templates Used</div><div class="value">' + (stats.templatesUsed || 0) + '</div></div>';
 
-    async function runDemo() {
-      var output = document.getElementById('demo-output');
-      var log = document.getElementById('demo-log');
-      output.style.display = 'block';
-      log.textContent = '';
+  let html = '';
+  for (const c of comps) {
+    const statusColor = c.status === 'completed' ? 'green' : c.status === 'failed' ? 'red' : 'yellow';
+    const phases = c.phases_completed || [];
+    html += '<tr>' +
+      '<td>' + badge(c.template, 'purple') + '</td>' +
+      '<td>' + badge(c.status, statusColor) + '</td>' +
+      '<td>' + esc(phases.join(' → ')) + '</td>' +
+      '<td>' + (c.duration_ms || '—') + 'ms</td>' +
+      '<td>' + (c.agent_count || 0) + '</td>' +
+      '<td>' + timeAgo(c.created_at) + '</td></tr>';
+  }
+  document.getElementById('symphony-table').innerHTML = html || '<tr><td colspan="6" class="empty">No compositions yet</td></tr>';
+}
 
-      function addLog(msg) { log.textContent += msg + '\n'; log.scrollTop = log.scrollHeight; }
+// ─── Load All ───────────────────────────────────────────────────
+async function loadAll() {
+  try {
+    await Promise.all([loadAgents(), loadMessages(), loadKnowledge(), loadLearning(), loadSymphony()]);
+    document.getElementById('status-text').textContent = 'Connected';
+    document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+  } catch (e) {
+    document.getElementById('status-text').textContent = 'Error';
+  }
+}
 
-      addLog('=== Agent Mesh Symphony Demo ===\n');
-
-      try {
-        // 1. Register agents
-        addLog('[1/6] Registering agents in mesh...');
-        var researcher = await (await fetch(API + '/api/mesh/agents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ siteId: 'demo', role: 'researcher', displayName: 'PriceBot', capabilities: ['scrape', 'compare'] }) })).json();
-        var analyst = await (await fetch(API + '/api/mesh/agents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ siteId: 'demo', role: 'analyst', displayName: 'ValueBot', capabilities: ['score', 'rank'] }) })).json();
-        var negotiator = await (await fetch(API + '/api/mesh/agents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ siteId: 'demo', role: 'negotiator', displayName: 'DealBot', capabilities: ['negotiate', 'bundle'] }) })).json();
-        var guardian = await (await fetch(API + '/api/mesh/agents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ siteId: 'demo', role: 'guardian', displayName: 'TrustBot', capabilities: ['verify', 'audit'] }) })).json();
-        addLog('   Researcher: ' + researcher.id.slice(0, 8) + ' (PriceBot)');
-        addLog('   Analyst:    ' + analyst.id.slice(0, 8) + ' (ValueBot)');
-        addLog('   Negotiator: ' + negotiator.id.slice(0, 8) + ' (DealBot)');
-        addLog('   Guardian:   ' + guardian.id.slice(0, 8) + ' (TrustBot)');
-
-        // 2. Share knowledge
-        addLog('\n[2/6] Sharing knowledge to mesh...');
-        await (await fetch(API + '/api/mesh/knowledge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId: researcher.id, knowledgeType: 'price', domain: 'electronics', key: 'iphone-15-price', value: { price: 999, currency: 'USD', source: 'apple.com' }, confidence: 0.95 }) })).json();
-        addLog('   Shared: iPhone 15 price data (confidence: 0.95)');
-
-        await (await fetch(API + '/api/mesh/knowledge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId: researcher.id, knowledgeType: 'price', domain: 'electronics', key: 'competitor-price', value: { price: 949, currency: 'USD', source: 'bestbuy.com' }, confidence: 0.9 }) })).json();
-        addLog('   Shared: Competitor price data (confidence: 0.90)');
-
-        // 3. Broadcast alert
-        addLog('\n[3/6] Broadcasting alert...');
-        await (await fetch(API + '/api/mesh/alerts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senderId: guardian.id, subject: 'Price drop detected on competitor site', details: { domain: 'electronics', oldPrice: 999, newPrice: 949 }, priority: 2 }) })).json();
-        addLog('   Alert: Price drop detected on competitor site');
-
-        // 4. Run Symphony
-        addLog('\n[4/6] Running Symphony Orchestration...');
-        addLog('   Template: purchase_advisor');
-        addLog('   Phases: discover → analyze → negotiate → guard → decide');
-        var symphony = await (await fetch(API + '/api/mesh/symphony/perform', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-          siteId: 'demo',
-          task: 'Find the best deal on iPhone 15',
-          taskType: 'purchase',
-          inputData: {
-            siteData: { schema: { actions: { buy: { params: {} }, compare: { params: {} } } }, policies: { returns: '30 days', shipping: 'Free over $50' } },
-            products: [
-              { name: 'iPhone 15', price: 999, rating: 4.7, inStock: true, discount: 5 },
-              { name: 'iPhone 15 Pro', price: 1199, rating: 4.8, inStock: true },
-              { name: 'iPhone 14', price: 699, rating: 4.5, inStock: true, discount: 15 }
-            ],
-            preferences: { maxPrice: 1000, preferredCategory: 'electronics' }
-          }
-        }) })).json();
-
-        addLog('\n   Symphony Results:');
-        addLog('   Status: ' + symphony.status);
-        addLog('   Confidence: ' + (symphony.confidence * 100).toFixed(1) + '%');
-        addLog('   Duration: ' + symphony.duration_ms + 'ms');
-
-        if (symphony.phases) {
-          Object.entries(symphony.phases).forEach(function(entry) {
-            var phase = entry[0], result = entry[1];
-            addLog('\n   Phase: ' + phase);
-            if (result.output?.reasoning) addLog('     → ' + result.output.reasoning);
-            if (result.consensus?.reasoning) {
-              result.consensus.reasoning.forEach(function(r) { addLog('     → ' + r); });
-            }
-          });
-        }
-
-        // 5. Learning
-        addLog('\n[5/6] Training learning engine...');
-        var decision = await (await fetch(API + '/api/mesh/learning/decisions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ siteId: 'demo', agentId: researcher.id, domain: 'electronics', action: 'buy_cheapest', context: { category: 'phones' }, features: { price: 699, discount: 15, rating: 4.5 } }) })).json();
-        addLog('   Decision recorded: ' + decision.decisionId?.slice(0, 8));
-        addLog('   Predicted reward: ' + (decision.predictedReward * 100).toFixed(1) + '%');
-
-        var fb = await (await fetch(API + '/api/mesh/learning/decisions/' + decision.decisionId + '/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ outcome: 'accepted', reward: 0.8 }) })).json();
-        addLog('   Feedback: accepted (reward: 0.8)');
-        addLog('   Updated confidence: ' + (fb.updatedConfidence * 100).toFixed(1) + '%');
-
-        // 6. Get recommendation
-        addLog('\n[6/6] Getting recommendation...');
-        var rec = await (await fetch(API + '/api/mesh/learning/recommend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ siteId: 'demo', agentId: researcher.id, domain: 'electronics', actions: ['buy_cheapest', 'buy_best_rated', 'wait_for_sale'], context: { category: 'phones', price: 999 } }) })).json();
-        addLog('   Recommended: ' + rec.recommended);
-        addLog('   Confidence: ' + (rec.confidence * 100).toFixed(1) + '%');
-
-        addLog('\n=== Demo Complete ===');
-        addLog('All processing was LOCAL — zero external API calls, zero tokens consumed.');
-
-      } catch (err) {
-        addLog('\nError: ' + err.message);
-      }
-
-      loadDashboard();
-    }
-
-    function timeAgo(dateStr) {
-      if (!dateStr) return 'never';
-      var diff = Date.now() - new Date(dateStr).getTime();
-      if (diff < 60000) return 'just now';
-      if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
-      if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
-      return Math.floor(diff / 86400000) + 'd ago';
-    }
-
-    function escapeHtml(str) {
-      var div = document.createElement('div');
-      div.textContent = str || '';
-      return div.innerHTML;
-    }
-
-    loadDashboard();
-  </script>
+loadAll();
+setInterval(loadAll, 10000);
+</script>
 </body>
 </html>

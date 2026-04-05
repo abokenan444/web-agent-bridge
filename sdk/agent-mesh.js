@@ -1,330 +1,446 @@
 /**
- * WAB Agent Mesh SDK
+ * WABAgentMesh — SDK Client for the Private Agent Mesh
  *
- * Provides a high-level client for interacting with the Private Agent Mesh:
- *   - Join the mesh and communicate with other agents
- *   - Share and query collective knowledge
- *   - Run symphony orchestrations (Researcher → Analyst → Negotiator → Guardian)
- *   - Learn from user decisions via local reinforcement learning
- *
- * Usage:
- *   const { WABAgentMesh } = require('web-agent-bridge-sdk/agent-mesh');
- *   const mesh = new WABAgentMesh('https://your-wab-server.com');
- *
- *   const agent = await mesh.join('researcher', 'PriceBot');
- *   await mesh.shareKnowledge('price', 'amazon.com', 'iphone-15', { price: 999, currency: 'USD' });
- *   const result = await mesh.symphony('Find the best deal on iPhone 15', 'purchase', { products: [...] });
+ * High-level client for agents to join the mesh, communicate,
+ * share knowledge, participate in votes, and learn from decisions.
+ * Includes automatic heartbeat, reconnection, and response validation.
  */
 
 class WABAgentMesh {
   /**
-   * @param {string} serverUrl — WAB server base URL
-   * @param {object} [options]
-   * @param {string} [options.siteId] — Site identifier
-   * @param {number} [options.heartbeatInterval=30000] — Heartbeat interval in ms
+   * @param {object} options
+   * @param {string} options.serverUrl - WAB server URL
+   * @param {string} options.role - Agent role (e.g., 'monitor', 'optimizer')
+   * @param {string} [options.displayName] - Human-readable agent name
+   * @param {string[]} [options.capabilities] - List of capabilities
+   * @param {string} [options.siteId] - Site identifier
+   * @param {number} [options.heartbeatInterval=30000] - Heartbeat interval in ms
    */
-  constructor(serverUrl, options = {}) {
-    this.serverUrl = serverUrl.replace(/\/$/, '');
-    this.siteId = options.siteId || 'default';
+  constructor(options = {}) {
+    this.serverUrl = (options.serverUrl || '').replace(/\/$/, '');
+    this.role = options.role || 'agent';
+    this.displayName = options.displayName || null;
+    this.capabilities = options.capabilities || [];
+    this.siteId = options.siteId || null;
     this.heartbeatInterval = options.heartbeatInterval || 30000;
+
     this.agentId = null;
-    this.role = null;
     this._heartbeatTimer = null;
+    this._retryCount = 0;
+    this._maxRetries = 5;
+    this._listeners = {};
   }
 
-  // ─── Mesh Management ──────────────────────────────────────────────
+  // ─── Lifecycle ───────────────────────────────────────────────────
 
   /**
-   * Join the agent mesh with a role.
-   * @param {string} role — Agent role (researcher, negotiator, analyst, guardian, etc.)
-   * @param {string} [displayName] — Human-readable name
-   * @param {string[]} [capabilities] — List of capabilities
-   * @returns {Promise<{id: string, role: string, displayName: string}>}
+   * Join the mesh. Registers the agent and starts heartbeat.
+   * @returns {Promise<object>} Registered agent data
    */
-  async join(role, displayName, capabilities = []) {
-    const data = await this._post('/api/mesh/agents', {
-      siteId: this.siteId, role, displayName, capabilities
+  async join() {
+    const res = await this._post('/api/mesh/agents', {
+      siteId: this.siteId,
+      role: this.role,
+      displayName: this.displayName,
+      capabilities: this.capabilities,
     });
-    this.agentId = data.id;
-    this.role = role;
-
-    // Start heartbeat
-    this._heartbeatTimer = setInterval(() => {
-      this._post(`/api/mesh/agents/${this.agentId}/heartbeat`, {}).catch(() => {});
-    }, this.heartbeatInterval);
-    if (this._heartbeatTimer.unref) this._heartbeatTimer.unref();
-
-    return data;
+    const data = await this._json(res);
+    this.agentId = data.agent.id;
+    this._retryCount = 0;
+    this._startHeartbeat();
+    this._emit('joined', data.agent);
+    return data.agent;
   }
 
   /**
-   * Leave the mesh.
+   * Leave the mesh. Deregisters and stops heartbeat.
    */
   async leave() {
-    if (this._heartbeatTimer) {
-      clearInterval(this._heartbeatTimer);
-      this._heartbeatTimer = null;
-    }
+    this._stopHeartbeat();
     if (this.agentId) {
-      await this._patch(`/api/mesh/agents/${this.agentId}/status`, { status: 'offline' });
+      try {
+        await this._delete(`/api/mesh/agents/${this.agentId}`);
+      } catch (_) { /* ignore errors during cleanup */ }
+      this._emit('left', { agentId: this.agentId });
       this.agentId = null;
     }
   }
 
   /**
-   * Get all active agents in the mesh.
+   * Destroy the client — leave mesh and clean up all resources.
    */
-  async getAgents() {
-    return this._get('/api/mesh/agents');
+  async destroy() {
+    await this.leave();
+    this._listeners = {};
   }
 
-  /**
-   * Get agents by role.
-   */
-  async getAgentsByRole(role) {
-    return this._get(`/api/mesh/agents/role/${encodeURIComponent(role)}`);
-  }
-
-  // ─── Messaging ────────────────────────────────────────────────────
+  // ─── Messaging ─────────────────────────────────────────────────
 
   /**
    * Publish a message to a channel.
    */
-  async publish(channel, messageType, subject, payload = {}, options = {}) {
-    this._requireAgent();
-    return this._post(`/api/mesh/channels/${encodeURIComponent(channel)}/messages`, {
-      senderId: this.agentId, messageType, subject, payload,
-      priority: options.priority, ttl: options.ttl, targetId: options.targetId
+  async publish(type, subject, payload = {}, options = {}) {
+    this._requireJoined();
+    const res = await this._post('/api/mesh/messages', {
+      channelName: options.channel || 'general',
+      senderId: this.agentId,
+      targetId: options.targetId || null,
+      type,
+      subject,
+      payload,
+      priority: options.priority || 0,
+      ttl: options.ttl,
     });
+    return (await this._json(res)).message;
   }
 
   /**
-   * Get unread messages for this agent on a channel.
+   * Get messages for this agent.
    */
-  async receive(channel, limit = 20) {
-    this._requireAgent();
-    return this._get(`/api/mesh/agents/${this.agentId}/messages/${encodeURIComponent(channel)}?limit=${limit}`);
+  async getMessages(limit = 50) {
+    this._requireJoined();
+    const res = await this._get(`/api/mesh/messages?agentId=${this.agentId}&limit=${limit}`);
+    return (await this._json(res)).messages;
   }
 
   /**
    * Acknowledge a message.
    */
   async acknowledge(messageId) {
-    this._requireAgent();
-    return this._post(`/api/mesh/agents/${this.agentId}/messages/${messageId}/ack`, {});
+    const res = await this._post(`/api/mesh/messages/${encodeURIComponent(messageId)}/acknowledge`);
+    return (await this._json(res));
   }
 
   /**
-   * Get unread count.
+   * Get unread count and breakdown by channel.
    */
-  async getUnreadCount() {
-    this._requireAgent();
-    return this._get(`/api/mesh/agents/${this.agentId}/unread`);
+  async getUnread() {
+    this._requireJoined();
+    const res = await this._get(`/api/mesh/agents/${this.agentId}/unread`);
+    return await this._json(res);
   }
 
   /**
-   * Broadcast an alert to all mesh agents.
+   * Broadcast an alert to all agents.
    */
-  async alert(subject, details = {}, priority = 2) {
-    this._requireAgent();
-    return this._post('/api/mesh/alerts', { senderId: this.agentId, subject, details, priority });
+  async alert(subject, details, priority = 2) {
+    this._requireJoined();
+    const res = await this._post('/api/mesh/alert', {
+      senderId: this.agentId, subject, details, priority,
+    });
+    return (await this._json(res)).message;
   }
 
   /**
    * Share a tactic with the mesh.
    */
-  async shareTactic(domain, tactic, confidence = 1.0) {
-    this._requireAgent();
-    return this._post('/api/mesh/tactics', {
-      senderId: this.agentId, domain, tactic, confidence
+  async shareTactic(name, tactic) {
+    this._requireJoined();
+    const res = await this._post('/api/mesh/tactic', {
+      senderId: this.agentId, name, tactic,
     });
+    return (await this._json(res)).message;
   }
 
   /**
    * Request help from other agents.
    */
-  async requestHelp(subject, question, targetRole = null) {
-    this._requireAgent();
-    return this._post('/api/mesh/help', {
-      senderId: this.agentId, subject, question, targetRole
+  async requestHelp(problem, context = {}) {
+    this._requireJoined();
+    const res = await this._post('/api/mesh/help', {
+      senderId: this.agentId, problem, context,
     });
+    return (await this._json(res)).message;
   }
 
-  // ─── Knowledge ────────────────────────────────────────────────────
+  // ─── Knowledge ─────────────────────────────────────────────────
 
   /**
-   * Share knowledge to the mesh.
+   * Share knowledge with the mesh.
    */
-  async shareKnowledge(knowledgeType, domain, key, value, confidence = 1.0) {
-    this._requireAgent();
-    return this._post('/api/mesh/knowledge', {
-      agentId: this.agentId, knowledgeType, domain, key, value, confidence
+  async shareKnowledge(type, key, value, options = {}) {
+    this._requireJoined();
+    const res = await this._post('/api/mesh/knowledge', {
+      agentId: this.agentId,
+      type,
+      domain: options.domain,
+      key,
+      value,
+      confidence: options.confidence,
+      source: options.source,
     });
+    return (await this._json(res)).knowledge;
   }
 
   /**
-   * Query knowledge by domain and key.
+   * Query knowledge by domain and/or type.
    */
-  async queryKnowledge(domain, key) {
-    return this._get(`/api/mesh/knowledge/${encodeURIComponent(domain)}/${encodeURIComponent(key)}`);
+  async queryKnowledge(params = {}) {
+    const qs = new URLSearchParams();
+    if (params.domain) qs.set('domain', params.domain);
+    if (params.type) qs.set('type', params.type);
+    if (params.agentId) qs.set('agentId', params.agentId);
+    if (params.limit) qs.set('limit', params.limit);
+    const res = await this._get(`/api/mesh/knowledge?${qs.toString()}`);
+    return (await this._json(res)).knowledge;
   }
 
   /**
-   * Search knowledge by domain.
+   * Search knowledge by keyword.
    */
-  async searchKnowledge(domain, limit = 20) {
-    return this._get(`/api/mesh/knowledge/${encodeURIComponent(domain)}?limit=${limit}`);
+  async searchKnowledge(query, limit = 20) {
+    const res = await this._get(`/api/mesh/knowledge/search/${encodeURIComponent(query)}?limit=${limit}`);
+    return (await this._json(res)).knowledge;
   }
 
-  // ─── Symphony Orchestrator ────────────────────────────────────────
+  /**
+   * Get knowledge domains with counts.
+   */
+  async getKnowledgeDomains() {
+    const res = await this._get('/api/mesh/knowledge-domains');
+    return (await this._json(res)).domains;
+  }
 
   /**
-   * Run a full symphony — coordinate researcher, analyst, negotiator, guardian.
-   * @param {string} task — Task description
-   * @param {string} taskType — purchase, price_comparison, negotiation, exploration, verification
-   * @param {object} [inputData] — Data to pass to symphony phases
-   * @param {object} [agentIds] — Map role → agentId for specific agents
+   * Verify a knowledge entry.
    */
-  async symphony(task, taskType, inputData = {}, agentIds = {}) {
-    return this._post('/api/mesh/symphony/perform', {
-      siteId: this.siteId, task, taskType, inputData, agentIds
+  async verifyKnowledge(knowledgeId, confidence) {
+    this._requireJoined();
+    const res = await this._post(`/api/mesh/knowledge/${encodeURIComponent(knowledgeId)}/verify`, {
+      verifierId: this.agentId, confidence,
     });
+    return await this._json(res);
   }
 
+  // ─── Voting ────────────────────────────────────────────────────
+
   /**
-   * Compose a symphony step-by-step.
+   * Create a vote for other agents to participate in.
    */
-  async symphonyCompose(task, taskType, agentIds = {}) {
-    return this._post('/api/mesh/symphony/compose', {
-      siteId: this.siteId, task, taskType, agentIds
+  async createVote(subject, options, deadlineSeconds = 60) {
+    this._requireJoined();
+    const res = await this._post('/api/mesh/votes', {
+      senderId: this.agentId, subject, options, deadlineSeconds,
     });
+    return (await this._json(res)).vote;
   }
 
   /**
-   * Execute a single symphony phase.
+   * Cast a vote on an existing vote message.
    */
-  async symphonyPhase(compositionId, phase, input = {}) {
-    return this._post(`/api/mesh/symphony/${compositionId}/phase`, { phase, input });
+  async castVote(voteMessageId, choice, weight = 1, reason = '') {
+    this._requireJoined();
+    const res = await this._post(`/api/mesh/votes/${encodeURIComponent(voteMessageId)}/cast`, {
+      voterId: this.agentId, choice, weight, reason,
+    });
+    return (await this._json(res)).result;
   }
 
   /**
-   * Get composition details.
+   * Get the tally for a vote.
    */
-  async getComposition(compositionId) {
-    return this._get(`/api/mesh/symphony/${compositionId}`);
+  async tallyVote(voteMessageId) {
+    const res = await this._get(`/api/mesh/votes/${encodeURIComponent(voteMessageId)}/tally`);
+    return (await this._json(res)).tally;
   }
 
-  /**
-   * Get available symphony templates.
-   */
-  async getTemplates() {
-    return this._get('/api/mesh/symphony/templates/all');
-  }
-
-  // ─── Learning Engine ──────────────────────────────────────────────
+  // ─── Learning Integration ─────────────────────────────────────
 
   /**
-   * Record a decision for the learning engine.
+   * Record a decision for learning.
    */
   async recordDecision(domain, action, context = {}, features = {}) {
-    this._requireAgent();
-    return this._post('/api/mesh/learning/decisions', {
-      siteId: this.siteId, agentId: this.agentId, domain, action, context, features
+    const res = await this._post('/api/mesh/learning/decisions', {
+      siteId: this.siteId || 'default',
+      agentId: this.agentId || this.role,
+      domain, action, context, features,
     });
+    return await this._json(res);
   }
 
   /**
    * Provide feedback on a decision.
-   * @param {string} decisionId
-   * @param {string} outcome — accepted, rejected, modified
-   * @param {number} reward — 0.0 to 1.0
    */
   async feedback(decisionId, outcome, reward) {
-    return this._post(`/api/mesh/learning/decisions/${decisionId}/feedback`, { outcome, reward });
+    const res = await this._post('/api/mesh/learning/feedback', {
+      decisionId, outcome, reward,
+    });
+    return await this._json(res);
   }
 
   /**
-   * Get recommendation based on learned preferences.
-   * @param {string} domain
-   * @param {string[]} actions — Available actions to choose from
-   * @param {object} [context] — Current context
+   * Get a recommendation for the best action.
    */
   async recommend(domain, actions, context = {}) {
-    this._requireAgent();
-    return this._post('/api/mesh/learning/recommend', {
-      siteId: this.siteId, agentId: this.agentId, domain, actions, context
+    const res = await this._post('/api/mesh/learning/recommend', {
+      siteId: this.siteId || 'default',
+      agentId: this.agentId || this.role,
+      domain, actions, context,
     });
-  }
-
-  /**
-   * Get learned preferences for a domain.
-   */
-  async getPreferences(domain) {
-    this._requireAgent();
-    return this._get(`/api/mesh/learning/preferences/${encodeURIComponent(this.siteId)}/${this.agentId}/${encodeURIComponent(domain)}`);
+    return await this._json(res);
   }
 
   /**
    * Get learning stats.
    */
   async getLearningStats() {
-    this._requireAgent();
-    return this._get(`/api/mesh/learning/stats/${encodeURIComponent(this.siteId)}/${this.agentId}`);
+    const res = await this._get(`/api/mesh/learning/stats?siteId=${this.siteId || 'default'}&agentId=${this.agentId || this.role}`);
+    return (await this._json(res)).stats;
   }
 
-  // ─── Stats ────────────────────────────────────────────────────────
+  // ─── Symphony Integration ─────────────────────────────────────
 
   /**
-   * Get mesh statistics.
+   * Execute a symphony composition.
+   */
+  async compose(template, inputData = {}, schema = null) {
+    const res = await this._post('/api/mesh/symphony/compose', {
+      siteId: this.siteId || 'default',
+      template, inputData, schema,
+    });
+    return await this._json(res);
+  }
+
+  /**
+   * Get available symphony templates.
+   */
+  async getTemplates() {
+    const res = await this._get('/api/mesh/symphony/templates');
+    return (await this._json(res)).templates;
+  }
+
+  // ─── Mesh Info ─────────────────────────────────────────────────
+
+  /**
+   * Get all active agents in the mesh.
+   */
+  async getAgents(role = null) {
+    const qs = role ? `?role=${encodeURIComponent(role)}` : '';
+    const res = await this._get(`/api/mesh/agents${qs}`);
+    return (await this._json(res)).agents;
+  }
+
+  /**
+   * Get mesh stats.
    */
   async getStats() {
-    return this._get('/api/mesh/stats');
+    const res = await this._get('/api/mesh/stats');
+    return (await this._json(res)).stats;
   }
 
   /**
-   * Get full dashboard data (agents, channels, templates, stats).
+   * Update own agent metadata.
    */
-  async getDashboard() {
-    return this._get('/api/mesh/dashboard');
+  async updateMeta(metadata) {
+    this._requireJoined();
+    const res = await this._patch(`/api/mesh/agents/${this.agentId}/meta`, { metadata });
+    return await this._json(res);
   }
 
-  // ─── Internal ─────────────────────────────────────────────────────
-
-  _requireAgent() {
-    if (!this.agentId) throw new Error('Must call join() first');
+  /**
+   * Set own status.
+   */
+  async setStatus(status) {
+    this._requireJoined();
+    const res = await this._put(`/api/mesh/agents/${this.agentId}/status`, { status });
+    return await this._json(res);
   }
 
-  async _get(path) {
-    const res = await fetch(`${this.serverUrl}${path}`);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.error || `HTTP ${res.status}`);
+  // ─── Events ────────────────────────────────────────────────────
+
+  on(event, fn) {
+    if (!this._listeners[event]) this._listeners[event] = [];
+    this._listeners[event].push(fn);
+    return this;
+  }
+
+  off(event, fn) {
+    if (!this._listeners[event]) return this;
+    this._listeners[event] = this._listeners[event].filter((f) => f !== fn);
+    return this;
+  }
+
+  _emit(event, data) {
+    if (this._listeners[event]) {
+      for (const fn of this._listeners[event]) {
+        try { fn(data); } catch (e) { console.error(`[WABAgentMesh] listener error on ${event}:`, e.message); }
+      }
     }
-    return res.json();
+  }
+
+  // ─── Internal ──────────────────────────────────────────────────
+
+  _requireJoined() {
+    if (!this.agentId) throw new Error('Agent not joined. Call join() first.');
+  }
+
+  _startHeartbeat() {
+    this._stopHeartbeat();
+    this._heartbeatTimer = setInterval(async () => {
+      try {
+        await this._post(`/api/mesh/agents/${this.agentId}/heartbeat`);
+        this._retryCount = 0;
+      } catch (e) {
+        this._retryCount++;
+        this._emit('heartbeat-error', { retryCount: this._retryCount, error: e.message });
+        if (this._retryCount >= this._maxRetries) {
+          this._stopHeartbeat();
+          this._emit('disconnected', { reason: 'heartbeat-failed', retries: this._retryCount });
+        }
+      }
+    }, this.heartbeatInterval);
+  }
+
+  _stopHeartbeat() {
+    if (this._heartbeatTimer) {
+      clearInterval(this._heartbeatTimer);
+      this._heartbeatTimer = null;
+    }
   }
 
   async _post(path, body) {
-    const res = await fetch(`${this.serverUrl}${path}`, {
+    const fetch = globalThis.fetch || require('node-fetch');
+    return fetch(`${this.serverUrl}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: body ? JSON.stringify(body) : undefined,
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.error || `HTTP ${res.status}`);
-    }
-    return res.json();
+  }
+
+  async _get(path) {
+    const fetch = globalThis.fetch || require('node-fetch');
+    return fetch(`${this.serverUrl}${path}`);
+  }
+
+  async _put(path, body) {
+    const fetch = globalThis.fetch || require('node-fetch');
+    return fetch(`${this.serverUrl}${path}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
   }
 
   async _patch(path, body) {
-    const res = await fetch(`${this.serverUrl}${path}`, {
+    const fetch = globalThis.fetch || require('node-fetch');
+    return fetch(`${this.serverUrl}${path}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
+  }
+
+  async _delete(path) {
+    const fetch = globalThis.fetch || require('node-fetch');
+    return fetch(`${this.serverUrl}${path}`, { method: 'DELETE' });
+  }
+
+  async _json(res) {
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.error || `HTTP ${res.status}`);
+      const text = await res.text().catch(() => '');
+      let msg;
+      try { msg = JSON.parse(text).error; } catch (_) { msg = text || res.statusText; }
+      throw new Error(`WABAgentMesh HTTP ${res.status}: ${msg}`);
     }
     return res.json();
   }
