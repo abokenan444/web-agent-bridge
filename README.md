@@ -67,6 +67,13 @@ WAB is an open-source middleware layer that bridges AI agents and websites — l
 - **AI Brain Swapping** — Switch between Llama 3, GPT-4, Claude, Gemini, Mistral, or Ollama (local) without reconfiguration
 - **Cross-Site Agent Orchestration** — One agent manages multiple WAB-enabled sites simultaneously via `WABMultiAgent`. Compare prices across stores, aggregate data, run parallel actions, and find the best deal automatically
 
+### v2.3 — Private Agent Mesh (Distributed Mind)
+
+- **Inter-Agent Protocol** — Agents communicate through a private mesh with 5 built-in channels (alerts, discoveries, tactics, negotiations, votes). Real-time knowledge sharing with confidence scoring and auto-expiring messages
+- **Local Reinforcement Learning** — Agents learn from every user decision using UCB1 multi-armed bandit action selection, gradient-descent policy updates, and behavioral pattern mining. Zero external API calls — all learning is local
+- **Symphony Orchestrator** — Four specialized agents (Researcher, Analyst, Negotiator, Guardian) collaborate autonomously through rule-based engines. 5 templates, 6-phase pipeline, Guardian veto for safety, weighted consensus. No external LLM dependency
+- **Agent Mesh Dashboard** — Real-time visualization of your agent mesh: active agents, communication channels, shared knowledge base, symphony compositions, and learning performance metrics
+
 ---
 
 ## Quick Start

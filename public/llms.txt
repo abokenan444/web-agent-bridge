@@ -30,6 +30,7 @@ AI agents today interact with websites through brittle DOM scraping, CSS selecto
 4. **Fairness Engine** — Prevents AI bias toward large platforms; ensures small businesses get equal visibility
 5. **MCP Compatibility** — `wab-mcp-adapter` converts WAB commands into MCP tools for any LLM
 6. **NoScript Fallback** — HTTP-only agents can interact via REST API when JavaScript is unavailable
+7. **Private Agent Mesh** — Inter-agent communication, local reinforcement learning, and symphony orchestration without external LLM dependency
 
 ## Use Cases
 

@@ -255,5 +255,6 @@ class WABAgent {
 }
 
 const { WABMultiAgent } = require('./multi-agent');
+const { WABAgentMesh } = require('./agent-mesh');
 
-module.exports = { WABAgent, WABMultiAgent };
+module.exports = { WABAgent, WABMultiAgent, WABAgentMesh };
