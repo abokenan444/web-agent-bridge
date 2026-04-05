@@ -1558,6 +1558,68 @@
       });
     }
 
+    // ── Commander Agent Protocol ────────────────────────────────────────
+
+    async _cmdPost(path, body) {
+      const base = this.config.serverUrl || '';
+      const res = await fetch(`${base}/api/commander${path}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(`Commander POST ${path} failed: ${res.status}`);
+      return res.json();
+    }
+
+    async _cmdGet(path) {
+      const base = this.config.serverUrl || '';
+      const res = await fetch(`${base}/api/commander${path}`);
+      if (!res.ok) throw new Error(`Commander GET ${path} failed: ${res.status}`);
+      return res.json();
+    }
+
+    /** Launch a mission — decompose a goal and execute it. */
+    async commanderLaunch(goal, options) {
+      const data = await this._cmdPost('/missions/launch', {
+        siteId: this.config.siteId, goal,
+        title: options?.title || goal.substring(0, 80),
+        strategy: options?.strategy,
+        priority: options?.priority, context: options?.context
+      });
+      this.events.emit('commander:mission', data.mission);
+      return data.mission;
+    }
+
+    /** Get commander + edge + local AI stats. */
+    async commanderStats() {
+      return this._cmdGet(`/stats?siteId=${encodeURIComponent(this.config.siteId || 'default')}`);
+    }
+
+    /** Register an edge computing node. */
+    async edgeRegisterNode(hostname, hardware, capabilities) {
+      return this._cmdPost('/edge/nodes', {
+        siteId: this.config.siteId, hostname, hardware, capabilities
+      });
+    }
+
+    /** Submit a task to the edge computing queue. */
+    async edgeSubmitTask(taskType, payload, options) {
+      return this._cmdPost('/edge/tasks', { taskType, payload, ...options });
+    }
+
+    /** Discover local AI models (Ollama, llama.cpp, etc.). */
+    async localAIDiscover(customEndpoints) {
+      return this._cmdPost('/local-ai/discover', {
+        siteId: this.config.siteId, customEndpoints
+      });
+    }
+
+    /** Run inference on a local AI model. */
+    async localAIInfer(prompt, options) {
+      return this._cmdPost('/local-ai/infer', {
+        siteId: this.config.siteId, prompt, ...options
+      });
+    }
+
     destroy() {
       this.events.emit('destroy');
       if (this._meshHeartbeat) { clearInterval(this._meshHeartbeat); this._meshHeartbeat = null; }

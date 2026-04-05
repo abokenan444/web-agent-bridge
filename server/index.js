@@ -20,6 +20,7 @@ const adminRoutes = require('./routes/admin');
 const billingRoutes = require('./routes/billing');
 const sovereignRoutes = require('./routes/sovereign');
 const meshRoutes = require('./routes/mesh');
+const commanderRoutes = require('./routes/commander');
 const { handleWebhookRequest } = require('./services/stripe');
 
 const app = express();
@@ -115,12 +116,16 @@ app.use('/api/admin', apiLimiter, adminRoutes);
 app.use('/api/billing', apiLimiter, billingRoutes);
 app.use('/api/sovereign', apiLimiter, sovereignRoutes);
 app.use('/api/mesh', apiLimiter, meshRoutes);
+app.use('/api/commander', apiLimiter, commanderRoutes);
 
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));
 });
 app.get('/mesh-dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'mesh-dashboard.html'));
+});
+app.get('/commander-dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'commander-dashboard.html'));
 });
 app.get('/docs', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'docs.html'));
