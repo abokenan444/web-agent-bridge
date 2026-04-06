@@ -165,6 +165,34 @@ app.use('/downloads', express.static(path.join(__dirname, '..', 'downloads'), {
   }
 }));
 
+// Agent chat endpoint for WAB Browser
+app.post('/api/wab/agent-chat', express.json({ limit: '16kb' }), (req, res) => {
+  const { message, context } = req.body;
+  if (!message || typeof message !== 'string') {
+    return res.status(400).json({ error: 'Message required' });
+  }
+  // Return structured response — can be expanded with AI integration later
+  const msg = message.toLowerCase();
+  let reply = '';
+
+  if (msg.includes('ghost') || msg.includes('شبح')) {
+    reply = '👻 Ghost Mode يحمي خصوصيتك عبر تدوير User-Agent، إخفاء بصمة Canvas، حظر WebRTC، وإرسال DNT. مثالي للتصفح الخاص بدون تتبع.';
+  } else if (msg.includes('shield') || msg.includes('درع') || msg.includes('حماية')) {
+    reply = '🛡️ Scam Shield يحلل كل موقع تلقائياً: فحص النطاق، TLD، انتحال العلامات التجارية، هجمات Homograph، وأنماط الاحتيال في المحتوى.';
+  } else if (msg.includes('search') || msg.includes('بحث')) {
+    reply = '🔍 Smart Search يدعم DuckDuckGo (افتراضي)، Google، Bing، Startpage مع اقتراحات فورية. غيّر المحرك من القائمة > Search Engine.';
+  } else if (msg.includes('safe') || msg.includes('آمن') || msg.includes('أمان')) {
+    const url = context?.url || '';
+    reply = url ? (url.startsWith('https') ? '🔒 الاتصال مشفر SSL/TLS ✅ — Scam Shield يعمل تلقائياً.' : '⚠️ اتصال غير مشفر — تجنب إدخال بيانات حساسة.') : '📄 لا توجد صفحة محملة حالياً.';
+  } else if (msg.includes('help') || msg.includes('مساعدة')) {
+    reply = '🤖 أنا وكيل WAB Browser. أستطيع مساعدتك في:\\n• تحليل أمان الصفحة\\n• شرح ميزات المتصفح\\n• نصائح الخصوصية والحماية\\n• البحث والتنقل';
+  } else {
+    reply = '🤖 مرحباً! أنا وكيل WAB Browser الذكي. اسألني عن: أمان المواقع، Ghost Mode، Scam Shield، أو أي ميزة في المتصفح.';
+  }
+
+  res.json({ reply, type: 'text' });
+});
+
 const pkg = require('../package.json');
 app.use(`/v${pkg.version.split('.')[0]}`, express.static(path.join(__dirname, '..', 'script')));
 app.use('/latest', express.static(path.join(__dirname, '..', 'script')));
