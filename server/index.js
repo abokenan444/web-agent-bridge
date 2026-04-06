@@ -61,6 +61,7 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc,
+        scriptSrcAttr: scriptSrc,
         styleSrc,
         imgSrc: ["'self'", 'data:', 'https:'],
         connectSrc: ["'self'", 'ws:', 'wss:'],
@@ -68,7 +69,8 @@ app.use(
         frameSrc: ["'none'"],
         frameAncestors: ["'none'"],
         objectSrc: ["'none'"],
-        baseUri: ["'self'"]
+        baseUri: ["'self'"],
+        formAction: ["'self'"]
       }
     },
     crossOriginEmbedderPolicy: false
