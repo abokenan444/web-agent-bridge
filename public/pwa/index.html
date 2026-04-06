@@ -25,7 +25,7 @@
         <span id="secure-icon">
           <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3" y="6" width="8" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 6V4a2 2 0 014 0v2" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
         </span>
-        <input id="url-input" type="text" inputmode="url" placeholder="ابحث أو أدخل عنوان..." autocomplete="off" spellcheck="false" />
+        <input id="url-input" type="text" inputmode="search" enterkeyhint="go" placeholder="ابحث أو أدخل عنوان..." autocomplete="off" spellcheck="false" />
       </div>
       <button id="go-btn" aria-label="Go">
         <svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 9h12M11 5l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -70,6 +70,14 @@
           <span class="feat-label">نظام العدالة</span>
         </div>
       </div>
+    </div>
+    <!-- Search Results -->
+    <div id="search-results" class="hidden">
+      <div id="search-results-header">
+        <span id="search-query-label"></span>
+        <button id="search-close" aria-label="Close">✕</button>
+      </div>
+      <div id="search-results-list"></div>
     </div>
     <!-- Loading overlay -->
     <div id="loading-bar" class="hidden"></div>

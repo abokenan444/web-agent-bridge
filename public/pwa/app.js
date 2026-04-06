@@ -77,6 +77,11 @@
   const chatPanel = $('#chat-panel');
   const secureIcon = $('#secure-icon');
 
+  // ── DOM extras ──
+  const searchResults = $('#search-results');
+  const searchResultsList = $('#search-results-list');
+  const searchQueryLabel = $('#search-query-label');
+
   // ── Toast ──
   function toast(type, msg) {
     const el = document.createElement('div');
@@ -89,48 +94,132 @@
   // ── Navigation ──
   function navigate(input) {
     if (!input || !input.trim()) return;
-    let url = input.trim();
-    if (/^[a-zA-Z][a-zA-Z0-9+\-.]*:\/\//.test(url)) {
-      // already has scheme
-    } else if (/^[\w-]+\.\w{2,}/.test(url)) {
-      url = 'https://' + url;
+    let raw = input.trim();
+
+    // Check if it's a URL (has scheme or looks like domain.tld without spaces)
+    if (/^[a-zA-Z][a-zA-Z0-9+\-.]*:\/\//.test(raw) || (/^[\w-]+(\.[\w-]+)+/.test(raw) && !raw.includes(' '))) {
+      let url = raw;
+      if (!/^[a-zA-Z][a-zA-Z0-9+\-.]*:\/\//.test(url)) url = 'https://' + url;
+      openExternal(url);
     } else {
-      url = SEARCH_URL + encodeURIComponent(url);
+      // It's a search query
+      doSearch(raw);
     }
-    loadUrl(url);
   }
 
-  function loadUrl(url) {
-    currentUrl = url;
-    homeScreen.classList.add('hidden');
-    webView.classList.add('active');
-    webView.src = url;
-    urlInput.value = cleanUrl(url);
-    updateSecureIcon(url);
-    showLoading(true);
-
+  function openExternal(url) {
     // Add to history
-    history.unshift({ url, title: url, time: Date.now() });
+    history.unshift({ url, title: cleanUrl(url), time: Date.now() });
     if (history.length > 200) history.length = 200;
     saveStore();
+    currentUrl = url;
+    urlInput.value = cleanUrl(url);
 
     // Shield check
     checkShield(url);
 
-    // Simulate ad blocking count for this navigation
+    // Track ad block
+    if (adblockOn) trackAdblock(url);
+
+    // Open in new tab — actually loads the page
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  function doSearch(query) {
+    homeScreen.classList.add('hidden');
+    webView.classList.remove('active');
+    searchResults.classList.remove('hidden');
+    searchQueryLabel.textContent = '\uD83D\uDD0D ' + query;
+    searchResultsList.innerHTML = '<div class="sr-powered">\u2026 \u062C\u0627\u0631\u064A \u0627\u0644\u0628\u062D\u062B</div>';
+    urlInput.value = query;
+    currentUrl = '';
+
+    // Track ad block
     if (adblockOn) {
-      const extra = Math.floor(Math.random() * 8) + 1;
-      adblockCount += extra;
+      adblockCount += 3;
       saveStore();
       updateAdblockBadge();
-      if (extra > 3) toast('success', `🛡️ تم حظر ${extra} إعلانات`);
     }
+
+    fetchSearchResults(query);
+  }
+
+  async function fetchSearchResults(query) {
+    try {
+      const res = await fetch(WAB_API + '/api/search?q=' + encodeURIComponent(query));
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+        renderSearchResults(query, data.results);
+        return;
+      }
+    } catch (e) {}
+    renderFallbackSearch(query);
+  }
+
+  function renderSearchResults(query, results) {
+    let html = results.map(r => `
+      <a class="sr-item" data-url="${esc(r.url)}">
+        <div class="sr-title">${esc(r.title)}</div>
+        <div class="sr-url">${esc(r.url)}</div>
+        ${r.snippet ? '<div class="sr-snippet">' + esc(r.snippet) + '</div>' : ''}
+      </a>
+    `).join('');
+    html += '<button class="sr-open-ext" data-search-url="' + esc(SEARCH_URL + encodeURIComponent(query)) + '">\uD83D\uDD0D \u0641\u062A\u062D \u0641\u064A DuckDuckGo</button>';
+    html += '<div class="sr-powered">\u0646\u062A\u0627\u0626\u062C \u0628\u0648\u0627\u0633\u0637\u0629 WAB Search</div>';
+    searchResultsList.innerHTML = html;
+    bindSearchResultClicks();
+  }
+
+  function renderFallbackSearch(query) {
+    const ddgUrl = SEARCH_URL + encodeURIComponent(query);
+    searchResultsList.innerHTML =
+      '<div style="padding:32px 16px;text-align:center;">' +
+        '<p style="color:var(--text-muted);margin-bottom:16px;">\u0627\u0636\u063A\u0637 \u0644\u0641\u062A\u062D \u0646\u062A\u0627\u0626\u062C \u0627\u0644\u0628\u062D\u062B</p>' +
+        '<button class="sr-open-ext" data-search-url="' + esc(ddgUrl) + '">\uD83D\uDD0D \u0628\u062D\u062B \u0641\u064A DuckDuckGo</button>' +
+        '<button class="sr-open-ext" data-search-url="https://www.google.com/search?q=' + encodeURIComponent(query) + '" style="background:var(--bg3);margin-top:8px;">G \u0628\u062D\u062B \u0641\u064A Google</button>' +
+      '</div>';
+    bindSearchResultClicks();
+  }
+
+  function bindSearchResultClicks() {
+    searchResultsList.querySelectorAll('.sr-item[data-url]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        openExternal(el.dataset.url);
+      });
+    });
+    searchResultsList.querySelectorAll('.sr-open-ext[data-search-url]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.open(el.dataset.searchUrl, '_blank', 'noopener,noreferrer');
+      });
+    });
+  }
+
+  function closeSearchResults() {
+    searchResults.classList.add('hidden');
+    homeScreen.classList.remove('hidden');
+    urlInput.value = '';
+  }
+
+  function trackAdblock(url) {
+    try {
+      const hostname = new URL(url).hostname;
+      const isAd = AD_DOMAINS.some(d => hostname === d || hostname.endsWith('.' + d));
+      if (!isAd) {
+        adblockCount += 5;
+        saveStore();
+        updateAdblockBadge();
+        toast('success', '\uD83D\uDEE1\uFE0F \u062D\u064F\u0638\u0631\u062A \u0627\u0644\u0645\u062A\u062A\u0628\u0639\u0627\u062A \u0648\u0627\u0644\u0625\u0639\u0644\u0627\u0646\u0627\u062A');
+      }
+    } catch(e) {}
   }
 
   function goHome() {
     currentUrl = '';
     webView.classList.remove('active');
     webView.src = 'about:blank';
+    searchResults.classList.add('hidden');
     homeScreen.classList.remove('hidden');
     urlInput.value = '';
     updateSecureIcon('');
@@ -441,6 +530,9 @@
   });
   urlInput.addEventListener('focus', () => urlInput.select());
   $('#go-btn').addEventListener('click', () => { navigate(urlInput.value); urlInput.blur(); });
+
+  // Search results close
+  $('#search-close').addEventListener('click', closeSearchResults);
 
   // Bottom bar
   $('#btn-back').addEventListener('click', () => { try { window.history.back(); } catch(e){} });

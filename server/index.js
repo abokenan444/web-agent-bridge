@@ -122,6 +122,49 @@ app.use('/api/mesh', apiLimiter, meshRoutes);
 app.use('/api/commander', apiLimiter, commanderRoutes);
 app.use('/api/ads', apiLimiter, adsRoutes);
 
+// Search proxy for PWA browser — scrapes DuckDuckGo HTML lite
+app.get('/api/search', apiLimiter, async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json({ results: [] });
+  try {
+    const ddgUrl = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q);
+    const resp = await fetch(ddgUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+        'Accept': 'text/html',
+        'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
+      },
+    });
+    const html = await resp.text();
+    const results = [];
+    // Parse DuckDuckGo HTML lite results
+    const resultPattern = /<a[^>]+class="result__a"[^>]+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
+    const snippetPattern = /<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
+    const urls = [];
+    const titles = [];
+    const snippets = [];
+    let m;
+    while ((m = resultPattern.exec(html)) !== null) {
+      urls.push(m[1]);
+      titles.push(m[2].replace(/<[^>]+>/g, '').trim());
+    }
+    while ((m = snippetPattern.exec(html)) !== null) {
+      snippets.push(m[1].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#x27;/g, "'").trim());
+    }
+    for (let i = 0; i < Math.min(urls.length, 10); i++) {
+      let url = urls[i];
+      // DuckDuckGo wraps URLs in redirects
+      const uddg = url.match(/uddg=([^&]+)/);
+      if (uddg) url = decodeURIComponent(uddg[1]);
+      if (!url.startsWith('http')) continue;
+      results.push({ title: titles[i] || url, url, snippet: snippets[i] || '' });
+    }
+    res.json({ results });
+  } catch (e) {
+    res.json({ results: [] });
+  }
+});
+
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));
 });
