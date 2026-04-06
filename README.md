@@ -56,23 +56,41 @@ WAB is an open-source middleware layer that bridges AI agents and websites — l
 - **GDPR/CCPA Consent** — Optional `wab-consent.js` banner with `WABConsent.showBanner()` and `hasConsent()` gate
 - **Admin Dashboard** — User management, tier grants, system analytics
 - **Stripe Integration** — Payment processing with customer portal
+- **Plugin Architecture** — Dynamic plugin system with hook-based execution, per-site installation, priority ordering, ratings, and audit logging
+- **Vision Analysis Service** — Multi-provider screenshot analysis (local Moondream, OpenAI, Anthropic, Ollama) with interactive element detection, bounding box extraction, and AES-256-GCM encrypted API keys
+- **Fairness Engine** — Neutrality layer ensuring AI agents give equal opportunity to small and large sites with fairness-weighted search, commission transparency tracking, and trust signature validation
+- **Agent Memory System** — Persistent behavioral memory with 4 memory types, 5 categories, semantic associations, importance scoring, and TTL-based expiration
+- **Premium Traffic Intelligence** — Advanced bot detection (30+ agent types), behavioral profiling, anomaly/spike detection, security exploit detection (SQLi, XSS), and webhook alerting
+- **E-Mail Service** — SMTP-based transactional emails (welcome, registration, password reset, contact) with branded HTML templates
+- **NoScript Fallback** — 1×1 tracking pixel endpoint for analytics collection when JavaScript is unavailable
+- **WAB-MCP Adapter** — Expose WAB site capabilities as MCP tools for Claude, GPT, Gemini, and other MCP-compatible AI agents
+- **WordPress Plugin** — Native WordPress plugin with settings page, per-page action meta boxes, discovery document generation, and dashboard widget
+- **WAB Browser (Desktop)** — Standalone Electron desktop browser with built-in ad blocker (80+ domains), scam shield, fairness ranking, agent chat, bookmarks, history, and WAB protocol support
+- **PWA Browser (Mobile)** — Progressive Web App browser for Android/iOS with ad blocking, DuckDuckGo search, scam detection, big-tech filtering, and offline-first service worker
+- **Schema Discovery SDK** — Server-side extraction of schema.org JSON-LD Product nodes from HTML with automatic WAB action hint generation
 
 ### v2.0 — Digital Fortress Features
 
-- **Real-time Negotiation Engine** — AI agents negotiate prices directly with WAB-enabled sites using multi-round sessions, 8 condition types, and 4 discount types
-- **Anti-Hallucination Shield** — Cross-verification engine comparing DOM vs vision screenshots, market benchmark validation, temporal consistency checks, and Levenshtein text similarity scoring
-- **Decentralized Reputation System** — Cryptographic trust attestations from the agent network with weighted scoring, trust levels (emerging → verified → exemplary), and global leaderboard
-- **Sovereign Dashboard** — Real-time command center with fairness radar, privacy shield, negotiation logs, verification checks, and AI model switcher
+- **Real-time Negotiation Engine** — AI agents negotiate prices directly with WAB-enabled sites using multi-round sessions. 8 condition types (bulk, loyalty, time-based, first-purchase, cart-value, seasonal, membership, referral) and 4 discount types (percentage, fixed, free-shipping, bonus-item). Includes daily usage limits, minimum order values, and full audit trail of all offers
+- **Anti-Hallucination Shield** — Cross-verification engine comparing DOM vs vision screenshots, market benchmark validation, temporal consistency checks, and Levenshtein text similarity scoring. 4 severity levels (minor → fraud) and 5 response actions (warn, halt, confirm-human, auto-correct, block)
+- **Decentralized Reputation System** — HMAC-signed trust attestations from the agent network covering 6 attestation types (purchase, booking, query, form, navigation, verification). 7 trust levels (unknown → blacklisted), temporal decay, Sybil resistance, global leaderboard, and challenge/dispute system
+- **Sovereign Dashboard** — Real-time command center with fairness radar, privacy shield, negotiation logs, verification checks, and AI model switcher. Exposes `/api/sovereign/dashboard/sovereign` aggregate endpoint
 - **Community Agent Hub** — 11 pre-built YAML agent templates (hotel booking, grocery comparison, artisan marketplace, flight deals, etc.) with CLI runner: `npx wab-agent run template.yaml`
-- **AI Brain Swapping** — Switch between Llama 3, GPT-4, Claude, Gemini, Mistral, or Ollama (local) without reconfiguration
+- **AI Brain Swapping** — Local AI runtime that auto-discovers Ollama and llama.cpp endpoints plus custom OpenAI-compatible APIs. Model capability tracking for text/vision, context window management, latency-based routing, and inference logging with token metrics
 - **Cross-Site Agent Orchestration** — One agent manages multiple WAB-enabled sites simultaneously via `WABMultiAgent`. Compare prices across stores, aggregate data, run parallel actions, and find the best deal automatically
 
 ### v2.3 — Private Agent Mesh (Distributed Mind)
 
-- **Inter-Agent Protocol** — Agents communicate through a private mesh with 5 built-in channels (alerts, discoveries, tactics, negotiations, votes). Real-time knowledge sharing with confidence scoring and auto-expiring messages
-- **Local Reinforcement Learning** — Agents learn from every user decision using UCB1 multi-armed bandit action selection, gradient-descent policy updates, and behavioral pattern mining. Zero external API calls — all learning is local
-- **Symphony Orchestrator** — Four specialized agents (Researcher, Analyst, Negotiator, Guardian) collaborate autonomously through rule-based engines. 5 templates, 6-phase pipeline, Guardian veto for safety, weighted consensus. No external LLM dependency
+- **Inter-Agent Protocol** — Agents communicate through a private mesh with 5 built-in channels (alerts, discoveries, tactics, negotiations, votes). 6 message types with confidence scoring, auto-expiring stale agents via heartbeat, peer verification of shared knowledge. All communication stays local — no external transmission
+- **Local Reinforcement Learning** — Agents learn from every user decision using UCB1 multi-armed bandit action selection, gradient-descent policy updates with sigmoid activation, temporal discounting, and sequential pattern mining. Zero external API calls — all learning is local
+- **Symphony Orchestrator** — Four specialized agents (Researcher, Analyst, Negotiator, Guardian) collaborate autonomously through rule-based engines. 5 templates, 6-phase pipeline (analyze → research → negotiate → guard → synthesize → decide), Guardian veto for safety, weighted consensus. Full phase logging with duration tracking. No external LLM dependency
 - **Agent Mesh Dashboard** — Real-time visualization of your agent mesh: active agents, communication channels, shared knowledge base, symphony compositions, and learning performance metrics
+
+### v2.4 — Commander & Edge Intelligence
+
+- **Commander Agent System** — Local-first mission orchestration engine that decomposes high-level goals into task DAGs. Agent registry with capabilities tracking, parallel execution engine, learning integration for outcome feedback, and edge coordination for distributed work
+- **Edge Compute System** — Transforms every user device into a sovereign AI node. Hardware profiling (CPU, RAM, GPU), AES-256-GCM encrypted inter-node communication, weighted load balancing, heartbeat-based health monitoring with auto-failover, and swarm formation with capability-based clustering
+- **Swarm Execution Engine** — Launch multiple agents in parallel to solve a single task. Configurable strategies (parallel, sequential, hybrid), result merging with best-score selection, role specialization, fairness-weighted aggregation, and per-agent confidence scoring
 
 ---
 
@@ -136,51 +154,119 @@ const info = bridge.getPageInfo();          // get page metadata
 
 ```
 web-agent-bridge/
-├── server/                 # Express.js backend
-│   ├── index.js            # Server entry point
+├── server/                         # Express.js backend
+│   ├── index.js                    # Server entry point
+│   ├── ws.js                       # WebSocket server (live analytics)
 │   ├── routes/
-│   │   ├── auth.js         # Authentication (register/login)
-│   │   ├── api.js          # Sites, config, analytics API
-│   │   ├── license.js      # License verification, token exchange & tracking
-│   │   ├── admin.js        # Admin dashboard API
-│   │   ├── billing.js      # Stripe billing integration
-│   │   └── sovereign.js    # v2.0: negotiation, reputation, verification
+│   │   ├── auth.js                 # Authentication (register/login)
+│   │   ├── api.js                  # Sites, config, analytics API
+│   │   ├── license.js              # License verification, token exchange & tracking
+│   │   ├── admin.js                # Admin dashboard API
+│   │   ├── admin-premium.js        # Admin premium analytics (memory, vision, swarm, plugins)
+│   │   ├── billing.js              # Stripe billing integration
+│   │   ├── sovereign.js            # v2.0: negotiation, reputation, verification, dashboard
+│   │   ├── mesh.js                 # v2.3: agent mesh protocol routes
+│   │   ├── commander.js            # v2.4: mission orchestration routes
+│   │   ├── premium.js              # Premium features
+│   │   ├── premium-v2.js           # v2 premium (memory, vision, healing, swarm, plugins)
+│   │   ├── discovery.js            # WAB discovery + fairness-weighted search
+│   │   ├── wab-api.js              # WAB HTTP transport (alternative to JS/WS)
+│   │   └── noscript.js             # NoScript tracking pixel fallback
 │   ├── services/
-│   │   ├── negotiation.js  # Real-time negotiation engine
-│   │   ├── verification.js # Anti-hallucination shield
-│   │   └── reputation.js   # Decentralized reputation system
+│   │   ├── negotiation.js          # Real-time negotiation engine
+│   │   ├── verification.js         # Anti-hallucination shield
+│   │   ├── reputation.js           # Decentralized reputation system
+│   │   ├── agent-mesh.js           # Inter-agent protocol (mesh)
+│   │   ├── agent-learning.js       # Local reinforcement learning (UCB1)
+│   │   ├── agent-symphony.js       # Symphony orchestrator (4 roles, 6 phases)
+│   │   ├── agent-memory.js         # Persistent agent memory with associations
+│   │   ├── commander.js            # Mission orchestration & task DAGs
+│   │   ├── edge-compute.js         # Edge computing / sovereign AI nodes
+│   │   ├── swarm.js                # Swarm execution engine
+│   │   ├── fairness.js             # Fairness & neutrality engine
+│   │   ├── vision.js               # Vision analysis (multi-provider)
+│   │   ├── self-healing.js         # Self-healing selector corrections
+│   │   ├── local-ai.js             # Local AI model runtime
+│   │   ├── plugins.js              # Plugin architecture (hooks, registry)
+│   │   ├── premium.js              # Premium traffic intelligence & bot detection
+│   │   ├── email.js                # SMTP email service
+│   │   └── stripe.js               # Stripe payment integration
 │   ├── middleware/
-│   │   └── auth.js         # JWT authentication middleware
+│   │   ├── auth.js                 # JWT authentication middleware
+│   │   ├── adminAuth.js            # Admin authentication
+│   │   └── rateLimits.js           # Multi-layer rate limiting
 │   ├── models/
-│   │   └── db.js           # SQLite database & operations
-│   ├── migrations/         # Numbered SQL migrations
+│   │   ├── db.js                   # Database operations
+│   │   └── adapters/              # SQLite, PostgreSQL, MySQL adapters
+│   ├── migrations/                 # Numbered SQL migrations
 │   └── utils/
-│       ├── cache.js        # In-memory cache + analytics queue
-│       └── migrate.js      # Migration runner
-├── public/                 # Frontend
-│   ├── index.html          # Landing page
-│   ├── dashboard.html      # Management dashboard
-│   ├── docs.html           # Documentation
-│   ├── login.html          # Sign in
-│   ├── register.html       # Sign up
-│   ├── admin/              # Admin panel
-│   ├── js/
-│   │   └── ws-client.js    # WebSocket client with auto-reconnect
-│   └── css/styles.css      # Design system
+│       ├── cache.js                # In-memory TTL cache + analytics queue
+│       ├── migrate.js              # Migration runner
+│       └── secureFields.js         # Field-level encryption utilities
+├── public/                         # Frontend
+│   ├── index.html                  # Landing page
+│   ├── dashboard.html              # Management dashboard
+│   ├── premium-dashboard.html      # Premium analytics dashboard
+│   ├── docs.html                   # Documentation
+│   ├── login.html / register.html  # Auth pages
+│   ├── admin/                      # Admin panel
+│   ├── pwa/                        # Progressive Web App (mobile browser)
+│   │   ├── manifest.json           # PWA manifest
+│   │   ├── sw.js                   # Service worker (offline-first)
+│   │   ├── index.html              # Mobile browser UI
+│   │   ├── app.js                  # Ad blocker, scam shield, fairness
+│   │   ├── app.css                 # Mobile-optimized dark theme
+│   │   └── icons/                  # PWA icons (192x192, 512x512)
+│   ├── script/
+│   │   ├── wab.min.js              # Minified WAB client library
+│   │   ├── wab-consent.js          # GDPR/CCPA consent banner
+│   │   ├── wab-schema.js           # Schema.org discovery
+│   │   ├── wab.d.ts                # TypeScript definitions
+│   │   └── wab-consent.d.ts        # Consent TypeScript definitions
+│   ├── js/                         # Dashboard frontend JS
+│   └── css/                        # Stylesheets
 ├── script/
-│   └── ai-agent-bridge.js  # The bridge script (embed in websites)
-├── examples/               # Agent examples (Puppeteer, BiDi, Vision)
-├── packages/               # Framework wrappers
-│   ├── react/              # @web-agent-bridge/react
-│   ├── vue/                # @web-agent-bridge/vue
-│   ├── svelte/             # @web-agent-bridge/svelte
-│   └── langchain/          # @web-agent-bridge/langchain
-├── sdk/                    # Agent SDK for Puppeteer/Playwright
+│   └── ai-agent-bridge.js          # The bridge script (embed in websites)
+├── examples/                       # Agent examples
+│   ├── puppeteer-agent.js          # Puppeteer + window.AICommands
+│   ├── bidi-agent.js               # WebDriver BiDi protocol
+│   ├── vision-agent.js             # Vision/NLP intent resolution
+│   ├── mcp-agent.js                # MCP adapter usage for Claude/GPT
+│   ├── cross-site-agent.js         # Multi-domain orchestration
+│   ├── next-app-router/            # Next.js App Router integration
+│   ├── shopify-hydrogen/           # Shopify Hydrogen storefront
+│   ├── wordpress-elementor/        # WordPress + Elementor setup
+│   └── saas-dashboard/             # SaaS dashboard actions
+├── packages/                       # Framework wrappers
+│   ├── react/                      # @web-agent-bridge/react
+│   ├── vue/                        # @web-agent-bridge/vue
+│   ├── svelte/                     # @web-agent-bridge/svelte
+│   └── langchain/                  # @web-agent-bridge/langchain
+├── sdk/                            # Agent SDK
+│   ├── index.js                    # WABAgent for Puppeteer/Playwright
+│   └── schema-discovery.js         # Server-side schema.org extraction
+├── wab-mcp-adapter/                # MCP adapter for Claude/GPT/Gemini
+│   ├── index.js                    # MCP tool definitions
+│   └── package.json
+├── wab-browser/                    # Electron desktop browser
+│   ├── main.js                     # Electron main process
+│   ├── preload.js                  # Bridge preload
+│   └── package.json
+├── web-agent-bridge-wordpress/     # WordPress plugin
+│   ├── web-agent-bridge.php        # Plugin entry point
+│   ├── includes/                   # PHP classes (API, Actions, Dashboard)
+│   └── assets/                     # Plugin CSS/JS
 ├── bin/
-│   ├── cli.js              # CLI entry point (wab-agent)
-│   └── agent-runner.js     # YAML template runner
-├── templates/              # Community Agent Hub YAML templates
-├── .env                    # Environment variables
+│   ├── cli.js                      # CLI entry point (wab-agent)
+│   └── wab.js                      # Agent runner
+├── templates/                      # 11 Community Agent Hub YAML templates
+├── docs/
+│   ├── SPEC.md                     # WAB Protocol Specification
+│   └── DEPLOY.md                   # Deployment guide
+├── demo-store/                     # Demo store for testing
+├── deploy/                         # Nginx configs
+├── tests/                          # Jest + Supertest test suite
+├── .env                            # Environment variables
 └── package.json
 ```
 
@@ -213,7 +299,7 @@ web-agent-bridge/
 | `/api/license/verify` | POST | Verify license key for domain (cached) |
 | `/api/license/token` | POST | Exchange `siteId` (Origin must match domain) or `licenseKey` for session token |
 | `/api/license/session` | POST | Validate session token (domain-locked) |
-| `/api/license/track` | POST | Record analytics (`sessionToken` + Origin; legacy `licenseKey` only if `ALLOW_LEGACY_LICENSE_TRACK`) |
+| `/api/license/track` | POST | Record analytics (`sessionToken` + Origin) |
 
 ### Sovereign (v2.0)
 | Endpoint | Method | Description |
@@ -231,6 +317,72 @@ web-agent-bridge/
 | `/api/sovereign/verify/text` | POST | Verify text accuracy |
 | `/api/sovereign/verify/page` | POST | Full page verification |
 | `/api/sovereign/dashboard/sovereign` | GET | Dashboard aggregate data |
+
+### Agent Mesh (v2.3)
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/mesh/agents` | POST | Register agent in mesh |
+| `/api/mesh/agents` | GET | List mesh agents |
+| `/api/mesh/channels` | GET | List communication channels |
+| `/api/mesh/messages` | POST | Publish message to channel |
+| `/api/mesh/messages/:channel` | GET | Get messages from channel |
+| `/api/mesh/knowledge` | POST | Share knowledge to mesh |
+| `/api/mesh/knowledge` | GET | Query knowledge base |
+| `/api/mesh/votes` | POST | Start a vote |
+| `/api/mesh/votes/:id/cast` | POST | Cast a vote |
+| `/api/mesh/votes/:id/tally` | GET | Get vote results |
+
+### Commander (v2.4)
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/commander/missions` | POST | Create a new mission |
+| `/api/commander/missions/:id/launch` | POST | Launch mission execution |
+| `/api/commander/missions/:id` | GET | Get mission status |
+| `/api/commander/missions` | GET | List all missions |
+| `/api/commander/agents` | POST | Register an agent |
+| `/api/commander/agents` | GET | List registered agents |
+| `/api/commander/edge/nodes` | POST | Register edge node |
+| `/api/commander/edge/nodes` | GET | List edge nodes |
+| `/api/commander/ai/models` | GET | Discover local AI models |
+| `/api/commander/ai/infer` | POST | Run local AI inference |
+| `/api/commander/stats` | GET | Unified platform statistics |
+
+### Premium v2
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/premium/v2/memory` | POST | Store agent memory |
+| `/api/premium/v2/memory/:agentId` | GET | Recall agent memories |
+| `/api/premium/v2/memory/associate` | POST | Create memory association |
+| `/api/premium/v2/memory/:id` | DELETE | Forget a memory |
+| `/api/premium/v2/memory/consolidate` | POST | Consolidate old memories |
+| `/api/premium/v2/vision/analyze` | POST | Analyze screenshot |
+| `/api/premium/v2/vision/elements` | POST | Extract interactive elements |
+| `/api/premium/v2/healing/corrections` | POST | Register selector correction |
+| `/api/premium/v2/healing/resolve` | POST | Resolve broken selector |
+| `/api/premium/v2/swarm/execute` | POST | Launch swarm task |
+| `/api/premium/v2/swarm/:id` | GET | Get swarm results |
+| `/api/premium/v2/plugins` | GET | List available plugins |
+| `/api/premium/v2/plugins/:id/install` | POST | Install plugin for site |
+| `/api/premium/v2/plugins/:id/hooks` | POST | Execute plugin hook |
+
+### Discovery & Fairness
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/discovery` | GET | WAB discovery document |
+| `/api/discovery/search` | GET | Fairness-weighted site search |
+| `/api/discovery/register` | POST | Register site in WAB directory |
+
+### WAB Protocol (HTTP Transport)
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/wab/session` | POST | Exchange session token |
+| `/api/wab/actions` | GET | Get available actions |
+| `/api/wab/execute` | POST | Execute action via HTTP |
+
+### NoScript Fallback
+| Endpoint | Method | Description |
+|---|---|---|
+| `/noscript/pixel.gif` | GET | 1×1 tracking pixel for non-JS environments |
 
 ---
 
@@ -603,6 +755,8 @@ Ready-to-run agent examples in the [`examples/`](examples/) directory:
 | `puppeteer-agent.js` | Basic agent using Puppeteer + `window.AICommands` |
 | `bidi-agent.js` | Agent using WebDriver BiDi protocol via `window.__wab_bidi` |
 | `vision-agent.js` | Vision/NLP agent — resolves natural language intents to actions using a local keyword-based resolver (no external API) |
+| `mcp-agent.js` | MCP adapter usage for Claude and GPT with tool discovery and execution |
+| `cross-site-agent.js` | Multi-domain orchestration — compare prices across stores, aggregate data, find best deals |
 
 ## Framework + CMS Examples
 
@@ -968,6 +1122,368 @@ fairness_rules:
   - Prefer independent sellers over large platforms
   - Verify all prices before purchase
 ```
+
+---
+
+## Commander Agent System
+
+The Commander is a local-first mission orchestration engine that decomposes high-level goals into task DAGs and distributes work across specialized agents:
+
+```javascript
+// Create a mission
+const mission = await fetch('/api/commander/missions', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    goal: 'Find the cheapest olive oil across 5 stores',
+    strategy: 'parallel',
+    agents: ['researcher-1', 'analyst-1', 'negotiator-1']
+  })
+}).then(r => r.json());
+
+// Launch mission
+await fetch(`/api/commander/missions/${mission.id}/launch`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+
+// Check status
+const status = await fetch(`/api/commander/missions/${mission.id}`, { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+// → { status: 'completed', tasks: [...], result: { bestPrice: 12.99, store: 'farm-direct' } }
+```
+
+### Commander Capabilities
+| Feature | Description |
+|---|---|
+| **Mission Decomposition** | Breaks high-level goals into task DAGs with dependency tracking |
+| **Agent Registry** | Tracks agent capabilities, availability, and performance history |
+| **Parallel Execution** | Runs independent tasks concurrently across multiple agents |
+| **Learning Integration** | Records outcomes for reinforcement learning feedback |
+| **Edge Coordination** | Distributes compute-heavy tasks to edge nodes |
+
+---
+
+## Edge Compute System
+
+Transform every user device into a sovereign AI node — no central cloud required:
+
+```javascript
+// Register a device as an edge node
+const node = await fetch('/api/commander/edge/nodes', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    name: 'my-laptop',
+    capabilities: { cpu: 8, ram: 16384, gpu: true },
+    supportedTasks: ['text-inference', 'vision-analysis', 'price-comparison']
+  })
+}).then(r => r.json());
+
+// List available edge nodes
+const nodes = await fetch('/api/commander/edge/nodes', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+```
+
+| Feature | Description |
+|---|---|
+| **Hardware Profiling** | Detects CPU, RAM, GPU capabilities per node |
+| **AES-256-GCM Encryption** | All inter-node data is encrypted end-to-end |
+| **Weighted Load Balancing** | Routes tasks based on hardware + availability scores |
+| **Heartbeat Health Monitoring** | Auto-failover when nodes become unresponsive |
+| **Swarm Formation** | Capability-based clustering of nodes for distributed tasks |
+
+---
+
+## Swarm Execution Engine
+
+Launch multiple agents in parallel to solve a single task, then intelligently merge their outputs:
+
+```javascript
+// Launch a swarm task
+const swarm = await fetch('/api/premium/v2/swarm/execute', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    task: 'Find best laptop deals under $1000',
+    strategy: 'parallel',        // parallel | sequential | hybrid
+    agentCount: 4,
+    roles: ['researcher', 'analyst', 'price-checker', 'reviewer'],
+    mergeStrategy: 'best-score'  // best-score | fairness-weighted | consensus
+  })
+}).then(r => r.json());
+// → { swarmId: '...', agents: 4, status: 'running' }
+
+// Get merged results
+const results = await fetch(`/api/premium/v2/swarm/${swarm.swarmId}`, {
+  headers: { 'Authorization': 'Bearer ' + token }
+}).then(r => r.json());
+// → { status: 'completed', merged: { bestDeal: {...}, confidence: 0.94 } }
+```
+
+---
+
+## Fairness Engine
+
+A neutrality layer ensuring AI agents give equal opportunity to small and large sites, preventing monopolistic concentration of agent traffic:
+
+```javascript
+// Fairness-weighted search (instead of pure relevance)
+const results = await fetch('/api/discovery/search?q=olive+oil&fairness=true', {
+  headers: { 'Authorization': 'Bearer ' + token }
+}).then(r => r.json());
+// Small farms ranked alongside Amazon — weighted by neutrality score, not just SEO
+
+// Register site in WAB directory
+await fetch('/api/discovery/register', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    domain: 'small-farm.example.com',
+    category: 'food',
+    commissionRate: 0,        // Direct — no middleman
+    independentSeller: true
+  })
+}).then(r => r.json());
+```
+
+### How Neutrality Scoring Works
+| Factor | Weight | Description |
+|---|---|---|
+| **Configuration completeness** | 25% | How well the site has configured WAB |
+| **Trust score** | 25% | Reputation attestations from the agent network |
+| **Transparency** | 25% | Commission disclosure, pricing clarity |
+| **Responsiveness** | 25% | API response time, uptime, action success rate |
+
+Small independent sites with good WAB configuration can outrank large platforms on fairness-weighted searches.
+
+---
+
+## Agent Memory System
+
+Persistent behavioral memory allowing agents to remember user preferences, learn patterns, and build associations:
+
+```javascript
+// Store a memory
+await fetch('/api/premium/v2/memory', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    agentId: 'agent-1',
+    type: 'preference',         // preference | interaction | correction | pattern
+    category: 'purchase',       // navigation | purchase | search | form | custom
+    key: 'preferred-brand',
+    value: 'organic-only',
+    importance: 0.9
+  })
+}).then(r => r.json());
+
+// Recall memories
+const memories = await fetch('/api/premium/v2/memory/agent-1?category=purchase&limit=10', {
+  headers: { 'Authorization': 'Bearer ' + token }
+}).then(r => r.json());
+
+// Create associations
+await fetch('/api/premium/v2/memory/associate', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    sourceId: 'memory-1',
+    targetId: 'memory-2',
+    relationship: 'leads_to'   // leads_to | similar_to | replaces | depends_on
+  })
+}).then(r => r.json());
+```
+
+---
+
+## Vision Analysis Service
+
+Multi-provider screenshot analysis for interactive element detection and data extraction:
+
+```javascript
+// Analyze a screenshot
+const analysis = await fetch('/api/premium/v2/vision/analyze', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    screenshot: 'base64-encoded-image...',
+    provider: 'auto',          // auto | local | openai | anthropic | ollama
+    extractElements: true
+  })
+}).then(r => r.json());
+// → { elements: [{ type: 'button', text: 'Add to Cart', selector: '#add-btn', confidence: 0.95, bbox: [120, 340, 200, 40] }] }
+
+// Extract interactive elements only
+const elements = await fetch('/api/premium/v2/vision/elements', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ screenshot: 'base64...', types: ['button', 'input', 'link'] })
+}).then(r => r.json());
+```
+
+### Supported Vision Providers
+| Provider | Local? | Description |
+|---|---|---|
+| **Moondream** | ✅ | Lightweight local vision model |
+| **Ollama** | ✅ | Local models via Ollama (llava, bakllava) |
+| **OpenAI** | ❌ | GPT-4 Vision |
+| **Anthropic** | ❌ | Claude Vision |
+
+---
+
+## Plugin Architecture
+
+Dynamic plugin system allowing third-party extensions:
+
+```javascript
+// List available plugins
+const plugins = await fetch('/api/premium/v2/plugins', {
+  headers: { 'Authorization': 'Bearer ' + token }
+}).then(r => r.json());
+
+// Install a plugin for your site
+await fetch('/api/premium/v2/plugins/price-alert/install', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ siteId: 'site-uuid', config: { threshold: 10 } })
+}).then(r => r.json());
+
+// Execute a plugin hook
+await fetch('/api/premium/v2/plugins/price-alert/hooks', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ hook: 'onPriceChange', data: { oldPrice: 49.99, newPrice: 39.99 } })
+}).then(r => r.json());
+```
+
+---
+
+## Premium Traffic Intelligence
+
+Advanced bot detection and traffic profiling for premium sites:
+
+| Capability | Description |
+|---|---|
+| **30+ Bot Types** | Detects Google, Bing, ChatGPT, Claude, Perplexity, and more |
+| **Behavioral Profiling** | Classifies agent behavior by signature, platform, and type |
+| **Anomaly Detection** | Spike detection and pattern analysis for unusual traffic |
+| **Security Exploit Detection** | Flags SQL injection, XSS patterns, and rate anomalies |
+| **Webhook Alerting** | Triggers webhooks on suspicious activity |
+| **Compliance Audit Logging** | Full audit trail for regulatory compliance |
+
+---
+
+## WAB-MCP Adapter
+
+Expose WAB site capabilities as [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) tools for Claude, GPT, Gemini, and other MCP-compatible AI agents:
+
+```javascript
+const { WABMCPAdapter } = require('wab-mcp-adapter');
+
+// Create adapter for a WAB-enabled site
+const adapter = new WABMCPAdapter({
+  siteUrl: 'https://shop.example.com',
+  transport: 'http'           // http | websocket | direct
+});
+
+// Get MCP tool definitions
+const tools = await adapter.getTools();
+// → [{ name: 'discover', description: '...', inputSchema: {...} }, ...]
+
+// Execute via MCP
+const result = await adapter.executeTool('execute_action', {
+  name: 'addToCart',
+  params: { sku: 'ABC123' }
+});
+```
+
+### Built-in MCP Tools
+| Tool | Description |
+|---|---|
+| `discover` | Auto-discover available actions on a WAB site |
+| `get_actions` | Get list of all actions with parameters |
+| `execute_action` | Execute a specific action |
+| `read_content` | Read content from the page |
+| `get_page_info` | Get page metadata |
+| `fairness_search` | Search the WAB directory with fairness weighting |
+| `authenticate` | Authenticate an agent with the site |
+
+---
+
+## WAB Browser (Desktop)
+
+Standalone Electron desktop browser with built-in privacy and fairness features:
+
+- **Ad Blocker** — 80+ blocked ad domains + URL pattern matching + cosmetic CSS rules
+- **Scam Shield** — Detects suspicious TLDs and brand-name spoofing in URLs
+- **Fairness Ranking** — Prioritizes independent sites, flags big-tech concentration
+- **Agent Chat** — Built-in AI assistant panel for browsing help
+- **Notifications** — Page analysis with safety and fairness alerts
+- **Ghost Mode** — Privacy-first browsing with no tracking
+- **Smart Search** — DuckDuckGo integration for private search
+- **Desktop/Mobile Toggle** — Switch user-agent for responsive testing
+
+```bash
+# Run the WAB Browser
+cd wab-browser
+npm install
+npx electron .
+
+# Build installer (Windows NSIS)
+npm run build:win
+```
+
+---
+
+## PWA Browser (Mobile)
+
+Progressive Web App browser for Android and iOS — installable from any mobile browser:
+
+- **Ad Blocker** — 45+ ad domain blacklist + URL pattern matching
+- **Scam Detection** — Suspicious TLD alerts and brand-name spoofing checks
+- **Fairness Mode** — Filters big-tech sites to promote independent alternatives
+- **Offline-First** — Service worker caches shell assets for offline launch
+- **Private Search** — DuckDuckGo integration (no Google tracking)
+- **Agent Chat** — AI assistant with remote + local fallback
+
+Install at: `https://yourserver.com/pwa/`
+
+---
+
+## WordPress Plugin
+
+Native WordPress plugin for adding WAB support to any WordPress site:
+
+```bash
+# Install
+cp -r web-agent-bridge-wordpress/ /wp-content/plugins/web-agent-bridge/
+```
+
+| Feature | Description |
+|---|---|
+| **Settings Page** | Configure API base URL, site ID, permissions |
+| **Per-Page Actions** | Meta box for adding custom WAB actions per page/post |
+| **Discovery Document** | Auto-generates WAB discovery endpoint |
+| **Dashboard Widget** | Shows WAB status and agent interaction stats |
+| **Shortcode** | `[wab_bridge]` shortcode for embedding WAB on specific pages |
+| **Hooks API** | `wab_before_action` / `wab_after_action` for custom logic |
+
+See [`web-agent-bridge-wordpress/README.md`](web-agent-bridge-wordpress/README.md) for full documentation.
+
+---
+
+## WAB Protocol Specification
+
+The full normative specification is available at [`docs/SPEC.md`](docs/SPEC.md):
+
+| Layer | Description |
+|---|---|
+| **Protocol Layer** | Discovery document format, command protocol, fairness protocol |
+| **Runtime Layer** | `window.AICommands` interface, auto-discovery engine, security sandbox |
+| **Transport Layer** | JavaScript global, WebSocket, HTTP, WebDriver BiDi, MCP |
+
+### 5-Phase Lifecycle
+1. **Discover** — Agent finds WAB discovery document (`.well-known/wab.json` or script tag)
+2. **Authenticate** — Agent exchanges `siteId` for session token
+3. **Plan** — Agent reads available actions and page metadata
+4. **Execute** — Agent runs actions through the bridge
+5. **Confirm** — Results are verified via Anti-Hallucination Shield
 
 ---
 
