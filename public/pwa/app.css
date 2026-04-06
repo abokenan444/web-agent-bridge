@@ -62,7 +62,8 @@ body {
 #url-input {
   flex: 1; background: none; border: none; color: var(--text);
   font-size: 14px; outline: none; min-width: 0;
-  font-family: inherit;
+  font-family: inherit; -webkit-appearance: none; appearance: none;
+  border-radius: 0;
 }
 #url-input::placeholder { color: var(--text-muted); }
 
