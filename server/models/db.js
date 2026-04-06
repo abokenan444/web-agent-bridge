@@ -287,18 +287,36 @@ function verifyLicense(domain, licenseKey) {
 }
 
 // ─── Admin Operations ─────────────────────────────────────────────────
+function normalizeAdminEmail(email) {
+  if (email == null) return '';
+  return String(email).trim().toLowerCase();
+}
+
 function createAdmin({ email, password, name, role }) {
+  const normEmail = normalizeAdminEmail(email);
+  if (!normEmail) throw new Error('Admin email required');
   const id = uuidv4();
   const hashed = bcrypt.hashSync(password, 12);
-  db.prepare(`INSERT INTO admins (id, email, password, name, role) VALUES (?, ?, ?, ?, ?)`).run(id, email, hashed, name, role || 'admin');
-  return { id, email, name, role: role || 'admin' };
+  db.prepare(`INSERT INTO admins (id, email, password, name, role) VALUES (?, ?, ?, ?, ?)`).run(id, normEmail, hashed, name, role || 'admin');
+  return { id, email: normEmail, name, role: role || 'admin' };
 }
 
 function loginAdmin({ email, password }) {
-  const admin = db.prepare(`SELECT * FROM admins WHERE email = ?`).get(email);
+  const normEmail = normalizeAdminEmail(email);
+  if (!normEmail || password == null || password === '') return null;
+  const admin = db.prepare(`SELECT * FROM admins WHERE LOWER(TRIM(email)) = ?`).get(normEmail);
   if (!admin) return null;
   if (!bcrypt.compareSync(password, admin.password)) return null;
-  return { id: admin.id, email: admin.email, name: admin.name, role: admin.role };
+  return { id: admin.id, email: normEmail, name: admin.name, role: admin.role };
+}
+
+/** CLI / ops only: set password for an existing admin row by email. */
+function resetAdminPassword(email, newPassword) {
+  const normEmail = normalizeAdminEmail(email);
+  if (!normEmail) return false;
+  const hashed = bcrypt.hashSync(newPassword, 12);
+  const r = db.prepare(`UPDATE admins SET password = ? WHERE LOWER(TRIM(email)) = ?`).run(hashed, normEmail);
+  return r.changes > 0;
 }
 
 function findAdminById(id) {
@@ -313,7 +331,7 @@ function maybeBootstrapAdmin() {
   if (isTest) return;
   const count = db.prepare(`SELECT COUNT(*) as c FROM admins`).get().c;
   if (count > 0) return;
-  const email = process.env.BOOTSTRAP_ADMIN_EMAIL;
+  const email = normalizeAdminEmail(process.env.BOOTSTRAP_ADMIN_EMAIL);
   const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
   if (!email || !password) {
     console.warn('[WAB] No admin accounts. Set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD for first boot, or run: node scripts/create-admin.js <email> <password>');
@@ -528,6 +546,7 @@ module.exports = {
   // Admin
   createAdmin,
   loginAdmin,
+  resetAdminPassword,
   findAdminById,
   maybeBootstrapAdmin,
   getAllUsers,

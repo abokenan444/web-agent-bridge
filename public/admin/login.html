@@ -21,7 +21,7 @@
       <form id="loginForm" onsubmit="return handleLogin(event)">
         <div class="form-group">
           <label>Email</label>
-          <input type="email" class="form-input" id="email" required autofocus placeholder="admin@webagentbridge.com">
+          <input type="email" class="form-input" id="email" required autofocus placeholder="your@email.com">
         </div>
         <div class="form-group">
           <label>Password</label>
@@ -42,7 +42,7 @@
 
     async function handleLogin(e) {
       e.preventDefault();
-      const email = document.getElementById('email').value;
+      const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
       const errEl = document.getElementById('loginError');
       const btn = document.getElementById('submitBtn');
