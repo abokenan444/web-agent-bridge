@@ -168,6 +168,43 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_stripe_subs_user ON stripe_subscriptions(user_id);
   CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
   CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications_log(user_id);
+
+  CREATE TABLE IF NOT EXISTS wab_ads (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    image_url TEXT,
+    target_url TEXT NOT NULL,
+    advertiser_name TEXT NOT NULL,
+    advertiser_email TEXT NOT NULL,
+    status TEXT DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','paused','expired')),
+    position TEXT DEFAULT 'new-tab' CHECK(position IN ('new-tab','sidebar','search')),
+    budget REAL DEFAULT 0,
+    spent REAL DEFAULT 0,
+    cost_per_click REAL DEFAULT 0.05,
+    cost_per_impression REAL DEFAULT 0.001,
+    impressions INTEGER DEFAULT 0,
+    clicks INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    approved_by TEXT,
+    approved_at TEXT,
+    expires_at TEXT,
+    FOREIGN KEY (approved_by) REFERENCES admins(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS ad_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ad_id TEXT NOT NULL,
+    event_type TEXT NOT NULL CHECK(event_type IN ('impression','click')),
+    platform TEXT DEFAULT 'browser',
+    ip_hash TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (ad_id) REFERENCES wab_ads(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_wab_ads_status ON wab_ads(status);
+  CREATE INDEX IF NOT EXISTS idx_ad_events_ad ON ad_events(ad_id);
+  CREATE INDEX IF NOT EXISTS idx_ad_events_created ON ad_events(created_at);
 `);
 
 function generateLicenseKey() {
@@ -287,36 +324,18 @@ function verifyLicense(domain, licenseKey) {
 }
 
 // ─── Admin Operations ─────────────────────────────────────────────────
-function normalizeAdminEmail(email) {
-  if (email == null) return '';
-  return String(email).trim().toLowerCase();
-}
-
 function createAdmin({ email, password, name, role }) {
-  const normEmail = normalizeAdminEmail(email);
-  if (!normEmail) throw new Error('Admin email required');
   const id = uuidv4();
   const hashed = bcrypt.hashSync(password, 12);
-  db.prepare(`INSERT INTO admins (id, email, password, name, role) VALUES (?, ?, ?, ?, ?)`).run(id, normEmail, hashed, name, role || 'admin');
-  return { id, email: normEmail, name, role: role || 'admin' };
+  db.prepare(`INSERT INTO admins (id, email, password, name, role) VALUES (?, ?, ?, ?, ?)`).run(id, email, hashed, name, role || 'admin');
+  return { id, email, name, role: role || 'admin' };
 }
 
 function loginAdmin({ email, password }) {
-  const normEmail = normalizeAdminEmail(email);
-  if (!normEmail || password == null || password === '') return null;
-  const admin = db.prepare(`SELECT * FROM admins WHERE LOWER(TRIM(email)) = ?`).get(normEmail);
+  const admin = db.prepare(`SELECT * FROM admins WHERE email = ?`).get(email);
   if (!admin) return null;
   if (!bcrypt.compareSync(password, admin.password)) return null;
-  return { id: admin.id, email: normEmail, name: admin.name, role: admin.role };
-}
-
-/** CLI / ops only: set password for an existing admin row by email. */
-function resetAdminPassword(email, newPassword) {
-  const normEmail = normalizeAdminEmail(email);
-  if (!normEmail) return false;
-  const hashed = bcrypt.hashSync(newPassword, 12);
-  const r = db.prepare(`UPDATE admins SET password = ? WHERE LOWER(TRIM(email)) = ?`).run(hashed, normEmail);
-  return r.changes > 0;
+  return { id: admin.id, email: admin.email, name: admin.name, role: admin.role };
 }
 
 function findAdminById(id) {
@@ -331,7 +350,7 @@ function maybeBootstrapAdmin() {
   if (isTest) return;
   const count = db.prepare(`SELECT COUNT(*) as c FROM admins`).get().c;
   if (count > 0) return;
-  const email = normalizeAdminEmail(process.env.BOOTSTRAP_ADMIN_EMAIL);
+  const email = process.env.BOOTSTRAP_ADMIN_EMAIL;
   const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
   if (!email || !password) {
     console.warn('[WAB] No admin accounts. Set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD for first boot, or run: node scripts/create-admin.js <email> <password>');
@@ -524,6 +543,74 @@ function setPlatformSetting(key, value) {
   db.prepare(`INSERT OR REPLACE INTO platform_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))`).run(key, value);
 }
 
+// ─── Ads Operations ──────────────────────────────────────────────────
+function submitAd({ title, description, imageUrl, targetUrl, advertiserName, advertiserEmail, position, budget, costPerClick, costPerImpression, expiresAt }) {
+  const id = uuidv4();
+  db.prepare(`INSERT INTO wab_ads (id, title, description, image_url, target_url, advertiser_name, advertiser_email, position, budget, cost_per_click, cost_per_impression, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, title, description || '', imageUrl || '', targetUrl, advertiserName, advertiserEmail, position || 'new-tab', budget || 0, costPerClick || 0.05, costPerImpression || 0.001, expiresAt || null);
+  return { id, title, advertiserName, status: 'pending' };
+}
+
+function getActiveAds(position) {
+  let q = `SELECT id, title, description, image_url, target_url, advertiser_name, position FROM wab_ads WHERE status = 'approved' AND (expires_at IS NULL OR expires_at > datetime('now')) AND (budget <= 0 OR spent < budget)`;
+  const params = [];
+  if (position) { q += ` AND position = ?`; params.push(position); }
+  q += ` ORDER BY created_at DESC LIMIT 10`;
+  return db.prepare(q).all(...params);
+}
+
+function getAllAds() {
+  return db.prepare(`SELECT * FROM wab_ads ORDER BY created_at DESC`).all();
+}
+
+function getPendingAds() {
+  return db.prepare(`SELECT * FROM wab_ads WHERE status = 'pending' ORDER BY created_at ASC`).all();
+}
+
+function getAdById(id) {
+  return db.prepare(`SELECT * FROM wab_ads WHERE id = ?`).get(id);
+}
+
+function updateAdStatus(id, status, adminId) {
+  const sets = ['status = ?'];
+  const params = [status];
+  if (status === 'approved') {
+    sets.push('approved_by = ?', 'approved_at = datetime(\'now\')');
+    params.push(adminId);
+  }
+  params.push(id);
+  db.prepare(`UPDATE wab_ads SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+}
+
+function deleteAd(id) {
+  db.prepare(`DELETE FROM ad_events WHERE ad_id = ?`).run(id);
+  db.prepare(`DELETE FROM wab_ads WHERE id = ?`).run(id);
+}
+
+function recordAdEvent(adId, eventType, ipHash) {
+  db.prepare(`INSERT INTO ad_events (ad_id, event_type, ip_hash) VALUES (?, ?, ?)`).run(adId, eventType, ipHash || null);
+  if (eventType === 'click') {
+    const ad = db.prepare(`SELECT cost_per_click FROM wab_ads WHERE id = ?`).get(adId);
+    if (ad) {
+      db.prepare(`UPDATE wab_ads SET clicks = clicks + 1, spent = spent + ? WHERE id = ?`).run(ad.cost_per_click, adId);
+    }
+  } else {
+    const ad = db.prepare(`SELECT cost_per_impression FROM wab_ads WHERE id = ?`).get(adId);
+    if (ad) {
+      db.prepare(`UPDATE wab_ads SET impressions = impressions + 1, spent = spent + ? WHERE id = ?`).run(ad.cost_per_impression, adId);
+    }
+  }
+}
+
+function getAdStats() {
+  const total = db.prepare(`SELECT COUNT(*) as c FROM wab_ads`).get().c;
+  const pending = db.prepare(`SELECT COUNT(*) as c FROM wab_ads WHERE status = 'pending'`).get().c;
+  const approved = db.prepare(`SELECT COUNT(*) as c FROM wab_ads WHERE status = 'approved'`).get().c;
+  const totalImpressions = db.prepare(`SELECT COALESCE(SUM(impressions), 0) as c FROM wab_ads`).get().c;
+  const totalClicks = db.prepare(`SELECT COALESCE(SUM(clicks), 0) as c FROM wab_ads`).get().c;
+  const totalRevenue = db.prepare(`SELECT COALESCE(SUM(spent), 0) as c FROM wab_ads`).get().c;
+  return { total, pending, approved, totalImpressions, totalClicks, totalRevenue };
+}
+
 module.exports = {
   db,
   registerUser,
@@ -546,7 +633,6 @@ module.exports = {
   // Admin
   createAdmin,
   loginAdmin,
-  resetAdminPassword,
   findAdminById,
   maybeBootstrapAdmin,
   getAllUsers,
@@ -576,5 +662,15 @@ module.exports = {
   getNotificationLogs,
   // Platform
   getPlatformSetting,
-  setPlatformSetting
+  setPlatformSetting,
+  // Ads
+  submitAd,
+  getActiveAds,
+  getAllAds,
+  getPendingAds,
+  getAdById,
+  updateAdStatus,
+  deleteAd,
+  recordAdEvent,
+  getAdStats
 };

@@ -41,6 +41,8 @@
         <a href="#" data-view="stripe">🔧 Stripe Config</a>
         <a href="#" data-view="smtp">📧 SMTP / Email</a>
         <a href="#" data-view="notifications">🔔 Notifications</a>
+        <a href="#" data-view="ads">📢 Ads Manager</a>
+        <a href="#" data-view="ad-submissions">📋 Ad Submissions</a>
       </nav>
       <div class="sidebar-footer">
         <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;" id="adminName"></div>
@@ -298,6 +300,66 @@
         </div>
       </div>
 
+      <!-- ── Ads Manager ── -->
+      <div id="view-ads" class="view">
+        <div class="page-header">
+          <h1>📢 Ads Manager</h1>
+          <button class="btn btn-primary" onclick="openCreateAdModal()">+ Create Ad</button>
+        </div>
+        <div class="stats-grid" id="adsStatsGrid">
+          <div class="stat-card"><div class="label">Total Ads</div><div class="value" id="adStatTotal">0</div></div>
+          <div class="stat-card"><div class="label">Pending</div><div class="value" id="adStatPending" style="color:var(--accent-yellow,#f59e0b)">0</div></div>
+          <div class="stat-card"><div class="label">Approved</div><div class="value" id="adStatApproved" style="color:var(--accent-green,#10b981)">0</div></div>
+          <div class="stat-card"><div class="label">Impressions</div><div class="value" id="adStatImpressions">0</div></div>
+          <div class="stat-card"><div class="label">Clicks</div><div class="value" id="adStatClicks">0</div></div>
+          <div class="stat-card"><div class="label">Ad Revenue</div><div class="value" id="adStatRevenue">$0</div></div>
+        </div>
+        <div class="table-wrapper" style="margin-top:24px;">
+          <table>
+            <thead><tr><th>Title</th><th>Advertiser</th><th>Position</th><th>Status</th><th>Impressions</th><th>Clicks</th><th>Budget/Spent</th><th>Actions</th></tr></thead>
+            <tbody id="adsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Create Ad Modal ── -->
+      <div class="modal" id="createAdModal">
+        <div class="modal-content" style="max-width:520px;">
+          <div class="modal-header"><h3>Create New Ad</h3><button class="modal-close" onclick="closeModal('createAdModal')">&times;</button></div>
+          <div class="modal-body">
+            <div class="form-group"><label>Title *</label><input type="text" id="adTitle" class="form-control" placeholder="Ad title"></div>
+            <div class="form-group"><label>Description</label><textarea id="adDesc" class="form-control" rows="2" placeholder="Short description"></textarea></div>
+            <div class="form-group"><label>Target URL *</label><input type="url" id="adTargetUrl" class="form-control" placeholder="https://example.com"></div>
+            <div class="form-group"><label>Image URL</label><input type="url" id="adImageUrl" class="form-control" placeholder="https://example.com/banner.jpg"></div>
+            <div class="form-group"><label>Advertiser Name *</label><input type="text" id="adAdvertiserName" class="form-control" placeholder="Company name"></div>
+            <div class="form-group"><label>Advertiser Email *</label><input type="email" id="adAdvertiserEmail" class="form-control" placeholder="contact@example.com"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="form-group"><label>Position</label><select id="adPosition" class="form-control"><option value="new-tab">New Tab</option><option value="sidebar">Sidebar</option><option value="search">Search Results</option></select></div>
+              <div class="form-group"><label>Budget ($)</label><input type="number" id="adBudget" class="form-control" value="0" min="0" step="0.01"></div>
+              <div class="form-group"><label>CPC ($)</label><input type="number" id="adCPC" class="form-control" value="0.05" min="0" step="0.01"></div>
+              <div class="form-group"><label>CPM ($)</label><input type="number" id="adCPM" class="form-control" value="0.001" min="0" step="0.001"></div>
+            </div>
+            <div class="form-group"><label>Expires At</label><input type="datetime-local" id="adExpires" class="form-control"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('createAdModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="createAd()">Create & Approve</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Ad Submissions ── -->
+      <div id="view-ad-submissions" class="view">
+        <div class="page-header"><h1>📋 Ad Submissions</h1></div>
+        <p style="color:var(--text-muted);margin-bottom:16px;">Review advertiser submissions. Approve or reject ads before they go live in the browser.</p>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Title</th><th>Advertiser</th><th>Email</th><th>URL</th><th>Position</th><th>Budget</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="adSubmissionsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -354,6 +416,8 @@
         case 'stripe': loadStripeConfig(); break;
         case 'smtp': loadSmtpConfig(); break;
         case 'notifications': loadNotifications(); break;
+        case 'ads': loadAds(); break;
+        case 'ad-submissions': loadAdSubmissions(); break;
       }
     }
 
@@ -834,6 +898,130 @@
           </tr>
         `).join('');
       } catch (err) { console.error(err); }
+    }
+
+    // ─── Ads Manager ──────────────────────────────────────────────────
+    const ADS_API = '/api/ads';
+
+    async function loadAds() {
+      try {
+        const [adsRes, statsRes] = await Promise.all([
+          fetch(`${ADS_API}/admin/all`, { headers: headers() }),
+          fetch(`${ADS_API}/admin/stats`, { headers: headers() })
+        ]);
+        const ads = await adsRes.json();
+        const stats = await statsRes.json();
+
+        document.getElementById('adStatTotal').textContent = stats.total || 0;
+        document.getElementById('adStatPending').textContent = stats.pending || 0;
+        document.getElementById('adStatApproved').textContent = stats.approved || 0;
+        document.getElementById('adStatImpressions').textContent = (stats.totalImpressions || 0).toLocaleString();
+        document.getElementById('adStatClicks').textContent = (stats.totalClicks || 0).toLocaleString();
+        document.getElementById('adStatRevenue').textContent = '$' + (stats.totalRevenue || 0).toFixed(2);
+
+        const tbody = document.getElementById('adsTableBody');
+        if (!ads.length) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No ads yet. Create one or wait for submissions.</td></tr>';
+          return;
+        }
+        const statusColors = { pending: '#f59e0b', approved: '#10b981', rejected: '#ef4444', paused: '#6b7280', expired: '#6b7280' };
+        tbody.innerHTML = ads.map(a => `
+          <tr>
+            <td><strong>${esc(a.title)}</strong></td>
+            <td style="font-size:0.85rem;">${esc(a.advertiser_name)}</td>
+            <td><span class="badge">${a.position}</span></td>
+            <td><span style="color:${statusColors[a.status] || '#fff'};font-weight:600;">${a.status}</span></td>
+            <td>${(a.impressions || 0).toLocaleString()}</td>
+            <td>${(a.clicks || 0).toLocaleString()}</td>
+            <td style="font-size:0.85rem;">$${(a.budget || 0).toFixed(2)} / $${(a.spent || 0).toFixed(2)}</td>
+            <td>
+              ${a.status !== 'approved' ? `<button class="btn btn-sm" style="background:#10b981;color:#fff;margin:2px;" onclick="setAdStatus('${a.id}','approved')">✅</button>` : ''}
+              ${a.status !== 'paused' ? `<button class="btn btn-sm" style="background:#f59e0b;color:#fff;margin:2px;" onclick="setAdStatus('${a.id}','paused')">⏸️</button>` : ''}
+              ${a.status !== 'rejected' ? `<button class="btn btn-sm" style="background:#ef4444;color:#fff;margin:2px;" onclick="setAdStatus('${a.id}','rejected')">❌</button>` : ''}
+              <button class="btn btn-sm" style="background:#374151;color:#fff;margin:2px;" onclick="removeAd('${a.id}')">🗑️</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) { console.error('loadAds:', err); }
+    }
+
+    async function setAdStatus(id, status) {
+      await fetch(`${ADS_API}/admin/${id}/status`, { method: 'PUT', headers: headers(), body: JSON.stringify({ status }) });
+      loadAds();
+    }
+
+    async function removeAd(id) {
+      if (!confirm('Delete this ad permanently?')) return;
+      await fetch(`${ADS_API}/admin/${id}`, { method: 'DELETE', headers: headers() });
+      loadAds();
+    }
+
+    function openCreateAdModal() { openModal('createAdModal'); }
+
+    async function createAd() {
+      const title = document.getElementById('adTitle').value.trim();
+      const targetUrl = document.getElementById('adTargetUrl').value.trim();
+      const advertiserName = document.getElementById('adAdvertiserName').value.trim();
+      const advertiserEmail = document.getElementById('adAdvertiserEmail').value.trim();
+      if (!title || !targetUrl || !advertiserName || !advertiserEmail) return alert('Fill required fields');
+      const body = {
+        title,
+        description: document.getElementById('adDesc').value.trim(),
+        targetUrl,
+        imageUrl: document.getElementById('adImageUrl').value.trim(),
+        advertiserName,
+        advertiserEmail,
+        position: document.getElementById('adPosition').value,
+        budget: parseFloat(document.getElementById('adBudget').value) || 0,
+        costPerClick: parseFloat(document.getElementById('adCPC').value) || 0.05,
+        costPerImpression: parseFloat(document.getElementById('adCPM').value) || 0.001,
+        expiresAt: document.getElementById('adExpires').value || null
+      };
+      const res = await fetch(`${ADS_API}/submit`, { method: 'POST', headers: headers(), body: JSON.stringify(body) });
+      const data = await res.json();
+      if (data.ok && data.ad) {
+        // Auto-approve admin-created ads
+        await fetch(`${ADS_API}/admin/${data.ad.id}/status`, { method: 'PUT', headers: headers(), body: JSON.stringify({ status: 'approved' }) });
+      }
+      closeModal('createAdModal');
+      loadAds();
+    }
+
+    async function loadAdSubmissions() {
+      try {
+        const res = await fetch(`${ADS_API}/admin/pending`, { headers: headers() });
+        const pending = await res.json();
+        const tbody = document.getElementById('adSubmissionsTableBody');
+        if (!pending.length) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No pending submissions</td></tr>';
+          return;
+        }
+        tbody.innerHTML = pending.map(a => `
+          <tr>
+            <td><strong>${esc(a.title)}</strong></td>
+            <td>${esc(a.advertiser_name)}</td>
+            <td style="font-size:0.85rem;">${esc(a.advertiser_email)}</td>
+            <td style="font-size:0.85rem;"><a href="${esc(a.target_url)}" target="_blank" rel="noopener">${esc(a.target_url).substring(0, 30)}...</a></td>
+            <td><span class="badge">${a.position}</span></td>
+            <td>$${(a.budget || 0).toFixed(2)}</td>
+            <td style="font-size:0.8rem;color:var(--text-muted);">${new Date(a.created_at).toLocaleString()}</td>
+            <td>
+              <button class="btn btn-sm" style="background:#10b981;color:#fff;margin:2px;" onclick="approveSubmission('${a.id}')">✅ Approve</button>
+              <button class="btn btn-sm" style="background:#ef4444;color:#fff;margin:2px;" onclick="rejectSubmission('${a.id}')">❌ Reject</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) { console.error('loadAdSubmissions:', err); }
+    }
+
+    async function approveSubmission(id) {
+      await fetch(`${ADS_API}/admin/${id}/status`, { method: 'PUT', headers: headers(), body: JSON.stringify({ status: 'approved' }) });
+      loadAdSubmissions();
+    }
+
+    async function rejectSubmission(id) {
+      await fetch(`${ADS_API}/admin/${id}/status`, { method: 'PUT', headers: headers(), body: JSON.stringify({ status: 'rejected' }) });
+      loadAdSubmissions();
     }
 
     // ─── Styles ─────────────────────────────────────────────────────────

@@ -21,6 +21,7 @@ const billingRoutes = require('./routes/billing');
 const sovereignRoutes = require('./routes/sovereign');
 const meshRoutes = require('./routes/mesh');
 const commanderRoutes = require('./routes/commander');
+const adsRoutes = require('./routes/ads');
 const { handleWebhookRequest } = require('./services/stripe');
 
 const app = express();
@@ -119,6 +120,7 @@ app.use('/api/billing', apiLimiter, billingRoutes);
 app.use('/api/sovereign', apiLimiter, sovereignRoutes);
 app.use('/api/mesh', apiLimiter, meshRoutes);
 app.use('/api/commander', apiLimiter, commanderRoutes);
+app.use('/api/ads', apiLimiter, adsRoutes);
 
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));
