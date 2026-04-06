@@ -166,8 +166,8 @@ app.use('/downloads', express.static(path.join(__dirname, '..', 'downloads'), {
 }));
 
 // Agent chat endpoint for WAB Browser
-app.post('/api/wab/agent-chat', express.json({ limit: '16kb' }), (req, res) => {
-  const { message, context } = req.body;
+app.post('/api/wab/agent-chat', (req, res) => {
+  const { message, context } = req.body || {};
   if (!message || typeof message !== 'string') {
     return res.status(400).json({ error: 'Message required' });
   }
