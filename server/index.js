@@ -126,6 +126,17 @@ app.use('/api/ads', apiLimiter, adsRoutes);
 app.get('/api/search', apiLimiter, async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q) return res.json({ results: [] });
+
+  // Try DuckDuckGo HTML lite first
+  let results = await searchDDG(q);
+  if (results.length === 0) {
+    // Fallback: try Google search scraping
+    results = await searchGoogle(q);
+  }
+  res.json({ results });
+});
+
+async function searchDDG(q) {
   try {
     const ddgUrl = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q);
     const resp = await fetch(ddgUrl, {
@@ -137,7 +148,6 @@ app.get('/api/search', apiLimiter, async (req, res) => {
     });
     const html = await resp.text();
     const results = [];
-    // Parse DuckDuckGo HTML lite results
     const resultPattern = /<a[^>]+class="result__a"[^>]+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
     const snippetPattern = /<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
     const urls = [];
@@ -153,17 +163,46 @@ app.get('/api/search', apiLimiter, async (req, res) => {
     }
     for (let i = 0; i < Math.min(urls.length, 10); i++) {
       let url = urls[i];
-      // DuckDuckGo wraps URLs in redirects
       const uddg = url.match(/uddg=([^&]+)/);
       if (uddg) url = decodeURIComponent(uddg[1]);
       if (!url.startsWith('http')) continue;
       results.push({ title: titles[i] || url, url, snippet: snippets[i] || '' });
     }
-    res.json({ results });
+    return results;
   } catch (e) {
-    res.json({ results: [] });
+    return [];
   }
-});
+}
+
+async function searchGoogle(q) {
+  try {
+    const gUrl = 'https://www.google.com/search?q=' + encodeURIComponent(q) + '&num=10&hl=en';
+    const resp = await fetch(gUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+        'Accept': 'text/html',
+        'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
+      },
+    });
+    const html = await resp.text();
+    const results = [];
+    // Google wraps results in <a href="/url?q=ACTUAL_URL&...">
+    const linkPattern = /<a[^>]+href="\/url\?q=([^&"]+)[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
+    let m;
+    while ((m = linkPattern.exec(html)) !== null && results.length < 10) {
+      const url = decodeURIComponent(m[1]);
+      if (!url.startsWith('http')) continue;
+      // Skip Google's own links
+      try { if (new URL(url).hostname.includes('google.')) continue; } catch(e) { continue; }
+      const title = m[2].replace(/<[^>]+>/g, '').trim();
+      if (!title) continue;
+      results.push({ title, url, snippet: '' });
+    }
+    return results;
+  } catch (e) {
+    return [];
+  }
+}
 
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));

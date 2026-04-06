@@ -390,12 +390,10 @@ body {
   font-size: 11px; color: var(--text-muted);
 }
 .sr-powered a { color: var(--accent); text-decoration: none; }
-.sr-open-ext {
-  display: block; text-align: center; padding: 14px;
-  margin: 8px 16px; border-radius: 10px;
-  background: var(--accent); color: #fff;
+.sr-retry {
+  display: inline-block; text-align: center; padding: 12px 24px;
+  border-radius: 10px; background: var(--accent); color: #fff;
   font-size: 14px; font-weight: 600;
-  text-decoration: none; border: none; cursor: pointer;
-  font-family: inherit;
+  border: none; cursor: pointer; font-family: inherit;
 }
-.sr-open-ext:active { opacity: 0.8; }
+.sr-retry:active { opacity: 0.8; }

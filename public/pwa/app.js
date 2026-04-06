@@ -6,7 +6,6 @@
 
   // ── Config ──
   const WAB_API = 'https://webagentbridge.com';
-  const SEARCH_URL = 'https://duckduckgo.com/?q=';
   const STORE_KEY = 'wab_pwa_data';
 
   // ── Ad Blocker Domain List ──
@@ -164,21 +163,17 @@
         ${r.snippet ? '<div class="sr-snippet">' + esc(r.snippet) + '</div>' : ''}
       </a>
     `).join('');
-    html += '<button class="sr-open-ext" data-search-url="' + esc(SEARCH_URL + encodeURIComponent(query)) + '">\uD83D\uDD0D \u0641\u062A\u062D \u0641\u064A DuckDuckGo</button>';
     html += '<div class="sr-powered">\u0646\u062A\u0627\u0626\u062C \u0628\u0648\u0627\u0633\u0637\u0629 WAB Search</div>';
     searchResultsList.innerHTML = html;
     bindSearchResultClicks();
   }
 
   function renderFallbackSearch(query) {
-    const ddgUrl = SEARCH_URL + encodeURIComponent(query);
     searchResultsList.innerHTML =
       '<div style="padding:32px 16px;text-align:center;">' +
-        '<p style="color:var(--text-muted);margin-bottom:16px;">\u0627\u0636\u063A\u0637 \u0644\u0641\u062A\u062D \u0646\u062A\u0627\u0626\u062C \u0627\u0644\u0628\u062D\u062B</p>' +
-        '<button class="sr-open-ext" data-search-url="' + esc(ddgUrl) + '">\uD83D\uDD0D \u0628\u062D\u062B \u0641\u064A DuckDuckGo</button>' +
-        '<button class="sr-open-ext" data-search-url="https://www.google.com/search?q=' + encodeURIComponent(query) + '" style="background:var(--bg3);margin-top:8px;">G \u0628\u062D\u062B \u0641\u064A Google</button>' +
+        '<p style="color:var(--text-muted);margin-bottom:16px;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u062A\u0627\u0626\u062C \u0644\u0640 "' + esc(query) + '"</p>' +
+        '<button class="sr-retry" onclick="document.getElementById(\x27url-input\x27).focus()">\uD83D\uDD04 \u062D\u0627\u0648\u0644 \u0628\u062D\u062B\u0627\u064B \u0622\u062E\u0631</button>' +
       '</div>';
-    bindSearchResultClicks();
   }
 
   function bindSearchResultClicks() {
@@ -186,12 +181,6 @@
       el.addEventListener('click', (e) => {
         e.preventDefault();
         openExternal(el.dataset.url);
-      });
-    });
-    searchResultsList.querySelectorAll('.sr-open-ext[data-search-url]').forEach(el => {
-      el.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.open(el.dataset.searchUrl, '_blank', 'noopener,noreferrer');
       });
     });
   }
