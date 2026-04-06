@@ -1,4 +1,9 @@
 public/video/
+public/video/**
+*.mp4
+*.mov
+*.avi
+*.webm
 public/css/premium.css
 public/premium.html
 public/premium-dashboard.html
@@ -18,5 +23,12 @@ Dockerfile
 deploy/
 demo-store/
 web-agent-bridge-wordpress/
+wab-mcp-adapter/
+packages/
+scripts/
+docs/
+CONTRIBUTING.md
 .git/
 node_modules/
+.env
+.env.*

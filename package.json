@@ -37,7 +37,15 @@
   "files": [
     "bin/",
     "server/",
-    "public/",
+    "public/*.html",
+    "public/*.txt",
+    "public/*.xml",
+    "public/*.json",
+    "public/css/",
+    "public/js/",
+    "public/script/",
+    "public/assets/",
+    "public/.well-known/",
     "script/",
     "sdk/",
     "templates/",
@@ -51,7 +59,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^11.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -62,7 +70,7 @@
     "nodemailer": "^8.0.3",
     "stripe": "^20.4.1",
     "uuid": "^10.0.0",
-    "ws": "^8.19.0"
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "jest": "^30.3.0",
