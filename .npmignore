@@ -8,6 +8,9 @@ public/css/premium.css
 public/premium.html
 public/premium-dashboard.html
 public/admin/
+public/browser.html
+wab-browser/
+downloads/
 server/migrations/002_premium_features.sql
 server/routes/premium.js
 server/routes/premium-v2.js

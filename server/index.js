@@ -153,6 +153,17 @@ app.get('/terms', (req, res) => {
 app.get('/cookies', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'cookies.html'));
 });
+app.get('/browser', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'browser.html'));
+});
+
+// Browser downloads
+app.use('/downloads', express.static(path.join(__dirname, '..', 'downloads'), {
+  maxAge: '1d',
+  setHeaders: (res, filePath) => {
+    res.set('Content-Disposition', 'attachment');
+  }
+}));
 
 const pkg = require('../package.json');
 app.use(`/v${pkg.version.split('.')[0]}`, express.static(path.join(__dirname, '..', 'script')));

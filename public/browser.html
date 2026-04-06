@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB Browser — The Intelligent Web Agent Browser</title>
+  <meta name="description" content="Download WAB Browser - the intelligent browser with Ghost Mode, Scam Shield, and Smart Search. Your data stays on your device.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .browser-hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f0f23 0%, #16213e 50%, #0a192f 100%);
+      position: relative;
+      overflow: hidden;
+      padding: 120px 20px 80px;
+    }
+    .browser-hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(14,165,233,0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 50%, rgba(16,185,129,0.06) 0%, transparent 50%);
+      animation: heroGlow 8s ease-in-out infinite alternate;
+    }
+    @keyframes heroGlow {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(-3%, 2%); }
+    }
+    .hero-content {
+      position: relative;
+      text-align: center;
+      max-width: 900px;
+      z-index: 1;
+    }
+    .browser-logo {
+      display: inline-block;
+      margin-bottom: 32px;
+      filter: drop-shadow(0 0 40px rgba(14,165,233,0.4));
+      animation: logoPulse 3s ease-in-out infinite;
+    }
+    @keyframes logoPulse {
+      0%, 100% { filter: drop-shadow(0 0 40px rgba(14,165,233,0.4)); }
+      50% { filter: drop-shadow(0 0 60px rgba(14,165,233,0.6)); }
+    }
+    .hero-title {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 900;
+      letter-spacing: -2px;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #e2e8f0, #0ea5e9);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-subtitle {
+      font-size: clamp(1rem, 2vw, 1.3rem);
+      color: #94a3b8;
+      margin-bottom: 40px;
+      line-height: 1.6;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .download-section {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 32px;
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      box-shadow: 0 4px 20px rgba(14,165,233,0.3);
+    }
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(14,165,233,0.4);
+    }
+    .download-btn svg { flex-shrink: 0; }
+    .download-btn .btn-text { text-align: left; }
+    .download-btn .btn-label { font-size: 11px; opacity: 0.8; font-weight: 500; }
+    .download-btn.secondary {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: none;
+    }
+    .download-btn.secondary:hover {
+      background: rgba(255,255,255,0.1);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    .hero-note {
+      color: #64748b;
+      font-size: 13px;
+    }
+    .hero-note a { color: #0ea5e9; text-decoration: none; }
+
+    /* Features */
+    .browser-features {
+      padding: 100px 20px;
+      background: #0a0a1a;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .feature-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.3s;
+    }
+    .feature-card:hover {
+      border-color: rgba(14,165,233,0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+    .feature-icon {
+      width: 56px;
+      height: 56px;
+      background: rgba(14,165,233,0.1);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+    .feature-card h3 { font-size: 18px; margin-bottom: 8px; color: #e2e8f0; }
+    .feature-card p { color: #94a3b8; font-size: 14px; line-height: 1.6; }
+
+    .section-title {
+      text-align: center;
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 800;
+      margin-bottom: 16px;
+      color: #e2e8f0;
+    }
+    .section-subtitle {
+      text-align: center;
+      color: #64748b;
+      font-size: 16px;
+      margin-bottom: 60px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* How it works */
+    .how-section {
+      padding: 100px 20px;
+      background: #0f0f23;
+    }
+    .steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px;
+      justify-content: center;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .step {
+      flex: 1;
+      min-width: 240px;
+      max-width: 300px;
+      text-align: center;
+    }
+    .step-number {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      color: white;
+      margin: 0 auto 16px;
+    }
+    .step h3 { font-size: 16px; margin-bottom: 8px; color: #e2e8f0; }
+    .step p { color: #94a3b8; font-size: 13px; line-height: 1.5; }
+
+    /* Privacy */
+    .privacy-section {
+      padding: 80px 20px;
+      background: linear-gradient(135deg, rgba(16,185,129,0.05), rgba(14,165,233,0.05));
+    }
+    .privacy-box {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 48px;
+      text-align: center;
+    }
+    .privacy-box h2 { font-size: 28px; margin-bottom: 16px; color: #10b981; }
+    .privacy-box p { color: #94a3b8; font-size: 15px; line-height: 1.7; margin-bottom: 12px; }
+    .privacy-list {
+      list-style: none;
+      text-align: left;
+      max-width: 500px;
+      margin: 24px auto 0;
+    }
+    .privacy-list li {
+      padding: 10px 0;
+      color: #e2e8f0;
+      font-size: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .privacy-list li::before { content: '✓'; color: #10b981; font-weight: 700; font-size: 16px; }
+
+    /* Footer */
+    .browser-footer {
+      padding: 40px 20px;
+      background: #080816;
+      text-align: center;
+    }
+    .browser-footer p { color: #64748b; font-size: 13px; }
+    .browser-footer a { color: #0ea5e9; text-decoration: none; }
+
+    .coming-soon {
+      display: inline-block;
+      padding: 4px 10px;
+      background: rgba(245,158,11,0.15);
+      color: #f59e0b;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body style="background:#0f0f23;color:#e2e8f0;">
+
+  <!-- ═══════ NAVBAR ═══════ -->
+  <nav class="navbar" id="navbar" style="background:rgba(15,15,35,0.9);backdrop-filter:blur(20px);">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <div class="brand-icon">⚡</div>
+        <span>WAB</span>
+      </a>
+      <ul class="navbar-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#privacy">Privacy</a></li>
+        <li><a href="/docs">Docs</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <a href="#download" class="btn btn-primary btn-sm">Download</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════ HERO ═══════ -->
+  <section class="browser-hero" id="download">
+    <div class="hero-content">
+      <div class="browser-logo">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <defs>
+            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#0ea5e9"/>
+              <stop offset="100%" style="stop-color:#10b981"/>
+            </linearGradient>
+          </defs>
+          <circle cx="60" cy="60" r="54" fill="none" stroke="url(#logoGrad)" stroke-width="2.5"/>
+          <circle cx="60" cy="60" r="40" fill="none" stroke="url(#logoGrad)" stroke-width="1" opacity="0.3"/>
+          <circle cx="60" cy="60" r="25" fill="none" stroke="url(#logoGrad)" stroke-width="0.5" opacity="0.15"/>
+          <path d="M36 78 L48 42 L60 66 L72 42 L84 78" fill="none" stroke="url(#logoGrad)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="60" cy="36" r="5" fill="#0ea5e9"/>
+          <circle cx="60" cy="36" r="8" fill="none" stroke="#0ea5e9" stroke-width="1" opacity="0.3"/>
+        </svg>
+      </div>
+
+      <h1 class="hero-title">WAB Browser</h1>
+      <p class="hero-subtitle">
+        The intelligent browser with Ghost Mode stealth, AI-powered Scam Shield,
+        and Smart Search. Your personal web agent that protects you while you browse.
+      </p>
+
+      <div class="download-section">
+        <a href="/downloads/wab-browser-setup.exe" class="download-btn" id="download-win">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.557l7.357-1.002v7.112H3V5.557zm0 12.886l7.357 1.002v-7.112H3v6.11zM11.643 4.39L22 2.857v8.81h-10.357V4.39zm0 15.22L22 21.143v-8.81H11.643v7.277z"/></svg>
+          <div class="btn-text">
+            <div class="btn-label">Download for</div>
+            <div>Windows</div>
+          </div>
+        </a>
+        <a href="/downloads/wab-browser.dmg" class="download-btn secondary" id="download-mac">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <div class="btn-text">
+            <div class="btn-label">Download for</div>
+            <div>macOS</div>
+          </div>
+        </a>
+        <a href="/downloads/wab-browser.AppImage" class="download-btn secondary" id="download-linux">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.368 1.884 1.43.871.074 1.543-.137 2.073-.467.264-.164.587-.328.653-.525.045-.132.19-.373.075-.553a.463.463 0 00-.115-.124c-.107-.066-.121-.145-.064-.27.138-.296.228-.652.123-1.03-.106-.386-.36-.593-.568-.835-.193-.199-.41-.402-.486-.665-.075-.263.058-.527.057-.786 0-.145-.062-.32-.1-.44a2.28 2.28 0 00-.555-.867c-.373-.354-.712-.515-1.012-.857-.09-.139-.262-.38-.315-.59a1.997 1.997 0 01.07-.857c.1-.276.177-.523.177-.862 0-.364-.136-.849-.454-1.257-.318-.397-.772-.639-1.269-.804a4.24 4.24 0 00-.906-.2c.098-.237.196-.402.26-.627.167-.567.151-1.19-.08-1.738a2.856 2.856 0 00-.35-.671c-.238-.332-.579-.536-.832-.786-.283-.295-.457-.596-.73-.924C10.807 3.44 9.02 2.077 7.374 2.12c-.26.007-.535.074-.77.2-1.195.625-1.108 2.218-.746 3.533.402 1.467-.3 2.614-1.093 3.726"/></svg>
+          <div class="btn-text">
+            <div class="btn-label">Download for</div>
+            <div>Linux</div>
+          </div>
+        </a>
+      </div>
+
+      <p class="hero-note">
+        v1.0.0 · Free · <a href="/privacy">Privacy Policy</a> · Your data stays on your device
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════ FEATURES ═══════ -->
+  <section class="browser-features" id="features">
+    <h2 class="section-title">Built for the Intelligent Web</h2>
+    <p class="section-subtitle">Every feature designed to protect, empower, and simplify your browsing experience.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">👻</div>
+        <h3>Ghost Mode</h3>
+        <p>Advanced fingerprint protection, automatic user-agent rotation, canvas noise injection, and WebGL spoofing. Browse without leaving digital traces.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h3>Scam Shield</h3>
+        <p>Real-time fraud detection analyzing domain patterns, TLD reputation, brand impersonation attempts, and homograph attacks. Every site gets a risk score.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <h3>Smart Search</h3>
+        <p>Multi-engine search with instant suggestions. Switch between DuckDuckGo, Google, Bing, and Startpage. Results are cached locally for instant recall.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Local-First Storage</h3>
+        <p>All your bookmarks, history, preferences, and search cache stored exclusively on your device. No cloud sync means no data exposure.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>WAB Agent Integration</h3>
+        <p>Built-in Web Agent Bridge protocol support. Your agents work natively inside the browser, understanding every page visually and semantically.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Lightweight & Fast</h3>
+        <p>Minimal footprint, no bloatware, no telemetry. Built on Chromium with only the essentials. Starts in seconds, stays fast forever.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ HOW IT WORKS ═══════ -->
+  <section class="how-section">
+    <h2 class="section-title">How It Works</h2>
+    <p class="section-subtitle">Three layers of intelligence working together to protect you.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3>You Browse</h3>
+        <p>Navigate the web normally. Tabs, bookmarks, search — everything you expect from a browser, refined and simplified.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3>Shield Analyzes</h3>
+        <p>Every page is silently analyzed for fraud patterns, suspicious domains, and scam indicators. You see a real-time safety score.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3>Ghost Protects</h3>
+        <p>When Ghost Mode is on, your digital fingerprint is randomized. Sites cannot track, identify, or profile you across the web.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ PRIVACY ═══════ -->
+  <section class="privacy-section" id="privacy">
+    <div class="privacy-box">
+      <h2>🔐 Your Data, Your Device</h2>
+      <p>WAB Browser was built with a radical privacy philosophy: if data doesn't need to leave your device, it stays on your device.</p>
+      <ul class="privacy-list">
+        <li>All bookmarks and history stored locally only</li>
+        <li>Search cache stored on your device, never on our servers</li>
+        <li>No telemetry, no analytics, no tracking</li>
+        <li>Ghost Mode removes all digital fingerprints</li>
+        <li>DNT and GPC headers sent by default</li>
+        <li>WAB Account is optional — for platform features only</li>
+        <li>Open protocol, transparent behavior</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══════ FOOTER ═══════ -->
+  <footer class="browser-footer">
+    <p>WAB Browser v1.0.0 · Built by <a href="/">WebAgentBridge</a> · Free to use</p>
+    <p style="margin-top:8px"><a href="/">Home</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/docs">Documentation</a></p>
+  </footer>
+
+  <script>
+    // Auto-detect OS and highlight the right download button
+    const ua = navigator.userAgent.toLowerCase();
+    if (ua.includes('mac')) {
+      document.getElementById('download-mac').classList.remove('secondary');
+      document.getElementById('download-win').classList.add('secondary');
+    } else if (ua.includes('linux')) {
+      document.getElementById('download-linux').classList.remove('secondary');
+      document.getElementById('download-win').classList.add('secondary');
+    }
+  </script>
+</body>
+</html>
