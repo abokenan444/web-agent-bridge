@@ -50,7 +50,18 @@ jobs:
             -e JWT_SECRET=docker-test-secret \
             -e JWT_SECRET_ADMIN=docker-admin-test-secret \
             web-agent-bridge
-          sleep 5
-          curl -f http://localhost:3000 || exit 1
+          for i in 1 2 3 4 5 6; do
+            sleep 5
+            if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+              echo "Server is healthy"
+              break
+            fi
+            echo "Waiting for server... attempt $i"
+            if [ "$i" = "6" ]; then
+              echo "Server failed to start:"
+              docker logs wab-test
+              exit 1
+            fi
+          done
           docker stop wab-test
           docker rm wab-test

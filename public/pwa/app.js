@@ -80,6 +80,10 @@
   const searchResults = $('#search-results');
   const searchResultsList = $('#search-results-list');
   const searchQueryLabel = $('#search-query-label');
+  const suggestionsDropdown = $('#suggestions-dropdown');
+
+  // ── Suggestion state ──
+  let suggestTimer = null;
 
   // ── Toast ──
   function toast(type, msg) {
@@ -125,6 +129,7 @@
   }
 
   function doSearch(query) {
+    hideSuggestions();
     homeScreen.classList.add('hidden');
     webView.classList.remove('active');
     searchResults.classList.remove('hidden');
@@ -156,16 +161,24 @@
   }
 
   function renderSearchResults(query, results) {
-    let html = results.map(r => `
+    let html = '<div class="sr-result-count">' + results.length + ' \u0646\u062A\u064A\u062C\u0629 \u0644\u0640 "' + esc(query) + '"</div>';
+    html += results.map(r => {
+      const domain = safeDomain(r.url);
+      const favicon = 'https://www.google.com/s2/favicons?sz=32&domain=' + encodeURIComponent(domain);
+      return `
       <a class="sr-item" data-url="${esc(r.url)}">
-        <div class="sr-title">${esc(r.title)}</div>
-        <div class="sr-url">${esc(r.url)}</div>
+        <div class="sr-title"><img class="sr-favicon" src="${esc(favicon)}" alt="" onerror="this.style.display='none'">${esc(r.title)}</div>
+        <div class="sr-url">${esc(domain)}</div>
         ${r.snippet ? '<div class="sr-snippet">' + esc(r.snippet) + '</div>' : ''}
-      </a>
-    `).join('');
-    html += '<div class="sr-powered">\u0646\u062A\u0627\u0626\u062C \u0628\u0648\u0627\u0633\u0637\u0629 WAB Search</div>';
+      </a>`;
+    }).join('');
+    html += '<div class="sr-powered">WAB Search \u2014 \u0645\u062D\u0631\u0643 \u0628\u062D\u062B \u0645\u0633\u062A\u0642\u0644</div>';
     searchResultsList.innerHTML = html;
     bindSearchResultClicks();
+  }
+
+  function safeDomain(url) {
+    try { return new URL(url).hostname; } catch { return url; }
   }
 
   function renderFallbackSearch(query) {
@@ -189,6 +202,71 @@
     searchResults.classList.add('hidden');
     homeScreen.classList.remove('hidden');
     urlInput.value = '';
+    loadTrending();
+  }
+
+  // ── Suggestions ──────────────────────────────────────────────────
+  function showSuggestions(items) {
+    if (!items || items.length === 0) { hideSuggestions(); return; }
+    suggestionsDropdown.innerHTML = items.map(s =>
+      '<div class="suggest-item" data-query="' + esc(s) + '">' +
+        '<span class="suggest-icon">\uD83D\uDD0D</span>' +
+        '<span class="suggest-text">' + esc(s) + '</span>' +
+      '</div>'
+    ).join('');
+    suggestionsDropdown.classList.remove('hidden');
+    suggestionsDropdown.querySelectorAll('.suggest-item').forEach(el => {
+      el.addEventListener('click', () => {
+        urlInput.value = el.dataset.query;
+        hideSuggestions();
+        navigate(el.dataset.query);
+        urlInput.blur();
+      });
+    });
+  }
+
+  function hideSuggestions() {
+    suggestionsDropdown.classList.add('hidden');
+    suggestionsDropdown.innerHTML = '';
+  }
+
+  async function fetchSuggestions(prefix) {
+    if (!prefix || prefix.length < 2) { hideSuggestions(); return; }
+    // If it looks like a URL, don't suggest
+    if (/^[a-zA-Z][a-zA-Z0-9+\-.]*:\/\//.test(prefix) || (/^[\w-]+(\.[\w-]+)+/.test(prefix) && !prefix.includes(' '))) {
+      hideSuggestions(); return;
+    }
+    try {
+      const res = await fetch(WAB_API + '/api/search/suggest?q=' + encodeURIComponent(prefix));
+      const data = await res.json();
+      showSuggestions(data.suggestions || []);
+    } catch (e) { hideSuggestions(); }
+  }
+
+  // ── Trending ────────────────────────────────────────────────────
+  async function loadTrending() {
+    const trendingList = $('#trending-list');
+    if (!trendingList) return;
+    try {
+      const res = await fetch(WAB_API + '/api/search/trending');
+      const data = await res.json();
+      if (data.trending && data.trending.length > 0) {
+        trendingList.innerHTML = data.trending.map(t =>
+          '<span class="trending-tag" data-query="' + esc(t.query) + '">' + esc(t.query) + '</span>'
+        ).join('');
+        trendingList.querySelectorAll('.trending-tag').forEach(el => {
+          el.addEventListener('click', () => {
+            urlInput.value = el.dataset.query;
+            navigate(el.dataset.query);
+          });
+        });
+        $('#trending-section').style.display = '';
+      } else {
+        $('#trending-section').style.display = 'none';
+      }
+    } catch (e) {
+      $('#trending-section').style.display = 'none';
+    }
   }
 
   function trackAdblock(url) {
@@ -360,11 +438,18 @@
   }
 
   // ── Agent Chat ──
+  // ── Chat session ──
+  let chatSessionId = localStorage.getItem('wab_chat_session') || crypto.randomUUID();
+  localStorage.setItem('wab_chat_session', chatSessionId);
+
   function toggleChat() {
     chatOpen = !chatOpen;
     chatPanel.classList.toggle('hidden', !chatOpen);
     if (chatOpen) closeMenu();
   }
+
+  let pwaActiveTaskId = null;
+  let pwaActiveTaskStatus = null;
 
   async function sendChat() {
     const input = $('#chat-input');
@@ -373,32 +458,93 @@
     input.value = '';
     appendChatMsg('user', msg);
 
+    const typing = document.createElement('div');
+    typing.className = 'chat-msg agent typing';
+    typing.textContent = '⏳ الوكيل يعمل...';
+    $('#chat-messages').appendChild(typing);
+    $('#chat-messages').scrollTop = $('#chat-messages').scrollHeight;
+
+    const payload = {
+      message: msg,
+      context: { url: currentUrl },
+      platform: 'wab-pwa',
+      sessionId: chatSessionId,
+    };
+    if (pwaActiveTaskId && pwaActiveTaskStatus === 'clarifying') {
+      payload.taskId = pwaActiveTaskId;
+      payload.taskAction = 'answer';
+    }
+
     try {
       const res = await fetch(WAB_API + '/api/wab/agent-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, context: { url: currentUrl }, platform: 'wab-pwa' }),
+        body: JSON.stringify(payload),
       });
+      typing.remove();
       const data = await res.json();
-      appendChatMsg('agent', data.reply || 'لا يوجد رد');
+
+      if (data.type === 'task') {
+        pwaActiveTaskId = data.taskId || pwaActiveTaskId;
+        pwaActiveTaskStatus = data.status;
+        appendChatMsg('agent', data.message || data.reply || 'Working...');
+
+        if (data.offers && data.offers.length > 0) {
+          const offerHtml = data.offers.map((o, i) => {
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+            return `<div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:10px;margin:4px 0">
+              <b>${medal} ${o.source}</b><br>
+              ${o.title ? `<small>${o.title}</small><br>` : ''}
+              ${o.price ? `💰 ${o.price}<br>` : ''}
+              ${o.negotiation?.savings ? `🤝 وفّرت: ${o.negotiation.savings}<br>` : ''}
+              <a href="${o.url}" style="color:#0ea5e9">${o.url}</a>
+            </div>`;
+          }).join('');
+          const wrapper = document.createElement('div');
+          wrapper.className = 'chat-msg agent';
+          wrapper.innerHTML = offerHtml;
+          $('#chat-messages').appendChild(wrapper);
+          $('#chat-messages').scrollTop = $('#chat-messages').scrollHeight;
+        }
+
+        if (data.status === 'completed' && data.action?.url) {
+          setTimeout(() => { navigateToUrl(data.action.url); }, 1500);
+          pwaActiveTaskId = null;
+          pwaActiveTaskStatus = null;
+        }
+      } else {
+        appendChatMsg('agent', data.reply || 'لا يوجد رد');
+      }
     } catch (e) {
+      typing.remove();
       appendChatMsg('agent', localAgentResponse(msg));
     }
   }
 
   function localAgentResponse(msg) {
     const m = msg.toLowerCase();
-    if (m.includes('مرحب') || m.includes('هلا') || m.includes('hi')) return '🤖 مرحباً! كيف أساعدك اليوم؟';
-    if (m.includes('اعلان') || m.includes('ad')) return '🛡️ حجب الإعلانات يعمل تلقائياً ويحظر الإعلانات والمتتبعات.';
-    if (m.includes('عدال') || m.includes('fairness')) return '⚖️ نظام العدالة يفضّل المواقع الصغيرة الموثوقة على الكبيرة. اضغط زر العدالة لتحليل الموقع.';
-    if (m.includes('شكر') || m.includes('thank')) return '🤖 عفواً! سعيد بمساعدتك.';
-    return '🤖 أنا وكيل WAB. يمكنني مساعدتك في الأمان والخصوصية أثناء التصفح.';
+    if (m.includes('مرحب') || m.includes('هلا') || m.includes('hi') || m.includes('hello')) return '🤖 مرحباً! أنا وكيل WAB. حالياً أنت غير متصل — سأساعدك بما أستطيع.';
+    if (m.includes('أمان') || m.includes('آمن') || m.includes('safe')) {
+      if (currentUrl) {
+        return currentUrl.startsWith('https') ? '🔒 الاتصال مشفر SSL/TLS ✅' : '⚠️ اتصال غير مشفر — تجنب إدخال بيانات حساسة.';
+      }
+      return '📄 لا توجد صفحة محملة حالياً.';
+    }
+    if (m.includes('اعلان') || m.includes('ad')) return '🚫 حاجب الإعلانات يعمل تلقائياً — يحظر 80+ نطاق إعلاني ومتتبع.';
+    if (m.includes('عدال') || m.includes('fairness')) return '⚖️ نظام العدالة يفضّل المواقع الصغيرة الموثوقة على الكبيرة.';
+    if (m.includes('ghost') || m.includes('شبح') || m.includes('خصوصية')) return '👻 Ghost Mode يحمي خصوصيتك — فعّله من القائمة.';
+    if (m.includes('shield') || m.includes('درع')) return '🛡️ Scam Shield يحلل المواقع تلقائياً ضد الاحتيال.';
+    if (m.includes('بحث') || m.includes('search')) return '🔍 WAB Search — محرك بحث مستقل يجمع نتائج من مصادر متعددة.';
+    if (m.includes('شكر') || m.includes('thank')) return '😊 عفواً! سعيد بمساعدتك.';
+    if (m.includes('مساعدة') || m.includes('help')) return '🤖 يمكنني مساعدتك في: أمان المواقع، الخصوصية، حجب الإعلانات، البحث. أنت حالياً غير متصل — اتصل بالإنترنت للحصول على إجابات أفضل.';
+    return '🤖 أنا وكيل WAB. أنت حالياً غير متصل — اتصل بالإنترنت لتفعيل الوكيل الذكي بالكامل.';
   }
 
   function appendChatMsg(who, text) {
     const div = document.createElement('div');
     div.className = 'chat-msg ' + who;
-    div.textContent = text;
+    // Support multi-line messages
+    div.innerHTML = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
     $('#chat-messages').appendChild(div);
     $('#chat-messages').scrollTop = $('#chat-messages').scrollHeight;
   }
@@ -515,10 +661,18 @@
   // ── Event Bindings ──
   // URL bar
   urlInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); navigate(urlInput.value); urlInput.blur(); }
+    if (e.key === 'Enter') { e.preventDefault(); hideSuggestions(); navigate(urlInput.value); urlInput.blur(); }
+    if (e.key === 'Escape') { hideSuggestions(); }
+  });
+  urlInput.addEventListener('input', () => {
+    clearTimeout(suggestTimer);
+    const val = urlInput.value.trim();
+    if (val.length < 2) { hideSuggestions(); return; }
+    suggestTimer = setTimeout(() => fetchSuggestions(val), 250);
   });
   urlInput.addEventListener('focus', () => urlInput.select());
-  $('#go-btn').addEventListener('click', () => { navigate(urlInput.value); urlInput.blur(); });
+  urlInput.addEventListener('blur', () => { setTimeout(hideSuggestions, 200); });
+  $('#go-btn').addEventListener('click', () => { hideSuggestions(); navigate(urlInput.value); urlInput.blur(); });
 
   // Search results close
   $('#search-close').addEventListener('click', closeSearchResults);
@@ -558,6 +712,9 @@
   document.querySelectorAll('.quick-link[data-url]').forEach(link => {
     link.addEventListener('click', () => navigate(link.dataset.url));
   });
+  document.querySelectorAll('.quick-link[data-action="search"]').forEach(link => {
+    link.addEventListener('click', () => { urlInput.focus(); });
+  });
 
   // Home feature row taps
   $('#feat-adblock').addEventListener('click', toggleAdblock);
@@ -575,6 +732,7 @@
   updateAdblockBadge();
   updateMenuAdblock();
   $('#btn-adblock').classList.toggle('active', adblockOn);
+  loadTrending();
 
   // Register Service Worker
   if ('serviceWorker' in navigator) {

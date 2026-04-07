@@ -1,11 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
+const { apiLimiter } = require('../middleware/rateLimits');
+const { validateDomain, validateSiteConfig, sanitizeInput, auditLog } = require('../services/security');
 const {
   addSite, findSitesByUser, findSiteById,
   updateSiteConfig, updateSiteTier, deleteSite,
   getAnalyticsBySite, getAnalyticsTimeline
 } = require('../models/db');
+
+// Apply general API rate limit to all routes
+router.use(apiLimiter);
 
 // ─── Sites ──────────────────────────────────────────────────────────────
 
@@ -26,8 +31,16 @@ router.post('/sites', authenticateToken, (req, res) => {
     return res.status(400).json({ error: 'Domain and name are required' });
   }
 
+  if (!validateDomain(domain)) {
+    return res.status(400).json({ error: 'Invalid domain format. Must be a valid hostname (e.g., example.com)' });
+  }
+
+  const cleanName = sanitizeInput(name, 200);
+  const cleanDesc = description ? sanitizeInput(description, 500) : undefined;
+
   try {
-    const site = addSite({ userId: req.user.id, domain, name, description, tier });
+    const site = addSite({ userId: req.user.id, domain: domain.toLowerCase().trim(), name: cleanName, description: cleanDesc, tier });
+    auditLog({ actorType: 'user', actorId: String(req.user.id), action: 'site_created', resource: 'site', resourceId: String(site.id), ip: req.ip });
     res.status(201).json({ site });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create site' });
@@ -46,11 +59,17 @@ router.put('/sites/:id/config', authenticateToken, (req, res) => {
   const { config } = req.body;
   if (!config) return res.status(400).json({ error: 'Config is required' });
 
+  const validation = validateSiteConfig(config);
+  if (!validation.valid) {
+    return res.status(400).json({ error: validation.error });
+  }
+
   try {
-    const r = updateSiteConfig.run(JSON.stringify(config), req.params.id, req.user.id);
+    const r = updateSiteConfig.run(JSON.stringify(validation.config), req.params.id, req.user.id);
     if (r.changes === 0) {
       return res.status(404).json({ error: 'Site not found' });
     }
+    auditLog({ actorType: 'user', actorId: String(req.user.id), action: 'site_config_updated', resource: 'site', resourceId: req.params.id, ip: req.ip });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update config' });

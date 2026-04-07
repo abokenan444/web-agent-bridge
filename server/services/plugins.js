@@ -360,10 +360,34 @@ function executeHook(hookName, siteId, input) {
     let error = null;
 
     try {
-      const fn = new Function('input', 'config', hook.handler);
+      const vm = require('vm');
+      const sandbox = {
+        input: JSON.parse(JSON.stringify(input || {})),
+        config: {},
+        result: null,
+        JSON,
+        Math,
+        Date,
+        Array,
+        Object,
+        String,
+        Number,
+        Boolean,
+        parseInt,
+        parseFloat,
+        isNaN,
+        isFinite,
+        encodeURIComponent,
+        decodeURIComponent,
+      };
       const inst = installed.find(i => i.plugin_id === hook.plugin_id);
-      const pluginConfig = inst ? parseJSON(inst.config, {}) : {};
-      output = fn(input, pluginConfig);
+      sandbox.config = inst ? JSON.parse(JSON.stringify(parseJSON(inst.config, {}))) : {};
+
+      const wrappedCode = `'use strict'; result = (function(input, config) { ${hook.handler} })(input, config);`;
+      const script = new vm.Script(wrappedCode, { timeout: 1000, filename: `plugin-${hook.plugin_id}.vm` });
+      const context = vm.createContext(sandbox, { codeGeneration: { strings: false, wasm: false } });
+      script.runInContext(context, { timeout: 1000 });
+      output = sandbox.result;
     } catch (err) {
       success = false;
       error = err.message || String(err);

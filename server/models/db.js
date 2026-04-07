@@ -179,10 +179,10 @@ db.exec(`
     advertiser_email TEXT NOT NULL,
     status TEXT DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','paused','expired')),
     position TEXT DEFAULT 'new-tab' CHECK(position IN ('new-tab','sidebar','search')),
-    budget REAL DEFAULT 0,
-    spent REAL DEFAULT 0,
-    cost_per_click REAL DEFAULT 0.05,
-    cost_per_impression REAL DEFAULT 0.001,
+    budget_cents INTEGER DEFAULT 0,
+    spent_cents INTEGER DEFAULT 0,
+    cpc_cents INTEGER DEFAULT 5,
+    cpi_cents INTEGER DEFAULT 1,
     impressions INTEGER DEFAULT 0,
     clicks INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
@@ -544,14 +544,14 @@ function setPlatformSetting(key, value) {
 }
 
 // ─── Ads Operations ──────────────────────────────────────────────────
-function submitAd({ title, description, imageUrl, targetUrl, advertiserName, advertiserEmail, position, budget, costPerClick, costPerImpression, expiresAt }) {
+function submitAd({ title, description, imageUrl, targetUrl, advertiserName, advertiserEmail, position, budgetCents, cpcCents, cpiCents, expiresAt }) {
   const id = uuidv4();
-  db.prepare(`INSERT INTO wab_ads (id, title, description, image_url, target_url, advertiser_name, advertiser_email, position, budget, cost_per_click, cost_per_impression, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, title, description || '', imageUrl || '', targetUrl, advertiserName, advertiserEmail, position || 'new-tab', budget || 0, costPerClick || 0.05, costPerImpression || 0.001, expiresAt || null);
+  db.prepare(`INSERT INTO wab_ads (id, title, description, image_url, target_url, advertiser_name, advertiser_email, position, budget_cents, cpc_cents, cpi_cents, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, title, description || '', imageUrl || '', targetUrl, advertiserName, advertiserEmail, position || 'new-tab', budgetCents || 0, cpcCents || 5, cpiCents || 1, expiresAt || null);
   return { id, title, advertiserName, status: 'pending' };
 }
 
 function getActiveAds(position) {
-  let q = `SELECT id, title, description, image_url, target_url, advertiser_name, position FROM wab_ads WHERE status = 'approved' AND (expires_at IS NULL OR expires_at > datetime('now')) AND (budget <= 0 OR spent < budget)`;
+  let q = `SELECT id, title, description, image_url, target_url, advertiser_name, position FROM wab_ads WHERE status = 'approved' AND (expires_at IS NULL OR expires_at > datetime('now')) AND (budget_cents <= 0 OR spent_cents < budget_cents)`;
   const params = [];
   if (position) { q += ` AND position = ?`; params.push(position); }
   q += ` ORDER BY created_at DESC LIMIT 10`;
@@ -587,16 +587,19 @@ function deleteAd(id) {
 }
 
 function recordAdEvent(adId, eventType, ipHash) {
+  // Deduplicate: skip if same ip+ad+event in last 60s
+  const recent = db.prepare(`SELECT 1 FROM ad_events WHERE ad_id = ? AND event_type = ? AND ip_hash = ? AND created_at > datetime('now', '-60 seconds') LIMIT 1`).get(adId, eventType, ipHash || '');
+  if (recent) return;
   db.prepare(`INSERT INTO ad_events (ad_id, event_type, ip_hash) VALUES (?, ?, ?)`).run(adId, eventType, ipHash || null);
   if (eventType === 'click') {
-    const ad = db.prepare(`SELECT cost_per_click FROM wab_ads WHERE id = ?`).get(adId);
+    const ad = db.prepare(`SELECT cpc_cents FROM wab_ads WHERE id = ?`).get(adId);
     if (ad) {
-      db.prepare(`UPDATE wab_ads SET clicks = clicks + 1, spent = spent + ? WHERE id = ?`).run(ad.cost_per_click, adId);
+      db.prepare(`UPDATE wab_ads SET clicks = clicks + 1, spent_cents = spent_cents + ? WHERE id = ?`).run(ad.cpc_cents, adId);
     }
   } else {
-    const ad = db.prepare(`SELECT cost_per_impression FROM wab_ads WHERE id = ?`).get(adId);
+    const ad = db.prepare(`SELECT cpi_cents FROM wab_ads WHERE id = ?`).get(adId);
     if (ad) {
-      db.prepare(`UPDATE wab_ads SET impressions = impressions + 1, spent = spent + ? WHERE id = ?`).run(ad.cost_per_impression, adId);
+      db.prepare(`UPDATE wab_ads SET impressions = impressions + 1, spent_cents = spent_cents + ? WHERE id = ?`).run(ad.cpi_cents, adId);
     }
   }
 }
@@ -607,8 +610,8 @@ function getAdStats() {
   const approved = db.prepare(`SELECT COUNT(*) as c FROM wab_ads WHERE status = 'approved'`).get().c;
   const totalImpressions = db.prepare(`SELECT COALESCE(SUM(impressions), 0) as c FROM wab_ads`).get().c;
   const totalClicks = db.prepare(`SELECT COALESCE(SUM(clicks), 0) as c FROM wab_ads`).get().c;
-  const totalRevenue = db.prepare(`SELECT COALESCE(SUM(spent), 0) as c FROM wab_ads`).get().c;
-  return { total, pending, approved, totalImpressions, totalClicks, totalRevenue };
+  const totalRevenueCents = db.prepare(`SELECT COALESCE(SUM(spent_cents), 0) as c FROM wab_ads`).get().c;
+  return { total, pending, approved, totalImpressions, totalClicks, totalRevenueCents };
 }
 
 module.exports = {

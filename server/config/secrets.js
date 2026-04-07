@@ -33,10 +33,12 @@ function isProd() {
 function assertSecretsAtStartup() {
   if (isTest()) return;
   if (isProd() && !process.env.JWT_SECRET) {
-    _autoUserSecret = generateAutoSecret('JWT_SECRET');
+    console.error('[WAB] FATAL: JWT_SECRET is not set in production. Refusing to start with insecure defaults.');
+    process.exit(1);
   }
   if (isProd() && !process.env.JWT_SECRET_ADMIN) {
-    _autoAdminSecret = generateAutoSecret('JWT_SECRET_ADMIN');
+    console.error('[WAB] FATAL: JWT_SECRET_ADMIN is not set in production. Refusing to start with insecure defaults.');
+    process.exit(1);
   }
 }
 
@@ -44,14 +46,20 @@ function getJwtUserSecret() {
   if (isTest()) {
     return process.env.JWT_SECRET || 'test-secret-key-for-testing';
   }
-  return process.env.JWT_SECRET || _autoUserSecret || 'dev-user-secret-change-in-development';
+  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+  // Dev mode: generate ephemeral secret per process (not hardcoded)
+  if (!_autoUserSecret) _autoUserSecret = generateAutoSecret('JWT_SECRET');
+  return _autoUserSecret;
 }
 
 function getJwtAdminSecret() {
   if (isTest()) {
-    return process.env.JWT_SECRET_ADMIN || process.env.JWT_SECRET || 'test-secret-key-for-testing-admin';
+    return process.env.JWT_SECRET_ADMIN || 'test-secret-key-for-testing-admin';
   }
-  return process.env.JWT_SECRET_ADMIN || process.env.JWT_SECRET || _autoAdminSecret || _autoUserSecret || 'dev-admin-secret-change-in-development';
+  if (process.env.JWT_SECRET_ADMIN) return process.env.JWT_SECRET_ADMIN;
+  // Dev mode: generate separate ephemeral secret (never share with user secret)
+  if (!_autoAdminSecret) _autoAdminSecret = generateAutoSecret('JWT_SECRET_ADMIN');
+  return _autoAdminSecret;
 }
 
 function signUserToken(payload, options = {}) {

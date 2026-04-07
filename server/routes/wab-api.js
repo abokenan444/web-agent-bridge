@@ -9,8 +9,11 @@
 
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { findSiteById, findSiteByLicense, recordAnalytic, db } = require('../models/db');
 const { broadcastAnalytic } = require('../ws');
+const { wabAuthenticateLimiter, wabActionLimiter, searchLimiter } = require('../middleware/rateLimits');
+const { auditLog } = require('../services/security');
 const {
   calculateNeutralityScore,
   fairnessWeightedSearch,
@@ -82,7 +85,7 @@ function buildErrorResponse(id, code, message) {
 // POST /api/wab/authenticate — session token exchange
 // ═════════════════════════════════════════════════════════════════════
 
-router.post('/authenticate', (req, res) => {
+router.post('/authenticate', wabAuthenticateLimiter, (req, res) => {
   try {
     const { siteId, apiKey, meta } = req.body;
     if (!siteId && !apiKey) {
@@ -91,12 +94,22 @@ router.post('/authenticate', (req, res) => {
 
     let site;
     if (apiKey) {
-      site = db.prepare('SELECT * FROM sites WHERE api_key = ? AND active = 1').get(apiKey);
+      // Timing-safe API key lookup: hash the provided key and compare against stored hashes
+      // to prevent timing attacks on the raw key comparison
+      const allActive = db.prepare('SELECT * FROM sites WHERE active = 1 AND api_key IS NOT NULL').all();
+      site = allActive.find(s => {
+        if (!s.api_key) return false;
+        const a = Buffer.from(s.api_key);
+        const b = Buffer.from(apiKey);
+        if (a.length !== b.length) return false;
+        return crypto.timingSafeEqual(a, b);
+      }) || null;
     } else {
       site = findSiteById.get(siteId);
     }
 
     if (!site) {
+      auditLog({ actorType: 'agent', action: 'wab_auth_failed', details: { siteId }, ip: req.ip, outcome: 'denied', severity: 'warning' });
       return res.status(404).json(buildErrorResponse(null, 'not_found', 'Site not found or invalid credentials'));
     }
 
@@ -105,7 +118,9 @@ router.post('/authenticate', (req, res) => {
       try {
         const reqDomain = new URL(origin).hostname.replace(/^www\./, '');
         const siteDomain = site.domain.replace(/^www\./, '');
-        if (reqDomain !== siteDomain && reqDomain !== 'localhost' && reqDomain !== '127.0.0.1') {
+        const isProduction = process.env.NODE_ENV === 'production';
+        const isLocalhost = reqDomain === 'localhost' || reqDomain === '127.0.0.1';
+        if (reqDomain !== siteDomain && !(isLocalhost && !isProduction)) {
           return res.status(403).json(buildErrorResponse(null, 'origin_mismatch', 'Origin does not match site domain'));
         }
       } catch (_) {}
@@ -193,7 +208,7 @@ router.get('/actions', (req, res) => {
 // POST /api/wab/actions/:name — execute action (with tracking)
 // ═════════════════════════════════════════════════════════════════════
 
-router.post('/actions/:name', requireSession, (req, res) => {
+router.post('/actions/:name', requireSession, wabActionLimiter, (req, res) => {
   try {
     const actionName = req.params.name;
     const site = findSiteById.get(req.wabSession.siteId);
@@ -333,7 +348,7 @@ router.get('/page-info', (req, res) => {
 // GET /api/wab/search — fairness-weighted search (MCP adapter uses this)
 // ═════════════════════════════════════════════════════════════════════
 
-router.get('/search', (req, res) => {
+router.get('/search', searchLimiter, (req, res) => {
   try {
     const query = req.query.q || '';
     const category = req.query.category || null;

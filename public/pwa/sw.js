@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wab-browser-v1';
+const CACHE_NAME = 'wab-browser-v2';
 const SHELL_ASSETS = [
   '/pwa/',
   '/pwa/app.css',

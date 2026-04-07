@@ -11,7 +11,10 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { setupWebSocket } = require('./ws');
 const { runMigrations } = require('./utils/migrate');
-const { maybeBootstrapAdmin } = require('./models/db');
+const { maybeBootstrapAdmin, db } = require('./models/db');
+const { initSearchEngine, search, getSuggestions, getTrendingSearches, getSearchStats, purgeOldCache } = require('./services/search-engine');
+const { processMessage: agentChat } = require('./services/agent-chat');
+const agentTasks = require('./services/agent-tasks');
 
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
@@ -22,6 +25,11 @@ const sovereignRoutes = require('./routes/sovereign');
 const meshRoutes = require('./routes/mesh');
 const commanderRoutes = require('./routes/commander');
 const adsRoutes = require('./routes/ads');
+const wabApiRoutes = require('./routes/wab-api');
+const noscriptRoutes = require('./routes/noscript');
+const discoveryRoutes = require('./routes/discovery');
+const premiumRoutes = require('./routes/premium');
+const adminPremiumRoutes = require('./routes/admin-premium');
 const { handleWebhookRequest } = require('./services/stripe');
 
 const app = express();
@@ -121,88 +129,48 @@ app.use('/api/sovereign', apiLimiter, sovereignRoutes);
 app.use('/api/mesh', apiLimiter, meshRoutes);
 app.use('/api/commander', apiLimiter, commanderRoutes);
 app.use('/api/ads', apiLimiter, adsRoutes);
+app.use('/api/wab', wabApiRoutes);
+app.use('/api/noscript', apiLimiter, noscriptRoutes);
+app.use('/api/discovery', apiLimiter, discoveryRoutes);
+app.use('/api/premium', apiLimiter, premiumRoutes);
+app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);
 
-// Search proxy for PWA browser — scrapes DuckDuckGo HTML lite
-app.get('/api/search', apiLimiter, async (req, res) => {
-  const q = (req.query.q || '').trim();
-  if (!q) return res.json({ results: [] });
+// ─── WAB Search Engine ────────────────────────────────────────────────
 
-  // Try DuckDuckGo HTML lite first
-  let results = await searchDDG(q);
-  if (results.length === 0) {
-    // Fallback: try Google search scraping
-    results = await searchGoogle(q);
-  }
-  res.json({ results });
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many search requests, please slow down' }
 });
 
-async function searchDDG(q) {
-  try {
-    const ddgUrl = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q);
-    const resp = await fetch(ddgUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-        'Accept': 'text/html',
-        'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
-      },
-    });
-    const html = await resp.text();
-    const results = [];
-    const resultPattern = /<a[^>]+class="result__a"[^>]+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
-    const snippetPattern = /<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
-    const urls = [];
-    const titles = [];
-    const snippets = [];
-    let m;
-    while ((m = resultPattern.exec(html)) !== null) {
-      urls.push(m[1]);
-      titles.push(m[2].replace(/<[^>]+>/g, '').trim());
-    }
-    while ((m = snippetPattern.exec(html)) !== null) {
-      snippets.push(m[1].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#x27;/g, "'").trim());
-    }
-    for (let i = 0; i < Math.min(urls.length, 10); i++) {
-      let url = urls[i];
-      const uddg = url.match(/uddg=([^&]+)/);
-      if (uddg) url = decodeURIComponent(uddg[1]);
-      if (!url.startsWith('http')) continue;
-      results.push({ title: titles[i] || url, url, snippet: snippets[i] || '' });
-    }
-    return results;
-  } catch (e) {
-    return [];
-  }
-}
+app.get('/api/search', searchLimiter, async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json({ results: [], cached: false });
+  if (q.length > 200) return res.status(400).json({ error: 'Query too long' });
+  const crypto = require('crypto');
+  const ipHash = crypto.createHash('sha256').update(req.ip || '').digest('hex').slice(0, 16);
+  const result = await search(q, ipHash);
+  res.json(result);
+});
 
-async function searchGoogle(q) {
-  try {
-    const gUrl = 'https://www.google.com/search?q=' + encodeURIComponent(q) + '&num=10&hl=en';
-    const resp = await fetch(gUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-        'Accept': 'text/html',
-        'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
-      },
-    });
-    const html = await resp.text();
-    const results = [];
-    // Google wraps results in <a href="/url?q=ACTUAL_URL&...">
-    const linkPattern = /<a[^>]+href="\/url\?q=([^&"]+)[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
-    let m;
-    while ((m = linkPattern.exec(html)) !== null && results.length < 10) {
-      const url = decodeURIComponent(m[1]);
-      if (!url.startsWith('http')) continue;
-      // Skip Google's own links
-      try { if (new URL(url).hostname.includes('google.')) continue; } catch(e) { continue; }
-      const title = m[2].replace(/<[^>]+>/g, '').trim();
-      if (!title) continue;
-      results.push({ title, url, snippet: '' });
-    }
-    return results;
-  } catch (e) {
-    return [];
-  }
-}
+app.get('/api/search/suggest', searchLimiter, (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json({ suggestions: [] });
+  const suggestions = getSuggestions(q, 8);
+  res.json({ suggestions });
+});
+
+app.get('/api/search/trending', apiLimiter, (req, res) => {
+  const trending = getTrendingSearches(10);
+  res.json({ trending });
+});
+
+app.get('/api/search/stats', apiLimiter, (req, res) => {
+  const stats = getSearchStats();
+  res.json(stats);
+});
 
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));
@@ -249,32 +217,101 @@ app.use('/downloads', express.static(path.join(__dirname, '..', 'downloads'), {
   }
 }));
 
-// Agent chat endpoint for WAB Browser
-app.post('/api/wab/agent-chat', (req, res) => {
-  const { message, context } = req.body || {};
+// Agent chat endpoint for WAB Browser — Real AI Agent
+const chatLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many messages, please slow down' }
+});
+
+app.post('/api/wab/agent-chat', chatLimiter, async (req, res) => {
+  const { message, context, sessionId, taskId, taskAction } = req.body || {};
   if (!message || typeof message !== 'string') {
     return res.status(400).json({ error: 'Message required' });
   }
-  // Return structured response — can be expanded with AI integration later
-  const msg = message.toLowerCase();
-  let reply = '';
-
-  if (msg.includes('ghost') || msg.includes('شبح')) {
-    reply = '👻 Ghost Mode يحمي خصوصيتك عبر تدوير User-Agent، إخفاء بصمة Canvas، حظر WebRTC، وإرسال DNT. مثالي للتصفح الخاص بدون تتبع.';
-  } else if (msg.includes('shield') || msg.includes('درع') || msg.includes('حماية')) {
-    reply = '🛡️ Scam Shield يحلل كل موقع تلقائياً: فحص النطاق، TLD، انتحال العلامات التجارية، هجمات Homograph، وأنماط الاحتيال في المحتوى.';
-  } else if (msg.includes('search') || msg.includes('بحث')) {
-    reply = '🔍 Smart Search يدعم DuckDuckGo (افتراضي)، Google، Bing، Startpage مع اقتراحات فورية. غيّر المحرك من القائمة > Search Engine.';
-  } else if (msg.includes('safe') || msg.includes('آمن') || msg.includes('أمان')) {
-    const url = context?.url || '';
-    reply = url ? (url.startsWith('https') ? '🔒 الاتصال مشفر SSL/TLS ✅ — Scam Shield يعمل تلقائياً.' : '⚠️ اتصال غير مشفر — تجنب إدخال بيانات حساسة.') : '📄 لا توجد صفحة محملة حالياً.';
-  } else if (msg.includes('help') || msg.includes('مساعدة')) {
-    reply = '🤖 أنا وكيل WAB Browser. أستطيع مساعدتك في:\\n• تحليل أمان الصفحة\\n• شرح ميزات المتصفح\\n• نصائح الخصوصية والحماية\\n• البحث والتنقل';
-  } else {
-    reply = '🤖 مرحباً! أنا وكيل WAB Browser الذكي. اسألني عن: أمان المواقع، Ghost Mode، Scam Shield، أو أي ميزة في المتصفح.';
+  if (message.length > 1000) {
+    return res.status(400).json({ error: 'Message too long' });
   }
 
-  res.json({ reply, type: 'text' });
+  const sid = sessionId || req.ip || 'anonymous';
+
+  try {
+    // ── Task actions (user responding to an active task) ──
+    if (taskId && taskAction) {
+      if (taskAction === 'answer') {
+        const result = agentTasks.answerClarification(taskId, message);
+        if (result.status === 'planning') {
+          // Auto-execute after planning
+          const execResult = await agentTasks.executeTask(taskId);
+          return res.json({ ...execResult, type: 'task' });
+        }
+        return res.json({ ...result, type: 'task' });
+      }
+      if (taskAction === 'select') {
+        const idx = parseInt(message.replace(/\D/g, '')) - 1;
+        const result = agentTasks.selectOffer(taskId, idx);
+        return res.json({ ...result, type: 'task' });
+      }
+      if (taskAction === 'cancel') {
+        const result = agentTasks.cancelTask(taskId);
+        return res.json({ ...result, type: 'task' });
+      }
+    }
+
+    // ── Check if user wants to select from existing offers ──
+    if (!taskId) {
+      const selectMatch = message.match(/(?:اختر|اخت(?:ا|ي)ر|select|choose|pick)\s*(\d+)/i);
+      if (selectMatch) {
+        const tasks = agentTasks.getSessionTasks(sid, 1);
+        if (tasks.length > 0 && tasks[0].status === 'presenting') {
+          const idx = parseInt(selectMatch[1]) - 1;
+          const result = agentTasks.selectOffer(tasks[0].id, idx);
+          return res.json({ ...result, type: 'task' });
+        }
+      }
+    }
+
+    // ── Detect if this is a task-type request (booking, shopping, etc.) ──
+    const intent = agentTasks.detectIntent(message);
+    if (intent.confidence >= 0.7 && intent.intent !== 'general') {
+      const task = agentTasks.createTask(sid, message);
+
+      if (task.status === 'clarifying') {
+        return res.json({ ...task, type: 'task' });
+      }
+
+      // If requirements are complete, auto-execute
+      const execResult = await agentTasks.executeTask(task.taskId);
+      return res.json({ ...execResult, type: 'task' });
+    }
+
+    // ── Regular chat (not a task) ──
+    const chatContext = {
+      url: context?.url || '',
+      platform: context?.platform || 'unknown',
+      sessionId: sid,
+    };
+    const result = await agentChat(message, chatContext);
+    res.json(result);
+  } catch (err) {
+    console.error('[agent-chat] Error:', err.message);
+    res.json({ reply: '🤖 عذراً، حدث خطأ. حاول مرة أخرى.', type: 'text' });
+  }
+});
+
+// Agent task status & history
+app.get('/api/wab/agent-task/:id', chatLimiter, (req, res) => {
+  const state = agentTasks.getTaskState(req.params.id);
+  if (!state) return res.status(404).json({ error: 'Task not found' });
+  res.json(state);
+});
+
+app.get('/api/wab/agent-tasks', chatLimiter, (req, res) => {
+  const sid = req.query.sessionId || req.ip || 'anonymous';
+  const tasks = agentTasks.getSessionTasks(sid, 20);
+  res.json({ tasks });
 });
 
 const pkg = require('../package.json');
@@ -293,6 +330,10 @@ if (process.env.NODE_ENV !== 'test') {
   console.log('Running database migrations...');
   runMigrations();
   maybeBootstrapAdmin();
+  initSearchEngine(db);
+
+  // Purge old search cache every hour
+  setInterval(purgeOldCache, 60 * 60 * 1000);
 
   const server = http.createServer(app);
   setupWebSocket(server);

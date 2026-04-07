@@ -341,6 +341,26 @@
       <p class="hero-note">
         v1.0.0 · Free · <a href="/privacy">Privacy Policy</a> · Your data stays on your device
       </p>
+
+      <div style="margin-top:24px;padding:16px 24px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;max-width:600px;margin-left:auto;margin-right:auto;text-align:left;">
+        <p style="color:#94a3b8;font-size:12px;margin-bottom:8px;font-weight:600;">🔐 Verify Your Download</p>
+        <p style="color:#64748b;font-size:11px;line-height:1.6;margin-bottom:8px;">
+          Always verify the checksum after downloading. Open a terminal and run:
+        </p>
+        <code style="display:block;background:#0a0a1a;padding:8px 12px;border-radius:6px;font-size:11px;color:#0ea5e9;word-break:break-all;font-family:'JetBrains Mono',monospace;">
+          # Windows (PowerShell)<br>
+          Get-FileHash .\wab-browser-setup.exe -Algorithm SHA256<br><br>
+          # macOS / Linux<br>
+          shasum -a 256 wab-browser-setup.exe
+        </code>
+        <p style="color:#64748b;font-size:11px;margin-top:8px;">
+          Expected SHA-256: <a href="/downloads/SHA256SUMS.txt" style="color:#10b981;text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:10px;">View checksums file</a>
+        </p>
+        <p style="color:#475569;font-size:10px;margin-top:6px;">
+          All releases are built from the <a href="https://github.com/abokenan444/web-agent-bridge" style="color:#0ea5e9;text-decoration:none;">open-source repository</a>.
+          Desktop browser source is maintained separately as wab-browser/ (private build pipeline).
+        </p>
+      </div>
     </div>
   </section>
 
@@ -363,12 +383,12 @@
       <div class="feature-card">
         <div class="feature-icon">🔍</div>
         <h3>Smart Search</h3>
-        <p>Multi-engine search with instant suggestions. Switch between DuckDuckGo, Google, Bing, and Startpage. Results are cached locally for instant recall.</p>
+        <p>WAB Search engine with instant results, cached locally for fast recall. Multi-source aggregation delivers comprehensive results under the WAB brand — no external branding shown.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🔒</div>
         <h3>Local-First Storage</h3>
-        <p>All your bookmarks, history, preferences, and search cache stored exclusively on your device. No cloud sync means no data exposure.</p>
+        <p>All your bookmarks, history, and preferences stored exclusively on your device. Search is proxied through WAB servers for privacy — external engines never see your IP.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🤖</div>
@@ -426,10 +446,10 @@
   <section class="privacy-section" id="privacy">
     <div class="privacy-box">
       <h2>🔐 Your Data, Your Device</h2>
-      <p>WAB Browser was built with a radical privacy philosophy: if data doesn't need to leave your device, it stays on your device.</p>
+      <p>WAB Browser was built with a strong privacy philosophy: bookmarks, history, and preferences stay on your device. Search queries are proxied through WAB servers to deliver results without exposing you to third-party tracking.</p>
       <ul class="privacy-list">
         <li>All bookmarks and history stored locally only</li>
-        <li>Search cache stored on your device, never on our servers</li>
+        <li>Search queries proxied — external engines never see your IP</li>
         <li>No telemetry, no analytics, no tracking</li>
         <li>Ghost Mode removes all digital fingerprints</li>
         <li>DNT and GPC headers sent by default</li>

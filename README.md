@@ -65,8 +65,8 @@ WAB is an open-source middleware layer that bridges AI agents and websites — l
 - **NoScript Fallback** — 1×1 tracking pixel endpoint for analytics collection when JavaScript is unavailable
 - **WAB-MCP Adapter** — Expose WAB site capabilities as MCP tools for Claude, GPT, Gemini, and other MCP-compatible AI agents
 - **WordPress Plugin** — Native WordPress plugin with settings page, per-page action meta boxes, discovery document generation, and dashboard widget
-- **WAB Browser (Desktop)** — Standalone Electron desktop browser with built-in ad blocker (80+ domains), scam shield, fairness ranking, agent chat, bookmarks, history, and WAB protocol support
-- **PWA Browser (Mobile)** — Progressive Web App browser for Android/iOS with ad blocking, DuckDuckGo search, scam detection, big-tech filtering, and offline-first service worker
+- **WAB Browser (Desktop)** — Standalone Electron desktop browser with built-in ad blocker (80+ domains), scam shield, fairness ranking, agent chat, bookmarks, history, and WAB protocol support. *Desktop source is maintained in a separate private build pipeline (`wab-browser/`); the PWA source below is fully open.*
+- **PWA Browser (Mobile)** — Progressive Web App browser for Android/iOS with ad blocking (80+ domains), WAB Search engine, scam detection, fairness ranking, real AI agent chat, and offline-first service worker. Full source at `public/pwa/`.
 - **Schema Discovery SDK** — Server-side extraction of schema.org JSON-LD Product nodes from HTML with automatic WAB action hint generation
 
 ### v2.0 — Digital Fortress Features
@@ -1416,7 +1416,7 @@ Standalone Electron desktop browser with built-in privacy and fairness features:
 - **Agent Chat** — Built-in AI assistant panel for browsing help
 - **Notifications** — Page analysis with safety and fairness alerts
 - **Ghost Mode** — Privacy-first browsing with no tracking
-- **Smart Search** — DuckDuckGo integration for private search
+- **Smart Search** — WAB Search integration for independent search
 - **Desktop/Mobile Toggle** — Switch user-agent for responsive testing
 
 ```bash
@@ -1435,12 +1435,12 @@ npm run build:win
 
 Progressive Web App browser for Android and iOS — installable from any mobile browser:
 
-- **Ad Blocker** — 45+ ad domain blacklist + URL pattern matching
+- **Ad Blocker** — 80+ ad domain blacklist + URL pattern matching
 - **Scam Detection** — Suspicious TLD alerts and brand-name spoofing checks
 - **Fairness Mode** — Filters big-tech sites to promote independent alternatives
 - **Offline-First** — Service worker caches shell assets for offline launch
-- **Private Search** — DuckDuckGo integration (no Google tracking)
-- **Agent Chat** — AI assistant with remote + local fallback
+- **WAB Search** — Independent search engine with multi-source aggregation, autocomplete, and trending
+- **AI Agent Chat** — Real AI agent (OpenAI / local Ollama / smart fallback) with conversation memory, web search, and security analysis
 
 Install at: `https://yourserver.com/pwa/`
 

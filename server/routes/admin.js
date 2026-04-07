@@ -6,6 +6,8 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateAdmin, generateAdminToken } = require('../middleware/adminAuth');
+const { adminLoginLimiter } = require('../middleware/rateLimits');
+const { auditLog, revokeJWT } = require('../services/security');
 const {
   loginAdmin, findAdminById, createAdmin,
   getAllUsers, getAllSites, getAdminStats, getPlatformAnalytics,
@@ -23,15 +25,27 @@ const { createCheckoutSession, createPortalSession, isStripeConfigured, getStrip
 
 // ─── Auth ──────────────────────────────────────────────────────────────
 
-router.post('/login', (req, res) => {
+router.post('/login', adminLoginLimiter, (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
   const admin = loginAdmin({ email, password });
-  if (!admin) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!admin) {
+    auditLog({ actorType: 'admin', action: 'admin_login_failed', details: { email }, ip: req.ip, outcome: 'denied', severity: 'warning' });
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
 
   const token = generateAdminToken(admin);
+  auditLog({ actorType: 'admin', actorId: String(admin.id), action: 'admin_login', ip: req.ip });
   res.json({ admin, token });
+});
+
+router.post('/logout', authenticateAdmin, (req, res) => {
+  if (req._rawToken) {
+    revokeJWT(req._rawToken, 'admin_logout');
+    auditLog({ actorType: 'admin', actorId: String(req.admin.id), action: 'admin_logout', ip: req.ip });
+  }
+  res.json({ success: true });
 });
 
 router.get('/me', authenticateAdmin, (req, res) => {

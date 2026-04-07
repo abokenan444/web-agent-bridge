@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const { authenticateAdmin } = require('../middleware/adminAuth');
 const {
   submitAd,
@@ -14,6 +15,25 @@ const {
   getAdStats
 } = require('../models/db');
 
+// ─── Rate Limiters ────────────────────────────────────────────────────
+const eventLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => crypto.createHash('sha256').update(req.ip || '').digest('hex').slice(0, 16),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many ad events, slow down' }
+});
+
+const submitLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  keyGenerator: (req) => crypto.createHash('sha256').update(req.ip || '').digest('hex').slice(0, 16),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many ad submissions, try again later' }
+});
+
 // ─── Public Routes ────────────────────────────────────────────────────
 
 // GET /api/ads/active — returns active approved ads for browser
@@ -24,34 +44,42 @@ router.get('/active', (req, res) => {
 });
 
 // POST /api/ads/impression — record ad impression
-router.post('/impression', (req, res) => {
+router.post('/impression', eventLimiter, (req, res) => {
   const { adId } = req.body;
-  if (!adId) return res.status(400).json({ error: 'adId required' });
+  if (!adId || typeof adId !== 'string' || adId.length > 50) return res.status(400).json({ error: 'adId required' });
   const ipHash = crypto.createHash('sha256').update(req.ip || '').digest('hex').slice(0, 16);
   recordAdEvent(adId, 'impression', ipHash);
   res.json({ ok: true });
 });
 
 // POST /api/ads/click — record ad click
-router.post('/click', (req, res) => {
+router.post('/click', eventLimiter, (req, res) => {
   const { adId } = req.body;
-  if (!adId) return res.status(400).json({ error: 'adId required' });
+  if (!adId || typeof adId !== 'string' || adId.length > 50) return res.status(400).json({ error: 'adId required' });
   const ipHash = crypto.createHash('sha256').update(req.ip || '').digest('hex').slice(0, 16);
   recordAdEvent(adId, 'click', ipHash);
   res.json({ ok: true });
 });
 
 // POST /api/ads/submit — public ad submission (advertiser applies)
-router.post('/submit', (req, res) => {
-  const { title, description, imageUrl, targetUrl, advertiserName, advertiserEmail, position, budget, costPerClick, costPerImpression, expiresAt } = req.body;
+router.post('/submit', submitLimiter, (req, res) => {
+  const { title, description, imageUrl, targetUrl, advertiserName, advertiserEmail, position, budgetCents, cpcCents, cpiCents, expiresAt } = req.body;
   if (!title || !targetUrl || !advertiserName || !advertiserEmail) {
     return res.status(400).json({ error: 'title, targetUrl, advertiserName, advertiserEmail required' });
   }
-  // Basic URL validation
+  // Input length validation
+  if (title.length > 200 || (description && description.length > 1000) || advertiserName.length > 100 || advertiserEmail.length > 254) {
+    return res.status(400).json({ error: 'Field too long' });
+  }
+  // Email format validation
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(advertiserEmail)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+  // URL validation
   try { new URL(targetUrl); } catch { return res.status(400).json({ error: 'Invalid targetUrl' }); }
   if (imageUrl) { try { new URL(imageUrl); } catch { return res.status(400).json({ error: 'Invalid imageUrl' }); } }
 
-  const ad = submitAd({ title, description, imageUrl, targetUrl, advertiserName, advertiserEmail, position, budget, costPerClick, costPerImpression, expiresAt });
+  const ad = submitAd({ title, description, imageUrl, targetUrl, advertiserName, advertiserEmail, position, budgetCents, cpcCents, cpiCents, expiresAt });
   res.json({ ok: true, ad });
 });
 

@@ -31,6 +31,8 @@
         <svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 9h12M11 5l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
+    <!-- Suggestions Dropdown -->
+    <div id="suggestions-dropdown" class="hidden"></div>
   </header>
 
   <!-- ══════ Webview Area ══════ -->
@@ -49,10 +51,15 @@
         <p>المتصفح الذكي — مع حجب الإعلانات ونظام العدالة</p>
       </div>
       <div id="quick-links">
-        <a class="quick-link" data-url="https://duckduckgo.com">🔍<span>بحث</span></a>
+        <a class="quick-link" data-action="search">🔍<span>بحث</span></a>
         <a class="quick-link" data-url="https://youtube.com">▶️<span>يوتيوب</span></a>
         <a class="quick-link" data-url="https://wikipedia.org">📚<span>ويكيبيديا</span></a>
         <a class="quick-link" data-url="https://github.com">💻<span>GitHub</span></a>
+      </div>
+      <!-- Trending Searches -->
+      <div id="trending-section">
+        <p class="trending-title">🔥 رائج الآن</p>
+        <div id="trending-list"></div>
       </div>
       <div id="home-features">
         <div class="home-feat" id="feat-adblock">
