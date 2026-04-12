@@ -13,6 +13,7 @@
   height: 100vh;
   overflow: hidden;
   direction: ltr;
+  -webkit-overflow-scrolling: touch;
 }
 
 .aws-body[dir="rtl"] { direction: rtl; }
@@ -193,6 +194,7 @@
   overflow: hidden;
   position: relative;
   min-height: 0;
+  min-width: 0;
 }
 
 .aws-panel-header {
@@ -269,6 +271,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 /* ─── Panel 1: Browser ──────────────────────────────────────────────── */
@@ -369,6 +372,8 @@
   flex-direction: column;
   gap: 10px;
   scroll-behavior: smooth;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .aws-chat-messages::-webkit-scrollbar { width: 4px; }
@@ -533,6 +538,8 @@
   flex: 1;
   overflow-y: auto;
   padding: 12px;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .aws-monitor-content::-webkit-scrollbar { width: 4px; }
@@ -700,6 +707,8 @@
   flex: 1;
   overflow-y: auto;
   padding: 12px;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .aws-results-content::-webkit-scrollbar { width: 4px; }
@@ -796,6 +805,18 @@
   color: #34d399;
   font-size: 0.72rem;
   font-weight: 700;
+}
+
+.aws-result-rating {
+  font-size: 0.78rem;
+  color: #fbbf24;
+  margin: 4px 0;
+}
+
+.aws-result-total {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
 }
 
 .aws-result-details {
@@ -1178,21 +1199,47 @@
 @media (max-width: 1024px) {
   .aws-topbar-center { display: none; }
   
+  .aws-body {
+    overflow-y: auto;
+    height: auto;
+    min-height: 100vh;
+  }
+
   .aws-workspace {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
+    height: auto;
+    min-height: calc(100vh - 52px);
   }
 
-  .aws-panel { min-height: 40vh; }
+  .aws-panel {
+    min-height: 50vh;
+    overflow: visible;
+  }
+
+  .aws-panel-body {
+    min-height: 300px;
+  }
   
   .aws-plans-grid { grid-template-columns: 1fr; }
 }
 
 /* ─── Responsive — Mobile ─────────────────────────────────────────── */
 @media (max-width: 768px) {
+  .aws-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
+    min-height: 100vh;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .aws-topbar {
     padding: 0 10px;
     height: 48px;
+    position: sticky;
+    top: 0;
+    z-index: 101;
   }
 
   .aws-topbar-title { font-size: 0.85rem; }
@@ -1206,14 +1253,15 @@
     grid-template-columns: 1fr;
     grid-template-rows: none;
     height: auto;
-    min-height: calc(100vh - 48px - 52px);
+    min-height: calc(100vh - 48px - 56px);
   }
 
   .aws-panel {
     display: none;
-    min-height: calc(100vh - 48px - 52px);
-    max-height: calc(100vh - 48px - 52px);
-    overflow: hidden;
+    min-height: calc(100vh - 48px - 56px);
+    max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     padding-bottom: 0;
   }
 
@@ -1222,11 +1270,20 @@
     flex-direction: column;
   }
 
-  /* Chat panel: make body scroll, input stays at bottom */
+  /* Chat panel: scrollable messages, sticky input at bottom */
   .aws-panel.active-mobile .aws-panel-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: calc(100vh - 48px - 56px - 40px);
+  }
+
+  .aws-panel.active-mobile .aws-chat-messages {
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    min-height: 0;
   }
 
   .aws-panel.active-mobile .aws-chat-input-area {
@@ -1245,10 +1302,20 @@
     min-height: 0;
   }
 
-  /* Results panel scrollable */
-  .aws-panel.active-mobile #resultsCards {
+  /* Results panel: ensure content is scrollable */
+  .aws-panel.active-mobile .aws-results-content {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    flex: 1;
+    padding-bottom: 60px;
+  }
+
+  /* Monitor panel scrollable */
+  .aws-panel.active-mobile .aws-monitor-content {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+    padding-bottom: 60px;
   }
 
   .aws-mobile-nav {
@@ -1262,7 +1329,7 @@
     border-top: 1px solid #1e293b;
     padding: 6px 0;
     justify-content: space-around;
-    height: 52px;
+    height: 56px;
   }
 
   .aws-mobile-nav-item {
@@ -1284,6 +1351,11 @@
   .aws-mobile-nav-item.active { color: #3b82f6; }
   .aws-mobile-nav-item:hover { color: #94a3b8; }
 
+  .aws-auth-overlay {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .aws-auth-card { padding: 28px 20px; }
   .aws-auth-title { font-size: 1.3rem; }
   .aws-plans-grid { grid-template-columns: 1fr; }
@@ -1298,7 +1370,7 @@
   .aws-msg { max-width: 95%; word-break: break-word; }
 
   /* Chat input textarea on mobile */
-  .aws-chat-input { font-size: 16px; } /* Prevents zoom on iOS */
+  .aws-chat-textarea { font-size: 16px; } /* Prevents zoom on iOS */
 }
 
 /* ─── Mobile Nav (hidden on desktop) ───────────────────────────────── */

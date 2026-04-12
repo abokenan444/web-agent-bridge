@@ -31,6 +31,7 @@ const I18N = {
   auth_has_account:      { ar: 'لديك حساب بالفعل؟', en: 'Already have an account?' },
   auth_signin_link:      { ar: 'تسجيل الدخول', en: 'Sign In' },
   auth_plan_title:       { ar: 'اختر خطتك', en: 'Choose Your Plan' },
+  auth_demo:             { ar: 'تجربة بدون حساب (وضع تجريبي)', en: 'Try without account (Demo Mode)' },
   auth_plan_subtitle:    { ar: 'ابدأ مجاناً أو اختر خطة تناسبك', en: 'Start free or pick a plan that fits you' },
   auth_signing_in:       { ar: 'جارِ التحقق...', en: 'Signing in...' },
   auth_creating:         { ar: 'جارِ الإنشاء...', en: 'Creating...' },
@@ -240,29 +241,93 @@ let state = {
   ws: null,
   taskStartTime: null,
   currentOffers: null,
+  offlineMode: false,
 };
+
+// ─── Chat Archive (localStorage persistence) ────────────────────────
+
+const ARCHIVE_KEY = 'wab_chat_archive';
+const ARCHIVE_MAX = 200;
+
+function saveArchive() {
+  try {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+    const msgs = [];
+    container.querySelectorAll('.aws-msg').forEach(el => {
+      const role = el.classList.contains('user') ? 'user' : el.classList.contains('system') ? 'system' : 'agent';
+      msgs.push({ role, html: el.innerHTML, text: el.textContent });
+    });
+    // Keep only the last ARCHIVE_MAX messages
+    const trimmed = msgs.slice(-ARCHIVE_MAX);
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(trimmed));
+  } catch (_) {}
+}
+
+function loadArchive() {
+  try {
+    const raw = localStorage.getItem(ARCHIVE_KEY);
+    if (!raw) return false;
+    const msgs = JSON.parse(raw);
+    if (!Array.isArray(msgs) || msgs.length === 0) return false;
+    const container = document.getElementById('chatMessages');
+    if (!container) return false;
+    container.innerHTML = '';
+    msgs.forEach(m => {
+      const div = document.createElement('div');
+      div.className = `aws-msg ${m.role}`;
+      if (m.role === 'system') {
+        div.textContent = m.text;
+      } else {
+        div.innerHTML = m.html;
+      }
+      container.appendChild(div);
+    });
+    container.scrollTop = container.scrollHeight;
+    return true;
+  } catch (_) { return false; }
+}
+
+function clearArchive() {
+  localStorage.removeItem(ARCHIVE_KEY);
+}
 
 // ─── Init ────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
   setDirection();
   applyI18n();
-  injectWelcomeMessage();
 
   if (state.token) {
     try {
       const res = await apiFetch('/api/auth/me');
       if (res.ok) {
         const data = await res.json();
-        state.user = data;
+        state.user = data.user || data;
         state.sessionId = 'ws-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
         showWorkspace();
         connectWebSocket();
+        // Load archived chat or inject welcome
+        if (!loadArchive()) injectWelcomeMessage();
         return;
       }
-    } catch (_) {}
-    state.token = null;
-    localStorage.removeItem('wab_token');
+    } catch (_) {
+      // Server unreachable — enter offline/demo mode
+      console.warn('[WAB] Server unreachable, entering offline mode');
+      state.offlineMode = true;
+      state.user = JSON.parse(localStorage.getItem('wab_user_cache') || 'null');
+      if (state.user && state.token) {
+        state.sessionId = 'offline-' + Date.now();
+        showWorkspace();
+        if (!loadArchive()) injectWelcomeMessage();
+        return;
+      }
+    }
+    // Only clear token if server explicitly rejected it (not if server is down)
+    if (!state.offlineMode) {
+      state.token = null;
+      localStorage.removeItem('wab_token');
+    }
   }
   showAuth();
 });
@@ -407,10 +472,17 @@ function showWorkspace() {
   document.getElementById('userName').textContent = name;
   document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
 
+  // Cache user info for offline mode
+  try { localStorage.setItem('wab_user_cache', JSON.stringify(user)); } catch (_) {}
+
   const tier = user.tier || 'premium';
   const tierEl = document.getElementById('userTier');
   tierEl.textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
   tierEl.className = 'aws-tier-badge ' + (tier === 'pro' ? 'pro' : tier === 'starter' ? 'starter' : 'premium');
+
+  if (state.offlineMode) {
+    showToast(state.lang === 'ar' ? '📡 وضع عدم الاتصال — البيانات محفوظة محلياً' : '📡 Offline mode — data saved locally', 'info');
+  }
 
   // On mobile, activate the chat panel (index 1) by default
   if (window.innerWidth <= 768) {
@@ -498,7 +570,15 @@ async function sendMessage() {
     }
   } catch (err) {
     showTyping(false);
-    addChatMessage('agent', i18n('agent_error'));
+    // Offline fallback: generate smart local response
+    const fallback = offlineFallbackReply(message);
+    addChatMessage('agent', fallback);
+
+    // If URL detected, try to navigate to it
+    if (hasUrl) {
+      const urlMatch = message.match(/https?:\/\/[^\s]+/i);
+      if (urlMatch) navigateTo(urlMatch[0]);
+    }
   }
 }
 
@@ -594,6 +674,8 @@ function addChatMessage(role, content) {
 
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
+  // Auto-save chat archive
+  saveArchive();
 }
 
 function formatChatOffers(data) {
@@ -603,9 +685,9 @@ function formatChatOffers(data) {
   let text = `✅ ${i18n('agent_found')} ${offers.length} ${i18n('agent_offers')}\n\n`;
 
   offers.forEach((o, idx) => {
-    const price = o.finalPrice || o.price;
-    const savings = o.savings ? ` (${i18n('result_save')} $${o.savings})` : '';
-    text += `${idx + 1}. ${o.title || o.name} — **$${price}**${savings}\n   📍 ${o.source}\n\n`;
+    const priceDisplay = o.price || (o.priceNum ? `$${o.priceNum}` : '');
+    const savings = o.negotiation?.savings ? ` (${i18n('result_save')} $${o.negotiation.savings})` : '';
+    text += `${idx + 1}. ${o.title || o.name} — **${priceDisplay}**${savings}\n   📍 ${o.source}\n\n`;
   });
 
   text += i18n('agent_pick');
@@ -646,6 +728,7 @@ function clearChat() {
   const container = document.getElementById('chatMessages');
   container.innerHTML = '';
   state.currentTask = null;
+  clearArchive();
   addChatMessage('agent', i18n('agent_new_chat'));
   document.getElementById('chatSuggestions').style.display = '';
 }
@@ -894,10 +977,28 @@ function showResults(data) {
     const card = document.createElement('div');
     card.className = `aws-result-card ${idx === 0 ? 'recommended' : ''}`;
 
-    const originalPrice = offer.originalPrice || offer.original_price || offer.price;
-    const finalPrice = offer.finalPrice || offer.final_price || offer.price;
-    const savings = originalPrice && finalPrice ? (originalPrice - finalPrice).toFixed(2) : null;
-    const savingsPct = savings && originalPrice ? Math.round((savings / originalPrice) * 100) : null;
+    // Normalize price — handle "$95/night", "$285", or numeric values
+    const rawPrice = offer.price || offer.finalPrice || offer.final_price;
+    const priceNum = offer.priceNum || parseFloat(String(rawPrice).replace(/[^\d.]/g, '')) || null;
+    const priceDisplay = rawPrice ? String(rawPrice) : (priceNum ? `$${priceNum}` : '');
+
+    // Calculate savings from negotiation
+    const origPriceNum = offer.negotiation?.originalPrice
+      ? parseFloat(String(offer.negotiation.originalPrice).replace(/[^\d.]/g, ''))
+      : priceNum;
+    const negPrice = offer.negotiation?.negotiatedPrice || priceNum;
+    const savings = origPriceNum && negPrice && origPriceNum > negPrice
+      ? (origPriceNum - negPrice).toFixed(0) : null;
+    const savingsPct = savings && origPriceNum ? Math.round((savings / origPriceNum) * 100) : null;
+
+    // Rating display
+    const rating = offer.rating ? `⭐ ${offer.rating}` : '';
+
+    // Details chips
+    const details = offer.details || [];
+    const detailsHtml = details.length > 0
+      ? `<div class="aws-result-details">${details.map(d => `<span class="aws-result-detail">${d}</span>`).join('')}</div>`
+      : '';
 
     card.innerHTML = `
       ${idx === 0 ? `<span class="aws-result-badge best">${i18n('result_best')}</span>` : ''}
@@ -907,20 +1008,17 @@ function showResults(data) {
         ${offer.title || offer.name || 'Offer ' + (idx + 1)}
         <span class="aws-result-source">${offer.source || ''}</span>
       </div>
+
+      ${rating ? `<div class="aws-result-rating">${rating}</div>` : ''}
       
       <div class="aws-result-prices">
-        ${savings > 0 ? `<span class="aws-result-original">$${originalPrice}</span>` : ''}
-        <span class="aws-result-final">$${finalPrice}</span>
+        ${savings > 0 ? `<span class="aws-result-original">$${origPriceNum}</span>` : ''}
+        <span class="aws-result-final">${priceDisplay || '—'}</span>
+        ${offer.totalPrice ? `<span class="aws-result-total">(${state.lang === 'ar' ? 'المجموع' : 'total'}: $${offer.totalPrice})</span>` : ''}
         ${savings > 0 ? `<span class="aws-result-savings-tag">${i18n('result_save')} $${savings}</span>` : ''}
       </div>
-      
-      ${offer.details ? `
-        <div class="aws-result-details">
-          ${(Array.isArray(offer.details) ? offer.details : [offer.details]).map(d => 
-            `<span class="aws-result-detail">${d}</span>`
-          ).join('')}
-        </div>
-      ` : ''}
+
+      ${detailsHtml}
       
       <div class="aws-result-actions">
         <a href="${sanitizeUrl(offer.url || '#')}" target="_blank" rel="noopener" class="aws-result-btn primary" 
@@ -946,10 +1044,12 @@ function showResults(data) {
 
   if (offers[0]) {
     const best = offers[0];
-    const orig = best.originalPrice || best.original_price || best.price;
-    const fin = best.finalPrice || best.final_price || best.price;
-    const save = orig && fin ? (orig - fin).toFixed(0) : '-';
-    document.getElementById('summaryBestSaving').textContent = save > 0 ? `$${save}` : '-';
+    const neg = best.negotiation;
+    if (neg && neg.savings) {
+      document.getElementById('summaryBestSaving').textContent = `$${neg.savings}`;
+    } else {
+      document.getElementById('summaryBestSaving').textContent = '-';
+    }
   }
 
   if (state.taskStartTime) {
@@ -1198,6 +1298,69 @@ function sanitizeUrl(url) {
   } catch (_) {
     return '#';
   }
+}
+
+// ─── Offline Fallback Agent ──────────────────────────────────────────
+
+function offlineFallbackReply(message) {
+  const msg = message.toLowerCase();
+  const isAr = /[\u0600-\u06FF]/.test(message);
+
+  // URL detection: open in browser panel
+  const urlMatch = message.match(/https?:\/\/[^\s]+/i);
+  if (urlMatch) {
+    return isAr
+      ? `🔗 فتحت الرابط في المتصفح.\n\n📡 الوكيل غير متصل حالياً بالخادم. يمكنك تصفح الصفحة مباشرة من لوحة المتصفح.`
+      : `🔗 Opened the link in the browser.\n\n📡 Agent is currently offline. You can browse the page directly from the Browser panel.`;
+  }
+
+  // Search/booking requests
+  if (/ابحث|بحث|فندق|فنادق|رحل|طيران|حجز|احجز|hotel|flight|book|search|find/i.test(msg)) {
+    const query = message.replace(/ابحث عن|ابحث|بحث عن|search for|find|look for/gi, '').trim();
+    if (query.length > 2) {
+      navigateTo(`https://www.google.com/search?q=${encodeURIComponent(query)}`);
+    }
+    return isAr
+      ? `🔍 بحثت لك عن "${query}" — النتائج تظهر في لوحة المتصفح.\n\n📡 حالياً أعمل في الوضع المحلي. عند اتصال الخادم، سأتفاوض وأقارن الأسعار تلقائياً.`
+      : `🔍 Searched for "${query}" — results shown in the Browser panel.\n\n📡 Currently in offline mode. When the server connects, I'll auto-negotiate and compare prices.`;
+  }
+
+  // Shopping requests
+  if (/اشتري|شراء|سعر|أسعار|مقارن|لابتوب|laptop|buy|price|compare|iphone|shop/i.test(msg)) {
+    const query = message.replace(/اشتري|شراء|buy|compare prices|قارن أسعار/gi, '').trim();
+    if (query.length > 2) {
+      navigateTo(`https://www.google.com/search?q=${encodeURIComponent(query + ' price')}`);
+    }
+    return isAr
+      ? `🛒 أبحث عن أسعار "${query}" — راجع المتصفح.\n\n💡 نصيحة: عند الاتصال بالخادم، سأقارن الأسعار من عدة مصادر وأوجد لك أفضل صفقة.`
+      : `🛒 Searching prices for "${query}" — check the Browser panel.\n\n💡 Tip: When connected to the server, I'll compare prices from multiple sources to find the best deal.`;
+  }
+
+  // Security check
+  if (/أمان|آمن|safe|security|scam|احتيال/i.test(msg)) {
+    return isAr
+      ? `🔒 لفحص أمان موقع، الصق الرابط هنا وسأحلله عند اتصال الخادم.\n\n💡 تأكد دائماً من وجود 🔒 في شريط العنوان (HTTPS).`
+      : `🔒 To check a site's security, paste the link here and I'll analyze it when the server connects.\n\n💡 Always look for 🔒 in the address bar (HTTPS).`;
+  }
+
+  // General greeting/help
+  if (/مرحب|هلا|سلام|أهلا|hi|hello|hey|help|مساعد/i.test(msg)) {
+    return isAr
+      ? `🤖 أهلاً! أنا وكيل WAB الذكي. يمكنني مساعدتك في:\n\n• 🔍 البحث عن أي شيء\n• ✈️ حجز رحلات وفنادق\n• 🛒 مقارنة الأسعار\n• 🔒 فحص أمان المواقع\n\nاكتب ما تحتاجه بأي لغة!`
+      : `🤖 Hello! I'm WAB Smart Agent. I can help with:\n\n• 🔍 Searching for anything\n• ✈️ Booking flights & hotels\n• 🛒 Comparing prices\n• 🔒 Security checks\n\nType what you need in any language!`;
+  }
+
+  // Navigate if it looks like a search
+  if (msg.length > 3) {
+    navigateTo(`https://www.google.com/search?q=${encodeURIComponent(message)}`);
+    return isAr
+      ? `🔍 بحثت عن "${message}" — راجع النتائج في لوحة المتصفح.\n\n📡 عند اتصال الخادم، سأقدم نتائج أذكى مع تفاوض ومقارنة.`
+      : `🔍 Searched for "${message}" — check results in the Browser panel.\n\n📡 When the server connects, I'll provide smarter results with negotiation and comparison.`;
+  }
+
+  return isAr
+    ? `🤖 أنا هنا لمساعدتك! اكتب ما تريد البحث عنه أو الصق رابطاً.`
+    : `🤖 I'm here to help! Type what you want to search for or paste a link.`;
 }
 
 // ─── Dynamic Pricing Shield UI ───────────────────────────────────────
