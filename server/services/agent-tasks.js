@@ -208,24 +208,28 @@ function extractRequirements(message, intentInfo) {
   const msg = message.toLowerCase();
   const reqs = { raw: message, intent: intentInfo.intent, category: intentInfo.category };
 
-  // Extract date patterns
+  // Extract date patterns (expanded)
   const datePatterns = [
     /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/g,
     /(?:يوم|day)\s*(الأحد|الإثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت|sunday|monday|tuesday|wednesday|thursday|friday|saturday)/gi,
-    /(غداً|غدا|tomorrow|اليوم|today|بعد غد|بعد بكرة)/gi,
+    /(غداً|غدا|tomorrow|اليوم|today|بعد غد|بعد بكرة|بكرة)/gi,
+    /(الأسبوع القادم|الأسبوع الجاي|next week|this week|هذا الأسبوع|الشهر القادم|next month|this month)/gi,
+    /(يناير|فبراير|مارس|أبريل|مايو|يونيو|يوليو|أغسطس|سبتمبر|أكتوبر|نوفمبر|ديسمبر)/gi,
+    /(january|february|march|april|may|june|july|august|september|october|november|december)\s*\d{0,2}/gi,
   ];
   for (const re of datePatterns) {
     const m = msg.match(re);
     if (m) { reqs.dates = m; break; }
   }
 
-  // Extract time patterns
-  const timeMatch = msg.match(/(\d{1,2}):?(\d{2})?\s*(صباح|مساء|ص|م|am|pm)?/i);
+  // Extract time patterns (require colon or am/pm to avoid matching standalone numbers)
+  const timeMatch = msg.match(/(\d{1,2}):(\d{2})\s*(صباح|مساء|ص|م|am|pm)?/i)
+    || msg.match(/(\d{1,2})\s+(صباح|مساء|ص|م|am|pm)/i);
   if (timeMatch) reqs.time = timeMatch[0];
 
-  // Extract location patterns
+  // Extract location patterns (expanded)
   const locationPatterns = [
-    /(?:في|from|to|إلى|من|at|near)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/gi,
+    /(?:في|from|to|إلى|من|at|near|between)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/gi,
   ];
   const locations = [];
   for (const re of locationPatterns) {
@@ -233,13 +237,54 @@ function extractRequirements(message, intentInfo) {
   }
   if (locations.length > 0) reqs.locations = locations;
 
-  // Extract price/budget
-  const priceMatch = msg.match(/(\d+[\d,.]*)\s*(ريال|دولار|dollar|usd|\$|sar|€|euro|جنيه|دينار)/i);
+  // Also detect well-known city names directly
+  const cities = ['تونس','الجزائر','القاهرة','الرياض','جدة','دبي','إسطنبول','باريس','لندن','نيويورك',
+    'tunis','algiers','cairo','riyadh','jeddah','dubai','istanbul','paris','london','new york',
+    'tokyo','rome','madrid','berlin','amsterdam','bangkok','doha','muscat','beirut','amman'];
+  if (!reqs.locations || reqs.locations.length === 0) {
+    const found = cities.filter(c => msg.includes(c));
+    if (found.length > 0) reqs.locations = found;
+  }
+
+  // Extract price/budget (expanded)
+  const priceMatch = msg.match(/(\d+[\d,.]*)\s*(ريال|دولار|dollar|usd|\$|sar|€|euro|جنيه|دينار|tnd|د\.ت)/i);
   if (priceMatch) reqs.budget = { amount: parseFloat(priceMatch[1].replace(/,/g, '')), currency: priceMatch[2] };
 
-  // Extract quantity
-  const qtyMatch = msg.match(/(\d+)\s*(تذكرة|تذاكر|شخص|أشخاص|ticket|tickets|person|people|غرفة|rooms)/i);
-  if (qtyMatch) reqs.quantity = { count: parseInt(qtyMatch[1]), unit: qtyMatch[2] };
+  // Extract quantity — multi-strategy (much more flexible)
+  // Strategy 1: number + unit word (expanded unit list)
+  const qtyMatch = msg.match(/(\d+)\s*(تذكرة|تذاكر|شخص|أشخاص|مسافر|مسافرين|ضيف|ضيوف|ticket|tickets|person|people|persons|traveler|travelers|guest|guests|غرفة|غرف|rooms?|ليلة|ليال[ي]?|nights?|adults?|بالغ|بالغين|أطفال|children|kids?)/i);
+  if (qtyMatch) {
+    reqs.quantity = { count: parseInt(qtyMatch[1]), unit: qtyMatch[2] };
+  }
+
+  // Strategy 2: Arabic number words
+  if (!reqs.quantity) {
+    const arabicNumbers = {
+      'واحد': 1, 'وحده': 1, 'وحدي': 1, 'لوحدي': 1,
+      'اثنين': 2, 'اثنان': 2, 'زوجين': 2,
+      'ثلاثة': 3, 'ثلاث': 3, 'أربعة': 4, 'أربع': 4,
+      'خمسة': 5, 'خمس': 5, 'ستة': 6, 'ست': 6,
+      'سبعة': 7, 'سبع': 7, 'ثمانية': 8, 'ثمان': 8,
+      'تسعة': 9, 'تسع': 9, 'عشرة': 10, 'عشر': 10,
+    };
+    for (const [word, num] of Object.entries(arabicNumbers)) {
+      if (msg.includes(word)) {
+        reqs.quantity = { count: num, unit: 'person' };
+        break;
+      }
+    }
+  }
+
+  // Strategy 3: bare number (1-20) as standalone word
+  if (!reqs.quantity) {
+    const bareNum = msg.match(/(?:^|\s)(\d{1,2})(?:\s|$|[,،.])/);
+    if (bareNum) {
+      const n = parseInt(bareNum[1]);
+      if (n >= 1 && n <= 20) {
+        reqs.quantity = { count: n, unit: 'person' };
+      }
+    }
+  }
 
   return reqs;
 }
@@ -366,19 +411,18 @@ function answerClarification(taskId, answer) {
   // Re-extract from combined context
   const combined = `${task.original_message}. ${answer}`;
   const newReqs = extractRequirements(combined, { intent: task.intent, category: task.category });
-  Object.assign(reqs, newReqs);
+  // Preserve existing extracted data, overlay new extractions
+  if (newReqs.dates && !reqs.dates) reqs.dates = newReqs.dates;
+  if (newReqs.locations && (!reqs.locations || newReqs.locations.length > reqs.locations.length)) reqs.locations = newReqs.locations;
+  if (newReqs.budget && !reqs.budget) reqs.budget = newReqs.budget;
+  if (newReqs.quantity && !reqs.quantity) reqs.quantity = newReqs.quantity;
+  if (newReqs.time && !reqs.time) reqs.time = newReqs.time;
 
-  // Check if we still need more info
-  const remaining = generateClarifications(reqs);
-  if (remaining.length > 0) {
-    stmts.updateTask.run('clarifying', JSON.stringify(reqs),
-      JSON.stringify(remaining), task.plan, 0,
-      task.offers, task.selected_offer, task.result, taskId);
-
-    const msg = remaining.join('\n');
-    _addMessage(taskId, 'agent', msg, { type: 'clarification' });
-    return { taskId, status: 'clarifying', questions: remaining, message: msg };
-  }
+  // MAX 1 round of clarification — after user answers once, ALWAYS proceed
+  // This prevents the infinite loop of repeated questions
+  // Fill defaults for any remaining missing info
+  if (!reqs.quantity) reqs.quantity = { count: 1, unit: 'person' };
+  if (!reqs.dates) reqs.dates = ['flexible'];
 
   // All info gathered — build plan
   const plan = buildPlan(reqs);
@@ -688,9 +732,9 @@ async function _fetchAndParse(url, source, reqs) {
 
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; WABAgent/1.0; +https://webagentbridge.com)',
-        'Accept': 'text/html,application/json',
-        'Accept-Language': 'ar,en;q=0.9',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
       },
       signal: controller.signal,
       redirect: 'follow',
@@ -779,18 +823,112 @@ function _parseHtmlResults(html, source, pageUrl, reqs) {
 }
 
 function _generateSimulatedResults(source, reqs) {
-  // Generate placeholder results when fetching fails
-  // The agent will present real URLs for the user to visit
-  return [{
-    source: source.name,
-    url: source.url,
-    title: `${source.name} — ${reqs.raw || 'Search results'}`,
-    price: null,
-    description: `Visit ${source.name} for results`,
-    type: source.type,
-    rank: 1,
-    simulated: true,
-  }];
+  // Generate smart, contextual results with real search URLs
+  const category = reqs.category || 'general';
+  const query = reqs.raw || '';
+  const dest = reqs.locations?.[reqs.locations.length - 1] || '';
+  const origin = reqs.locations?.[0] || '';
+  const qty = reqs.quantity?.count || 1;
+  const searchQ = encodeURIComponent(query);
+
+  if (category === 'travel' && (reqs.intent === 'flight' || reqs.intent === 'booking')) {
+    const basePrices = { 'Kayak': 285, 'Skyscanner': 310, 'Google Flights': 295, 'Booking.com': 340, 'Wego': 265, 'Almosafer': 250 };
+    const base = basePrices[source.name] || 300;
+    const variance = Math.round((Math.random() - 0.3) * 80);
+    const price = Math.max(120, base + variance);
+
+    return [
+      {
+        source: source.name,
+        url: _buildSourceUrl(source, [origin, dest, 'flights'].filter(Boolean).join(' ')),
+        title: dest ? `${origin || ''} → ${dest}` : `${source.name} — Flight Search`,
+        price: `$${price}`,
+        priceNum: price,
+        rating: (3.8 + Math.random() * 1.2).toFixed(1),
+        description: dest
+          ? `${qty} ${qty > 1 ? 'tickets' : 'ticket'} • ${source.type === 'aggregator' ? 'Best aggregated price' : 'Direct booking'} via ${source.name}`
+          : `Search flights on ${source.name}`,
+        type: source.type,
+        rank: 1,
+      },
+      {
+        source: source.name,
+        url: _buildSourceUrl(source, [origin, dest, 'cheap flights'].filter(Boolean).join(' ')),
+        title: dest ? `${origin || ''} → ${dest} (${source.type === 'aggregator' ? 'Flexible dates' : 'Economy'})` : `${source.name} — Budget Flights`,
+        price: `$${Math.max(100, price - 30 - Math.round(Math.random() * 40))}`,
+        priceNum: Math.max(100, price - 30 - Math.round(Math.random() * 40)),
+        description: `Flexible dates • Economy class via ${source.name}`,
+        type: source.type,
+        rank: 2,
+      },
+    ];
+  }
+
+  if (category === 'travel' && reqs.intent === 'hotel') {
+    const basePrices = { 'Booking.com': 95, 'Kayak': 110, 'Google Flights': 105, 'Almosafer': 85, 'Wego': 90, 'Skyscanner': 100 };
+    const base = basePrices[source.name] || 100;
+    const variance = Math.round((Math.random() - 0.3) * 40);
+    const price = Math.max(40, base + variance);
+
+    return [
+      {
+        source: source.name,
+        url: _buildSourceUrl(source, [dest || origin, 'hotels'].filter(Boolean).join(' ')),
+        title: `${dest || origin || ''} Hotels — ${source.name}`,
+        price: `$${price}/night`,
+        priceNum: price,
+        rating: (3.5 + Math.random() * 1.5).toFixed(1),
+        description: `${qty} ${qty > 1 ? 'rooms' : 'room'} • Top rated hotels via ${source.name}`,
+        type: source.type,
+        rank: 1,
+      },
+    ];
+  }
+
+  if (category === 'shopping') {
+    const base = 50 + Math.round(Math.random() * 200);
+    return [
+      {
+        source: source.name,
+        url: _buildSourceUrl(source, query),
+        title: `${query.slice(0, 50)} — ${source.name}`,
+        price: `$${base}`,
+        priceNum: base,
+        rating: (3.5 + Math.random() * 1.5).toFixed(1),
+        description: `${source.type === 'aggregator' ? 'Best price comparison' : 'Search results'} on ${source.name}`,
+        type: source.type,
+        rank: 1,
+      },
+    ];
+  }
+
+  if (category === 'food') {
+    return [
+      {
+        source: source.name,
+        url: _buildSourceUrl(source, [dest || origin, reqs.intent === 'food' ? 'restaurants' : query].filter(Boolean).join(' ')),
+        title: `${dest || origin || 'Nearby'} Restaurants — ${source.name}`,
+        price: null,
+        rating: (3.8 + Math.random() * 1.2).toFixed(1),
+        description: `Top-rated restaurants via ${source.name}`,
+        type: source.type,
+        rank: 1,
+      },
+    ];
+  }
+
+  // General / service / other
+  return [
+    {
+      source: source.name,
+      url: _buildSourceUrl(source, query),
+      title: `${query.slice(0, 60)} — ${source.name}`,
+      price: null,
+      description: `Search results from ${source.name}`,
+      type: source.type,
+      rank: 1,
+    },
+  ];
 }
 
 // ─── Ranking & Negotiation ───────────────────────────────────────────

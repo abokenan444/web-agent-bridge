@@ -1206,16 +1206,50 @@
     grid-template-columns: 1fr;
     grid-template-rows: none;
     height: auto;
-    min-height: calc(100vh - 48px);
+    min-height: calc(100vh - 48px - 52px);
   }
 
   .aws-panel {
     display: none;
     min-height: calc(100vh - 48px - 52px);
-    padding-bottom: 56px;
+    max-height: calc(100vh - 48px - 52px);
+    overflow: hidden;
+    padding-bottom: 0;
   }
 
-  .aws-panel.active-mobile { display: flex; }
+  .aws-panel.active-mobile {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Chat panel: make body scroll, input stays at bottom */
+  .aws-panel.active-mobile .aws-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .aws-panel.active-mobile .aws-chat-input-area {
+    position: sticky;
+    bottom: 0;
+    padding: 8px;
+    background: #0f172a;
+    border-top: 1px solid #1e293b;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  /* Browser iframe full height on mobile */
+  .aws-panel.active-mobile #browserFrame {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Results panel scrollable */
+  .aws-panel.active-mobile #resultsCards {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 
   .aws-mobile-nav {
     display: flex !important;
@@ -1258,6 +1292,13 @@
   .aws-chat-suggestions { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
 
   .aws-result-actions { flex-direction: column; }
+  .aws-result-card { margin: 0 4px; }
+
+  /* Agent messages: prevent overflow */
+  .aws-msg { max-width: 95%; word-break: break-word; }
+
+  /* Chat input textarea on mobile */
+  .aws-chat-input { font-size: 16px; } /* Prevents zoom on iOS */
 }
 
 /* ─── Mobile Nav (hidden on desktop) ───────────────────────────────── */

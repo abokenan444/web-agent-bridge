@@ -402,6 +402,11 @@ function showWorkspace() {
   const tierEl = document.getElementById('userTier');
   tierEl.textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
   tierEl.className = 'aws-tier-badge ' + (tier === 'pro' ? 'pro' : tier === 'starter' ? 'starter' : 'premium');
+
+  // On mobile, activate the chat panel (index 1) by default
+  if (window.innerWidth <= 768) {
+    switchMobilePanel(1, document.querySelectorAll('.aws-mobile-nav-item')[1]);
+  }
 }
 
 // ─── WebSocket ───────────────────────────────────────────────────────
@@ -493,17 +498,26 @@ function handleTaskResponse(data) {
     startMonitor(data);
     executeTask(data.taskId);
   } else if (data.status === 'presenting') {
+    // Animate the monitor through all steps before showing results
+    startMonitor(data);
+    animateMonitorProgress(data);
     addChatMessage('agent', formatChatOffers(data));
     showResults(data);
-    updateMonitorComplete();
+    // Load first offer URL in browser panel
+    const firstUrl = data.offers?.[0]?.url;
+    if (firstUrl) navigateTo(firstUrl);
+    // Clear task so user can make new requests
+    state.currentTask = null;
   } else if (data.status === 'completed') {
     addChatMessage('agent', data.message);
     if (data.action?.url) {
       navigateTo(data.action.url);
     }
+    state.currentTask = null;
   } else if (data.status === 'failed') {
     addChatMessage('agent', data.message);
     updateMonitorFailed();
+    state.currentTask = null;
   } else {
     addChatMessage('agent', data.message || JSON.stringify(data));
   }
@@ -738,6 +752,90 @@ function updateMonitorComplete() {
   });
 }
 
+/**
+ * Animate monitor steps from searching → comparing → negotiating → done
+ * Gives the user a visual sense of progress even when the server returns results instantly.
+ */
+function animateMonitorProgress(data) {
+  const steps = document.querySelectorAll('.aws-progress-step');
+  if (steps.length === 0) return;
+
+  const updates = data.updates || [];
+  const agentsEl = document.getElementById('monitorAgents');
+  const negEl = document.getElementById('monitorNegotiations');
+
+  document.getElementById('monitorStatus').textContent = i18n('status_working');
+  document.getElementById('monitorStatus').className = 'aws-panel-status working';
+
+  let delay = 0;
+  const stepDelay = 800;
+
+  steps.forEach((step, idx) => {
+    setTimeout(() => {
+      // Mark previous steps as completed
+      for (let i = 0; i < idx; i++) {
+        steps[i].className = 'aws-progress-step completed';
+        const icon = steps[i].querySelector('.aws-step-icon');
+        if (icon) { icon.className = 'aws-step-icon completed'; icon.textContent = '✓'; }
+      }
+      // Mark current step as active
+      step.className = 'aws-progress-step active';
+      const icon = step.querySelector('.aws-step-icon');
+      if (icon) { icon.className = 'aws-step-icon active'; icon.textContent = '⏳'; }
+
+      // Show agent cards during search step
+      if (idx === 0 && data.offers) {
+        agentsEl.innerHTML = '';
+        const sources = [...new Set(data.offers.map(o => o.source))];
+        sources.forEach(src => {
+          const card = document.createElement('div');
+          card.className = 'aws-agent-card';
+          card.innerHTML = `
+            <div class="aws-agent-card-header">
+              <div class="aws-agent-name"><span class="dot searching"></span>${src} Agent</div>
+              <span style="font-size:0.7rem;color:#64748b">searching...</span>
+            </div>
+            <div class="aws-agent-progress"><div class="aws-agent-progress-bar" style="width:50%"></div></div>
+          `;
+          agentsEl.appendChild(card);
+        });
+      }
+
+      // Update agent cards to done during compare step
+      if (idx === 1) {
+        agentsEl.querySelectorAll('.dot').forEach(d => d.className = 'dot done');
+        agentsEl.querySelectorAll('.aws-agent-progress-bar').forEach(b => b.style.width = '100%');
+        agentsEl.querySelectorAll('.aws-agent-card-header span:last-child').forEach(s => {
+          s.textContent = state.lang === 'ar' ? 'تم' : 'done';
+        });
+      }
+
+      // Show negotiation details
+      if (idx >= 2 && updates.length > 0) {
+        updates.forEach(u => {
+          if (u.message && !document.querySelector(`[data-update-msg="${u.step}"]`)) {
+            const round = document.createElement('div');
+            round.className = 'aws-neg-round';
+            round.setAttribute('data-update-msg', u.step || idx);
+            round.innerHTML = `
+              <div class="aws-neg-round-header"><span>${u.step === 'negotiate' ? '🤝' : '🔍'}</span>
+              <span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
+              <div class="aws-neg-round-body">${u.message}</div>
+            `;
+            negEl.appendChild(round);
+          }
+        });
+      }
+    }, delay);
+    delay += stepDelay;
+  });
+
+  // Final: mark all completed
+  setTimeout(() => {
+    updateMonitorComplete();
+  }, delay + 300);
+}
+
 function updateMonitorFailed() {
   document.getElementById('monitorStatus').textContent = i18n('status_failed');
   document.getElementById('monitorStatus').className = 'aws-panel-status idle';
@@ -824,6 +922,11 @@ function showResults(data) {
   }
 
   state.currentOffers = offers;
+
+  // On mobile, auto-switch to results panel
+  if (window.innerWidth <= 768) {
+    switchMobilePanel(3, document.querySelectorAll('.aws-mobile-nav-item')[3]);
+  }
 }
 
 function showTips(offers) {
