@@ -203,7 +203,7 @@ let state = {
   user: null,
   sessionId: null,
   currentTask: null,
-  lang: localStorage.getItem('wab_lang') || (navigator.language?.startsWith('ar') ? 'ar' : 'en'),
+  lang: localStorage.getItem('wab_lang') || 'en',
   layout: 'grid',
   activeMobilePanel: 0,
   ws: null,
