@@ -117,6 +117,12 @@ const TEMPLATES = {
     phases: ['research', 'analyze', 'synthesize'],
     roles: ['researcher', 'analyst'],
   },
+  'price-shield': {
+    name: 'Dynamic Pricing Shield',
+    description: 'Detect price manipulation via multi-identity probing and statistical analysis',
+    phases: ['research', 'guard', 'negotiate', 'synthesize'],
+    roles: ['researcher', 'guardian', 'negotiator'],
+  },
 };
 
 // ─── Role Engines ────────────────────────────────────────────────────

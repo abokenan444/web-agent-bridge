@@ -155,6 +155,28 @@ const I18N = {
   toast_lang_en:   { ar: 'تم التبديل إلى الإنجليزية', en: 'Switched to English' },
   toast_settings:  { ar: 'الإعدادات قريباً', en: 'Settings coming soon' },
   toast_no_results:{ ar: 'لا توجد نتائج', en: 'No results' },
+
+  // Dynamic Pricing Shield
+  shield_title:          { ar: 'درع التسعير الديناميكي', en: 'Dynamic Pricing Shield' },
+  shield_scanning:       { ar: '🔍 يفحص الأسعار عبر {count} هوية مختلفة...', en: '🔍 Scanning prices across {count} different identities...' },
+  shield_probe_done:     { ar: '✓ {persona}: {price}', en: '✓ {persona}: {price}' },
+  shield_analyzing:      { ar: '🧮 يحلل فروقات الأسعار...', en: '🧮 Analyzing price differences...' },
+  shield_clean:          { ar: '✅ لم يُكتشف تلاعب بالأسعار — السعر متسق عبر جميع الهويات', en: '✅ No price manipulation detected — price is consistent across all identities' },
+  shield_detected:       { ar: '⚠️ تم اكتشاف تلاعب بالأسعار!', en: '⚠️ Price manipulation detected!' },
+  shield_score:          { ar: 'درجة التلاعب: {score}/100 ({level})', en: 'Manipulation score: {score}/100 ({level})' },
+  shield_spread:         { ar: 'فرق السعر: ${lowest} — ${highest} (فارق {pct}%)', en: 'Price spread: ${lowest} — ${highest} ({pct}% difference)' },
+  shield_best_price:     { ar: '💰 أفضل سعر: ${price} عبر هوية "{persona}"', en: '💰 Best price: ${price} via "{persona}" identity' },
+  shield_savings:        { ar: '🎯 توفير محتمل: ${amount} ({pct}%)', en: '🎯 Potential savings: ${amount} ({pct}%)' },
+  shield_tip_device:     { ar: '📱 استخدم جهاز/متصفح مختلف للحصول على سعر أقل', en: '📱 Switch device/browser for a lower price' },
+  shield_tip_cookies:    { ar: '🍪 امسح ملفات تعريف الارتباط وسجل التصفح قبل الشراء', en: '🍪 Clear cookies and browsing history before purchasing' },
+  shield_tip_geo:        { ar: '🌍 استخدم VPN لتظهر من منطقة بأسعار أقل', en: '🌍 Use VPN to appear from a region with cheaper pricing' },
+  shield_tip_referral:   { ar: '🔗 ادخل عبر موقع مقارنة أسعار للحصول على سعر أقل', en: '🔗 Arrive via a price comparison site for lower pricing' },
+  shield_tip_incognito:  { ar: '🕵️ استخدم وضع التصفح المتخفي لتجنب رسوم الزيارات المتكررة', en: '🕵️ Use incognito mode to avoid repeat-visitor surcharges' },
+  shield_level_none:     { ar: 'لا يوجد', en: 'none' },
+  shield_level_minor:    { ar: 'طفيف', en: 'minor' },
+  shield_level_moderate: { ar: 'متوسط', en: 'moderate' },
+  shield_level_significant: { ar: 'كبير', en: 'significant' },
+  shield_level_severe:   { ar: 'خطير', en: 'severe' },
 };
 
 /** Get translated string */
@@ -1037,4 +1059,135 @@ function sanitizeUrl(url) {
   } catch (_) {
     return '#';
   }
+}
+
+// ─── Dynamic Pricing Shield UI ───────────────────────────────────────
+
+/**
+ * Show the Price Shield scanning overlay in the monitor panel.
+ * Call this when the agent starts a multi-identity price scan.
+ */
+function showPriceShield(scanData) {
+  const section = document.getElementById('priceShieldSection');
+  const statusEl = document.getElementById('shieldStatus');
+  const probesEl = document.getElementById('shieldProbes');
+  const resultEl = document.getElementById('shieldResult');
+  const badgeEl = document.getElementById('shieldBadge');
+  if (!section) return;
+
+  section.style.display = 'block';
+  badgeEl.textContent = '';
+  badgeEl.className = 'aws-shield-badge';
+  resultEl.innerHTML = '';
+
+  const personaCount = scanData?.personas?.length || 12;
+  statusEl.innerHTML = `<div class="aws-shield-scanning">${i18n('shield_scanning', { count: personaCount })}</div>`;
+  probesEl.innerHTML = '';
+
+  // Scroll monitor into view
+  document.getElementById('monitorEmpty')?.style && (document.getElementById('monitorEmpty').style.display = 'none');
+}
+
+/**
+ * Update a single probe result as it comes in.
+ */
+function updateShieldProbe(personaLabel, price, currency = 'USD') {
+  const probesEl = document.getElementById('shieldProbes');
+  if (!probesEl) return;
+
+  const div = document.createElement('div');
+  div.className = 'aws-shield-probe-item';
+  const priceStr = price != null ? `${currency === 'USD' ? '$' : currency}${price}` : '—';
+  div.textContent = i18n('shield_probe_done', { persona: personaLabel, price: priceStr });
+  probesEl.appendChild(div);
+}
+
+/**
+ * Show the final Price Shield analysis result.
+ */
+function showShieldResult(analysis) {
+  const statusEl = document.getElementById('shieldStatus');
+  const resultEl = document.getElementById('shieldResult');
+  const badgeEl = document.getElementById('shieldBadge');
+  if (!resultEl) return;
+
+  statusEl.innerHTML = '';
+
+  if (!analysis || !analysis.manipulation || !analysis.manipulation.detected) {
+    badgeEl.textContent = '✅';
+    badgeEl.className = 'aws-shield-badge shield-clean';
+    resultEl.innerHTML = `<div class="aws-shield-clean">${i18n('shield_clean')}</div>`;
+    return;
+  }
+
+  const m = analysis.manipulation;
+  const p = analysis.prices;
+  const r = analysis.recommendation;
+
+  const levelKey = `shield_level_${m.level || 'none'}`;
+  const levelText = I18N[levelKey] ? i18n(levelKey) : m.level;
+
+  // Badge
+  const badgeClass = m.score >= 70 ? 'shield-severe' : m.score >= 45 ? 'shield-significant' : m.score >= 20 ? 'shield-moderate' : 'shield-minor';
+  badgeEl.textContent = `${m.score}/100`;
+  badgeEl.className = `aws-shield-badge ${badgeClass}`;
+
+  let html = `<div class="aws-shield-alert">
+    <div class="aws-shield-alert-title">${i18n('shield_detected')}</div>
+    <div class="aws-shield-score">${i18n('shield_score', { score: m.score, level: levelText })}</div>
+    <div class="aws-shield-spread">${i18n('shield_spread', { lowest: p.lowest, highest: p.highest, pct: p.spreadPct })}</div>`;
+
+  if (r && r.bestPrice) {
+    html += `<div class="aws-shield-best">${i18n('shield_best_price', { price: r.bestPrice, persona: r.bestPersonaLabel || r.bestPersona })}</div>`;
+    if (r.savings > 0) {
+      html += `<div class="aws-shield-savings">${i18n('shield_savings', { amount: r.savings.toFixed(2), pct: r.savingsPct })}</div>`;
+    }
+  }
+
+  // Tips from strategy
+  if (r && r.strategy && r.strategy.tips && r.strategy.tips.length > 0) {
+    html += `<div class="aws-shield-tips">`;
+    for (const tip of r.strategy.tips) {
+      html += `<div class="aws-shield-tip">💡 ${escapeHtml(tip)}</div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Manipulation types
+  if (analysis.manipulations && analysis.manipulations.length > 0) {
+    html += `<div class="aws-shield-types">`;
+    for (const manip of analysis.manipulations) {
+      const severityClass = `severity-${manip.severity}`;
+      html += `<div class="aws-shield-type-item ${severityClass}">
+        <span class="aws-shield-type-label">${escapeHtml(manip.type.replace(/_/g, ' '))}</span>
+        <span class="aws-shield-type-severity">${manip.severity}</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Probe comparison table
+  if (analysis.probes && analysis.probes.length > 0) {
+    html += `<div class="aws-shield-probes-table"><table>
+      <tr><th>${state.lang === 'ar' ? 'الهوية' : 'Identity'}</th><th>${state.lang === 'ar' ? 'السعر' : 'Price'}</th></tr>`;
+    const sortedProbes = [...analysis.probes].sort((a, b) => (a.price || 999999) - (b.price || 999999));
+    for (const probe of sortedProbes) {
+      const isBest = probe.price === p.lowest;
+      const isWorst = probe.price === p.highest;
+      const cls = isBest ? 'probe-best' : isWorst ? 'probe-worst' : '';
+      html += `<tr class="${cls}">
+        <td>${escapeHtml(probe.label)}</td>
+        <td>${probe.price != null ? '$' + probe.price : '—'}${isBest ? ' ⭐' : ''}${isWorst ? ' ⚠️' : ''}</td>
+      </tr>`;
+    }
+    html += `</table></div>`;
+  }
+
+  html += `</div>`;
+  resultEl.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

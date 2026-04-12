@@ -12,6 +12,7 @@ const { authenticateToken } = require('../middleware/auth');
 const reputation = require('../services/reputation');
 const negotiation = require('../services/negotiation');
 const verification = require('../services/verification');
+const priceShield = require('../services/price-shield');
 
 // ═══════════════════════════════════════════════════════════════════════
 // REPUTATION API
@@ -302,6 +303,83 @@ router.get('/dashboard/sovereign', authenticateToken, (req, res) => {
   dashboardData.sites = siteDetails;
 
   res.json(dashboardData);
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// DYNAMIC PRICING SHIELD API
+// ═══════════════════════════════════════════════════════════════════════
+
+// Get available identity personas
+router.get('/price-shield/personas', (req, res) => {
+  res.json(priceShield.getPersonas());
+});
+
+// Create a new price scan
+router.post('/price-shield/scans', (req, res) => {
+  const { siteId, url, itemName, category } = req.body;
+  if (!url) {
+    return res.status(400).json({ error: 'url is required' });
+  }
+  const result = priceShield.createScan({ siteId, url, itemName, category });
+  res.json(result);
+});
+
+// Record a probe result for a scan
+router.post('/price-shield/scans/:scanId/probes', (req, res) => {
+  const { personaId, priceText, currency, responseHeaders, cookiesReceived, durationMs } = req.body;
+  if (!personaId || !priceText) {
+    return res.status(400).json({ error: 'personaId and priceText are required' });
+  }
+  const result = priceShield.recordProbe(req.params.scanId, {
+    personaId, priceText, currency, responseHeaders, cookiesReceived, durationMs
+  });
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
+// Analyze a scan (after probes are recorded)
+router.post('/price-shield/scans/:scanId/analyze', (req, res) => {
+  const result = priceShield.analyzeScan(req.params.scanId);
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
+// Quick scan — all-in-one (provide probes + get analysis)
+router.post('/price-shield/quick-scan', (req, res) => {
+  const { url, itemName, siteId, category, probes } = req.body;
+  if (!url || !probes || !Array.isArray(probes) || probes.length < 2) {
+    return res.status(400).json({ error: 'url and at least 2 probes are required' });
+  }
+  const result = priceShield.quickScan({ url, itemName, siteId, category, probes });
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
+// Get scan report
+router.get('/price-shield/scans/:scanId', (req, res) => {
+  const result = priceShield.getScanReport(req.params.scanId);
+  if (result.error) return res.status(404).json(result);
+  res.json(result);
+});
+
+// Get global price shield statistics
+router.get('/price-shield/stats', (req, res) => {
+  res.json(priceShield.getGlobalStats());
+});
+
+// Get price history for a URL
+router.get('/price-shield/history', (req, res) => {
+  const url = req.query.url;
+  if (!url) return res.status(400).json({ error: 'url query parameter is required' });
+  const limit = Math.min(parseInt(req.query.limit) || 30, 100);
+  res.json(priceShield.getPriceHistory(url, limit));
+});
+
+// Get manipulation log for a site
+router.get('/price-shield/manipulations/:siteId', (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+  const result = priceShield.getGlobalStats();
+  res.json(result.topManipulators.find(m => m.siteId === req.params.siteId) || { siteId: req.params.siteId, incidents: 0 });
 });
 
 module.exports = router;

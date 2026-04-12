@@ -1317,3 +1317,191 @@
 .aws-body ::-webkit-scrollbar { width: 4px; height: 4px; }
 .aws-body ::-webkit-scrollbar-track { background: transparent; }
 .aws-body ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+
+/* ═══ Dynamic Pricing Shield ═══════════════════════════════════════ */
+
+#priceShieldSection {
+  margin: 12px 0;
+  background: linear-gradient(135deg, rgba(139,92,246,0.08), rgba(59,130,246,0.06));
+  border: 1px solid rgba(139,92,246,0.2);
+  border-radius: 12px;
+  padding: 16px;
+  animation: shieldFadeIn 0.4s ease-out;
+}
+
+@keyframes shieldFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.aws-shield-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.aws-shield-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #c4b5fd;
+}
+
+.aws-shield-badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.aws-shield-badge.shield-clean { background: rgba(16,185,129,0.2); color: #34d399; }
+.aws-shield-badge.shield-minor { background: rgba(250,204,21,0.15); color: #fcd34d; }
+.aws-shield-badge.shield-moderate { background: rgba(251,146,60,0.2); color: #fb923c; }
+.aws-shield-badge.shield-significant { background: rgba(239,68,68,0.2); color: #f87171; }
+.aws-shield-badge.shield-severe { background: rgba(220,38,38,0.3); color: #fca5a5; }
+
+.aws-shield-scanning {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.aws-shield-probe-item {
+  font-size: 0.8rem;
+  color: #64748b;
+  padding: 3px 0;
+  animation: probeSlideIn 0.3s ease-out;
+}
+
+@keyframes probeSlideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.aws-shield-clean {
+  text-align: center;
+  padding: 12px;
+  font-size: 0.9rem;
+  color: #34d399;
+}
+
+.aws-shield-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aws-shield-alert-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f87171;
+}
+
+.aws-shield-score {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+}
+
+.aws-shield-spread {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.aws-shield-best {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #34d399;
+}
+
+.aws-shield-savings {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.aws-shield-tips {
+  margin-top: 8px;
+  padding: 10px;
+  background: rgba(59,130,246,0.06);
+  border-radius: 8px;
+  border: 1px solid rgba(59,130,246,0.12);
+}
+
+.aws-shield-tip {
+  font-size: 0.8rem;
+  color: #93c5fd;
+  padding: 3px 0;
+}
+
+.aws-shield-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.aws-shield-type-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  background: rgba(30,41,59,0.6);
+  border: 1px solid rgba(71,85,105,0.3);
+}
+
+.aws-shield-type-item.severity-low { border-color: rgba(250,204,21,0.3); }
+.aws-shield-type-item.severity-medium { border-color: rgba(251,146,60,0.3); }
+.aws-shield-type-item.severity-high { border-color: rgba(239,68,68,0.3); }
+.aws-shield-type-item.severity-critical { border-color: rgba(220,38,38,0.5); background: rgba(220,38,38,0.1); }
+
+.aws-shield-type-label {
+  color: #cbd5e1;
+  text-transform: capitalize;
+}
+
+.aws-shield-type-severity {
+  color: #64748b;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.aws-shield-probes-table {
+  margin-top: 10px;
+  overflow-x: auto;
+}
+
+.aws-shield-probes-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.aws-shield-probes-table th {
+  text-align: start;
+  color: #94a3b8;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(71,85,105,0.3);
+}
+
+.aws-shield-probes-table td {
+  padding: 5px 8px;
+  color: #e2e8f0;
+  border-bottom: 1px solid rgba(30,41,59,0.5);
+}
+
+.aws-shield-probes-table tr.probe-best td {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.aws-shield-probes-table tr.probe-worst td {
+  color: #f87171;
+}
