@@ -93,6 +93,8 @@ const I18N = {
   chip_iphone_query:   { ar: 'قارن أسعار iPhone 16 Pro', en: 'Compare iPhone 16 Pro prices' },
   chip_flight:         { ar: '✈️ رحلة طيران', en: '✈️ Flight' },
   chip_flight_query:   { ar: 'احجز رحلة من تونس إلى إسطنبول', en: 'Book a flight from Tunisia to Istanbul' },
+  chip_url_paste:      { ar: '🔗 لصق رابط حجز', en: '🔗 Paste Booking Link' },
+  chip_url_paste_prompt: { ar: 'الصق رابط الحجز هنا وسأبحث لك عن سعر أفضل...', en: 'Paste your booking link here and I\'ll find you a better price...' },
   chip_security:       { ar: '🔒 فحص أمان', en: '🔒 Security Check' },
   chip_security_query: { ar: 'هل هذا الموقع آمن؟', en: 'Is this website safe?' },
 
@@ -155,6 +157,13 @@ const I18N = {
   toast_lang_en:   { ar: 'تم التبديل إلى الإنجليزية', en: 'Switched to English' },
   toast_settings:  { ar: 'الإعدادات قريباً', en: 'Settings coming soon' },
   toast_no_results:{ ar: 'لا توجد نتائج', en: 'No results' },
+
+  // URL Paste Negotiation
+  url_paste_detected:    { ar: '🔗 اكتشفت رابط حجز! سأحلله وأبحث عن سعر أفضل...', en: '🔗 Booking link detected! Analyzing and searching for better prices...' },
+  url_paste_hint:        { ar: '💡 الصق رابط حجز لأبحث لك عن سعر أفضل', en: '💡 Paste a booking link and I\'ll find you a better price' },
+  url_original_label:    { ar: '📌 الرابط الأصلي', en: '📌 Original Link' },
+  url_savings_found:     { ar: '🎯 وجدت توفير!', en: '🎯 Savings found!' },
+  url_no_savings:        { ar: 'لم أجد سعراً أفضل حالياً', en: 'No better price found currently' },
 
   // Dynamic Pricing Shield
   shield_title:          { ar: 'درع التسعير الديناميكي', en: 'Dynamic Pricing Shield' },
@@ -453,6 +462,13 @@ async function sendMessage() {
 
   addChatMessage('user', message);
   document.getElementById('chatSuggestions').style.display = 'none';
+
+  // Detect URL paste — show immediate feedback
+  const hasUrl = /https?:\/\/[^\s]+/i.test(message);
+  if (hasUrl) {
+    addChatMessage('system', i18n('url_paste_detected'));
+  }
+
   showTyping(true);
 
   try {
@@ -462,7 +478,7 @@ async function sendMessage() {
       sessionId: state.sessionId,
     };
 
-    if (state.currentTask) {
+    if (state.currentTask && !hasUrl) {
       body.taskId = state.currentTask.taskId;
       body.taskAction = 'answer';
     }
@@ -503,9 +519,13 @@ function handleTaskResponse(data) {
     animateMonitorProgress(data);
     addChatMessage('agent', formatChatOffers(data));
     showResults(data);
-    // Load first offer URL in browser panel
-    const firstUrl = data.offers?.[0]?.url;
-    if (firstUrl) navigateTo(firstUrl);
+    // For URL tasks, load original URL in browser; otherwise load first offer
+    if (data.urlData?.url) {
+      navigateTo(data.urlData.url);
+    } else {
+      const firstUrl = data.offers?.[0]?.url;
+      if (firstUrl) navigateTo(firstUrl);
+    }
     // Clear task so user can make new requests
     state.currentTask = null;
   } else if (data.status === 'completed') {
@@ -604,6 +624,22 @@ function showTyping(show) {
 function useSuggestion(text) {
   document.getElementById('chatInput').value = text;
   sendMessage();
+}
+
+function promptUrlPaste() {
+  const input = document.getElementById('chatInput');
+  input.value = '';
+  input.placeholder = i18n('chip_url_paste_prompt');
+  input.focus();
+  // Try reading from clipboard
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    navigator.clipboard.readText().then(text => {
+      if (/https?:\/\/[^\s]+/i.test(text)) {
+        input.value = text;
+        autoResize(input);
+      }
+    }).catch(() => { /* clipboard access denied, user will paste manually */ });
+  }
 }
 
 function clearChat() {

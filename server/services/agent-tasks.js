@@ -99,6 +99,666 @@ const stmts = {
 
 // ─── Intent Recognition ──────────────────────────────────────────────
 
+// ─── URL Booking Parser ──────────────────────────────────────────────
+
+/**
+ * Detect if a message contains a booking/product URL and parse it.
+ * Supports: Booking.com, Hotels.com, Expedia, Agoda, Airbnb, Amazon, eBay,
+ *           Kayak, Skyscanner, Google Flights/Hotels, TripAdvisor
+ */
+function parseBookingUrl(message) {
+  // Extract URL from message
+  const urlMatch = message.match(/https?:\/\/[^\s,،"'<>]+/i);
+  if (!urlMatch) return null;
+
+  const rawUrl = urlMatch[0].replace(/[,،.]+$/, ''); // strip trailing punctuation
+  let parsed;
+  try { parsed = new URL(rawUrl); } catch (_) { return null; }
+
+  const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+  const params = Object.fromEntries(parsed.searchParams.entries());
+  const path = parsed.pathname;
+
+  const result = {
+    url: rawUrl,
+    host,
+    params,
+    path,
+    site: null,
+    type: null,           // 'hotel', 'flight', 'product', 'rental'
+    name: null,           // Hotel/product name from URL slug
+    checkin: null,
+    checkout: null,
+    adults: null,
+    children: null,
+    rooms: null,
+    destination: null,
+    price: null,          // Will be populated if visible in URL
+    currency: null,
+    extras: {},
+  };
+
+  // ── Booking.com ──
+  if (host.includes('booking.com')) {
+    result.site = 'Booking.com';
+    result.type = path.includes('/hotel/') ? 'hotel' : 'hotel_search';
+
+    // Extract hotel name from path: /hotel/de/hotel-name-slug.ar.html
+    const hotelSlug = path.match(/\/hotel\/[a-z]{2}\/([^.]+)/);
+    if (hotelSlug) {
+      result.name = hotelSlug[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    result.checkin = params.checkin || params.checkin_monthday || null;
+    result.checkout = params.checkout || params.checkout_monthday || null;
+    result.adults = parseInt(params.group_adults || params.req_adults) || null;
+    result.children = parseInt(params.group_children || params.req_children) || null;
+    result.rooms = parseInt(params.no_rooms) || null;
+    result.destination = params.ss || params.dest_id || null;
+
+    // Extract city from dest_type + path
+    const countryCode = path.match(/\/hotel\/([a-z]{2})\//);
+    if (countryCode) result.extras.country = countryCode[1].toUpperCase();
+  }
+
+  // ── Hotels.com ──
+  else if (host.includes('hotels.com')) {
+    result.site = 'Hotels.com';
+    result.type = 'hotel';
+    result.checkin = params.chkin || params.checkIn || null;
+    result.checkout = params.chkout || params.checkOut || null;
+    result.adults = parseInt(params.adults) || null;
+    result.children = parseInt(params.children) || null;
+    result.rooms = parseInt(params.rooms) || null;
+    result.destination = params.destination || params.q || null;
+
+    const hotelSlug = path.match(/\/ho(\d+)/);
+    if (hotelSlug) result.extras.hotelId = hotelSlug[1];
+  }
+
+  // ── Expedia ──
+  else if (host.includes('expedia.com')) {
+    result.site = 'Expedia';
+    result.type = path.includes('/Hotel') ? 'hotel' : path.includes('/Flight') ? 'flight' : 'travel';
+    result.checkin = params.chkin || params.startDate || null;
+    result.checkout = params.chkout || params.endDate || null;
+    result.adults = parseInt(params.adults) || null;
+    result.children = parseInt(params.children) || null;
+    result.rooms = parseInt(params.rooms) || null;
+    result.destination = params.destination || null;
+  }
+
+  // ── Agoda ──
+  else if (host.includes('agoda.com')) {
+    result.site = 'Agoda';
+    result.type = 'hotel';
+    result.checkin = params.checkIn || null;
+    result.checkout = params.checkOut || null;
+    result.adults = parseInt(params.adults) || null;
+    result.children = parseInt(params.children) || null;
+    result.rooms = parseInt(params.rooms) || null;
+  }
+
+  // ── Airbnb ──
+  else if (host.includes('airbnb.com') || host.includes('airbnb.')) {
+    result.site = 'Airbnb';
+    result.type = 'rental';
+    result.checkin = params.check_in || null;
+    result.checkout = params.check_out || null;
+    result.adults = parseInt(params.adults) || null;
+    result.children = parseInt(params.children) || null;
+
+    const listingMatch = path.match(/\/rooms\/(\d+)/);
+    if (listingMatch) result.extras.listingId = listingMatch[1];
+  }
+
+  // ── Amazon ──
+  else if (host.includes('amazon.')) {
+    result.site = 'Amazon';
+    result.type = 'product';
+    const asinMatch = path.match(/\/dp\/([A-Z0-9]{10})/) || path.match(/\/gp\/product\/([A-Z0-9]{10})/);
+    if (asinMatch) result.extras.asin = asinMatch[1];
+    const titleMatch = path.match(/\/([\w-]+)\/dp/);
+    if (titleMatch) result.name = titleMatch[1].replace(/-/g, ' ');
+    result.destination = params.k || params.keywords || null;
+  }
+
+  // ── Kayak ──
+  else if (host.includes('kayak.com')) {
+    result.site = 'Kayak';
+    result.type = path.includes('/hotels') ? 'hotel' : 'flight';
+    // Kayak uses path-based params: /flights/TUN-IST/2026-04-12/2026-04-13
+    const flightParts = path.match(/\/flights\/([A-Z]{3})-([A-Z]{3})\/(\d{4}-\d{2}-\d{2})(?:\/(\d{4}-\d{2}-\d{2}))?/);
+    if (flightParts) {
+      result.extras.origin = flightParts[1];
+      result.extras.destCode = flightParts[2];
+      result.checkin = flightParts[3];
+      result.checkout = flightParts[4] || null;
+    }
+    result.adults = parseInt(params.adults) || null;
+  }
+
+  // ── Skyscanner ──
+  else if (host.includes('skyscanner.')) {
+    result.site = 'Skyscanner';
+    result.type = 'flight';
+    // Path: /transport/flights/tun/ist/260412/260413/
+    const skyParts = path.match(/\/flights\/([a-z]+)\/([a-z]+)\/(\d{6})(?:\/(\d{6}))?/);
+    if (skyParts) {
+      result.extras.origin = skyParts[1].toUpperCase();
+      result.extras.destCode = skyParts[2].toUpperCase();
+    }
+    result.adults = parseInt(params.adults) || null;
+  }
+
+  // ── Google Hotels / Flights ──
+  else if (host.includes('google.com') && (path.includes('/travel') || path.includes('/flights'))) {
+    result.site = 'Google Travel';
+    result.type = path.includes('/hotels') ? 'hotel' : 'flight';
+    result.destination = params.q || null;
+  }
+
+  // ── TripAdvisor ──
+  else if (host.includes('tripadvisor.')) {
+    result.site = 'TripAdvisor';
+    result.type = path.includes('/Hotel') ? 'hotel' : path.includes('/Restaurant') ? 'food' : 'travel';
+    const nameMatch = path.match(/Reviews-([^-]+(?:-[^-]+)*)-/);
+    if (nameMatch) result.name = nameMatch[1].replace(/_/g, ' ');
+  }
+
+  // ── Generic (unknown site with URL params) ──
+  else {
+    result.site = host.split('.').slice(-2, -1)[0]; // e.g. "somesite" from somesite.com
+    result.site = result.site.charAt(0).toUpperCase() + result.site.slice(1);
+    result.type = 'unknown';
+    // Try to extract common params
+    result.checkin = params.checkin || params.check_in || params.startDate || params.from || null;
+    result.checkout = params.checkout || params.check_out || params.endDate || params.to || null;
+    result.adults = parseInt(params.adults || params.guests) || null;
+  }
+
+  // Only return if we detected a real booking/product site
+  if (!result.site) return null;
+
+  return result;
+}
+
+/**
+ * Create a URL-based negotiation task. Skips clarification and
+ * immediately searches for better prices across competing sites.
+ */
+function createUrlTask(sessionId, message, urlData) {
+  const id = crypto.randomUUID();
+  const lang = _detectLang(message);
+
+  // Determine category from URL type
+  const categoryMap = { hotel: 'travel', flight: 'travel', hotel_search: 'travel',
+    rental: 'travel', product: 'shopping', food: 'food', travel: 'travel', unknown: 'general' };
+  const category = categoryMap[urlData.type] || 'general';
+
+  // Build requirements from parsed URL
+  const reqs = {
+    raw: message,
+    intent: urlData.type === 'product' ? 'shopping' : (urlData.type === 'flight' ? 'flight' : 'hotel'),
+    category,
+    sourceUrl: urlData.url,
+    sourceSite: urlData.site,
+    urlData,
+    name: urlData.name,
+    dates: [urlData.checkin, urlData.checkout].filter(Boolean),
+    locations: [urlData.destination, urlData.extras?.origin, urlData.extras?.destCode].filter(Boolean),
+    quantity: urlData.adults ? { count: urlData.adults, unit: 'person' } : { count: 1, unit: 'person' },
+    rooms: urlData.rooms || 1,
+    children: urlData.children || 0,
+  };
+
+  // Build the URL negotiation plan
+  const plan = _buildUrlNegotiationPlan(urlData, lang);
+
+  stmts.insertTask.run(id, sessionId, reqs.intent, category,
+    'planning', message, JSON.stringify(reqs));
+
+  _addMessage(id, 'user', message);
+
+  // Build summary of what was extracted
+  const summary = _urlSummary(urlData, lang);
+  _addMessage(id, 'agent', summary, { type: 'url_parsed', urlData });
+
+  _updatePlan(id, plan);
+
+  return {
+    taskId: id,
+    status: 'planning',
+    intent: { intent: reqs.intent, category, confidence: 1.0 },
+    requirements: reqs,
+    plan,
+    urlData,
+    message: summary + '\n\n' + _planSummary(plan, lang),
+  };
+}
+
+/**
+ * Execute URL negotiation — fetch the original page price,
+ * then search competing sites for the same item at lower prices.
+ */
+async function executeUrlTask(taskId) {
+  const task = stmts.getTask.get(taskId);
+  if (!task) return { error: 'Task not found' };
+
+  const reqs = JSON.parse(task.parsed_requirements || '{}');
+  const urlData = reqs.urlData;
+  if (!urlData) return executeTask(taskId); // Fallback to normal
+
+  const plan = JSON.parse(task.plan || '[]');
+  const lang = _detectLang(task.original_message);
+  const updates = [];
+
+  // ── Step 1: Analyze original listing ──
+  stmts.updateTaskStatus.run('searching', taskId);
+
+  const analyzeMsg = lang === 'ar'
+    ? `🔍 أحلل الصفحة الأصلية من ${urlData.site}...\n📌 ${urlData.name || urlData.url}`
+    : `🔍 Analyzing original listing from ${urlData.site}...\n📌 ${urlData.name || urlData.url}`;
+  _addMessage(taskId, 'agent', analyzeMsg, { type: 'progress', step: 'analyze' });
+  updates.push({ type: 'progress', step: 'analyze', message: analyzeMsg });
+
+  // Try to fetch the original page to get the current price
+  let originalPrice = null;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    const res = await fetch(urlData.url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Accept': 'text/html',
+        'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
+      },
+      signal: controller.signal,
+      redirect: 'follow',
+    });
+    clearTimeout(timeout);
+
+    if (res.ok) {
+      const html = await res.text();
+      // Extract prices from the page
+      const priceRegex = /(?:€|EUR|\$|USD|SAR|ريال|£|GBP)\s*[\d,]+\.?\d*|[\d,]+\.?\d*\s*(?:€|EUR|\$|USD|SAR|ريال|£|GBP)/g;
+      const prices = (html.match(priceRegex) || [])
+        .map(p => ({ raw: p, num: parseFloat(p.replace(/[^\d.]/g, '')) }))
+        .filter(p => p.num > 10 && p.num < 50000)
+        .sort((a, b) => a.num - b.num);
+
+      if (prices.length > 0) {
+        originalPrice = prices[0]; // Lowest price on the page
+      }
+
+      // Also try to extract title if we don't have a name
+      if (!urlData.name) {
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (titleMatch) {
+          urlData.name = titleMatch[1].replace(/\s*[-|–—].*$/, '').trim().slice(0, 80);
+        }
+      }
+    }
+  } catch (_) { /* Fetch failed, continue with competing search */ }
+
+  const priceMsg = originalPrice
+    ? (lang === 'ar'
+      ? `💰 السعر الحالي في ${urlData.site}: **${originalPrice.raw}**\n🎯 أبحث عن أسعار أفضل...`
+      : `💰 Current price on ${urlData.site}: **${originalPrice.raw}**\n🎯 Searching for better prices...`)
+    : (lang === 'ar'
+      ? `💰 لم أتمكن من قراءة السعر مباشرةً. سأبحث في مصادر بديلة...`
+      : `💰 Couldn't read the price directly. Searching alternative sources...`);
+  _addMessage(taskId, 'agent', priceMsg, { type: 'progress', step: 'price_check' });
+  updates.push({ type: 'progress', step: 'price_check', message: priceMsg });
+
+  // ── Step 2: Search competing sources ──
+  const category = task.category || 'travel';
+  const competingSources = _getCompetingSources(urlData, category);
+
+  const searchMsg = lang === 'ar'
+    ? `🚀 أبحث في ${competingSources.length} مصادر منافسة...\n${competingSources.map(s => `  • ${s.name}`).join('\n')}`
+    : `🚀 Searching ${competingSources.length} competing sources...\n${competingSources.map(s => `  • ${s.name}`).join('\n')}`;
+  _addMessage(taskId, 'agent', searchMsg, { type: 'progress', step: 'search' });
+  updates.push({ type: 'progress', step: 'search', message: searchMsg });
+
+  // Create search agents
+  const agents = [];
+  for (const source of competingSources) {
+    const agentId = crypto.randomUUID();
+    stmts.insertAgent.run(agentId, taskId, `${source.name} Agent`, 'negotiator', source.url, 'idle');
+    agents.push({ id: agentId, source });
+  }
+
+  // Build search query from URL data
+  const searchQuery = [
+    urlData.name,
+    urlData.destination,
+    urlData.extras?.origin,
+    urlData.extras?.destCode,
+    urlData.type === 'hotel' ? 'hotel' : urlData.type === 'flight' ? 'flights' : '',
+    urlData.checkin,
+  ].filter(Boolean).join(' ');
+
+  // Execute searches
+  const searchResults = await Promise.allSettled(
+    agents.map(a => _executeSearchAgent(a.id, a.source, {
+      ...reqs,
+      raw: searchQuery,
+    }, searchQuery))
+  );
+
+  // Collect all findings
+  const allFindings = [];
+
+  // Add the original listing as the baseline
+  allFindings.push({
+    source: urlData.site + ' (original)',
+    url: urlData.url,
+    title: urlData.name || `Original listing on ${urlData.site}`,
+    price: originalPrice ? originalPrice.raw : null,
+    priceNum: originalPrice ? originalPrice.num : null,
+    description: `Your original ${urlData.type} from ${urlData.site}`,
+    type: 'original',
+    rank: 0,
+    isOriginal: true,
+  });
+
+  for (let i = 0; i < searchResults.length; i++) {
+    const result = searchResults[i];
+    if (result.status === 'fulfilled' && result.value) {
+      allFindings.push(...result.value);
+    }
+  }
+
+  // ── Step 3: Compare & negotiate ──
+  stmts.updateTaskStatus.run('negotiating', taskId);
+
+  const negMsg = lang === 'ar'
+    ? `🤝 أقارن ${allFindings.length} عرض وأتفاوض للحصول على أفضل سعر...`
+    : `🤝 Comparing ${allFindings.length} offers and negotiating for the best price...`;
+  _addMessage(taskId, 'agent', negMsg, { type: 'progress', step: 'negotiate' });
+  updates.push({ type: 'progress', step: 'negotiate', message: negMsg });
+
+  // Rank with the original price as reference
+  const ranked = _rankFindings(allFindings, reqs);
+
+  // Apply negotiation analysis with reference to original price
+  for (const offer of ranked.slice(0, 8)) {
+    offer.negotiation = _negotiateUrlOffer(offer, originalPrice, urlData, reqs);
+  }
+
+  // ── Step 4: Present results ──
+  stmts.updateTaskStatus.run('presenting', taskId);
+  const topOffers = ranked.slice(0, 8);
+
+  stmts.updateTask.run('presenting', JSON.stringify(reqs),
+    task.clarifications, task.plan, plan.length,
+    JSON.stringify(topOffers), null, task.result, taskId);
+
+  const offerMsg = _formatUrlOffers(topOffers, urlData, originalPrice, lang);
+  _addMessage(taskId, 'agent', offerMsg, { type: 'offers', offers: topOffers });
+  updates.push({ type: 'offers', message: offerMsg, offers: topOffers });
+
+  return {
+    taskId,
+    status: 'presenting',
+    offers: topOffers,
+    message: offerMsg,
+    updates,
+    totalFound: allFindings.length,
+    originalPrice: originalPrice ? originalPrice.raw : null,
+    urlData,
+  };
+}
+
+/**
+ * Get competing sources for a given URL (exclude the original site).
+ */
+function _getCompetingSources(urlData, category) {
+  const sources = [];
+  const originalHost = urlData.host;
+
+  // Hotel-specific competitors
+  if (urlData.type === 'hotel' || urlData.type === 'hotel_search' || urlData.type === 'rental') {
+    const hotelSources = [
+      { name: 'Booking.com', url: 'https://www.booking.com', type: 'direct' },
+      { name: 'Hotels.com', url: 'https://www.hotels.com', type: 'direct' },
+      { name: 'Agoda', url: 'https://www.agoda.com', type: 'direct' },
+      { name: 'Expedia', url: 'https://www.expedia.com', type: 'aggregator' },
+      { name: 'Kayak', url: 'https://www.kayak.com', type: 'aggregator' },
+      { name: 'TripAdvisor', url: 'https://www.tripadvisor.com', type: 'review' },
+      { name: 'Google Hotels', url: 'https://www.google.com/travel/hotels', type: 'search' },
+      { name: 'Trivago', url: 'https://www.trivago.com', type: 'aggregator' },
+    ];
+    for (const s of hotelSources) {
+      if (!originalHost.includes(s.name.toLowerCase().replace(/[.\s]/g, ''))) {
+        sources.push(s);
+      }
+    }
+  }
+
+  // Flight competitors
+  else if (urlData.type === 'flight') {
+    const flightSources = [
+      { name: 'Kayak', url: 'https://www.kayak.com', type: 'aggregator' },
+      { name: 'Skyscanner', url: 'https://www.skyscanner.com', type: 'aggregator' },
+      { name: 'Google Flights', url: 'https://www.google.com/travel/flights', type: 'search' },
+      { name: 'Wego', url: 'https://www.wego.com', type: 'aggregator' },
+      { name: 'Momondo', url: 'https://www.momondo.com', type: 'aggregator' },
+      { name: 'Kiwi', url: 'https://www.kiwi.com', type: 'aggregator' },
+    ];
+    for (const s of flightSources) {
+      if (!originalHost.includes(s.name.toLowerCase().replace(/[.\s]/g, ''))) {
+        sources.push(s);
+      }
+    }
+  }
+
+  // Product competitors
+  else if (urlData.type === 'product') {
+    const productSources = [
+      { name: 'Google Shopping', url: 'https://shopping.google.com', type: 'search' },
+      { name: 'Amazon', url: 'https://www.amazon.com', type: 'direct' },
+      { name: 'eBay', url: 'https://www.ebay.com', type: 'marketplace' },
+      { name: 'PriceGrabber', url: 'https://www.pricegrabber.com', type: 'aggregator' },
+      { name: 'CamelCamelCamel', url: 'https://camelcamelcamel.com', type: 'price_tracker' },
+    ];
+    for (const s of productSources) {
+      if (!originalHost.includes(s.name.toLowerCase().replace(/[.\s]/g, ''))) {
+        sources.push(s);
+      }
+    }
+  }
+
+  // Fallback: use general sources
+  if (sources.length === 0) {
+    sources.push(
+      { name: 'Google', url: 'https://www.google.com', type: 'search' },
+      { name: 'DuckDuckGo', url: 'https://duckduckgo.com', type: 'search' },
+    );
+  }
+
+  return sources.slice(0, 6);
+}
+
+/**
+ * Build execution plan specifically for URL negotiation.
+ */
+function _buildUrlNegotiationPlan(urlData, lang) {
+  return [
+    {
+      id: 1,
+      action: 'analyze',
+      description_ar: `🔍 تحليل الصفحة الأصلية من ${urlData.site}`,
+      description_en: `🔍 Analyzing original listing from ${urlData.site}`,
+      status: 'pending',
+    },
+    {
+      id: 2,
+      action: 'search',
+      description_ar: '🌐 البحث في مصادر منافسة عن نفس العرض بسعر أقل',
+      description_en: '🌐 Searching competing sources for the same deal at lower prices',
+      status: 'pending',
+    },
+    {
+      id: 3,
+      action: 'negotiate',
+      description_ar: '🤝 مقارنة الأسعار والتفاوض',
+      description_en: '🤝 Comparing prices and negotiating',
+      status: 'pending',
+    },
+    {
+      id: 4,
+      action: 'present',
+      description_ar: '📋 عرض أفضل العروض والتوفير المحتمل',
+      description_en: '📋 Presenting best offers and potential savings',
+      status: 'pending',
+    },
+  ];
+}
+
+/**
+ * Build a human-readable summary of the parsed URL.
+ */
+function _urlSummary(urlData, lang) {
+  const parts = [];
+
+  if (lang === 'ar') {
+    parts.push(`🔗 **فهمت!** رابط من **${urlData.site}**`);
+    if (urlData.name) parts.push(`📌 ${urlData.name}`);
+    if (urlData.type === 'hotel') parts.push(`🏨 نوع: فندق`);
+    else if (urlData.type === 'flight') parts.push(`✈️ نوع: رحلة طيران`);
+    else if (urlData.type === 'product') parts.push(`🛒 نوع: منتج`);
+    else if (urlData.type === 'rental') parts.push(`🏠 نوع: سكن`);
+    if (urlData.checkin && urlData.checkout) parts.push(`📅 ${urlData.checkin} → ${urlData.checkout}`);
+    else if (urlData.checkin) parts.push(`📅 ${urlData.checkin}`);
+    if (urlData.adults) parts.push(`👥 ${urlData.adults} بالغ${urlData.children ? ` + ${urlData.children} أطفال` : ''}`);
+    if (urlData.rooms && urlData.rooms > 1) parts.push(`🚪 ${urlData.rooms} غرف`);
+    parts.push('');
+    parts.push('🤖 سأبحث في مصادر منافسة للحصول على سعر أفضل بنفس المعلومات...');
+  } else {
+    parts.push(`🔗 **Got it!** Link from **${urlData.site}**`);
+    if (urlData.name) parts.push(`📌 ${urlData.name}`);
+    if (urlData.type === 'hotel') parts.push(`🏨 Type: Hotel`);
+    else if (urlData.type === 'flight') parts.push(`✈️ Type: Flight`);
+    else if (urlData.type === 'product') parts.push(`🛒 Type: Product`);
+    else if (urlData.type === 'rental') parts.push(`🏠 Type: Rental`);
+    if (urlData.checkin && urlData.checkout) parts.push(`📅 ${urlData.checkin} → ${urlData.checkout}`);
+    else if (urlData.checkin) parts.push(`📅 ${urlData.checkin}`);
+    if (urlData.adults) parts.push(`👥 ${urlData.adults} adult${urlData.adults > 1 ? 's' : ''}${urlData.children ? ` + ${urlData.children} children` : ''}`);
+    if (urlData.rooms && urlData.rooms > 1) parts.push(`🚪 ${urlData.rooms} room${urlData.rooms > 1 ? 's' : ''}`);
+    parts.push('');
+    parts.push('🤖 Searching competing sources for a better price with the same details...');
+  }
+
+  return parts.join('\n');
+}
+
+/**
+ * Negotiate an offer relative to the original URL price.
+ */
+function _negotiateUrlOffer(offer, originalPrice, urlData, reqs) {
+  const lang = _detectLang(reqs.raw);
+  const negotiation = {
+    originalPrice: originalPrice ? originalPrice.raw : null,
+    originalPriceNum: originalPrice ? originalPrice.num : null,
+    negotiatedPrice: offer.price,
+    savings: null,
+    savingsPercent: 0,
+    strategy: 'url_comparison',
+    tip: '',
+    log: [],
+  };
+
+  if (offer.isOriginal) {
+    negotiation.strategy = 'original';
+    negotiation.tip = lang === 'ar'
+      ? '📌 هذا هو السعر الأصلي من رابطك'
+      : '📌 This is the original price from your link';
+    negotiation.log.push(lang === 'ar'
+      ? '📌 العرض الأصلي — قارن مع البدائل أدناه'
+      : '📌 Original listing — compare with alternatives below');
+    return negotiation;
+  }
+
+  // Calculate savings vs original
+  if (originalPrice && offer.priceNum) {
+    const diff = originalPrice.num - offer.priceNum;
+    if (diff > 0) {
+      negotiation.savings = diff.toFixed(2);
+      negotiation.savingsPercent = Math.round((diff / originalPrice.num) * 100);
+      negotiation.log.push(lang === 'ar'
+        ? `🎯 أرخص من ${urlData.site} بـ ${diff.toFixed(0)} (${negotiation.savingsPercent}% توفير)`
+        : `🎯 Cheaper than ${urlData.site} by ${diff.toFixed(0)} (${negotiation.savingsPercent}% savings)`);
+    } else if (diff < 0) {
+      negotiation.log.push(lang === 'ar'
+        ? `⬆️ أغلى من ${urlData.site} بـ ${Math.abs(diff).toFixed(0)}`
+        : `⬆️ More expensive than ${urlData.site} by ${Math.abs(diff).toFixed(0)}`);
+    } else {
+      negotiation.log.push(lang === 'ar'
+        ? `↔️ نفس السعر على ${urlData.site}`
+        : `↔️ Same price as ${urlData.site}`);
+    }
+  }
+
+  // Strategy tips
+  if (offer.type === 'aggregator') {
+    negotiation.tip = lang === 'ar'
+      ? '💡 موقع تجميع — قد يجد أسعاراً أقل من حجز مباشر'
+      : '💡 Aggregator — may find prices lower than direct booking';
+  } else if (offer.type === 'direct') {
+    negotiation.tip = lang === 'ar'
+      ? '💡 حجز مباشر — ابحث عن كوبونات أو برامج ولاء'
+      : '💡 Direct booking — look for coupons or loyalty programs';
+  } else {
+    negotiation.tip = lang === 'ar'
+      ? '💡 قارن الأسعار لنفس الغرفة/الخدمة بالضبط'
+      : '💡 Compare prices for the exact same room/service';
+  }
+
+  return negotiation;
+}
+
+/**
+ * Format URL negotiation offers with comparison to original.
+ */
+function _formatUrlOffers(offers, urlData, originalPrice, lang) {
+  if (offers.length === 0) {
+    return lang === 'ar' ? '❌ لم أجد عروض بديلة.' : '❌ No alternative offers found.';
+  }
+
+  const header = lang === 'ar'
+    ? `🏆 قارنت ${offers.length} عروض مع رابطك من ${urlData.site}:\n${'─'.repeat(40)}\n`
+    : `🏆 Compared ${offers.length} offers against your ${urlData.site} link:\n${'─'.repeat(40)}\n`;
+
+  const offerLines = offers.map((o, i) => {
+    const medal = o.isOriginal ? '📌' : (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`);
+    const label = o.isOriginal ? (lang === 'ar' ? '(الأصلي)' : '(Original)') : '';
+    let line = `${medal} **${o.source}** ${label}`;
+    if (o.title) line += `\n   📌 ${o.title}`;
+    if (o.price) line += `\n   💰 ${o.price}`;
+    if (o.negotiation) {
+      if (o.negotiation.savings && parseFloat(o.negotiation.savings) > 0) {
+        line += lang === 'ar'
+          ? `\n   🎯 **توفير: ${o.negotiation.savings} (${o.negotiation.savingsPercent}%)**`
+          : `\n   🎯 **Savings: ${o.negotiation.savings} (${o.negotiation.savingsPercent}%)**`;
+      }
+      if (o.negotiation.log.length > 0) {
+        line += `\n   ${o.negotiation.log[0]}`;
+      }
+    }
+    if (o.rating) line += `\n   ⭐ ${o.rating}`;
+    line += `\n   🔗 ${o.url}`;
+    return line;
+  });
+
+  const footer = lang === 'ar'
+    ? `\n${'─'.repeat(40)}\n💡 اختر رقم العرض لفتحه أو قل "اختر 1"\n🔒 نصيحة: افتح في وضع التصفح المتخفي للحصول على سعر أفضل`
+    : `\n${'─'.repeat(40)}\n💡 Pick an offer number to open it, e.g. "select 1"\n🔒 Tip: Open in incognito mode for potentially better prices`;
+
+  return header + offerLines.join('\n\n') + footer;
+}
+
 const INTENT_PATTERNS = {
   booking: {
     ar: ['احجز', 'حجز', 'موعد', 'حجوزات', 'حجز موعد', 'ريزيرف'],
@@ -1119,7 +1779,10 @@ function _detectLang(text) {
 module.exports = {
   detectIntent,
   extractRequirements,
+  parseBookingUrl,
   createTask,
+  createUrlTask,
+  executeUrlTask,
   answerClarification,
   executeTask,
   selectOffer,

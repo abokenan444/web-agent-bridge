@@ -236,7 +236,7 @@ app.post('/api/wab/agent-chat', chatLimiter, async (req, res) => {
   if (!message || typeof message !== 'string') {
     return res.status(400).json({ error: 'Message required' });
   }
-  if (message.length > 1000) {
+  if (message.length > 3000) {
     return res.status(400).json({ error: 'Message too long' });
   }
 
@@ -276,6 +276,14 @@ app.post('/api/wab/agent-chat', chatLimiter, async (req, res) => {
           return res.json({ ...result, type: 'task' });
         }
       }
+    }
+
+    // ── Detect URL paste — create URL negotiation task ──
+    const urlData = agentTasks.parseBookingUrl(message);
+    if (urlData) {
+      const task = agentTasks.createUrlTask(sid, message, urlData);
+      const execResult = await agentTasks.executeUrlTask(task.taskId);
+      return res.json({ ...execResult, type: 'task', urlData });
     }
 
     // ── Detect if this is a task-type request (booking, shopping, etc.) ──
