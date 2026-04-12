@@ -9,6 +9,8 @@
 
 > **robots.txt told bots what NOT to do. WAB tells AI agents what they CAN do.**
 
+🌐 **Live Website:** [https://webagentbridge.com](https://webagentbridge.com) — Try the Agent Workspace, dashboards, and many more features live.
+
 **English** | **[العربية](README.ar.md)**
 
 WAB is an open-source middleware layer that bridges AI agents and websites — like **OpenAPI for human-facing pages**. Website owners embed a script that exposes a standardized `window.AICommands` interface. AI agents discover available actions, execute commands, and interact with sites accurately — no DOM parsing, no scraping, no guesswork.
@@ -91,6 +93,14 @@ WAB is an open-source middleware layer that bridges AI agents and websites — l
 - **Commander Agent System** — Local-first mission orchestration engine that decomposes high-level goals into task DAGs. Agent registry with capabilities tracking, parallel execution engine, learning integration for outcome feedback, and edge coordination for distributed work
 - **Edge Compute System** — Transforms every user device into a sovereign AI node. Hardware profiling (CPU, RAM, GPU), AES-256-GCM encrypted inter-node communication, weighted load balancing, heartbeat-based health monitoring with auto-failover, and swarm formation with capability-based clustering
 - **Swarm Execution Engine** — Launch multiple agents in parallel to solve a single task. Configurable strategies (parallel, sequential, hybrid), result merging with best-score selection, role specialization, fairness-weighted aggregation, and per-agent confidence scoring
+
+### v2.5 — Agent Workspace & Multilingual AI
+
+- **Agent Workspace** — Premium 4-panel workspace for non-technical users: embedded browser, smart agent chat, real-time negotiation monitor, and results panel. Subscription tiers (Free/Starter/Pro/Enterprise), deal tracking, and admin management. Live at [webagentbridge.com/workspace](https://webagentbridge.com/workspace)
+- **Bilingual UI (AR/EN)** — Full Arabic/English interface with auto-detection from browser language. Toggle instantly between languages. RTL/LTR layout support
+- **Multilingual Agent** — The smart agent understands and responds in any language the user writes in — Arabic, English, French, Spanish, Turkish, and more. No restrictions on input style, dialect, or format
+
+> **Many more features** are available on the live website that aren't listed here — dashboards, analytics, admin tools, and more. Visit [webagentbridge.com](https://webagentbridge.com) to explore.
 
 ---
 

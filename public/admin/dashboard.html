@@ -43,6 +43,7 @@
         <a href="#" data-view="notifications">🔔 Notifications</a>
         <a href="#" data-view="ads">📢 Ads Manager</a>
         <a href="#" data-view="ad-submissions">📋 Ad Submissions</a>
+        <a href="#" data-view="workspace">🤖 Agent Workspace</a>
       </nav>
       <div class="sidebar-footer">
         <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;" id="adminName"></div>
@@ -360,6 +361,57 @@
         </div>
       </div>
 
+      <!-- ── Agent Workspace Management ── -->
+      <div id="view-workspace" class="view">
+        <div class="page-header">
+          <h1>🤖 Agent Workspace</h1>
+          <a href="/workspace" target="_blank" class="btn btn-primary btn-sm">Open Workspace</a>
+        </div>
+
+        <!-- Workspace Stats -->
+        <div class="stats-grid" id="wsStatsGrid">
+          <div class="stat-card"><div class="label">Workspace Users</div><div class="value" id="wsStatUsers">0</div></div>
+          <div class="stat-card"><div class="label">Active Today</div><div class="value" id="wsStatActive">0</div></div>
+          <div class="stat-card"><div class="label">Total Tasks</div><div class="value" id="wsStatTasks">0</div></div>
+          <div class="stat-card"><div class="label">Deals Completed</div><div class="value" id="wsStatDeals">0</div></div>
+          <div class="stat-card"><div class="label">Total Savings</div><div class="value" id="wsStatSavings" style="color:#10b981">$0</div></div>
+        </div>
+
+        <!-- Plan Breakdown -->
+        <div class="grid-2" style="margin-top:24px;">
+          <div class="card">
+            <h3 style="margin-bottom:16px;">Plan Breakdown</h3>
+            <div id="wsPlanBreakdown"></div>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:16px;">Daily Activity (30d)</h3>
+            <div id="wsDailyChart" style="max-height:200px;overflow-y:auto;"></div>
+          </div>
+        </div>
+
+        <!-- Subscriptions Table -->
+        <div class="card" style="margin-top:24px;">
+          <h3 style="margin-bottom:16px;">Subscriptions</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>User</th><th>Email</th><th>Plan</th><th>Tasks Today</th><th>Total Tasks</th><th>Deals</th><th>Savings</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="wsSubsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Deals Table -->
+        <div class="card" style="margin-top:24px;">
+          <h3 style="margin-bottom:16px;">Recent Deals</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>User</th><th>Source</th><th>Item</th><th>Original $</th><th>Final $</th><th>Savings</th><th>Status</th><th>Date</th></tr></thead>
+              <tbody id="wsDealsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -418,6 +470,7 @@
         case 'notifications': loadNotifications(); break;
         case 'ads': loadAds(); break;
         case 'ad-submissions': loadAdSubmissions(); break;
+        case 'workspace': loadWorkspace(); break;
       }
     }
 
@@ -1022,6 +1075,111 @@
     async function rejectSubmission(id) {
       await fetch(`${ADS_API}/admin/${id}/status`, { method: 'PUT', headers: headers(), body: JSON.stringify({ status: 'rejected' }) });
       loadAdSubmissions();
+    }
+
+    // ─── Workspace Management ─────────────────────────────────────────
+    async function loadWorkspace() {
+      try {
+        // Load stats
+        const statsRes = await fetch('/api/workspace/admin/stats', { headers: headers() });
+        if (statsRes.ok) {
+          const s = await statsRes.json();
+          document.getElementById('wsStatUsers').textContent = s.totalUsers;
+          document.getElementById('wsStatActive').textContent = s.activeToday;
+          document.getElementById('wsStatTasks').textContent = (s.totalTasks || 0).toLocaleString();
+          document.getElementById('wsStatDeals').textContent = s.totalDeals || 0;
+          document.getElementById('wsStatSavings').textContent = '$' + (s.totalSavings || 0).toFixed(2);
+
+          // Plan breakdown
+          const pb = document.getElementById('wsPlanBreakdown');
+          if (s.planBreakdown && s.planBreakdown.length) {
+            pb.innerHTML = s.planBreakdown.map(p => `
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                <span class="badge badge-${p.plan}">${esc(p.plan)}</span>
+                <span>${p.count} users • ${p.tasks || 0} tasks • $${(p.savings || 0).toFixed(0)} saved</span>
+              </div>
+            `).join('');
+          } else {
+            pb.innerHTML = '<p style="color:var(--text-muted)">No workspace subscriptions yet</p>';
+          }
+
+          // Daily chart
+          const dc = document.getElementById('wsDailyChart');
+          if (s.dailyTasks && s.dailyTasks.length) {
+            const max = Math.max(...s.dailyTasks.map(d => d.count), 1);
+            dc.innerHTML = s.dailyTasks.slice(-14).map(d => `
+              <div style="display:flex;align-items:center;gap:8px;padding:3px 0;">
+                <span style="width:70px;font-size:0.75rem;color:var(--text-muted)">${d.day.slice(5)}</span>
+                <div style="flex:1;height:14px;background:var(--bg-card);border-radius:4px;overflow:hidden;">
+                  <div style="width:${(d.count/max)*100}%;height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);border-radius:4px;"></div>
+                </div>
+                <span style="width:30px;font-size:0.75rem;text-align:right">${d.count}</span>
+              </div>
+            `).join('');
+          } else {
+            dc.innerHTML = '<p style="color:var(--text-muted)">No activity data yet</p>';
+          }
+        }
+
+        // Load subscriptions
+        const subsRes = await fetch('/api/workspace/admin/subscriptions?limit=50', { headers: headers() });
+        if (subsRes.ok) {
+          const data = await subsRes.json();
+          const tbody = document.getElementById('wsSubsTableBody');
+          tbody.innerHTML = (data.subscriptions || []).map(s => `
+            <tr>
+              <td>${esc(s.name || '-')}</td>
+              <td>${esc(s.email || '-')}</td>
+              <td><span class="badge badge-${s.plan}">${esc(s.plan)}</span></td>
+              <td>${s.tasks_today || 0}</td>
+              <td>${s.tasks_total || 0}</td>
+              <td>${s.deals_completed || 0}</td>
+              <td style="color:#10b981">$${(s.total_savings || 0).toFixed(2)}</td>
+              <td><span class="badge badge-${s.status === 'active' ? 'free' : 'ended'}">${esc(s.status)}</span></td>
+              <td>
+                <select onchange="updateWsSub('${esc(s.user_id)}', this.value)" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-color);border-radius:6px;padding:4px 8px;font-size:0.8rem;">
+                  <option value="free" ${s.plan==='free'?'selected':''}>Free</option>
+                  <option value="starter" ${s.plan==='starter'?'selected':''}>Starter</option>
+                  <option value="pro" ${s.plan==='pro'?'selected':''}>Pro</option>
+                  <option value="enterprise" ${s.plan==='enterprise'?'selected':''}>Enterprise</option>
+                </select>
+              </td>
+            </tr>
+          `).join('');
+        }
+
+        // Load deals
+        const dealsRes = await fetch('/api/workspace/admin/deals?limit=30', { headers: headers() });
+        if (dealsRes.ok) {
+          const data = await dealsRes.json();
+          const tbody = document.getElementById('wsDealsTableBody');
+          tbody.innerHTML = (data.deals || []).map(d => `
+            <tr>
+              <td>${esc(d.user_name || d.email || '-')}</td>
+              <td>${esc(d.offer_source || '-')}</td>
+              <td>${esc(d.offer_title || '-')}</td>
+              <td>$${(d.original_price || 0).toFixed(2)}</td>
+              <td style="color:#10b981">$${(d.final_price || 0).toFixed(2)}</td>
+              <td style="color:#fbbf24">$${(d.savings || 0).toFixed(2)}</td>
+              <td><span class="badge badge-${d.status==='completed'?'free':'ended'}">${esc(d.status)}</span></td>
+              <td style="font-size:0.8rem;color:var(--text-muted)">${d.created_at ? d.created_at.slice(0,16) : '-'}</td>
+            </tr>
+          `).join('');
+        }
+      } catch (err) {
+        console.error('Workspace load error:', err);
+      }
+    }
+
+    async function updateWsSub(userId, plan) {
+      try {
+        await fetch(`/api/workspace/admin/subscription/${userId}`, {
+          method: 'PUT',
+          headers: headers(),
+          body: JSON.stringify({ plan })
+        });
+        loadWorkspace();
+      } catch (err) { console.error(err); }
     }
 
     // ─── Styles ─────────────────────────────────────────────────────────

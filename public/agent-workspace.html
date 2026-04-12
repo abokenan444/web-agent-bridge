@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title data-i18n="page_title">WAB Agent Workspace — مساحة عمل الوكيل الذكي</title>
+  <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/agent-workspace.css">
+</head>
+<body class="aws-body" dir="rtl">
+
+<!-- ═══ Auth Overlay ═══ -->
+<div id="authOverlay" class="aws-auth-overlay">
+  <div class="aws-auth-card">
+    <div class="aws-auth-logo">🤖</div>
+
+    <!-- Login Form -->
+    <div id="authLogin">
+      <h2 class="aws-auth-title" data-i18n="auth_welcome">مرحباً بك في WAB</h2>
+      <p class="aws-auth-subtitle" data-i18n="auth_subtitle">سجّل دخولك للوصول إلى مساحة عمل الوكيل الذكي</p>
+      <div id="authError" class="aws-auth-error"></div>
+      <form id="loginForm" class="aws-auth-form" autocomplete="on">
+        <label for="loginEmail" data-i18n="auth_email">البريد الإلكتروني</label>
+        <input id="loginEmail" class="aws-auth-input" type="email" data-i18n-placeholder="auth_email_ph" placeholder="you@email.com" required autocomplete="email">
+        <label for="loginPassword" data-i18n="auth_password">كلمة المرور</label>
+        <input id="loginPassword" class="aws-auth-input" type="password" data-i18n-placeholder="auth_password_ph" placeholder="••••••••" required autocomplete="current-password">
+        <button type="submit" class="aws-auth-submit" id="loginBtn" data-i18n="auth_login_btn">تسجيل الدخول</button>
+      </form>
+      <p class="aws-auth-switch"><span data-i18n="auth_no_account">ليس لديك حساب؟</span> <a onclick="showRegister()" data-i18n="auth_create_account">إنشاء حساب جديد</a></p>
+    </div>
+
+    <!-- Register Form -->
+    <div id="authRegister" style="display:none">
+      <h2 class="aws-auth-title" data-i18n="auth_register_title">إنشاء حساب جديد</h2>
+      <p class="aws-auth-subtitle" data-i18n="auth_register_subtitle">ابدأ مع الوكيل الذكي — ابحث، قارن، وفاوض بذكاء</p>
+      <div id="regError" class="aws-auth-error"></div>
+      <form id="registerForm" class="aws-auth-form" autocomplete="on">
+        <label for="regName" data-i18n="auth_name">الاسم</label>
+        <input id="regName" class="aws-auth-input" type="text" data-i18n-placeholder="auth_name_ph" placeholder="محمد" required autocomplete="name">
+        <label for="regEmail" data-i18n="auth_email">البريد الإلكتروني</label>
+        <input id="regEmail" class="aws-auth-input" type="email" data-i18n-placeholder="auth_email_ph" placeholder="you@email.com" required autocomplete="email">
+        <label for="regPassword" data-i18n="auth_password">كلمة المرور</label>
+        <input id="regPassword" class="aws-auth-input" type="password" data-i18n-placeholder="auth_reg_password_ph" placeholder="6 أحرف على الأقل" required minlength="6" autocomplete="new-password">
+        <button type="submit" class="aws-auth-submit" id="regBtn" data-i18n="auth_register_btn">إنشاء حساب</button>
+      </form>
+      <p class="aws-auth-switch"><span data-i18n="auth_has_account">لديك حساب بالفعل؟</span> <a onclick="showLogin()" data-i18n="auth_signin_link">تسجيل الدخول</a></p>
+    </div>
+
+    <!-- Subscription Selection (after register) -->
+    <div id="authSubscription" style="display:none">
+      <h2 class="aws-auth-title" data-i18n="auth_plan_title">اختر خطتك</h2>
+      <p class="aws-auth-subtitle" data-i18n="auth_plan_subtitle">ابدأ مجاناً أو اختر خطة تناسبك</p>
+      <div class="aws-plans-grid">
+        <div class="aws-plan-card" onclick="selectPlan('free')">
+          <div class="aws-plan-name" data-i18n="plan_free">مجاني</div>
+          <div class="aws-plan-price">$0 <span data-i18n="plan_per_month">/شهر</span></div>
+          <ul class="aws-plan-features">
+            <li data-i18n="plan_free_f1">5 مهام يومياً</li>
+            <li data-i18n="plan_free_f2">بحث أساسي</li>
+            <li data-i18n="plan_free_f3">نتائج محدودة</li>
+          </ul>
+        </div>
+        <div class="aws-plan-card recommended" onclick="selectPlan('pro')">
+          <div class="aws-plan-name" style="color:#8b5cf6">Pro ⭐</div>
+          <div class="aws-plan-price">$29 <span data-i18n="plan_per_month">/شهر</span></div>
+          <ul class="aws-plan-features">
+            <li data-i18n="plan_pro_f1">مهام غير محدودة</li>
+            <li data-i18n="plan_pro_f2">تفاوض متقدم</li>
+            <li data-i18n="plan_pro_f3">وكيل يُتمم الصفقات</li>
+            <li data-i18n="plan_pro_f4">أولوية في الدعم</li>
+          </ul>
+        </div>
+        <div class="aws-plan-card" onclick="selectPlan('enterprise')">
+          <div class="aws-plan-name">Enterprise</div>
+          <div class="aws-plan-price">$99 <span data-i18n="plan_per_month">/شهر</span></div>
+          <ul class="aws-plan-features">
+            <li data-i18n="plan_ent_f1">كل ميزات Pro</li>
+            <li data-i18n="plan_ent_f2">API مخصص</li>
+            <li data-i18n="plan_ent_f3">فريق متعدد</li>
+            <li data-i18n="plan_ent_f4">دعم مخصص 24/7</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Top Bar ═══ -->
+<div class="aws-topbar">
+  <div class="aws-topbar-left">
+    <div class="aws-logo">W</div>
+    <div class="aws-topbar-title"><span>WAB</span> Agent Workspace</div>
+  </div>
+
+  <div class="aws-topbar-center">
+    <button class="aws-layout-btn active" onclick="setLayout('grid')" title="Grid 2×2">⊞</button>
+    <button class="aws-layout-btn" onclick="setLayout('horizontal')" title="Horizontal">☰</button>
+    <button class="aws-layout-btn" onclick="setLayout('focus-browser')" title="Focus Browser">◧</button>
+  </div>
+
+  <div class="aws-topbar-right">
+    <span id="userTier" class="aws-tier-badge premium">Premium</span>
+    <div id="userBadge" class="aws-user-badge">
+      <div class="aws-user-avatar" id="userAvatar">M</div>
+      <span id="userName">User</span>
+    </div>
+    <button class="aws-btn-icon" onclick="toggleLang()" title="عربي/English">🌐</button>
+    <button class="aws-btn-icon" onclick="toggleSettings()" data-i18n-title="topbar_settings" title="الإعدادات">⚙</button>
+    <button class="aws-logout-btn" onclick="logout()" data-i18n="topbar_logout">خروج</button>
+    <button class="aws-mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+  </div>
+</div>
+
+<!-- ═══ 4-Panel Workspace ═══ -->
+<div id="workspace" class="aws-workspace">
+
+  <!-- Panel 1: Browser -->
+  <div class="aws-panel active-mobile" id="panelBrowser">
+    <div class="aws-panel-header">
+      <div class="aws-panel-header-left">
+        <div class="aws-panel-icon browser">🌐</div>
+        <span class="aws-panel-title" data-i18n="panel_browser">المتصفح</span>
+        <span class="aws-panel-status idle" id="browserStatus" data-i18n="status_ready">جاهز</span>
+      </div>
+      <div class="aws-panel-actions">
+        <button class="aws-panel-action-btn" onclick="refreshBrowser()" data-i18n-title="browser_refresh" title="تحديث">↻</button>
+        <button class="aws-panel-action-btn" onclick="maximizePanel('panelBrowser')" data-i18n-title="panel_maximize" title="تكبير">⬜</button>
+      </div>
+    </div>
+    <div class="aws-panel-body">
+      <div class="aws-browser-bar">
+        <div class="aws-browser-nav">
+          <button onclick="browserBack()" data-i18n-title="browser_back" title="رجوع">←</button>
+          <button onclick="browserForward()" data-i18n-title="browser_forward" title="تقدم">→</button>
+        </div>
+        <div class="aws-url-bar">
+          <span class="aws-url-lock" id="urlLock">🔒</span>
+          <input class="aws-url-input" id="urlInput" data-i18n-placeholder="browser_url_ph" placeholder="أدخل الرابط أو ابحث..." 
+                 onkeydown="if(event.key==='Enter')navigateTo(this.value)">
+        </div>
+      </div>
+      <div class="aws-browser-empty" id="browserEmpty">
+        <div class="aws-browser-empty-icon">🌐</div>
+        <p data-i18n="browser_empty">اطلب من الوكيل البحث عن شيء أو أدخل رابطاً في شريط العنوان</p>
+      </div>
+      <iframe class="aws-browser-frame" id="browserFrame" style="display:none" 
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+    </div>
+  </div>
+
+  <!-- Panel 2: Agent Chat -->
+  <div class="aws-panel" id="panelChat">
+    <div class="aws-panel-header">
+      <div class="aws-panel-header-left">
+        <div class="aws-panel-icon chat">🤖</div>
+        <span class="aws-panel-title" data-i18n="panel_agent">الوكيل الذكي</span>
+        <span class="aws-panel-status active" id="chatStatus" data-i18n="status_connected">متصل</span>
+      </div>
+      <div class="aws-panel-actions">
+        <button class="aws-panel-action-btn" onclick="clearChat()" data-i18n-title="chat_new" title="محادثة جديدة">🗑</button>
+        <button class="aws-panel-action-btn" onclick="maximizePanel('panelChat')" data-i18n-title="panel_maximize" title="تكبير">⬜</button>
+      </div>
+    </div>
+    <div class="aws-panel-body">
+      <div class="aws-chat-messages" id="chatMessages">
+        <!-- Welcome message injected by JS -->
+      </div>
+
+      <div class="aws-typing-indicator" id="typingIndicator">
+        <div class="aws-typing-dot"></div>
+        <div class="aws-typing-dot"></div>
+        <div class="aws-typing-dot"></div>
+      </div>
+
+      <div class="aws-chat-input-area">
+        <div class="aws-chat-input-row">
+          <textarea class="aws-chat-textarea" id="chatInput" rows="1" 
+                    data-i18n-placeholder="chat_input_ph" placeholder="اكتب رسالتك هنا... (لا قيود — اكتب بحرية)"
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+                    oninput="autoResize(this)"></textarea>
+          <button class="aws-chat-send" id="sendBtn" onclick="sendMessage()" data-i18n-title="chat_send" title="إرسال">➤</button>
+        </div>
+        <div class="aws-chat-suggestions" id="chatSuggestions">
+          <button class="aws-suggestion-chip" data-i18n="chip_hotels" onclick="useSuggestion(i18n('chip_hotels_query'))">🏨 فنادق تونس</button>
+          <button class="aws-suggestion-chip" data-i18n="chip_laptop" onclick="useSuggestion(i18n('chip_laptop_query'))">🎮 لابتوب قيمنق</button>
+          <button class="aws-suggestion-chip" data-i18n="chip_iphone" onclick="useSuggestion(i18n('chip_iphone_query'))">📱 iPhone 16</button>
+          <button class="aws-suggestion-chip" data-i18n="chip_flight" onclick="useSuggestion(i18n('chip_flight_query'))">✈️ رحلة طيران</button>
+          <button class="aws-suggestion-chip" data-i18n="chip_security" onclick="useSuggestion(i18n('chip_security_query'))">🔒 فحص أمان</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 3: Negotiation Monitor -->
+  <div class="aws-panel" id="panelMonitor">
+    <div class="aws-panel-header">
+      <div class="aws-panel-header-left">
+        <div class="aws-panel-icon monitor">📊</div>
+        <span class="aws-panel-title" data-i18n="panel_monitor">شاشة التفاوض</span>
+        <span class="aws-panel-status idle" id="monitorStatus" data-i18n="status_waiting">في الانتظار</span>
+      </div>
+      <div class="aws-panel-actions">
+        <button class="aws-panel-action-btn" onclick="maximizePanel('panelMonitor')" data-i18n-title="panel_maximize" title="تكبير">⬜</button>
+      </div>
+    </div>
+    <div class="aws-panel-body">
+      <div class="aws-monitor-content" id="monitorContent">
+        <div class="aws-monitor-empty" id="monitorEmpty">
+          <div class="aws-monitor-empty-icon">📊</div>
+          <p data-i18n="monitor_empty">عندما يبدأ الوكيل بالبحث والتفاوض، ستراقب كل خطوة هنا مباشرة</p>
+        </div>
+
+        <!-- Progress Steps (shown during task) -->
+        <div id="monitorSteps" style="display:none">
+          <div class="aws-progress-steps" id="progressSteps"></div>
+        </div>
+
+        <!-- Agent Activity Cards -->
+        <div id="monitorAgents"></div>
+
+        <!-- Negotiation Rounds -->
+        <div id="monitorNegotiations"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 4: Results & Actions -->
+  <div class="aws-panel" id="panelResults">
+    <div class="aws-panel-header">
+      <div class="aws-panel-header-left">
+        <div class="aws-panel-icon results">✅</div>
+        <span class="aws-panel-title" data-i18n="panel_results">النتائج والإجراءات</span>
+        <span class="aws-panel-status idle" id="resultsStatus" data-i18n="status_awaiting">بانتظار النتائج</span>
+      </div>
+      <div class="aws-panel-actions">
+        <button class="aws-panel-action-btn" onclick="maximizePanel('panelResults')" data-i18n-title="panel_maximize" title="تكبير">⬜</button>
+      </div>
+    </div>
+    <div class="aws-panel-body">
+      <div class="aws-results-content" id="resultsContent">
+        <div class="aws-results-empty" id="resultsEmpty">
+          <div class="aws-results-empty-icon">✅</div>
+          <p data-i18n="results_empty">ستظهر هنا أفضل النتائج والروابط بعد انتهاء الوكيل من البحث والتفاوض</p>
+        </div>
+
+        <!-- Results cards injected here -->
+        <div id="resultsCards"></div>
+
+        <!-- Login request (shown when site needs auth) -->
+        <div id="loginRequestArea" style="display:none"></div>
+
+        <!-- Tips section -->
+        <div id="tipsArea" style="display:none"></div>
+      </div>
+
+      <!-- Summary bar -->
+      <div class="aws-results-summary" id="resultsSummary" style="display:none">
+        <div class="aws-summary-stat">
+          <span data-i18n="summary_results">🔍 نتائج:</span>
+          <span class="value" id="summaryCount">0</span>
+        </div>
+        <div class="aws-summary-stat">
+          <span data-i18n="summary_best_saving">💰 أفضل توفير:</span>
+          <span class="value" id="summaryBestSaving">-</span>
+        </div>
+        <div class="aws-summary-stat">
+          <span data-i18n="summary_time">⏱️ الوقت:</span>
+          <span class="value" id="summaryTime">-</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Mobile Bottom Navigation ═══ -->
+<div class="aws-mobile-nav" id="mobileNav">
+  <button class="aws-mobile-nav-item active" onclick="switchMobilePanel(0, this)">
+    <span class="icon">🌐</span>
+    <span data-i18n="nav_browser">المتصفح</span>
+  </button>
+  <button class="aws-mobile-nav-item" onclick="switchMobilePanel(1, this)">
+    <span class="icon">🤖</span>
+    <span data-i18n="nav_agent">الوكيل</span>
+  </button>
+  <button class="aws-mobile-nav-item" onclick="switchMobilePanel(2, this)">
+    <span class="icon">📊</span>
+    <span data-i18n="nav_monitor">التفاوض</span>
+  </button>
+  <button class="aws-mobile-nav-item" onclick="switchMobilePanel(3, this)">
+    <span class="icon">✅</span>
+    <span data-i18n="nav_results">النتائج</span>
+  </button>
+</div>
+
+<!-- ═══ Toast Notification ═══ -->
+<div class="aws-toast" id="toast"></div>
+
+<script src="/js/agent-workspace.js"></script>
+</body>
+</html>

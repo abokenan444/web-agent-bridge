@@ -30,6 +30,7 @@ const noscriptRoutes = require('./routes/noscript');
 const discoveryRoutes = require('./routes/discovery');
 const premiumRoutes = require('./routes/premium');
 const adminPremiumRoutes = require('./routes/admin-premium');
+const workspaceRoutes = require('./routes/agent-workspace');
 const { handleWebhookRequest } = require('./services/stripe');
 
 const app = express();
@@ -71,11 +72,11 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc,
         scriptSrcAttr: scriptSrc,
-        styleSrc,
+        styleSrc: [...styleSrc, 'https://fonts.googleapis.com'],
         imgSrc: ["'self'", 'data:', 'https:'],
         connectSrc: ["'self'", 'ws:', 'wss:'],
-        fontSrc: ["'self'", 'https:', 'data:'],
-        frameSrc: ["'none'"],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https:', 'data:'],
+        frameSrc: ["'self'", 'https:', 'http:'],
         frameAncestors: ["'none'"],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
@@ -134,6 +135,7 @@ app.use('/api/noscript', apiLimiter, noscriptRoutes);
 app.use('/api/discovery', apiLimiter, discoveryRoutes);
 app.use('/api/premium', apiLimiter, premiumRoutes);
 app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);
+app.use('/api/workspace', apiLimiter, workspaceRoutes);
 
 // ─── WAB Search Engine ────────────────────────────────────────────────
 
@@ -207,6 +209,9 @@ app.get('/cookies', (req, res) => {
 });
 app.get('/browser', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'browser.html'));
+});
+app.get('/workspace', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'agent-workspace.html'));
 });
 
 // Browser downloads

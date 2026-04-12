@@ -1,0 +1,1040 @@
+/**
+ * WAB Agent Workspace — Frontend Controller
+ * ════════════════════════════════════════════════════════════════════════
+ * Manages the 4-panel workspace: Browser, Chat, Monitor, Results
+ * Handles auth, subscription, real-time updates, agent communication
+ * Full bilingual (AR/EN) with auto-detection and multilingual agent
+ */
+
+// ─── i18n Dictionary ─────────────────────────────────────────────────
+
+const I18N = {
+  // Page
+  page_title: { ar: 'WAB Agent Workspace — مساحة عمل الوكيل الذكي', en: 'WAB Agent Workspace — Smart Agent Workspace' },
+
+  // Auth
+  auth_welcome:          { ar: 'مرحباً بك في WAB', en: 'Welcome to WAB' },
+  auth_subtitle:         { ar: 'سجّل دخولك للوصول إلى مساحة عمل الوكيل الذكي', en: 'Sign in to access the Smart Agent Workspace' },
+  auth_email:            { ar: 'البريد الإلكتروني', en: 'Email' },
+  auth_email_ph:         { ar: 'you@email.com', en: 'you@email.com' },
+  auth_password:         { ar: 'كلمة المرور', en: 'Password' },
+  auth_password_ph:      { ar: '••••••••', en: '••••••••' },
+  auth_login_btn:        { ar: 'تسجيل الدخول', en: 'Sign In' },
+  auth_no_account:       { ar: 'ليس لديك حساب؟', en: "Don't have an account?" },
+  auth_create_account:   { ar: 'إنشاء حساب جديد', en: 'Create a new account' },
+  auth_register_title:   { ar: 'إنشاء حساب جديد', en: 'Create New Account' },
+  auth_register_subtitle:{ ar: 'ابدأ مع الوكيل الذكي — ابحث، قارن، وفاوض بذكاء', en: 'Start with the Smart Agent — Search, Compare & Negotiate' },
+  auth_name:             { ar: 'الاسم', en: 'Name' },
+  auth_name_ph:          { ar: 'محمد', en: 'John' },
+  auth_reg_password_ph:  { ar: '6 أحرف على الأقل', en: 'At least 6 characters' },
+  auth_register_btn:     { ar: 'إنشاء حساب', en: 'Create Account' },
+  auth_has_account:      { ar: 'لديك حساب بالفعل؟', en: 'Already have an account?' },
+  auth_signin_link:      { ar: 'تسجيل الدخول', en: 'Sign In' },
+  auth_plan_title:       { ar: 'اختر خطتك', en: 'Choose Your Plan' },
+  auth_plan_subtitle:    { ar: 'ابدأ مجاناً أو اختر خطة تناسبك', en: 'Start free or pick a plan that fits you' },
+  auth_signing_in:       { ar: 'جارِ التحقق...', en: 'Signing in...' },
+  auth_creating:         { ar: 'جارِ الإنشاء...', en: 'Creating...' },
+
+  // Plans
+  plan_free:       { ar: 'مجاني', en: 'Free' },
+  plan_per_month:  { ar: '/شهر', en: '/month' },
+  plan_free_f1:    { ar: '5 مهام يومياً', en: '5 tasks/day' },
+  plan_free_f2:    { ar: 'بحث أساسي', en: 'Basic search' },
+  plan_free_f3:    { ar: 'نتائج محدودة', en: 'Limited results' },
+  plan_pro_f1:     { ar: 'مهام غير محدودة', en: 'Unlimited tasks' },
+  plan_pro_f2:     { ar: 'تفاوض متقدم', en: 'Advanced negotiation' },
+  plan_pro_f3:     { ar: 'وكيل يُتمم الصفقات', en: 'Agent completes deals' },
+  plan_pro_f4:     { ar: 'أولوية في الدعم', en: 'Priority support' },
+  plan_ent_f1:     { ar: 'كل ميزات Pro', en: 'All Pro features' },
+  plan_ent_f2:     { ar: 'API مخصص', en: 'Custom API' },
+  plan_ent_f3:     { ar: 'فريق متعدد', en: 'Multi-team' },
+  plan_ent_f4:     { ar: 'دعم مخصص 24/7', en: '24/7 Dedicated support' },
+
+  // Topbar
+  topbar_settings: { ar: 'الإعدادات', en: 'Settings' },
+  topbar_logout:   { ar: 'خروج', en: 'Logout' },
+
+  // Panels
+  panel_browser:   { ar: 'المتصفح', en: 'Browser' },
+  panel_agent:     { ar: 'الوكيل الذكي', en: 'Smart Agent' },
+  panel_monitor:   { ar: 'شاشة التفاوض', en: 'Negotiation Monitor' },
+  panel_results:   { ar: 'النتائج والإجراءات', en: 'Results & Actions' },
+
+  // Status
+  status_ready:      { ar: 'جاهز', en: 'Ready' },
+  status_connected:  { ar: 'متصل', en: 'Connected' },
+  status_waiting:    { ar: 'في الانتظار', en: 'Waiting' },
+  status_awaiting:   { ar: 'بانتظار النتائج', en: 'Awaiting Results' },
+  status_loading:    { ar: 'يحمّل...', en: 'Loading...' },
+  status_loaded:     { ar: 'محمّل', en: 'Loaded' },
+  status_working:    { ar: 'يعمل', en: 'Working' },
+  status_done:       { ar: 'مكتمل', en: 'Done' },
+  status_failed:     { ar: 'فشل', en: 'Failed' },
+
+  // Browser
+  browser_url_ph:    { ar: 'أدخل الرابط أو ابحث...', en: 'Enter a URL or search...' },
+  browser_empty:     { ar: 'اطلب من الوكيل البحث عن شيء أو أدخل رابطاً في شريط العنوان', en: 'Ask the agent to search or enter a URL in the address bar' },
+  browser_refresh:   { ar: 'تحديث', en: 'Refresh' },
+  browser_back:      { ar: 'رجوع', en: 'Back' },
+  browser_forward:   { ar: 'تقدم', en: 'Forward' },
+  panel_maximize:    { ar: 'تكبير', en: 'Maximize' },
+
+  // Chat
+  chat_input_ph:     { ar: 'اكتب رسالتك هنا... (لا قيود — اكتب بحرية)', en: 'Type your message... (no limits — write freely)' },
+  chat_send:         { ar: 'إرسال', en: 'Send' },
+  chat_new:          { ar: 'محادثة جديدة', en: 'New Chat' },
+
+  // Suggestion chips
+  chip_hotels:         { ar: '🏨 فنادق تونس', en: '🏨 Tunisia Hotels' },
+  chip_hotels_query:   { ar: 'ابحث عن فنادق رخيصة في تونس', en: 'Search for cheap hotels in Tunisia' },
+  chip_laptop:         { ar: '🎮 لابتوب قيمنق', en: '🎮 Gaming Laptop' },
+  chip_laptop_query:   { ar: 'اشتري لابتوب قيمنق بأقل سعر', en: 'Buy a gaming laptop at the lowest price' },
+  chip_iphone:         { ar: '📱 iPhone 16', en: '📱 iPhone 16' },
+  chip_iphone_query:   { ar: 'قارن أسعار iPhone 16 Pro', en: 'Compare iPhone 16 Pro prices' },
+  chip_flight:         { ar: '✈️ رحلة طيران', en: '✈️ Flight' },
+  chip_flight_query:   { ar: 'احجز رحلة من تونس إلى إسطنبول', en: 'Book a flight from Tunisia to Istanbul' },
+  chip_security:       { ar: '🔒 فحص أمان', en: '🔒 Security Check' },
+  chip_security_query: { ar: 'هل هذا الموقع آمن؟', en: 'Is this website safe?' },
+
+  // Welcome message
+  welcome_msg: {
+    ar: '🤖 مرحباً! أنا وكيل WAB الذكي — مساعدك الشخصي للبحث والتفاوض والشراء.<br><br>أخبرني ماذا تحتاج:<br>• ✈️ "احجز لي رحلة إلى إسطنبول"<br>• 🏨 "ابحث عن فندق رخيص في تونس"<br>• 🛒 "اشتري لابتوب بأقل سعر"<br>• 🔍 "قارن أسعار iPhone 16"<br><br>اكتب بأي لغة وسأبدأ فوراً! 💪',
+    en: '🤖 Hello! I\'m WAB Smart Agent — your personal assistant for searching, negotiating & buying.<br><br>Tell me what you need:<br>• ✈️ "Book me a flight to Istanbul"<br>• 🏨 "Find a cheap hotel in Tunisia"<br>• 🛒 "Buy a gaming laptop at the best price"<br>• 🔍 "Compare iPhone 16 prices"<br><br>Type in any language and I\'ll start right away! 💪'
+  },
+  welcome_now: { ar: 'الآن', en: 'Now' },
+
+  // Monitor
+  monitor_empty:  { ar: 'عندما يبدأ الوكيل بالبحث والتفاوض، ستراقب كل خطوة هنا مباشرة', en: 'When the agent starts searching and negotiating, you\'ll monitor every step here in real-time' },
+
+  // Results
+  results_empty:  { ar: 'ستظهر هنا أفضل النتائج والروابط بعد انتهاء الوكيل من البحث والتفاوض', en: 'Best results and links will appear here after the agent finishes searching and negotiating' },
+  summary_results:      { ar: '🔍 نتائج:', en: '🔍 Results:' },
+  summary_best_saving:  { ar: '💰 أفضل توفير:', en: '💰 Best Saving:' },
+  summary_time:         { ar: '⏱️ الوقت:', en: '⏱️ Time:' },
+  result_best:          { ar: '⭐ الأفضل', en: '⭐ Best' },
+  result_savings:       { ar: 'توفير', en: 'off' },
+  result_save:          { ar: 'وفّر', en: 'Save' },
+  result_open:          { ar: '🔗 فتح الصفقة', en: '🔗 Open Deal' },
+  result_agent_do:      { ar: '🤖 الوكيل يُتمم', en: '🤖 Agent Do It' },
+  result_view:          { ar: '🌐 عرض', en: '🌐 View' },
+
+  // Mobile nav
+  nav_browser:  { ar: 'المتصفح', en: 'Browser' },
+  nav_agent:    { ar: 'الوكيل', en: 'Agent' },
+  nav_monitor:  { ar: 'التفاوض', en: 'Negotiate' },
+  nav_results:  { ar: 'النتائج', en: 'Results' },
+
+  // Agent messages
+  agent_error:          { ar: '⚠️ عذراً، حدث خطأ في الاتصال. حاول مرة أخرى.', en: '⚠️ Connection error. Please try again.' },
+  agent_task_started:   { ar: '🚀 بدأ الوكيل بتنفيذ المهمة...', en: '🚀 Agent started executing task...' },
+  agent_done:           { ar: '✅ انتهيت! راجع النتائج في شاشة النتائج ←', en: '✅ Done! Check the Results panel →' },
+  agent_new_chat:       { ar: '🤖 محادثة جديدة! كيف أساعدك؟', en: '🤖 New chat! How can I help?' },
+  agent_found:          { ar: 'وجدت', en: 'Found' },
+  agent_offers:         { ar: 'عروض! الأفضل:', en: 'offers! Best:' },
+  agent_pick:           { ar: '👆 اختر رقم العرض أو راجع التفاصيل في شاشة النتائج', en: '👆 Pick an offer number or check the Results panel for details' },
+  agent_login_required: { ar: '🔑 تسجيل دخول مطلوب', en: '🔑 Login Required' },
+  agent_login_site:     { ar: 'الموقع {site} يتطلب تسجيل دخول لإتمام العملية. اختر طريقة:', en: '{site} requires login to complete. Choose how:' },
+  agent_give_creds:     { ar: '🤖 أعطِ الوكيل بياناتي (مشفّر)', en: '🤖 Give agent my credentials (encrypted)' },
+  agent_manual_login:   { ar: '🌐 سأسجل الدخول بنفسي في المتصفح', en: "🌐 I'll log in myself in the browser" },
+  agent_deal_start:     { ar: '🤖 الوكيل يبدأ إتمام الصفقة من {source}...', en: '🤖 Agent starting to complete deal from {source}...' },
+  agent_deal_login:     { ar: '🔑 الموقع {source} يتطلب تسجيل دخول. اختر الطريقة من شاشة النتائج.', en: '🔑 {source} requires login. Choose method from the Results panel.' },
+  agent_deal_opened:    { ar: '✅ فتحت الصفقة في المتصفح. السعر: ${price}\n\n💡 أكمل الدفع من المتصفح، أو أخبرني إذا تحتاج مساعدة.', en: '✅ Opened the deal in the browser. Price: ${price}\n\n💡 Complete payment in the browser, or tell me if you need help.' },
+  agent_creds_request:  { ar: '🔑 أرسل لي بيانات تسجيل الدخول (البريد وكلمة المرور) وسأسجّل الدخول بشكل آمن.\n\n🔒 بياناتك مشفّرة ولا تُخزّن.', en: '🔑 Send me the login credentials (email and password) and I\'ll log in securely.\n\n🔒 Your data is encrypted and not stored.' },
+  agent_manual_opened:  { ar: '🌐 فتحت الموقع في المتصفح. سجّل دخولك ثم أخبرني "جاهز" لأُكمل.', en: '🌐 Opened the site in the browser. Log in and then tell me "ready" to continue.' },
+
+  // Tips
+  tips_title:       { ar: '💡 نصائح ذكية', en: '💡 Smart Tips' },
+  tip_weekday:      { ar: 'جرّب الحجز في أيام الأسبوع — الأسعار أقل عادةً', en: 'Try booking on weekdays — prices are usually lower' },
+  tip_agent_do:     { ar: 'استخدم زر "الوكيل يُتمم" ليقوم الوكيل بإتمام العملية بدلاً عنك', en: 'Use "Agent Do It" to let the agent complete the purchase' },
+  tip_compare:      { ar: 'قارن بين العروض جيداً — الأرخص ليس دائماً الأفضل', en: "Compare offers carefully — cheapest isn't always best" },
+  tip_login:        { ar: 'إذا طلب الموقع تسجيل دخول، يمكنك إعطاء الوكيل إذناً أو تسجيل الدخول يدوياً', en: 'If a site requires login, you can authorize the agent or log in manually' },
+
+  // Toasts
+  toast_welcome:   { ar: '🎉 مرحباً بك في WAB!', en: '🎉 Welcome to WAB!' },
+  toast_lang_ar:   { ar: 'تم التبديل إلى العربية', en: 'Switched to Arabic' },
+  toast_lang_en:   { ar: 'تم التبديل إلى الإنجليزية', en: 'Switched to English' },
+  toast_settings:  { ar: 'الإعدادات قريباً', en: 'Settings coming soon' },
+  toast_no_results:{ ar: 'لا توجد نتائج', en: 'No results' },
+};
+
+/** Get translated string */
+function i18n(key, replacements) {
+  const entry = I18N[key];
+  if (!entry) return key;
+  let text = entry[state.lang] || entry.en || key;
+  if (replacements) {
+    Object.entries(replacements).forEach(([k, v]) => {
+      text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), v);
+    });
+  }
+  return text;
+}
+
+/** Apply i18n to all data-i18n elements in DOM */
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const entry = I18N[key];
+    if (entry) {
+      if (el.tagName === 'TITLE') {
+        document.title = entry[state.lang] || entry.en;
+      } else {
+        el.textContent = entry[state.lang] || entry.en;
+      }
+    }
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const entry = I18N[key];
+    if (entry) el.placeholder = entry[state.lang] || entry.en;
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    const entry = I18N[key];
+    if (entry) el.title = entry[state.lang] || entry.en;
+  });
+}
+
+// ─── State ───────────────────────────────────────────────────────────
+
+const API = window.location.origin;
+let state = {
+  token: localStorage.getItem('wab_token') || null,
+  user: null,
+  sessionId: null,
+  currentTask: null,
+  lang: localStorage.getItem('wab_lang') || (navigator.language?.startsWith('ar') ? 'ar' : 'en'),
+  layout: 'grid',
+  activeMobilePanel: 0,
+  ws: null,
+  taskStartTime: null,
+  currentOffers: null,
+};
+
+// ─── Init ────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', async () => {
+  setDirection();
+  applyI18n();
+  injectWelcomeMessage();
+
+  if (state.token) {
+    try {
+      const res = await apiFetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        state.user = data;
+        state.sessionId = 'ws-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+        showWorkspace();
+        connectWebSocket();
+        return;
+      }
+    } catch (_) {}
+    state.token = null;
+    localStorage.removeItem('wab_token');
+  }
+  showAuth();
+});
+
+function injectWelcomeMessage() {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+  container.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'aws-msg agent';
+  div.innerHTML = `${i18n('welcome_msg')}<span class="aws-msg-time">${i18n('welcome_now')}</span>`;
+  container.appendChild(div);
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────
+
+function showAuth() {
+  document.getElementById('authOverlay').classList.remove('hidden');
+}
+
+function hideAuth() {
+  document.getElementById('authOverlay').classList.add('hidden');
+}
+
+function showLogin() {
+  document.getElementById('authLogin').style.display = '';
+  document.getElementById('authRegister').style.display = 'none';
+  document.getElementById('authSubscription').style.display = 'none';
+}
+
+function showRegister() {
+  document.getElementById('authLogin').style.display = 'none';
+  document.getElementById('authRegister').style.display = '';
+  document.getElementById('authSubscription').style.display = 'none';
+}
+
+function showSubscriptions() {
+  document.getElementById('authLogin').style.display = 'none';
+  document.getElementById('authRegister').style.display = 'none';
+  document.getElementById('authSubscription').style.display = '';
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const btn = document.getElementById('loginBtn');
+  const errEl = document.getElementById('authError');
+
+  btn.disabled = true;
+  btn.textContent = i18n('auth_signing_in');
+  errEl.classList.remove('visible');
+
+  try {
+    const res = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+
+    state.token = data.token;
+    state.user = data.user || { email, name: email.split('@')[0] };
+    localStorage.setItem('wab_token', data.token);
+    state.sessionId = 'ws-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    hideAuth();
+    showWorkspace();
+    connectWebSocket();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = i18n('auth_login_btn');
+  }
+});
+
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const btn = document.getElementById('regBtn');
+  const errEl = document.getElementById('regError');
+
+  btn.disabled = true;
+  btn.textContent = i18n('auth_creating');
+  errEl.classList.remove('visible');
+
+  try {
+    const res = await fetch(`${API}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Registration failed');
+
+    state.token = data.token;
+    state.user = data.user || { email, name };
+    localStorage.setItem('wab_token', data.token);
+    state.sessionId = 'ws-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    showSubscriptions();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = i18n('auth_register_btn');
+  }
+});
+
+async function selectPlan(plan) {
+  if (plan !== 'free') {
+    try {
+      await apiFetch('/api/billing/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ plan }),
+      });
+    } catch (_) {}
+  }
+  hideAuth();
+  showWorkspace();
+  connectWebSocket();
+  showToast(i18n('toast_welcome'), 'success');
+}
+
+function logout() {
+  state.token = null;
+  state.user = null;
+  localStorage.removeItem('wab_token');
+  if (state.ws) state.ws.close();
+  location.reload();
+}
+
+// ─── Workspace Setup ─────────────────────────────────────────────────
+
+function showWorkspace() {
+  const user = state.user || {};
+  const name = user.name || user.email || 'User';
+  document.getElementById('userName').textContent = name;
+  document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+
+  const tier = user.tier || 'premium';
+  const tierEl = document.getElementById('userTier');
+  tierEl.textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
+  tierEl.className = 'aws-tier-badge ' + (tier === 'pro' ? 'pro' : tier === 'starter' ? 'starter' : 'premium');
+}
+
+// ─── WebSocket ───────────────────────────────────────────────────────
+
+function connectWebSocket() {
+  try {
+    const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    state.ws = new WebSocket(`${wsProto}//${location.host}/ws/analytics`);
+
+    state.ws.onopen = () => {
+      state.ws.send(JSON.stringify({ type: 'auth', token: state.token }));
+    };
+
+    state.ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleWsMessage(data);
+      } catch (_) {}
+    };
+
+    state.ws.onclose = () => {
+      setTimeout(connectWebSocket, 5000);
+    };
+  } catch (_) {}
+}
+
+function handleWsMessage(data) {
+  if (data.type === 'task_update') {
+    updateMonitorFromWs(data);
+  } else if (data.type === 'result') {
+    addResultFromWs(data);
+  }
+}
+
+// ─── Chat ────────────────────────────────────────────────────────────
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message) return;
+
+  input.value = '';
+  autoResize(input);
+
+  addChatMessage('user', message);
+  document.getElementById('chatSuggestions').style.display = 'none';
+  showTyping(true);
+
+  try {
+    const body = {
+      message,
+      context: { url: document.getElementById('urlInput').value, platform: 'workspace', lang: state.lang },
+      sessionId: state.sessionId,
+    };
+
+    if (state.currentTask) {
+      body.taskId = state.currentTask.taskId;
+      body.taskAction = 'answer';
+    }
+
+    const res = await apiFetch('/api/wab/agent-chat', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+    showTyping(false);
+
+    if (data.type === 'task') {
+      handleTaskResponse(data);
+    } else {
+      addChatMessage('agent', data.reply || data.message || 'OK');
+    }
+  } catch (err) {
+    showTyping(false);
+    addChatMessage('agent', i18n('agent_error'));
+  }
+}
+
+function handleTaskResponse(data) {
+  state.currentTask = data;
+  state.taskStartTime = state.taskStartTime || Date.now();
+
+  if (data.status === 'clarifying') {
+    addChatMessage('agent', data.message || data.questions?.join('\n'));
+  } else if (data.status === 'planning') {
+    addChatMessage('agent', data.message);
+    addChatMessage('system', i18n('agent_task_started'));
+    startMonitor(data);
+    executeTask(data.taskId);
+  } else if (data.status === 'presenting') {
+    addChatMessage('agent', formatChatOffers(data));
+    showResults(data);
+    updateMonitorComplete();
+  } else if (data.status === 'completed') {
+    addChatMessage('agent', data.message);
+    if (data.action?.url) {
+      navigateTo(data.action.url);
+    }
+  } else if (data.status === 'failed') {
+    addChatMessage('agent', data.message);
+    updateMonitorFailed();
+  } else {
+    addChatMessage('agent', data.message || JSON.stringify(data));
+  }
+}
+
+async function executeTask(taskId) {
+  let tries = 0;
+  const maxTries = 30;
+
+  const poll = async () => {
+    if (tries++ >= maxTries) return;
+    try {
+      const res = await apiFetch(`/api/wab/agent-task/${taskId}`);
+      const data = await res.json();
+
+      updateMonitorFromTask(data);
+
+      if (['presenting', 'completed', 'failed', 'cancelled'].includes(data.status)) {
+        if (data.status === 'presenting') {
+          showResults({ offers: data.offers, updates: data.messages });
+          addChatMessage('agent', i18n('agent_done'));
+          updateMonitorComplete();
+        }
+        return;
+      }
+
+      setTimeout(poll, 2000);
+    } catch (_) {
+      setTimeout(poll, 3000);
+    }
+  };
+
+  setTimeout(poll, 2000);
+}
+
+function addChatMessage(role, content) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `aws-msg ${role}`;
+
+  const time = new Date().toLocaleTimeString(state.lang === 'ar' ? 'ar-SA' : 'en-US', {
+    hour: '2-digit', minute: '2-digit'
+  });
+
+  if (role === 'system') {
+    div.textContent = content;
+  } else {
+    const formatted = content
+      .replace(/\n/g, '<br>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`(.*?)`/g, '<code style="background:rgba(255,255,255,0.1);padding:1px 4px;border-radius:3px;font-size:0.8em">$1</code>');
+    div.innerHTML = `${formatted}<span class="aws-msg-time">${time}</span>`;
+  }
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function formatChatOffers(data) {
+  const offers = data.offers || [];
+  if (offers.length === 0) return data.message || i18n('toast_no_results');
+
+  let text = `✅ ${i18n('agent_found')} ${offers.length} ${i18n('agent_offers')}\n\n`;
+
+  offers.forEach((o, idx) => {
+    const price = o.finalPrice || o.price;
+    const savings = o.savings ? ` (${i18n('result_save')} $${o.savings})` : '';
+    text += `${idx + 1}. ${o.title || o.name} — **$${price}**${savings}\n   📍 ${o.source}\n\n`;
+  });
+
+  text += i18n('agent_pick');
+  return text;
+}
+
+function showTyping(show) {
+  const el = document.getElementById('typingIndicator');
+  el.classList.toggle('visible', show);
+  if (show) {
+    const container = document.getElementById('chatMessages');
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+function useSuggestion(text) {
+  document.getElementById('chatInput').value = text;
+  sendMessage();
+}
+
+function clearChat() {
+  const container = document.getElementById('chatMessages');
+  container.innerHTML = '';
+  state.currentTask = null;
+  addChatMessage('agent', i18n('agent_new_chat'));
+  document.getElementById('chatSuggestions').style.display = '';
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ─── Monitor Panel ───────────────────────────────────────────────────
+
+function startMonitor(data) {
+  document.getElementById('monitorEmpty').style.display = 'none';
+  document.getElementById('monitorSteps').style.display = '';
+  document.getElementById('monitorStatus').textContent = i18n('status_working');
+  document.getElementById('monitorStatus').className = 'aws-panel-status working';
+
+  const plan = data.plan || [];
+  const stepsEl = document.getElementById('progressSteps');
+  stepsEl.innerHTML = '';
+
+  plan.forEach((step, idx) => {
+    const desc = state.lang === 'ar' ? step.description_ar : step.description_en;
+    const div = document.createElement('div');
+    div.className = `aws-progress-step ${idx === 0 ? 'active' : 'pending'}`;
+    div.id = `step-${step.id}`;
+    div.innerHTML = `
+      <div class="aws-step-icon ${idx === 0 ? 'active' : 'pending'}">${idx === 0 ? '⏳' : '○'}</div>
+      <span>${desc || step.action}</span>
+    `;
+    stepsEl.appendChild(div);
+  });
+}
+
+function updateMonitorFromTask(taskData) {
+  const agents = taskData.agents || [];
+  const messages = taskData.messages || [];
+
+  const agentsEl = document.getElementById('monitorAgents');
+  agentsEl.innerHTML = '';
+
+  agents.forEach(agent => {
+    const card = document.createElement('div');
+    card.className = 'aws-agent-card';
+
+    const statusDot = agent.status === 'done' ? 'done' :
+                      agent.status === 'failed' ? 'failed' :
+                      agent.status === 'negotiating' ? 'negotiating' : 'searching';
+
+    const foundText = agent.findings?.count
+      ? (state.lang === 'ar' ? `وجد ${agent.findings.count} نتيجة` : `Found ${agent.findings.count} results`)
+      : '';
+
+    card.innerHTML = `
+      <div class="aws-agent-card-header">
+        <div class="aws-agent-name">
+          <span class="dot ${statusDot}"></span>
+          ${agent.agent_name}
+        </div>
+        <span style="font-size:0.7rem;color:#64748b">${agent.progress || 0}%</span>
+      </div>
+      <div class="aws-agent-progress">
+        <div class="aws-agent-progress-bar" style="width:${agent.progress || 0}%"></div>
+      </div>
+      ${foundText ? `<div class="aws-agent-finding">${foundText}</div>` : ''}
+    `;
+    agentsEl.appendChild(card);
+  });
+
+  const status = taskData.status;
+  const stepMap = { searching: 1, comparing: 2, negotiating: 3, presenting: 4 };
+  const currentStep = stepMap[status] || 0;
+
+  document.querySelectorAll('.aws-progress-step').forEach((el, idx) => {
+    const stepNum = idx + 1;
+    if (stepNum < currentStep) {
+      el.className = 'aws-progress-step completed';
+      el.querySelector('.aws-step-icon').className = 'aws-step-icon completed';
+      el.querySelector('.aws-step-icon').textContent = '✓';
+    } else if (stepNum === currentStep) {
+      el.className = 'aws-progress-step active';
+      el.querySelector('.aws-step-icon').className = 'aws-step-icon active';
+      el.querySelector('.aws-step-icon').textContent = '⏳';
+    }
+  });
+
+  const negEl = document.getElementById('monitorNegotiations');
+  const negLabel = state.lang === 'ar' ? '🤝 تفاوض' : '🤝 Negotiation';
+  const updateLabel = state.lang === 'ar' ? '🔍 تحديث' : '🔍 Update';
+
+  messages.filter(m => m.metadata?.type === 'progress' || m.role === 'agent').forEach(m => {
+    if (!document.getElementById(`neg-${m.id}`)) {
+      const round = document.createElement('div');
+      round.className = 'aws-neg-round';
+      round.id = `neg-${m.id}`;
+      round.innerHTML = `
+        <div class="aws-neg-round-header">
+          <span>${m.metadata?.step === 'negotiate' ? negLabel : updateLabel}</span>
+          <span>${new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <div class="aws-neg-round-body">${m.content}</div>
+      `;
+      negEl.appendChild(round);
+    }
+  });
+}
+
+function updateMonitorFromWs(data) {
+  if (data.step) {
+    const agentsEl = document.getElementById('monitorAgents');
+    const card = document.createElement('div');
+    card.className = 'aws-agent-card';
+    card.innerHTML = `
+      <div class="aws-agent-card-header">
+        <div class="aws-agent-name">
+          <span class="dot searching"></span>
+          ${data.agent || 'Agent'}
+        </div>
+      </div>
+      <div class="aws-agent-progress">
+        <div class="aws-agent-progress-bar" style="width:${data.progress || 50}%"></div>
+      </div>
+      <div class="aws-agent-finding">${data.message || ''}</div>
+    `;
+    agentsEl.appendChild(card);
+  }
+}
+
+function updateMonitorComplete() {
+  document.getElementById('monitorStatus').textContent = i18n('status_done');
+  document.getElementById('monitorStatus').className = 'aws-panel-status active';
+
+  document.querySelectorAll('.aws-progress-step').forEach(el => {
+    el.className = 'aws-progress-step completed';
+    const icon = el.querySelector('.aws-step-icon');
+    if (icon) {
+      icon.className = 'aws-step-icon completed';
+      icon.textContent = '✓';
+    }
+  });
+}
+
+function updateMonitorFailed() {
+  document.getElementById('monitorStatus').textContent = i18n('status_failed');
+  document.getElementById('monitorStatus').className = 'aws-panel-status idle';
+}
+
+// ─── Results Panel ───────────────────────────────────────────────────
+
+function showResults(data) {
+  const offers = data.offers || [];
+  if (offers.length === 0) return;
+
+  document.getElementById('resultsEmpty').style.display = 'none';
+  document.getElementById('resultsStatus').textContent = `${offers.length} ${state.lang === 'ar' ? 'نتائج' : 'results'}`;
+  document.getElementById('resultsStatus').className = 'aws-panel-status active';
+
+  const cardsEl = document.getElementById('resultsCards');
+  cardsEl.innerHTML = '';
+
+  offers.forEach((offer, idx) => {
+    const card = document.createElement('div');
+    card.className = `aws-result-card ${idx === 0 ? 'recommended' : ''}`;
+
+    const originalPrice = offer.originalPrice || offer.original_price || offer.price;
+    const finalPrice = offer.finalPrice || offer.final_price || offer.price;
+    const savings = originalPrice && finalPrice ? (originalPrice - finalPrice).toFixed(2) : null;
+    const savingsPct = savings && originalPrice ? Math.round((savings / originalPrice) * 100) : null;
+
+    card.innerHTML = `
+      ${idx === 0 ? `<span class="aws-result-badge best">${i18n('result_best')}</span>` : ''}
+      ${savingsPct && savingsPct > 0 ? `<span class="aws-result-badge savings">${savingsPct}% ${i18n('result_savings')}</span>` : ''}
+      
+      <div class="aws-result-title">
+        ${offer.title || offer.name || 'Offer ' + (idx + 1)}
+        <span class="aws-result-source">${offer.source || ''}</span>
+      </div>
+      
+      <div class="aws-result-prices">
+        ${savings > 0 ? `<span class="aws-result-original">$${originalPrice}</span>` : ''}
+        <span class="aws-result-final">$${finalPrice}</span>
+        ${savings > 0 ? `<span class="aws-result-savings-tag">${i18n('result_save')} $${savings}</span>` : ''}
+      </div>
+      
+      ${offer.details ? `
+        <div class="aws-result-details">
+          ${(Array.isArray(offer.details) ? offer.details : [offer.details]).map(d => 
+            `<span class="aws-result-detail">${d}</span>`
+          ).join('')}
+        </div>
+      ` : ''}
+      
+      <div class="aws-result-actions">
+        <a href="${sanitizeUrl(offer.url || '#')}" target="_blank" rel="noopener" class="aws-result-btn primary" 
+           onclick="trackClick(${idx})">
+          ${i18n('result_open')}
+        </a>
+        <button class="aws-result-btn agent-do" onclick="agentExecuteDeal(${idx})">
+          ${i18n('result_agent_do')}
+        </button>
+        <button class="aws-result-btn secondary" onclick="openInBrowser(${idx})">
+          ${i18n('result_view')}
+        </button>
+      </div>
+    `;
+    cardsEl.appendChild(card);
+  });
+
+  showTips(offers);
+
+  const summaryEl = document.getElementById('resultsSummary');
+  summaryEl.style.display = '';
+  document.getElementById('summaryCount').textContent = offers.length;
+
+  if (offers[0]) {
+    const best = offers[0];
+    const orig = best.originalPrice || best.original_price || best.price;
+    const fin = best.finalPrice || best.final_price || best.price;
+    const save = orig && fin ? (orig - fin).toFixed(0) : '-';
+    document.getElementById('summaryBestSaving').textContent = save > 0 ? `$${save}` : '-';
+  }
+
+  if (state.taskStartTime) {
+    const elapsed = Math.round((Date.now() - state.taskStartTime) / 1000);
+    document.getElementById('summaryTime').textContent = `${elapsed}s`;
+  }
+
+  state.currentOffers = offers;
+}
+
+function showTips(offers) {
+  const tipsArea = document.getElementById('tipsArea');
+  tipsArea.style.display = '';
+
+  const tips = [i18n('tip_weekday'), i18n('tip_agent_do')];
+  if (offers.length > 1) tips.push(i18n('tip_compare'));
+  tips.push(i18n('tip_login'));
+
+  tipsArea.innerHTML = `
+    <div class="aws-tips-section">
+      <h4>${i18n('tips_title')}</h4>
+      ${tips.map(t => `<div class="aws-tip-item">${t}</div>`).join('')}
+    </div>
+  `;
+}
+
+function showLoginRequest(site, offerIndex) {
+  const area = document.getElementById('loginRequestArea');
+  area.style.display = '';
+  area.innerHTML = `
+    <div class="aws-login-request">
+      <h4>${i18n('agent_login_required')}</h4>
+      <p>${i18n('agent_login_site', { site })}</p>
+      <div class="aws-login-options">
+        <button class="aws-login-option-btn agent-login" onclick="agentLogin(${offerIndex})">
+          ${i18n('agent_give_creds')}
+        </button>
+        <button class="aws-login-option-btn manual-login" onclick="manualLogin(${offerIndex})">
+          ${i18n('agent_manual_login')}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Deal Execution ──────────────────────────────────────────────────
+
+function trackClick(index) {
+  try {
+    apiFetch('/api/license/track', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deal_click', index, sessionId: state.sessionId }),
+    });
+  } catch (_) {}
+}
+
+async function agentExecuteDeal(index) {
+  const offer = state.currentOffers?.[index];
+  if (!offer) return;
+
+  addChatMessage('system', i18n('agent_deal_start', { source: offer.source }));
+
+  if (offer.requiresLogin) {
+    showLoginRequest(offer.source, index);
+    addChatMessage('agent', i18n('agent_deal_login', { source: offer.source }));
+    return;
+  }
+
+  if (offer.url) navigateTo(offer.url);
+
+  addChatMessage('agent', i18n('agent_deal_opened', { price: offer.finalPrice || offer.price }));
+}
+
+function agentLogin(index) {
+  addChatMessage('agent', i18n('agent_creds_request'));
+  state.currentTask = { ...state.currentTask, awaitingLogin: true, offerIndex: index };
+}
+
+function manualLogin(index) {
+  const offer = state.currentOffers?.[index];
+  if (offer?.url) {
+    navigateTo(offer.url);
+    addChatMessage('agent', i18n('agent_manual_opened'));
+  }
+}
+
+function openInBrowser(index) {
+  const offer = state.currentOffers?.[index];
+  if (offer?.url) navigateTo(offer.url);
+}
+
+// ─── Browser Panel ───────────────────────────────────────────────────
+
+function navigateTo(url) {
+  if (!url) return;
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://www.google.com/search?q=${encodeURIComponent(url)}`;
+  }
+
+  const urlInput = document.getElementById('urlInput');
+  const frame = document.getElementById('browserFrame');
+  const empty = document.getElementById('browserEmpty');
+
+  urlInput.value = url;
+  empty.style.display = 'none';
+  frame.style.display = '';
+  frame.src = url;
+
+  document.getElementById('browserStatus').textContent = i18n('status_loading');
+  document.getElementById('browserStatus').className = 'aws-panel-status working';
+
+  frame.onload = () => {
+    document.getElementById('browserStatus').textContent = i18n('status_loaded');
+    document.getElementById('browserStatus').className = 'aws-panel-status active';
+    updateUrlLock(url);
+  };
+}
+
+function updateUrlLock(url) {
+  const lock = document.getElementById('urlLock');
+  lock.textContent = url.startsWith('https://') ? '🔒' : '⚠️';
+  lock.style.color = url.startsWith('https://') ? '#10b981' : '#f59e0b';
+}
+
+function browserBack() {
+  const frame = document.getElementById('browserFrame');
+  try { frame.contentWindow.history.back(); } catch (_) {}
+}
+
+function browserForward() {
+  const frame = document.getElementById('browserFrame');
+  try { frame.contentWindow.history.forward(); } catch (_) {}
+}
+
+function refreshBrowser() {
+  const frame = document.getElementById('browserFrame');
+  try { frame.contentWindow.location.reload(); } catch (_) {
+    if (frame.src) frame.src = frame.src;
+  }
+}
+
+// ─── Layout ──────────────────────────────────────────────────────────
+
+function setLayout(layout) {
+  state.layout = layout;
+  const ws = document.getElementById('workspace');
+  ws.className = 'aws-workspace';
+  if (layout !== 'grid') ws.classList.add(`layout-${layout}`);
+
+  document.querySelectorAll('.aws-layout-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function maximizePanel(panelId) {
+  const panel = document.getElementById(panelId);
+  if (panel.style.gridColumn === '1 / -1') {
+    panel.style.gridColumn = '';
+    panel.style.gridRow = '';
+    document.querySelectorAll('.aws-panel').forEach(p => p.style.display = '');
+  } else {
+    document.querySelectorAll('.aws-panel').forEach(p => {
+      if (p.id !== panelId) p.style.display = 'none';
+    });
+    panel.style.gridColumn = '1 / -1';
+    panel.style.gridRow = '1 / -1';
+  }
+}
+
+// ─── Mobile ──────────────────────────────────────────────────────────
+
+function switchMobilePanel(index, btn) {
+  state.activeMobilePanel = index;
+  const panels = document.querySelectorAll('.aws-panel');
+  panels.forEach((p, idx) => p.classList.toggle('active-mobile', idx === index));
+
+  document.querySelectorAll('.aws-mobile-nav-item').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+function toggleMobileMenu() {
+  const nav = document.getElementById('mobileNav');
+  nav.style.display = nav.style.display === 'flex' ? 'none' : 'flex';
+}
+
+// ─── Language ────────────────────────────────────────────────────────
+
+function toggleLang() {
+  state.lang = state.lang === 'ar' ? 'en' : 'ar';
+  localStorage.setItem('wab_lang', state.lang);
+  setDirection();
+  applyI18n();
+  injectWelcomeMessage();
+  showToast(state.lang === 'ar' ? i18n('toast_lang_ar') : i18n('toast_lang_en'), 'info');
+}
+
+function setDirection() {
+  const body = document.querySelector('.aws-body');
+  const html = document.documentElement;
+  if (state.lang === 'ar') {
+    body.setAttribute('dir', 'rtl');
+    html.setAttribute('dir', 'rtl');
+    html.setAttribute('lang', 'ar');
+  } else {
+    body.setAttribute('dir', 'ltr');
+    html.setAttribute('dir', 'ltr');
+    html.setAttribute('lang', 'en');
+  }
+}
+
+// ─── Settings ────────────────────────────────────────────────────────
+
+function toggleSettings() {
+  showToast(i18n('toast_settings'), 'info');
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────
+
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = `aws-toast ${type} visible`;
+  setTimeout(() => toast.classList.remove('visible'), 3500);
+}
+
+// ─── API Helper ──────────────────────────────────────────────────────
+
+function apiFetch(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+  return fetch(`${API}${path}`, { ...options, headers });
+}
+
+// ─── Security ────────────────────────────────────────────────────────
+
+function sanitizeUrl(url) {
+  if (!url) return '#';
+  try {
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return '#';
+    return parsed.href;
+  } catch (_) {
+    return '#';
+  }
+}

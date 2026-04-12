@@ -48,7 +48,16 @@ function parseYAML(text) {
 
     // Array item
     if (stripped.startsWith('- ')) {
-      const parent = stack[stack.length - 1].obj;
+      let parent = stack[stack.length - 1].obj;
+
+      // Fix: if current stack top is an empty {} from `key:` with no value,
+      // it should be an array. Pop stack and convert.
+      if (stack.length > 1 && typeof parent === 'object' && !Array.isArray(parent) && Object.keys(parent).length === 0) {
+        stack.pop();
+        parent = stack[stack.length - 1].obj;
+        parent[currentKey] = [];
+      }
+
       if (currentKey && !Array.isArray(parent[currentKey])) {
         parent[currentKey] = [];
       }

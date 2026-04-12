@@ -1,0 +1,1319 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   WAB Agent Workspace — 4-Panel Premium Layout
+   Responsive for all screens including mobile
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ─── Reset & Base ────────────────────────────────────────────────────── */
+.aws-body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #06080f;
+  color: #f0f4ff;
+  height: 100vh;
+  overflow: hidden;
+  direction: ltr;
+}
+
+.aws-body[dir="rtl"] { direction: rtl; }
+
+/* ─── Top Bar ──────────────────────────────────────────────────────────── */
+.aws-topbar {
+  height: 52px;
+  background: linear-gradient(90deg, #0a0e1a, #111827);
+  border-bottom: 1px solid #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.aws-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.aws-logo {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.aws-topbar-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.aws-topbar-title span {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.aws-topbar-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aws-layout-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid #1e293b;
+  color: #94a3b8;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.aws-layout-btn:hover, .aws-layout-btn.active {
+  background: rgba(59,130,246,0.15);
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+.aws-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.aws-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.05);
+  padding: 4px 12px 4px 4px;
+  border-radius: 20px;
+  border: 1px solid #1e293b;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.aws-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.aws-tier-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.aws-tier-badge.premium { background: linear-gradient(135deg, #f59e0b, #ef4444); color: #fff; }
+.aws-tier-badge.pro { background: linear-gradient(135deg, #8b5cf6, #ec4899); color: #fff; }
+.aws-tier-badge.starter { background: linear-gradient(135deg, #06b6d4, #3b82f6); color: #fff; }
+
+.aws-btn-icon {
+  background: none;
+  border: 1px solid #1e293b;
+  color: #94a3b8;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.aws-btn-icon:hover { background: rgba(255,255,255,0.05); color: #f0f4ff; }
+
+.aws-logout-btn {
+  background: none;
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #ef4444;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.aws-logout-btn:hover { background: rgba(239,68,68,0.1); }
+
+/* ─── Mobile Menu ──────────────────────────────────────────────────────── */
+.aws-mobile-menu-btn {
+  display: none;
+  background: none;
+  border: 1px solid #1e293b;
+  color: #94a3b8;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Workspace Grid (4-Panel) ─────────────────────────────────────────── */
+.aws-workspace {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  height: calc(100vh - 52px);
+  gap: 2px;
+  background: #0a0e1a;
+}
+
+/* Panel base */
+.aws-panel {
+  background: #0f1629;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
+}
+
+.aws-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(17, 24, 39, 0.9);
+  border-bottom: 1px solid #1e293b;
+  flex-shrink: 0;
+  min-height: 40px;
+}
+
+.aws-panel-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aws-panel-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.aws-panel-icon.browser { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.aws-panel-icon.chat { background: rgba(139,92,246,0.15); color: #a78bfa; }
+.aws-panel-icon.monitor { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.aws-panel-icon.results { background: rgba(16,185,129,0.15); color: #34d399; }
+
+.aws-panel-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.aws-panel-status {
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.aws-panel-status.active { background: rgba(16,185,129,0.15); color: #34d399; }
+.aws-panel-status.idle { background: rgba(148,163,184,0.1); color: #64748b; }
+.aws-panel-status.working { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+.aws-panel-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.aws-panel-action-btn {
+  background: none;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+}
+
+.aws-panel-action-btn:hover { color: #94a3b8; background: rgba(255,255,255,0.05); }
+
+.aws-panel-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Panel 1: Browser ──────────────────────────────────────────────── */
+.aws-browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #111827;
+  border-bottom: 1px solid #1e293b;
+  flex-shrink: 0;
+}
+
+.aws-browser-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.aws-browser-nav button {
+  background: none;
+  border: 1px solid #1e293b;
+  color: #64748b;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.aws-browser-nav button:hover { color: #94a3b8; background: rgba(255,255,255,0.05); }
+
+.aws-url-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0a0e1a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 0 10px;
+  height: 32px;
+}
+
+.aws-url-lock { color: #10b981; font-size: 0.75rem; flex-shrink: 0; }
+
+.aws-url-input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.aws-url-input::placeholder { color: #475569; }
+
+.aws-browser-frame {
+  flex: 1;
+  border: none;
+  background: #fff;
+  width: 100%;
+}
+
+.aws-browser-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  gap: 16px;
+  padding: 20px;
+  text-align: center;
+}
+
+.aws-browser-empty-icon {
+  font-size: 3rem;
+  opacity: 0.4;
+}
+
+.aws-browser-empty p {
+  font-size: 0.85rem;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+/* ─── Panel 2: Chat ──────────────────────────────────────────────────── */
+.aws-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior: smooth;
+}
+
+.aws-chat-messages::-webkit-scrollbar { width: 4px; }
+.aws-chat-messages::-webkit-scrollbar-track { background: transparent; }
+.aws-chat-messages::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+
+.aws-msg {
+  max-width: 88%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  word-break: break-word;
+  animation: msgSlide 0.25s ease-out;
+}
+
+@keyframes msgSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.aws-msg.user {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.aws-msg.agent {
+  align-self: flex-start;
+  background: #1a2236;
+  color: #e2e8f0;
+  border: 1px solid #1e293b;
+  border-bottom-left-radius: 4px;
+}
+
+.aws-msg.system {
+  align-self: center;
+  background: rgba(245,158,11,0.1);
+  color: #fbbf24;
+  border: 1px solid rgba(245,158,11,0.2);
+  font-size: 0.78rem;
+  text-align: center;
+  max-width: 95%;
+}
+
+.aws-msg-time {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.4);
+  margin-top: 4px;
+  display: block;
+}
+
+.aws-msg.agent .aws-msg-time { color: #475569; }
+
+.aws-typing-indicator {
+  display: none;
+  align-self: flex-start;
+  padding: 10px 16px;
+  background: #1a2236;
+  border: 1px solid #1e293b;
+  border-radius: 14px;
+  border-bottom-left-radius: 4px;
+}
+
+.aws-typing-indicator.visible { display: flex; gap: 4px; }
+
+.aws-typing-dot {
+  width: 6px;
+  height: 6px;
+  background: #475569;
+  border-radius: 50%;
+  animation: typingBounce 1.4s infinite;
+}
+
+.aws-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.aws-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+}
+
+.aws-chat-input-area {
+  padding: 10px 12px;
+  border-top: 1px solid #1e293b;
+  background: #111827;
+  flex-shrink: 0;
+}
+
+.aws-chat-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.aws-chat-textarea {
+  flex: 1;
+  background: #0a0e1a;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: #f0f4ff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  max-height: 120px;
+  min-height: 42px;
+  transition: border-color 0.2s;
+}
+
+.aws-chat-textarea:focus { border-color: #3b82f6; }
+.aws-chat-textarea::placeholder { color: #475569; }
+
+.aws-chat-send {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.aws-chat-send:hover { transform: scale(1.05); box-shadow: 0 4px 16px rgba(59,130,246,0.3); }
+.aws-chat-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.aws-chat-suggestions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.aws-suggestion-chip {
+  padding: 5px 12px;
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 16px;
+  color: #60a5fa;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.aws-suggestion-chip:hover {
+  background: rgba(59,130,246,0.15);
+  border-color: #3b82f6;
+}
+
+/* ─── Panel 3: Negotiation Monitor ────────────────────────────────────── */
+.aws-monitor-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.aws-monitor-content::-webkit-scrollbar { width: 4px; }
+.aws-monitor-content::-webkit-scrollbar-track { background: transparent; }
+.aws-monitor-content::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+
+.aws-monitor-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #475569;
+  gap: 12px;
+  text-align: center;
+  padding: 20px;
+}
+
+.aws-monitor-empty-icon { font-size: 2.5rem; opacity: 0.4; }
+.aws-monitor-empty p { font-size: 0.82rem; max-width: 240px; line-height: 1.5; }
+
+/* Progress steps */
+.aws-progress-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.aws-progress-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  transition: all 0.3s;
+}
+
+.aws-progress-step.active {
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+}
+
+.aws-progress-step.completed {
+  background: rgba(16,185,129,0.06);
+}
+
+.aws-progress-step.pending { color: #475569; }
+
+.aws-step-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
+.aws-step-icon.active { background: rgba(245,158,11,0.2); color: #fbbf24; }
+.aws-step-icon.completed { background: rgba(16,185,129,0.2); color: #34d399; }
+.aws-step-icon.pending { background: rgba(148,163,184,0.1); color: #475569; }
+
+/* Agent cards in monitor */
+.aws-agent-card {
+  background: rgba(26,34,54,0.6);
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  animation: msgSlide 0.3s ease-out;
+}
+
+.aws-agent-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.aws-agent-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.aws-agent-name .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.aws-agent-name .dot.searching { background: #fbbf24; animation: pulse 1.5s infinite; }
+.aws-agent-name .dot.negotiating { background: #f59e0b; animation: pulse 1s infinite; }
+.aws-agent-name .dot.done { background: #10b981; }
+.aws-agent-name .dot.failed { background: #ef4444; }
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.aws-agent-progress {
+  width: 100%;
+  height: 3px;
+  background: #1e293b;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 6px 0;
+}
+
+.aws-agent-progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease-out;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+}
+
+.aws-agent-finding {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(30,41,59,0.5);
+}
+
+.aws-agent-finding:last-child { border-bottom: none; }
+
+.aws-agent-finding .price {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.aws-agent-finding .savings {
+  color: #fbbf24;
+  font-weight: 600;
+  font-size: 0.7rem;
+}
+
+/* Negotiation rounds */
+.aws-neg-round {
+  background: rgba(139,92,246,0.05);
+  border: 1px solid rgba(139,92,246,0.15);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  animation: msgSlide 0.25s ease-out;
+}
+
+.aws-neg-round-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: #a78bfa;
+  margin-bottom: 4px;
+  font-size: 0.72rem;
+}
+
+.aws-neg-round-body { color: #94a3b8; line-height: 1.5; }
+
+/* ─── Panel 4: Results ────────────────────────────────────────────────── */
+.aws-results-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.aws-results-content::-webkit-scrollbar { width: 4px; }
+.aws-results-content::-webkit-scrollbar-track { background: transparent; }
+.aws-results-content::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+
+.aws-results-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #475569;
+  gap: 12px;
+  text-align: center;
+  padding: 20px;
+}
+
+.aws-results-empty-icon { font-size: 2.5rem; opacity: 0.4; }
+.aws-results-empty p { font-size: 0.82rem; max-width: 260px; line-height: 1.5; }
+
+/* Result cards */
+.aws-result-card {
+  background: #1a2236;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+  animation: msgSlide 0.3s ease-out;
+}
+
+.aws-result-card:hover {
+  border-color: #334155;
+  background: #1f2a42;
+}
+
+.aws-result-card.recommended {
+  border-color: rgba(16,185,129,0.4);
+  box-shadow: 0 0 20px rgba(16,185,129,0.05);
+}
+
+.aws-result-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.aws-result-badge.best { background: rgba(16,185,129,0.15); color: #34d399; }
+.aws-result-badge.savings { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+.aws-result-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.aws-result-source {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.aws-result-prices {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.aws-result-original {
+  color: #64748b;
+  text-decoration: line-through;
+  font-size: 0.82rem;
+}
+
+.aws-result-final {
+  color: #10b981;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.aws-result-savings-tag {
+  padding: 2px 8px;
+  background: rgba(16,185,129,0.12);
+  border-radius: 6px;
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.aws-result-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.aws-result-detail {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  padding: 3px 8px;
+  background: rgba(148,163,184,0.06);
+  border-radius: 6px;
+}
+
+.aws-result-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.aws-result-btn {
+  flex: 1;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  text-align: center;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.aws-result-btn.primary {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+}
+
+.aws-result-btn.primary:hover { box-shadow: 0 4px 16px rgba(59,130,246,0.3); }
+
+.aws-result-btn.secondary {
+  background: rgba(148,163,184,0.08);
+  color: #94a3b8;
+  border: 1px solid #1e293b;
+}
+
+.aws-result-btn.secondary:hover { background: rgba(148,163,184,0.12); color: #f0f4ff; }
+
+.aws-result-btn.agent-do {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: #fff;
+}
+
+.aws-result-btn.agent-do:hover { box-shadow: 0 4px 16px rgba(139,92,246,0.3); }
+
+/* Login request card */
+.aws-login-request {
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.aws-login-request h4 {
+  font-size: 0.85rem;
+  color: #fbbf24;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.aws-login-request p {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.aws-login-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.aws-login-option-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid #1e293b;
+  background: #1a2236;
+  color: #f0f4ff;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.aws-login-option-btn:hover { background: #1f2a42; border-color: #334155; }
+
+.aws-login-option-btn.agent-login {
+  border-color: rgba(139,92,246,0.3);
+}
+
+.aws-login-option-btn.manual-login {
+  border-color: rgba(59,130,246,0.3);
+}
+
+/* Tips section */
+.aws-tips-section {
+  background: rgba(6,182,212,0.06);
+  border: 1px solid rgba(6,182,212,0.15);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.aws-tips-section h4 {
+  font-size: 0.82rem;
+  color: #22d3ee;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.aws-tip-item {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  padding: 4px 0;
+  line-height: 1.5;
+  display: flex;
+  gap: 6px;
+}
+
+.aws-tip-item::before {
+  content: "💡";
+  flex-shrink: 0;
+  font-size: 0.7rem;
+}
+
+/* Summary bar */
+.aws-results-summary {
+  padding: 10px 12px;
+  background: #111827;
+  border-top: 1px solid #1e293b;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+}
+
+.aws-summary-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+}
+
+.aws-summary-stat .value {
+  font-weight: 700;
+  color: #10b981;
+}
+
+/* ─── Auth/Subscription Overlay ──────────────────────────────────────── */
+.aws-auth-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(6,8,15,0.95);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.aws-auth-overlay.hidden { display: none; }
+
+.aws-auth-card {
+  background: #111827;
+  border: 1px solid #1e293b;
+  border-radius: 20px;
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+  text-align: center;
+  animation: authSlide 0.3s ease-out;
+}
+
+@keyframes authSlide {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.aws-auth-logo {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin: 0 auto 20px;
+  color: #fff;
+  font-weight: 800;
+}
+
+.aws-auth-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.aws-auth-subtitle {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 28px;
+  line-height: 1.5;
+}
+
+.aws-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.aws-auth-form label {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-bottom: -6px;
+}
+
+.aws-auth-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: #0a0e1a;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  color: #f0f4ff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.aws-auth-input:focus { border-color: #3b82f6; }
+
+.aws-auth-submit {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s;
+}
+
+.aws-auth-submit:hover {
+  box-shadow: 0 6px 24px rgba(59,130,246,0.3);
+  transform: translateY(-1px);
+}
+
+.aws-auth-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.aws-auth-switch {
+  margin-top: 16px;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.aws-auth-switch a {
+  color: #60a5fa;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.aws-auth-switch a:hover { text-decoration: underline; }
+
+.aws-auth-error {
+  color: #ef4444;
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 8px;
+  background: rgba(239,68,68,0.08);
+  border-radius: 8px;
+  display: none;
+}
+
+.aws-auth-error.visible { display: block; }
+
+/* ─── Subscription Plans ─────────────────────────────────────────────── */
+.aws-plans-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.aws-plan-card {
+  background: #0f1629;
+  border: 1px solid #1e293b;
+  border-radius: 14px;
+  padding: 20px 16px;
+  text-align: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.aws-plan-card:hover { border-color: #334155; }
+
+.aws-plan-card.recommended {
+  border-color: #3b82f6;
+  box-shadow: 0 0 20px rgba(59,130,246,0.1);
+}
+
+.aws-plan-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.aws-plan-price {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #f0f4ff;
+  margin-bottom: 4px;
+}
+
+.aws-plan-price span { font-size: 0.75rem; color: #64748b; font-weight: 400; }
+
+.aws-plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  text-align: left;
+}
+
+.aws-plan-features li {
+  padding: 3px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.aws-plan-features li::before { content: "✓"; color: #10b981; font-weight: 700; }
+
+/* ─── Responsive — Tablet ──────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .aws-topbar-center { display: none; }
+  
+  .aws-workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .aws-panel { min-height: 40vh; }
+  
+  .aws-plans-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── Responsive — Mobile ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .aws-topbar {
+    padding: 0 10px;
+    height: 48px;
+  }
+
+  .aws-topbar-title { font-size: 0.85rem; }
+  .aws-topbar-center { display: none; }
+  .aws-user-badge { display: none; }
+  .aws-tier-badge { display: none; }
+  .aws-logout-btn { display: none; }
+  .aws-mobile-menu-btn { display: flex; }
+
+  .aws-workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    height: auto;
+    min-height: calc(100vh - 48px);
+  }
+
+  .aws-panel {
+    display: none;
+    min-height: calc(100vh - 48px - 52px);
+    padding-bottom: 56px;
+  }
+
+  .aws-panel.active-mobile { display: flex; }
+
+  .aws-mobile-nav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: #111827;
+    border-top: 1px solid #1e293b;
+    padding: 6px 0;
+    justify-content: space-around;
+    height: 52px;
+  }
+
+  .aws-mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 12px;
+    background: none;
+    border: none;
+    color: #475569;
+    font-size: 0.62rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .aws-mobile-nav-item .icon { font-size: 1.1rem; }
+  .aws-mobile-nav-item.active { color: #3b82f6; }
+  .aws-mobile-nav-item:hover { color: #94a3b8; }
+
+  .aws-auth-card { padding: 28px 20px; }
+  .aws-auth-title { font-size: 1.3rem; }
+  .aws-plans-grid { grid-template-columns: 1fr; }
+
+  .aws-browser-nav { display: none; }
+  .aws-chat-suggestions { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+
+  .aws-result-actions { flex-direction: column; }
+}
+
+/* ─── Mobile Nav (hidden on desktop) ───────────────────────────────── */
+.aws-mobile-nav { display: none; }
+
+/* ─── Layout Variants ──────────────────────────────────────────────── */
+.aws-workspace.layout-horizontal {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr;
+}
+
+.aws-workspace.layout-focus-browser {
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.aws-workspace.layout-focus-browser .aws-panel:first-child {
+  grid-row: 1 / -1;
+}
+
+/* ─── Loading spinner ──────────────────────────────────────────────── */
+.aws-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #1e293b;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Notification toast ──────────────────────────────────────────── */
+.aws-toast {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  z-index: 300;
+  padding: 12px 20px;
+  background: #1a2236;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  color: #f0f4ff;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  transform: translateX(120%);
+  transition: transform 0.3s ease-out;
+}
+
+.aws-toast.visible { transform: translateX(0); }
+.aws-toast.success { border-color: rgba(16,185,129,0.4); }
+.aws-toast.error { border-color: rgba(239,68,68,0.4); }
+.aws-toast.info { border-color: rgba(59,130,246,0.4); }
+
+/* ─── Dark scrollbar global ──────────────────────────────────────── */
+.aws-body ::-webkit-scrollbar { width: 4px; height: 4px; }
+.aws-body ::-webkit-scrollbar-track { background: transparent; }
+.aws-body ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
