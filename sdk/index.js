@@ -254,7 +254,121 @@ class WABAgent {
   }
 }
 
+/**
+ * WABUniversalAgent — Works on ANY page, no bridge script needed.
+ * Uses server-side extraction, analysis, and comparison APIs.
+ */
+class WABUniversalAgent {
+  /**
+   * @param {string} [serverUrl='http://localhost:3000'] — WAB server URL
+   */
+  constructor(serverUrl = 'http://localhost:3000') {
+    this.serverUrl = serverUrl.replace(/\/$/, '');
+  }
+
+  /** @private */
+  async _post(path, body) {
+    const res = await fetch(`${this.serverUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`WAB API error ${res.status}: ${await res.text()}`);
+    return res.json();
+  }
+
+  /** @private */
+  async _get(path) {
+    const res = await fetch(`${this.serverUrl}${path}`);
+    if (!res.ok) throw new Error(`WAB API error ${res.status}: ${await res.text()}`);
+    return res.json();
+  }
+
+  /**
+   * Extract products, prices, and metadata from any URL.
+   * @param {string} url
+   * @returns {Promise<object>}
+   */
+  async extract(url) {
+    return this._post('/api/universal/extract', { url });
+  }
+
+  /**
+   * Full analysis: extract + fairness + fraud detection + dark patterns.
+   * @param {string} url
+   * @returns {Promise<object>}
+   */
+  async analyze(url) {
+    return this._post('/api/universal/analyze', { url });
+  }
+
+  /**
+   * Compare prices across multiple sources.
+   * @param {string} query — Product or service to search for
+   * @param {string} [category='product'] — 'product', 'hotel', 'flight'
+   * @returns {Promise<object>}
+   */
+  async compare(query, category = 'product') {
+    return this._post('/api/universal/compare', { query, category });
+  }
+
+  /**
+   * Find and rank the best deals with fairness scoring.
+   * @param {string} query
+   * @param {string} [category='product']
+   * @param {string} [lang='en']
+   * @returns {Promise<object>}
+   */
+  async deals(query, category = 'product', lang = 'en') {
+    return this._post('/api/universal/deals', { query, category, lang });
+  }
+
+  /**
+   * Get fairness score for a domain.
+   * @param {string} domain
+   * @returns {Promise<object>}
+   */
+  async fairness(domain) {
+    return this._post('/api/universal/fairness', { domain });
+  }
+
+  /**
+   * Detect dark patterns on a URL.
+   * @param {string} url
+   * @returns {Promise<object>}
+   */
+  async darkPatterns(url) {
+    return this._post('/api/universal/dark-patterns', { url });
+  }
+
+  /**
+   * Get price history for a domain.
+   * @param {string} domain
+   * @returns {Promise<object>}
+   */
+  async priceHistory(domain) {
+    return this._get(`/api/universal/history?domain=${encodeURIComponent(domain)}`);
+  }
+
+  /**
+   * Get top fairness-scored sites.
+   * @param {number} [limit=20]
+   * @returns {Promise<object>}
+   */
+  async topFair(limit = 20) {
+    return this._get(`/api/universal/top-fair?limit=${limit}`);
+  }
+
+  /**
+   * Get all known competing sources.
+   * @returns {Promise<object>}
+   */
+  async sources() {
+    return this._get('/api/universal/sources');
+  }
+}
+
 const { WABMultiAgent } = require('./multi-agent');
 const { WABAgentMesh } = require('./agent-mesh');
 
-module.exports = { WABAgent, WABMultiAgent, WABAgentMesh };
+module.exports = { WABAgent, WABUniversalAgent, WABMultiAgent, WABAgentMesh };

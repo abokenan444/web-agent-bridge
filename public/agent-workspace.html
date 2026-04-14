@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/agent-workspace.css?v=2.4.1">
+  <link rel="stylesheet" href="/css/agent-workspace.css?v=2.4.0">
 </head>
 <body class="aws-body" dir="rtl">
 
@@ -193,6 +193,9 @@
           <button class="aws-suggestion-chip" data-i18n="chip_flight" onclick="useSuggestion(i18n('chip_flight_query'))">✈️ رحلة طيران</button>
           <button class="aws-suggestion-chip" data-i18n="chip_url_paste" onclick="promptUrlPaste()">🔗 لصق رابط حجز</button>
           <button class="aws-suggestion-chip" data-i18n="chip_security" onclick="useSuggestion(i18n('chip_security_query'))">🔒 فحص أمان</button>
+          <button class="aws-suggestion-chip" data-i18n="chip_uni_analyze" onclick="universalAnalyzePage()">🔬 تحليل شامل</button>
+          <button class="aws-suggestion-chip" data-i18n="chip_uni_fairness" onclick="universalFairnessCheck()">⚖️ فحص عدالة</button>
+          <button class="aws-suggestion-chip" data-i18n="chip_uni_compare" onclick="universalComparePrompt()">📊 مقارنة أسعار</button>
         </div>
       </div>
     </div>
@@ -264,6 +267,32 @@
         <!-- Results cards injected here -->
         <div id="resultsCards"></div>
 
+        <!-- Universal Agent Analysis Section -->
+        <div id="universalSection" style="display:none">
+          <div class="aws-universal-header">
+            <span>🌐 <span data-i18n="uni_title">Universal Agent Analysis</span></span>
+            <button class="aws-panel-action-btn" onclick="closeUniversalSection()">✕</button>
+          </div>
+
+          <!-- Bridge Status -->
+          <div class="aws-uni-bridge" id="uniBridgeWs"></div>
+
+          <!-- Fairness Score -->
+          <div class="aws-uni-fairness" id="uniFairnessWs"></div>
+
+          <!-- Products Found -->
+          <div class="aws-uni-products" id="uniProductsWs" style="display:none"></div>
+
+          <!-- Dark Patterns Detected -->
+          <div class="aws-uni-dark" id="uniDarkWs" style="display:none"></div>
+
+          <!-- Fraud Alerts -->
+          <div class="aws-uni-alerts" id="uniAlertsWs" style="display:none"></div>
+
+          <!-- Comparison Results -->
+          <div class="aws-uni-compare" id="uniCompareWs" style="display:none"></div>
+        </div>
+
         <!-- Login request (shown when site needs auth) -->
         <div id="loginRequestArea" style="display:none"></div>
 
@@ -313,6 +342,6 @@
 <!-- ═══ Toast Notification ═══ -->
 <div class="aws-toast" id="toast"></div>
 
-<script src="/js/agent-workspace.js?v=2.4.1"></script>
+<script src="/js/agent-workspace.js?v=2.4.0"></script>
 </body>
 </html>

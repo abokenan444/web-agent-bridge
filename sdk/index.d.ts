@@ -209,3 +209,86 @@ export declare class WABMultiAgent {
   /** Close all browser sessions. */
   close(): Promise<void>;
 }
+
+// ─── WABUniversalAgent — Works on ANY page, no bridge needed ───────────
+
+export interface UniversalAnalysis {
+  url: string;
+  domain: string;
+  products?: Array<{
+    name?: string;
+    price?: number;
+    currency?: string;
+    originalPrice?: number;
+    rating?: number;
+    method?: string;
+  }>;
+  fairness?: {
+    total: number;
+    category: string;
+    breakdown: Record<string, number>;
+    wabBridge?: { installed: boolean; bonus?: number; hasNegotiation?: boolean };
+    platform?: { size: string; commission: number };
+  };
+  darkPatterns?: Array<{ type: string; severity?: string; matches?: string[] }>;
+  alerts?: Array<{ title: string; description?: string; severity?: string }>;
+}
+
+export interface UniversalDeal {
+  name?: string;
+  source?: string;
+  domain?: string;
+  priceUsd?: number;
+  rating?: number;
+  url?: string;
+  compositeScore?: number;
+  wabBridge?: boolean;
+  canNegotiate?: boolean;
+  fairness?: { total: number; category: string };
+}
+
+export interface UniversalDealsResult {
+  deals: UniversalDeal[];
+  insights?: Array<{ icon?: string; text: string }>;
+  sourcesChecked?: number;
+}
+
+export interface UniversalFairness {
+  domain: string;
+  total: number;
+  category: string;
+  breakdown: Record<string, number>;
+  wabBridge?: { installed: boolean; bonus?: number };
+  platform?: { size: string; commission: number };
+}
+
+export declare class WABUniversalAgent {
+  constructor(serverUrl?: string);
+
+  /** Extract products, prices, and metadata from any URL. */
+  extract(url: string): Promise<any>;
+
+  /** Full analysis: extract + fairness + fraud detection + dark patterns. */
+  analyze(url: string): Promise<UniversalAnalysis>;
+
+  /** Compare prices across multiple sources. */
+  compare(query: string, category?: string): Promise<any>;
+
+  /** Find and rank the best deals with fairness scoring. */
+  deals(query: string, category?: string, lang?: string): Promise<UniversalDealsResult>;
+
+  /** Get fairness score for a domain. */
+  fairness(domain: string): Promise<UniversalFairness>;
+
+  /** Detect dark patterns on a URL. */
+  darkPatterns(url: string): Promise<any>;
+
+  /** Get price history for a domain. */
+  priceHistory(domain: string): Promise<any>;
+
+  /** Get top fairness-scored sites. */
+  topFair(limit?: number): Promise<any>;
+
+  /** Get all known competing sources. */
+  sources(): Promise<any>;
+}

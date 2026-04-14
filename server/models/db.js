@@ -255,6 +255,7 @@ const findSitesByUser = db.prepare(`SELECT * FROM sites WHERE user_id = ? ORDER 
 const findSiteById = db.prepare(`SELECT * FROM sites WHERE id = ?`);
 const findSiteByLicense = db.prepare(`SELECT * FROM sites WHERE license_key = ? AND active = 1`);
 const findSiteByDomainAndLicense = db.prepare(`SELECT * FROM sites WHERE domain = ? AND license_key = ? AND active = 1`);
+const findSiteByDomain = db.prepare(`SELECT * FROM sites WHERE domain = ? AND active = 1 LIMIT 1`);
 const updateSiteConfig = db.prepare(`UPDATE sites SET config = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`);
 const updateSiteTier = db.prepare(`UPDATE sites SET tier = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`);
 const deleteSite = db.prepare(`UPDATE sites SET active = 0, updated_at = datetime('now') WHERE id = ? AND user_id = ?`);
@@ -624,6 +625,7 @@ module.exports = {
   findSitesByUser,
   findSiteById,
   findSiteByLicense,
+  findSiteByDomain,
   updateSiteConfig,
   updateSiteTier,
   deleteSite,

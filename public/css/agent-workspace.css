@@ -1619,3 +1619,95 @@
 .aws-shield-probes-table tr.probe-worst td {
   color: #f87171;
 }
+
+/* ══════════════════════════════════════════════════════
+   Universal Agent Workspace Styles
+   ══════════════════════════════════════════════════════ */
+
+.aws-universal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(139,92,246,.12));
+  border-radius: 10px 10px 0 0; font-weight: 700; font-size: 0.95rem;
+  border-bottom: 1px solid rgba(59,130,246,.2); margin-bottom: 10px;
+}
+
+.aws-uni-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px;
+  border-radius: 14px; font-size: 0.75rem; font-weight: 600; margin: 3px 4px 3px 0;
+}
+.aws-uni-badge.bridge { background: rgba(59,130,246,.15); color: #60a5fa; }
+.aws-uni-badge.negotiate { background: rgba(34,197,94,.15); color: #4ade80; }
+.aws-uni-badge.listed { background: rgba(168,85,247,.15); color: #c084fc; }
+.aws-uni-badge.neutral { background: rgba(148,163,184,.1); color: #94a3b8; }
+.aws-uni-badge.small { font-size: 0.65rem; padding: 2px 6px; }
+
+.aws-uni-fairness h4,
+.aws-uni-products h4,
+.aws-uni-dark h4,
+.aws-uni-alerts h4,
+.aws-uni-compare h4 {
+  font-size: 0.82rem; font-weight: 700; margin: 10px 0 6px;
+  color: #e2e8f0;
+}
+
+.aws-uni-score-bar {
+  height: 8px; background: rgba(255,255,255,.06); border-radius: 4px; overflow: hidden; margin-bottom: 6px;
+}
+.aws-uni-score-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+.aws-uni-score-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+.aws-uni-score-val { font-weight: 700; }
+.aws-uni-score-cat { font-size: 0.8rem; }
+.aws-uni-meta { font-size: 0.72rem; color: #94a3b8; margin-top: 3px; }
+.aws-uni-meta.bridge-bonus { color: #60a5fa; }
+.aws-uni-breakdown { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; font-size: 0.7rem; color: #94a3b8; }
+
+.aws-uni-product {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.04);
+  font-size: 0.82rem;
+}
+.aws-uni-product:last-child { border-bottom: none; }
+.aws-uni-product-name { flex: 1; margin-inline-end: 10px; line-height: 1.3; }
+.aws-uni-product-details strong { color: #34d399; margin-inline-end: 6px; }
+.aws-uni-product-details s { color: #64748b; margin-inline-end: 6px; font-size: 0.75rem; }
+
+.aws-uni-dark-item {
+  padding: 4px 0; font-size: 0.78rem; line-height: 1.4;
+}
+.aws-uni-dark-item.high { color: #f87171; }
+.aws-uni-dark-item.medium { color: #fbbf24; }
+.aws-uni-dark-item.low { color: #94a3b8; }
+
+.aws-uni-alert-item {
+  padding: 6px 8px; border-radius: 6px; margin-bottom: 4px; font-size: 0.78rem; line-height: 1.4;
+}
+.aws-uni-alert-item.high { background: rgba(239,68,68,.08); color: #f87171; }
+.aws-uni-alert-item.medium { background: rgba(234,179,8,.08); color: #fbbf24; }
+
+.aws-uni-insight { font-size: 0.78rem; color: #94a3b8; padding: 3px 0; line-height: 1.4; }
+
+.aws-uni-deal {
+  padding: 8px 10px; border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px; margin-bottom: 6px;
+}
+.aws-uni-deal.best { border-color: rgba(34,197,94,.3); background: rgba(34,197,94,.04); }
+.aws-uni-deal.wab-bridge { border-inline-start: 3px solid #3b82f6; }
+.aws-uni-deal-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.aws-uni-deal-source { font-weight: 600; font-size: 0.82rem; flex: 1; }
+.aws-uni-deal-score { font-size: 0.78rem; font-weight: 700; color: #8b5cf6; }
+.aws-uni-deal-name { font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; }
+.aws-uni-deal-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+.aws-uni-fairness-chip {
+  font-size: 0.68rem; padding: 2px 6px; border-radius: 8px; font-weight: 600;
+}
+.aws-uni-fairness-chip.recommended { background: rgba(34,197,94,.15); color: #4ade80; }
+.aws-uni-fairness-chip.caution { background: rgba(239,68,68,.15); color: #f87171; }
+.aws-uni-deal-link {
+  display: inline-block; margin-top: 4px; font-size: 0.75rem;
+  color: #60a5fa; text-decoration: none;
+}
+.aws-uni-deal-link:hover { text-decoration: underline; }
+.aws-uni-compare-summary {
+  text-align: center; font-size: 0.72rem; color: #64748b;
+  padding-top: 6px; border-top: 1px solid rgba(255,255,255,.06); margin-top: 4px;
+}

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>WAB Browser</title>
+  <link rel="stylesheet" href="css/browser.css">
+</head>
+<body>
+  <!-- ═══════ Title Bar + Tabs ═══════ -->
+  <div id="title-bar">
+    <div id="app-brand">
+      <svg width="20" height="20" viewBox="0 0 40 40" id="app-logo">
+        <circle cx="20" cy="20" r="18" fill="none" stroke="#0ea5e9" stroke-width="2.5"/>
+        <path d="M12 26 L16 14 L20 22 L24 14 L28 26" fill="none" stroke="#0ea5e9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="20" cy="12" r="2.5" fill="#0ea5e9"/>
+      </svg>
+    </div>
+    <div id="tab-bar">
+      <div id="tabs-container"></div>
+      <button id="new-tab-btn" title="New Tab (Ctrl+T)">
+        <svg width="14" height="14" viewBox="0 0 14 14"><line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" stroke-width="1.5"/><line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+    </div>
+    <div id="window-controls">
+      <button id="min-btn" title="Minimize">
+        <svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+      <button id="max-btn" title="Maximize">
+        <svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+      <button id="close-btn" title="Close">
+        <svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════ Navigation Bar ═══════ -->
+  <div id="nav-bar">
+    <div id="nav-buttons">
+      <button id="back-btn" title="Back (Alt+Left)" disabled>
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <button id="forward-btn" title="Forward (Alt+Right)" disabled>
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <button id="reload-btn" title="Reload (Ctrl+R)">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M13 8A5 5 0 1 1 8 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 1l3 2-3 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="home-btn" title="Home">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 8.5V14h4v-4h2v4h4V8.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M1 9l7-7 7 7" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <div id="url-container">
+      <span id="security-icon" title="Connection Security">
+        <svg width="14" height="14" viewBox="0 0 14 14"><rect x="3" y="6" width="8" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 6V4a2 2 0 0 1 4 0v2" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </span>
+      <input id="url-input" type="text" placeholder="Search with WAB or enter URL..." spellcheck="false" autocomplete="off" />
+      <div id="url-suggestions" class="hidden"></div>
+    </div>
+
+    <div id="nav-tools">
+      <button id="adblock-btn" title="Ad Blocker" class="adblock-on">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="4" y1="4" x2="14" y2="14" stroke="currentColor" stroke-width="1.5"/><text x="9" y="10.5" text-anchor="middle" font-size="7" font-weight="bold" fill="currentColor">AD</text></svg>
+        <span id="adblock-badge" class="adblock-count">0</span>
+      </button>
+      <button id="fairness-btn" title="Fairness Score">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2L6 7H3l2.5 4L4 16h4l1-3 1 3h4l-1.5-5L16 7h-3L9 2z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="universal-btn" title="Universal Agent — Analyze any page" class="universal-off">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5 9h8M9 5v8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="9" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+        <span id="universal-badge" class="hidden">!</span>
+      </button>
+      <button id="shield-btn" title="Scam Shield" class="shield-safe">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 1.5L2.5 4.5v4c0 4.1 2.8 7.5 6.5 8.5 3.7-1 6.5-4.4 6.5-8.5v-4L9 1.5z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M6 9l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="shield-badge" class="hidden">!</span>
+      </button>
+      <button id="ghost-btn" title="Ghost Mode (Ctrl+Shift+G)" class="ghost-off">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2C6 2 4 4.5 4 7v6c0 .5.5 1 1 1s1-.5 1.5-1 1-.5 1.5-.5.5.5 1 .5 1 1 1.5 1 1-.5 1-1V7c0-2.5-2-5-5-5z" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="11" cy="7" r="1" fill="currentColor"/></svg>
+      </button>
+      <button id="notif-btn" title="Alerts &amp; Notifications">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2a5 5 0 0 0-5 5v3l-1 2h12l-1-2V7a5 5 0 0 0-5-5z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 14a1.5 1.5 0 0 0 3 0" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+        <span id="notif-badge" class="hidden">0</span>
+      </button>
+      <button id="chat-btn" title="Agent Chat (Ctrl+Shift+A)">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 3h12v9H6l-3 3V3z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="6.5" cy="7.5" r="0.8" fill="currentColor"/><circle cx="9" cy="7.5" r="0.8" fill="currentColor"/><circle cx="11.5" cy="7.5" r="0.8" fill="currentColor"/></svg>
+      </button>
+      <button id="bookmark-btn" title="Bookmark this page">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 2h8v12l-4-3-4 3V2z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+      </button>
+      <button id="menu-btn" title="Menu">
+        <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="3" r="1.2" fill="currentColor"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="8" cy="13" r="1.2" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════ Menu Dropdown ═══════ -->
+  <div id="menu-dropdown" class="hidden">
+    <div class="menu-section">
+      <button class="menu-item" id="menu-new-tab"><span>New Tab</span><kbd>Ctrl+T</kbd></button>
+      <button class="menu-item" id="menu-new-ghost"><span>New Ghost Tab</span><kbd>Ctrl+Shift+N</kbd></button>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-section">
+      <button class="menu-item" id="menu-history"><span>History</span><kbd>Ctrl+H</kbd></button>
+      <button class="menu-item" id="menu-bookmarks"><span>Bookmarks</span><kbd>Ctrl+B</kbd></button>
+      <button class="menu-item" id="menu-downloads"><span>Downloads</span></button>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-section">
+      <button class="menu-item" id="menu-search-engine"><span>Search Engine</span></button>
+      <button class="menu-item" id="menu-workspace"><span>Agent Workspace</span></button>
+      <button class="menu-item" id="menu-settings"><span>Settings</span></button>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-section">
+      <button class="menu-item" id="menu-auth"><span>WAB Account</span></button>
+      <button class="menu-item" id="menu-about"><span>About WAB Browser</span></button>
+    </div>
+  </div>
+
+  <!-- ═══════ Sidebar Panels ═══════ -->
+  <div id="sidebar" class="hidden">
+    <div id="sidebar-header">
+      <h3 id="sidebar-title">Panel</h3>
+      <button id="sidebar-close">✕</button>
+    </div>
+    <div id="sidebar-content"></div>
+  </div>
+
+  <!-- ═══════ Content Area (Webviews) ═══════ -->
+  <div id="content-area"></div>
+
+  <!-- ═══════ Agent Chat Panel ═══════ -->
+  <div id="chat-panel" class="hidden">
+    <div id="chat-header">
+      <div class="chat-header-left">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 3h12v9H6l-3 3V3z" fill="none" stroke="var(--accent)" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        <span>WAB Agent</span>
+        <span style="font-size:10px;color:var(--text-muted);margin-right:4px">وكيل ذكي</span>
+      </div>
+      <button id="chat-close">✕</button>
+    </div>
+    <div id="chat-messages">
+      <div class="chat-msg agent">
+        <div class="chat-msg-content">🤖 مرحباً! أنا وكيل WAB الذكي. أستطيع:
+
+🔍 البحث والمقارنة — "ابحث عن أفضل هاتف"
+✈️ حجز رحلات — "احجز لي تذكرة طيران"
+🏨 حجز فنادق — "ابحث عن فندق في إسطنبول"
+🛒 التسوق والتفاوض — "اشتري لي لابتوب بأقل سعر"
+📅 حجز مواعيد — "احجز لي موعد عند طبيب"
+🔒 فحص أمان — "هل هذا الموقع آمن؟"
+
+💡 جرّب مساحة العمل الكاملة: webagentbridge.com/workspace
+   4 شاشات — متصفحّ، وكيل، تفاوض، نتائج — بالعربية والإنجليزية
+
+🤖 Hello! I'm WAB Smart Agent. I can:
+🔍 Search &amp; compare — "Find the best phone"
+✈️ Book flights — "Book me a flight"
+🏨 Hotels — "Find a hotel in Istanbul"
+🛒 Shop &amp; negotiate — "Buy a laptop at the best price"
+🔒 Security check — "Is this site safe?"
+
+💡 Try the full workspace: webagentbridge.com/workspace
+   4 panels — Browser, Agent, Negotiation, Results — in AR &amp; EN
+
+اطلب بأي لغة! Type in any language! 💪</div>
+      </div>
+    </div>
+    <div id="chat-input-area">
+      <input type="text" id="chat-input" placeholder="اطلب من الوكيل... Ask the agent... (any language)" autocomplete="off" spellcheck="false" />
+      <button id="chat-send">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 8l12-6-4 6 4 6z" fill="var(--accent)" /></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════ Notifications Panel ═══════ -->
+  <div id="notif-panel" class="hidden">
+    <div id="notif-header">
+      <span>🔔 Alerts &amp; Findings</span>
+      <div class="notif-header-actions">
+        <button id="notif-clear" title="Clear all">🗑️</button>
+        <button id="notif-close">✕</button>
+      </div>
+    </div>
+    <div id="notif-list"></div>
+  </div>
+
+  <!-- ═══════ Notification Toast ═══════ -->
+  <div id="toast-container"></div>
+
+  <!-- ═══════ Universal Agent Panel ═══════ -->
+  <div id="universal-panel" class="hidden">
+    <div id="universal-header">
+      <div class="universal-header-left">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="var(--accent)" stroke-width="1.3"/><path d="M5 9h8M9 5v8" stroke="var(--accent)" stroke-width="1.3" stroke-linecap="round"/><circle cx="9" cy="9" r="2.5" fill="none" stroke="var(--accent)" stroke-width="1"/></svg>
+        <span>Universal Agent</span>
+        <span style="font-size:10px;color:var(--text-muted);margin-right:4px">الوكيل الشامل</span>
+      </div>
+      <button id="universal-close">✕</button>
+    </div>
+
+    <div id="universal-content">
+      <!-- Page info -->
+      <div class="uni-section" id="uniPageInfo">
+        <div class="uni-section-title">📄 Page Info — معلومات الصفحة</div>
+        <div id="uniPageDomain" class="uni-domain"></div>
+        <div id="uniPageTitle" class="uni-page-title"></div>
+      </div>
+
+      <!-- WAB Bridge Status -->
+      <div class="uni-section" id="uniBridgeStatus">
+        <div class="uni-section-title">🌉 WAB Bridge Status</div>
+        <div id="uniBridgeInfo" class="uni-bridge-info"></div>
+      </div>
+
+      <!-- Fairness Score -->
+      <div class="uni-section" id="uniFairness">
+        <div class="uni-section-title">⚖️ Fairness — العدالة</div>
+        <div id="uniFairnessScore" class="uni-fairness"></div>
+      </div>
+
+      <!-- Products / Prices extracted -->
+      <div class="uni-section" id="uniProducts" style="display:none">
+        <div class="uni-section-title">📦 Products — المنتجات</div>
+        <div id="uniProductsList" class="uni-products"></div>
+      </div>
+
+      <!-- Dark Patterns -->
+      <div class="uni-section" id="uniDarkPatterns" style="display:none">
+        <div class="uni-section-title">🚩 Dark Patterns — أنماط مضللة</div>
+        <div id="uniDarkList" class="uni-darks"></div>
+      </div>
+
+      <!-- Fraud Alerts -->
+      <div class="uni-section" id="uniFraudAlerts" style="display:none">
+        <div class="uni-section-title">⚠️ Fraud Alerts — تحذيرات احتيال</div>
+        <div id="uniFraudList" class="uni-alerts"></div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="uni-actions">
+        <button class="uni-btn primary" id="uniCompareBtn">🔍 Compare Prices — قارن الأسعار</button>
+        <button class="uni-btn" id="uniDealsBtn">💰 Find Deals — ابحث عن صفقات</button>
+        <button class="uni-btn" id="uniAnalyzeBtn">🔬 Deep Analyze — تحليل عميق</button>
+      </div>
+
+      <!-- Comparison Results -->
+      <div class="uni-section" id="uniCompareResults" style="display:none">
+        <div class="uni-section-title">📊 Comparison Results — نتائج المقارنة</div>
+        <div id="uniCompareList" class="uni-compare"></div>
+      </div>
+
+      <!-- Loading -->
+      <div id="uniLoading" class="uni-loading hidden">
+        <div class="uni-spinner"></div>
+        <span>Analyzing... يحلل...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ Status Bar ═══════ -->
+  <div id="status-bar">
+    <span id="status-shield-info"></span>
+    <span id="status-ghost-info"></span>
+    <span id="status-text"></span>
+  </div>
+
+  <!-- ═══════ Loading Overlay ═══════ -->
+  <div id="loading-overlay" class="hidden">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <script src="js/browser.js"></script>
+</body>
+</html>

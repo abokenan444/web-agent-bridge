@@ -31,6 +31,7 @@ const discoveryRoutes = require('./routes/discovery');
 const premiumRoutes = require('./routes/premium');
 const adminPremiumRoutes = require('./routes/admin-premium');
 const workspaceRoutes = require('./routes/agent-workspace');
+const universalRoutes = require('./routes/universal');
 const { handleWebhookRequest } = require('./services/stripe');
 
 const app = express();
@@ -136,6 +137,7 @@ app.use('/api/discovery', apiLimiter, discoveryRoutes);
 app.use('/api/premium', apiLimiter, premiumRoutes);
 app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);
 app.use('/api/workspace', apiLimiter, workspaceRoutes);
+app.use('/api/universal', apiLimiter, universalRoutes);
 
 // ─── WAB Search Engine ────────────────────────────────────────────────
 

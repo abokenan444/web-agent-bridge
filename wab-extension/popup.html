@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=320">
+  <title>WAB Agent</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 360px; min-height: 480px; max-height: 600px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a; color: #e2e8f0;
+      overflow-y: auto;
+    }
+    /* Header */
+    .wab-header {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .wab-logo { font-size: 24px; }
+    .wab-title { font-size: 15px; font-weight: 600; flex: 1; }
+    .wab-badge {
+      font-size: 10px; padding: 2px 8px; border-radius: 10px;
+      background: #22c55e20; color: #22c55e; border: 1px solid #22c55e40;
+    }
+    .wab-badge.offline { background: #ef444420; color: #ef4444; border-color: #ef444440; }
+
+    /* Page Info */
+    .wab-page-info {
+      padding: 12px 16px;
+      background: #1e293b; border-bottom: 1px solid #334155;
+    }
+    .wab-page-url {
+      font-size: 11px; color: #64748b;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .wab-page-title {
+      font-size: 13px; font-weight: 500; margin-top: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* Sections */
+    .wab-section {
+      padding: 12px 16px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .wab-section-title {
+      font-size: 12px; font-weight: 600; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    /* Product cards */
+    .wab-product {
+      background: #1e293b; border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 8px;
+    }
+    .wab-product-name {
+      font-size: 13px; font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .wab-product-price {
+      font-size: 18px; font-weight: 700; color: #22c55e; margin-top: 4px;
+    }
+    .wab-product-original {
+      font-size: 12px; color: #ef4444; text-decoration: line-through; margin-left: 8px;
+    }
+    .wab-product-meta {
+      display: flex; gap: 8px; margin-top: 6px;
+      font-size: 11px; color: #64748b;
+    }
+    .wab-product-meta span { display: flex; align-items: center; gap: 3px; }
+
+    /* Alerts */
+    .wab-alert {
+      padding: 8px 12px; border-radius: 6px; margin-bottom: 6px;
+      font-size: 12px; display: flex; align-items: flex-start; gap: 8px;
+    }
+    .wab-alert.high { background: #ef444420; border: 1px solid #ef444440; color: #fca5a5; }
+    .wab-alert.medium { background: #f59e0b20; border: 1px solid #f59e0b40; color: #fcd34d; }
+    .wab-alert.low { background: #3b82f620; border: 1px solid #3b82f640; color: #93c5fd; }
+    .wab-alert-icon { font-size: 14px; flex-shrink: 0; }
+
+    /* Insights */
+    .wab-insight {
+      background: #1e293b; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px;
+      font-size: 12px; display: flex; align-items: flex-start; gap: 8px;
+    }
+    .wab-insight-icon { font-size: 16px; flex-shrink: 0; }
+
+    /* Actions */
+    .wab-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .wab-btn {
+      flex: 1; min-width: 120px;
+      padding: 10px 12px; border-radius: 8px; border: none;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: all 0.15s;
+    }
+    .wab-btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb); color: white;
+    }
+    .wab-btn-primary:hover { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+    .wab-btn-secondary {
+      background: #1e293b; color: #94a3b8; border: 1px solid #334155;
+    }
+    .wab-btn-secondary:hover { background: #334155; color: #e2e8f0; }
+    .wab-btn-success {
+      background: linear-gradient(135deg, #22c55e, #16a34a); color: white;
+    }
+
+    /* Fairness badge */
+    .wab-fairness {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 10px; font-size: 11px;
+    }
+    .wab-fairness.recommended { background: #22c55e20; color: #22c55e; }
+    .wab-fairness.neutral { background: #64748b20; color: #94a3b8; }
+    .wab-fairness.caution { background: #ef444420; color: #ef4444; }
+
+    /* Loading */
+    .wab-loading {
+      text-align: center; padding: 30px;
+      color: #64748b; font-size: 13px;
+    }
+    .wab-spinner {
+      width: 24px; height: 24px; border: 2px solid #1e293b;
+      border-top-color: #3b82f6; border-radius: 50%;
+      animation: wab-spin 0.8s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes wab-spin { to { transform: rotate(360deg); } }
+
+    /* Chat input */
+    .wab-chat-input {
+      display: flex; gap: 8px; padding: 12px 16px;
+      background: #0f172a; border-top: 1px solid #1e293b;
+      position: sticky; bottom: 0;
+    }
+    .wab-chat-input input {
+      flex: 1; background: #1e293b; border: 1px solid #334155;
+      border-radius: 8px; padding: 8px 12px; color: #e2e8f0;
+      font-size: 13px; outline: none;
+    }
+    .wab-chat-input input:focus { border-color: #3b82f6; }
+    .wab-chat-input button {
+      background: #3b82f6; border: none; color: white;
+      padding: 8px 14px; border-radius: 8px; cursor: pointer;
+      font-size: 14px;
+    }
+
+    /* Empty state */
+    .wab-empty {
+      text-align: center; padding: 40px 20px; color: #475569;
+    }
+    .wab-empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .wab-empty-text { font-size: 13px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="wab-header">
+    <span class="wab-logo">🤖</span>
+    <span class="wab-title">WAB Agent</span>
+    <span class="wab-badge" id="statusBadge">Connected</span>
+  </div>
+
+  <!-- Page info -->
+  <div class="wab-page-info" id="pageInfo" style="display:none;">
+    <div class="wab-page-url" id="pageUrl"></div>
+    <div class="wab-page-title" id="pageTitle"></div>
+  </div>
+
+  <!-- Content -->
+  <div id="content">
+    <div class="wab-loading" id="loading">
+      <div class="wab-spinner"></div>
+      Analyzing page...
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="wab-section" id="actionsSection" style="display: none;">
+    <div class="wab-actions">
+      <button class="wab-btn wab-btn-primary" id="btnCompare">🔍 Compare Prices</button>
+      <button class="wab-btn wab-btn-success" id="btnDeals">💰 Find Deals</button>
+    </div>
+    <div class="wab-actions" style="margin-top: 8px;">
+      <button class="wab-btn wab-btn-secondary" id="btnAnalyze">🛡️ Fraud Check</button>
+      <button class="wab-btn wab-btn-secondary" id="btnFairness">⚖️ Fairness</button>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="wab-chat-input">
+    <input type="text" id="chatInput" placeholder="Ask WAB agent anything...">
+    <button id="chatSend">➤</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

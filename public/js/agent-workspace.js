@@ -187,6 +187,31 @@ const I18N = {
   shield_level_moderate: { ar: 'متوسط', en: 'moderate' },
   shield_level_significant: { ar: 'كبير', en: 'significant' },
   shield_level_severe:   { ar: 'خطير', en: 'severe' },
+
+  // Universal Agent
+  chip_uni_analyze:      { ar: '🔬 تحليل شامل', en: '🔬 Full Analysis' },
+  chip_uni_fairness:     { ar: '⚖️ فحص عدالة', en: '⚖️ Fairness Check' },
+  chip_uni_compare:      { ar: '📊 مقارنة أسعار', en: '📊 Compare Prices' },
+  uni_title:             { ar: 'تحليل Universal Agent', en: 'Universal Agent Analysis' },
+  uni_bridge_installed:  { ar: '🌉 WAB Bridge مثبت — أولوية في الترتيب', en: '🌉 WAB Bridge installed — priority ranking' },
+  uni_bridge_negotiate:  { ar: '🤝 التفاوض متاح', en: '🤝 Negotiation available' },
+  uni_bridge_listed:     { ar: '📋 مسجل في الدليل', en: '📋 Listed in directory' },
+  uni_bridge_none:       { ar: '🌐 وضع شامل — يعمل بالاستخراج الذكي', en: '🌐 Universal mode — smart extraction' },
+  uni_fairness_label:    { ar: '⚖️ درجة العدالة', en: '⚖️ Fairness Score' },
+  uni_recommended:       { ar: '✅ موصى', en: '✅ Recommended' },
+  uni_caution:           { ar: '⚠️ حذر', en: '⚠️ Caution' },
+  uni_neutral:           { ar: '🟡 محايد', en: '🟡 Neutral' },
+  uni_products_title:    { ar: '🛍️ منتجات مكتشفة', en: '🛍️ Products Found' },
+  uni_dark_title:        { ar: '🚩 أنماط مظلمة', en: '🚩 Dark Patterns' },
+  uni_alerts_title:      { ar: '🚨 تحذيرات احتيال', en: '🚨 Fraud Alerts' },
+  uni_compare_title:     { ar: '📊 مقارنة الأسعار', en: '📊 Price Comparison' },
+  uni_analyzing:         { ar: '🔬 جارِ التحليل الشامل...', en: '🔬 Running full analysis...' },
+  uni_fairness_checking: { ar: '⚖️ جارِ فحص العدالة...', en: '⚖️ Checking fairness...' },
+  uni_comparing:         { ar: '📊 جارِ مقارنة الأسعار...', en: '📊 Comparing prices...' },
+  uni_done:              { ar: '✅ اكتمل التحليل! راجع النتائج ←', en: '✅ Analysis complete! Check results →' },
+  uni_no_url:            { ar: '⚠️ افتح موقعاً أولاً أو أدخل رابطاً في المتصفح', en: '⚠️ Open a site first or enter a URL in the browser' },
+  uni_compare_prompt:    { ar: 'ما المنتج الذي تريد مقارنة أسعاره؟', en: 'What product would you like to compare prices for?' },
+  uni_sources_checked:   { ar: 'مصادر تم فحصها', en: 'sources checked' },
 };
 
 /** Get translated string */
@@ -528,6 +553,15 @@ async function sendMessage() {
   const input = document.getElementById('chatInput');
   const message = input.value.trim();
   if (!message) return;
+
+  // Intercept compare mode
+  if (state._nextIsCompare) {
+    delete state._nextIsCompare;
+    input.value = '';
+    autoResize(input);
+    universalCompare(message);
+    return;
+  }
 
   input.value = '';
   autoResize(input);
@@ -1492,4 +1526,215 @@ function showShieldResult(analysis) {
 function escapeHtml(str) {
   if (!str) return '';
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ══════════════════════════════════════════════════════════════
+// Universal Agent — Full Analysis, Fairness, Comparison
+// ══════════════════════════════════════════════════════════════
+
+function _getWorkspaceUrl() {
+  const input = document.getElementById('urlInput');
+  const frame = document.getElementById('browserFrame');
+  return (input && input.value) || (frame && frame.src && frame.src !== 'about:blank' ? frame.src : '') || '';
+}
+
+function universalAnalyzePage() {
+  const url = _getWorkspaceUrl();
+  if (!url || url === 'about:blank') {
+    addChatMessage('agent', i18n('uni_no_url'));
+    return;
+  }
+  addChatMessage('user', `🔬 ${i18n('chip_uni_analyze')}: ${url}`);
+  addChatMessage('agent', i18n('uni_analyzing'));
+  document.getElementById('universalSection').style.display = '';
+
+  apiFetch('/api/universal/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url })
+  }).then(data => {
+    renderUniversalWs(data, url);
+    addChatMessage('agent', i18n('uni_done'));
+    switchMobilePanel(3); // show results panel on mobile
+  }).catch(err => {
+    addChatMessage('agent', `⚠️ ${err.message || 'Analysis failed'}`);
+  });
+}
+
+function universalFairnessCheck() {
+  const url = _getWorkspaceUrl();
+  if (!url || url === 'about:blank') {
+    addChatMessage('agent', i18n('uni_no_url'));
+    return;
+  }
+  let domain;
+  try { domain = new URL(url.startsWith('http') ? url : 'https://' + url).hostname.replace(/^www\./, ''); } catch(_) { domain = url; }
+  addChatMessage('user', `⚖️ ${i18n('chip_uni_fairness')}: ${domain}`);
+  addChatMessage('agent', i18n('uni_fairness_checking'));
+  document.getElementById('universalSection').style.display = '';
+
+  apiFetch('/api/universal/fairness', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ domain })
+  }).then(data => {
+    renderFairnessWs(data);
+    addChatMessage('agent', i18n('uni_done'));
+  }).catch(err => {
+    addChatMessage('agent', `⚠️ ${err.message || 'Fairness check failed'}`);
+  });
+}
+
+function universalComparePrompt() {
+  const chatInput = document.getElementById('chatInput');
+  chatInput.value = i18n('uni_compare_prompt');
+  chatInput.focus();
+  chatInput.select();
+  // Override next send to route to compare
+  state._nextIsCompare = true;
+}
+
+// Hook into sendMessage to check for compare mode
+const _origSendMessage = typeof sendMessage === 'function' ? sendMessage : null;
+
+function universalCompare(query) {
+  addChatMessage('user', `📊 ${i18n('chip_uni_compare')}: ${query}`);
+  addChatMessage('agent', i18n('uni_comparing'));
+  document.getElementById('universalSection').style.display = '';
+
+  apiFetch('/api/universal/deals', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, category: 'product', lang: state.lang })
+  }).then(data => {
+    renderCompareWs(data);
+    addChatMessage('agent', i18n('uni_done'));
+    switchMobilePanel(3);
+  }).catch(err => {
+    addChatMessage('agent', `⚠️ ${err.message || 'Comparison failed'}`);
+  });
+}
+
+function closeUniversalSection() {
+  document.getElementById('universalSection').style.display = 'none';
+}
+
+// ──── Rendering ────
+
+function renderUniversalWs(data, url) {
+  let domain;
+  try { domain = new URL(url.startsWith('http') ? url : 'https://' + url).hostname.replace(/^www\./, ''); } catch(_) { domain = url; }
+
+  // Bridge
+  const bridge = data.fairness?.wabBridge || { installed: false };
+  const bridgeEl = document.getElementById('uniBridgeWs');
+  if (bridge.installed) {
+    bridgeEl.innerHTML = `
+      <div class="aws-uni-badge bridge">🌉 ${i18n('uni_bridge_installed')}</div>
+      ${bridge.hasNegotiation ? `<div class="aws-uni-badge negotiate">${i18n('uni_bridge_negotiate')}</div>` : ''}
+      ${bridge.isListed ? `<div class="aws-uni-badge listed">${i18n('uni_bridge_listed')}</div>` : ''}`;
+  } else {
+    bridgeEl.innerHTML = `<div class="aws-uni-badge neutral">${i18n('uni_bridge_none')}</div>`;
+  }
+
+  // Fairness
+  if (data.fairness) renderFairnessWs(data.fairness);
+
+  // Products
+  const products = data.products || [];
+  const productsEl = document.getElementById('uniProductsWs');
+  if (products.length > 0) {
+    productsEl.style.display = '';
+    productsEl.innerHTML = `<h4>${i18n('uni_products_title')}</h4>` + products.slice(0, 8).map(p => `
+      <div class="aws-uni-product">
+        <span class="aws-uni-product-name">${escapeHtml(String(p.name || '').slice(0, 100))}</span>
+        <span class="aws-uni-product-details">
+          ${p.price ? `<strong>${p.currency || '$'}${p.price}</strong>` : ''}
+          ${p.originalPrice ? `<s>${p.currency || '$'}${p.originalPrice}</s>` : ''}
+          ${p.rating ? `⭐ ${p.rating}` : ''}
+        </span>
+      </div>
+    `).join('');
+  }
+
+  // Dark Patterns
+  const darkPatterns = data.darkPatterns || [];
+  const darkEl = document.getElementById('uniDarkWs');
+  if (darkPatterns.length > 0) {
+    darkEl.style.display = '';
+    darkEl.innerHTML = `<h4>${i18n('uni_dark_title')}</h4>` + darkPatterns.map(dp => `
+      <div class="aws-uni-dark-item ${dp.severity || 'low'}">
+        🚩 ${escapeHtml(dp.type || dp.name || '')} ${dp.matches ? '— ' + dp.matches.slice(0, 3).map(m => escapeHtml(m)).join(', ') : ''}
+      </div>
+    `).join('');
+  }
+
+  // Alerts
+  const alerts = data.alerts || [];
+  const alertsEl = document.getElementById('uniAlertsWs');
+  if (alerts.length > 0) {
+    alertsEl.style.display = '';
+    alertsEl.innerHTML = `<h4>${i18n('uni_alerts_title')}</h4>` + alerts.map(a => `
+      <div class="aws-uni-alert-item ${a.severity || 'medium'}">
+        ${a.severity === 'high' ? '🚨' : '⚠️'} <strong>${escapeHtml(a.title || '')}</strong> — ${escapeHtml(a.description || '')}
+      </div>
+    `).join('');
+  }
+}
+
+function renderFairnessWs(f) {
+  const el = document.getElementById('uniFairnessWs');
+  if (!f || !f.total) { el.innerHTML = ''; return; }
+  const barColor = f.total >= 70 ? '#22c55e' : f.total >= 45 ? '#eab308' : '#ef4444';
+  const catKey = f.category === 'recommended' ? 'uni_recommended' : f.category === 'caution' ? 'uni_caution' : 'uni_neutral';
+  el.innerHTML = `
+    <h4>${i18n('uni_fairness_label')}</h4>
+    <div class="aws-uni-score-bar"><div class="aws-uni-score-fill" style="width:${f.total}%;background:${barColor}"></div></div>
+    <div class="aws-uni-score-row">
+      <span class="aws-uni-score-val">${f.total}/100</span>
+      <span class="aws-uni-score-cat">${i18n(catKey)}</span>
+    </div>
+    ${f.platform ? `<div class="aws-uni-meta">📏 ${f.platform.size} · 💸 ${f.platform.commission}% comm.</div>` : ''}
+    ${f.wabBridge?.bonus > 0 ? `<div class="aws-uni-meta bridge-bonus">🌉 WAB bonus: +${f.wabBridge.bonus}</div>` : ''}
+    <div class="aws-uni-breakdown">
+      <span>📐 Size: ${f.breakdown?.sizeScore || '-'}</span>
+      <span>🤝 Trust: ${f.breakdown?.trustScore || '-'}</span>
+      <span>💰 Price: ${f.breakdown?.priceHonesty || '-'}</span>
+      <span>🔍 Transparency: ${f.breakdown?.transparency || '-'}</span>
+    </div>`;
+}
+
+function renderCompareWs(data) {
+  const deals = data.deals || data.results || [];
+  const el = document.getElementById('uniCompareWs');
+  if (deals.length === 0) {
+    showToast(i18n('toast_no_results'));
+    return;
+  }
+  el.style.display = '';
+  const badges = ['🥇', '🥈', '🥉'];
+  el.innerHTML = `
+    <h4>${i18n('uni_compare_title')}</h4>
+    ${(data.insights || []).map(ins => `
+      <div class="aws-uni-insight">${ins.icon || '💡'} ${escapeHtml(ins.text)}</div>
+    `).join('')}
+    ${deals.slice(0, 10).map((d, i) => `
+      <div class="aws-uni-deal ${i === 0 ? 'best' : ''} ${d.wabBridge ? 'wab-bridge' : ''}">
+        <div class="aws-uni-deal-header">
+          <span>${badges[i] || '#' + (i + 1)}</span>
+          <span class="aws-uni-deal-source">${escapeHtml(d.source || d.domain || '')}</span>
+          ${d.wabBridge ? '<span class="aws-uni-badge bridge small">🌉 WAB</span>' : ''}
+          ${d.canNegotiate ? '<span class="aws-uni-badge negotiate small">🤝</span>' : ''}
+          <span class="aws-uni-deal-score">${d.compositeScore || d.score || ''}</span>
+        </div>
+        <div class="aws-uni-deal-name">${escapeHtml(String(d.name || '').slice(0, 80))}</div>
+        <div class="aws-uni-deal-row">
+          ${d.priceUsd ? `<strong>$${d.priceUsd}</strong>` : ''}
+          ${d.fairness ? `<span class="aws-uni-fairness-chip ${d.fairness.category}">${d.fairness.total}/100</span>` : ''}
+          ${d.rating ? `⭐ ${d.rating}` : ''}
+        </div>
+        ${d.url ? `<a href="${escapeHtml(d.url)}" target="_blank" class="aws-uni-deal-link">🔗 ${state.lang === 'ar' ? 'فتح' : 'Open'}</a>` : ''}
+      </div>
+    `).join('')}
+    <div class="aws-uni-compare-summary">${data.sourcesChecked || 0} ${i18n('uni_sources_checked')}</div>`;
 }

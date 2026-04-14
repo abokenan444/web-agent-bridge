@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Tab - WAB Browser</title>
+  <style>
+    :root {
+      --bg: #0f0f23;
+      --bg2: #16213e;
+      --text: #e2e8f0;
+      --text2: #94a3b8;
+      --text3: #64748b;
+      --accent: #0ea5e9;
+      --accent-dim: rgba(14,165,233,0.12);
+      --border: rgba(255,255,255,0.08);
+      --ghost: #10b981;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .logo-container {
+      margin-bottom: 32px;
+      animation: fadeIn 0.6s ease;
+    }
+    .logo-container svg {
+      filter: drop-shadow(0 0 20px rgba(14,165,233,0.3));
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .brand {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+      text-align: center;
+      animation: fadeIn 0.6s ease 0.1s both;
+    }
+    .brand span { color: var(--accent); }
+    .tagline {
+      color: var(--text3);
+      font-size: 14px;
+      text-align: center;
+      margin-bottom: 36px;
+      animation: fadeIn 0.6s ease 0.2s both;
+    }
+
+    .search-box {
+      width: 100%;
+      max-width: 580px;
+      position: relative;
+      animation: fadeIn 0.6s ease 0.3s both;
+      margin-bottom: 48px;
+    }
+    .search-box input {
+      width: 100%;
+      padding: 14px 20px 14px 48px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .search-box input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    .search-box input::placeholder { color: var(--text3); }
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text3);
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 580px;
+      animation: fadeIn 0.6s ease 0.4s both;
+    }
+    .feature {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 16px;
+      text-align: center;
+      transition: all 0.2s;
+      cursor: default;
+    }
+    .feature:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .feature-icon { font-size: 28px; margin-bottom: 8px; }
+    .feature-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .feature-desc { font-size: 11px; color: var(--text3); line-height: 1.4; }
+
+    .shortcuts {
+      margin-top: 48px;
+      width: 100%;
+      max-width: 580px;
+      animation: fadeIn 0.6s ease 0.5s both;
+    }
+    .shortcuts h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text3);
+      margin-bottom: 12px;
+    }
+    .shortcut-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 10px;
+    }
+    .shortcut {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .shortcut:hover {
+      border-color: var(--accent);
+      background: rgba(14,165,233,0.08);
+    }
+    .shortcut-icon {
+      width: 28px; height: 28px;
+      margin: 0 auto 6px;
+      border-radius: 6px;
+      background: var(--accent-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .shortcut-name {
+      font-size: 11px;
+      color: var(--text2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .footer {
+      margin-top: 48px;
+      color: var(--text3);
+      font-size: 11px;
+      text-align: center;
+      animation: fadeIn 0.6s ease 0.6s both;
+    }
+
+    /* WAB Index Stats */
+    .wab-stats {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      margin-bottom: 28px;
+      animation: fadeIn 0.6s ease 0.35s both;
+    }
+    .wab-stat {
+      text-align: center;
+    }
+    .wab-stat-val {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .wab-stat-label {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 2px;
+    }
+
+    /* Sponsored Ads */
+    .sponsored-section {
+      width: 100%;
+      max-width: 580px;
+      margin-top: 32px;
+      animation: fadeIn 0.6s ease 0.55s both;
+    }
+    .sponsored-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text3);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sponsored-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .sponsored-ad {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      color: var(--text);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .sponsored-ad:hover {
+      border-color: var(--accent);
+      background: rgba(14,165,233,0.06);
+      transform: translateY(-1px);
+    }
+    .ad-img {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--accent-dim);
+      flex-shrink: 0;
+    }
+    .ad-body { flex: 1; min-width: 0; }
+    .ad-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ad-desc {
+      font-size: 11px;
+      color: var(--text3);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .ad-badge {
+      font-size: 9px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-top: 4px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo-container">
+    <svg width="80" height="80" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="18" fill="none" stroke="#0ea5e9" stroke-width="1.5"/>
+      <circle cx="20" cy="20" r="12" fill="none" stroke="#0ea5e9" stroke-width="0.5" opacity="0.3"/>
+      <path d="M12 26 L16 14 L20 22 L24 14 L28 26" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="20" cy="12" r="2" fill="#0ea5e9"/>
+    </svg>
+  </div>
+
+  <div class="brand">WAB <span>Browser</span></div>
+  <p class="tagline">The Intelligent Web Agent Browser</p>
+
+  <div class="search-box">
+    <svg class="search-icon" width="18" height="18" viewBox="0 0 18 18"><circle cx="7.5" cy="7.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="12" x2="16" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <input type="text" id="search-input" placeholder="Search your WAB Index or the web..." autofocus />
+  </div>
+
+  <div class="wab-stats" id="wab-stats">
+    <div class="wab-stat"><div class="wab-stat-val" id="stat-pages">0</div><div class="wab-stat-label">Pages Indexed</div></div>
+    <div class="wab-stat"><div class="wab-stat-val" id="stat-domains">0</div><div class="wab-stat-label">Domains</div></div>
+    <div class="wab-stat"><div class="wab-stat-val" id="stat-keywords">0</div><div class="wab-stat-label">Keywords</div></div>
+  </div>
+
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">🧠</div>
+      <div class="feature-title">Smart Index</div>
+      <div class="feature-desc">Self-learning search from your browsing</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">👻</div>
+      <div class="feature-title">Ghost Mode</div>
+      <div class="feature-desc">Browse invisibly with fingerprint protection</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🛡️</div>
+      <div class="feature-title">Scam Shield</div>
+      <div class="feature-desc">Real-time fraud detection on every site</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">⚖️</div>
+      <div class="feature-title">Fairness</div>
+      <div class="feature-desc">Ethical rankings with digital fairness</div>
+    </div>
+    <div class="feature" style="cursor:pointer" onclick="window.location.href='https://webagentbridge.com/workspace'">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-title">Agent Workspace</div>
+      <div class="feature-desc">AI search, negotiate & buy — AR/EN</div>
+    </div>
+  </div>
+
+  <div class="sponsored-section" id="sponsored-section" style="display:none">
+    <div class="sponsored-label">📢 Sponsored</div>
+    <div class="sponsored-grid" id="sponsored-grid"></div>
+  </div>
+
+  <div class="shortcuts" id="shortcuts-section">
+    <h3>Quick Access</h3>
+    <div class="shortcut-grid" id="shortcut-grid">
+      <a class="shortcut" href="https://duckduckgo.com">
+        <div class="shortcut-icon">🦆</div>
+        <div class="shortcut-name">DuckDuckGo</div>
+      </a>
+      <a class="shortcut" href="https://www.google.com">
+        <div class="shortcut-icon">G</div>
+        <div class="shortcut-name">Google</div>
+      </a>
+      <a class="shortcut" href="https://www.youtube.com">
+        <div class="shortcut-icon">▶</div>
+        <div class="shortcut-name">YouTube</div>
+      </a>
+      <a class="shortcut" href="https://github.com">
+        <div class="shortcut-icon">⚡</div>
+        <div class="shortcut-name">GitHub</div>
+      </a>
+      <a class="shortcut" href="https://webagentbridge.com">
+        <div class="shortcut-icon">W</div>
+        <div class="shortcut-name">WAB</div>
+      </a>
+      <a class="shortcut" href="https://webagentbridge.com/workspace">
+        <div class="shortcut-icon">🤖</div>
+        <div class="shortcut-name">Workspace</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="footer">
+    WAB Browser v1.0.0 · Your data stays on your device · Built by WebAgentBridge
+  </div>
+
+  <script>
+    const searchInput = document.getElementById('search-input');
+    const wab = window.wab;
+
+    // Load WAB Index stats
+    (async () => {
+      try {
+        if (wab && wab.wabIndex) {
+          const s = await wab.wabIndex.stats();
+          if (s) {
+            document.getElementById('stat-pages').textContent = s.totalVisits || 0;
+            document.getElementById('stat-domains').textContent = s.domains || 0;
+            document.getElementById('stat-keywords').textContent = s.keywords || 0;
+          }
+        }
+      } catch(e) {}
+    })();
+
+    // Load sponsored ads
+    (async () => {
+      try {
+        if (wab && wab.ads) {
+          const ads = await wab.ads.getActive();
+          if (ads && ads.length > 0) {
+            const grid = document.getElementById('sponsored-grid');
+            const section = document.getElementById('sponsored-section');
+            section.style.display = '';
+            ads.slice(0, 4).forEach(ad => {
+              const el = document.createElement('a');
+              el.className = 'sponsored-ad';
+              el.href = '#';
+              const title = (ad.title || '').replace(/</g, '&lt;');
+              const desc = (ad.description || '').replace(/</g, '&lt;');
+              const advName = (ad.advertiser_name || '').replace(/</g, '&lt;');
+              el.innerHTML = (ad.image_url ? '<img class="ad-img" src="' + ad.image_url.replace(/"/g, '&quot;') + '" alt="">' : '<div class="ad-img" style="display:flex;align-items:center;justify-content:center;font-size:20px">📢</div>') +
+                '<div class="ad-body"><div class="ad-title">' + title + '</div><div class="ad-desc">' + desc + '</div>' +
+                (advName ? '<span class="ad-badge">' + advName + '</span>' : '') + '</div>';
+              el.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (wab.ads.click) wab.ads.click(ad.id);
+                if (ad.target_url) window.location.href = ad.target_url;
+              });
+              grid.appendChild(el);
+              // Record impression
+              if (wab.ads.impression) wab.ads.impression(ad.id);
+            });
+          }
+        }
+      } catch(e) {}
+    })();
+
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && searchInput.value.trim()) {
+        const val = searchInput.value.trim();
+        if (/^(https?:\/\/|[\w-]+(\.[\w-]+)+)/.test(val) && !val.includes(' ')) {
+          window.location.href = val.startsWith('http') ? val : 'https://' + val;
+        } else {
+          window.location.href = 'https://duckduckgo.com/?q=' + encodeURIComponent(val);
+        }
+      }
+    });
+
+    // Shortcuts click
+    document.querySelectorAll('.shortcut').forEach(s => {
+      s.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = s.href;
+      });
+    });
+  </script>
+</body>
+</html>

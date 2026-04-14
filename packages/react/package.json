@@ -1,6 +1,6 @@
 {
   "name": "web-agent-bridge-react",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "React hooks and provider for Web Agent Bridge (WAB) browser client",
   "main": "index.js",
   "types": "index.d.ts",
