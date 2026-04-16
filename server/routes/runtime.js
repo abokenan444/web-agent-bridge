@@ -28,6 +28,11 @@ const { commandRegistry, siteRegistry, templateRegistry } = require('../registry
 const { certificationEngine } = require('../registry/certification');
 const { adapterManager, mcpAdapter, restAdapter, browserAdapter } = require('../adapters');
 const { replayEngine } = require('../runtime/replay');
+const { featureGate, usageLimit } = require('../middleware/featureGate');
+const { listPlans, getPlan, USAGE_PRICING, MARKETPLACE } = require('../config/plans');
+const metering = require('../services/metering');
+const { marketplace } = require('../services/marketplace');
+const { hostedRuntime } = require('../services/hosted-runtime');
 const { sessionEngine } = require('../runtime/session-engine');
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -48,6 +53,8 @@ const PUBLIC_PATHS = [
   '/registry/commands',
   '/registry/sites',
   '/registry/templates',
+  '/plans',
+  '/marketplace',
 ];
 
 function authMiddleware(req, res, next) {
@@ -99,6 +106,7 @@ function authMiddleware(req, res, next) {
 }
 
 router.use(authMiddleware);
+router.use(featureGate);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PROTOCOL ENDPOINTS
@@ -241,7 +249,7 @@ router.delete('/agents/:agentId', (req, res) => {
 /**
  * Submit a task
  */
-router.post('/tasks', (req, res) => {
+router.post('/tasks', usageLimit('tasksPerDay'), (req, res) => {
   try {
     const result = runtime.submitTask(req.body);
     metrics.increment('tasks.submitted', 1, { type: req.body.type });
@@ -299,7 +307,7 @@ router.post('/tasks/:taskId/resume', (req, res) => {
 /**
  * Execute a semantic action
  */
-router.post('/execute', async (req, res) => {
+router.post('/execute', usageLimit('executionsPerDay'), async (req, res) => {
   try {
     const result = await executor.execute(req.body);
     res.json(result);
@@ -523,6 +531,9 @@ router.get('/observability/health', (req, res) => {
   health.sessions = sessionEngine.getStats();
   health.failures = failureAnalyzer.getStats();
   health.certification = certificationEngine.getStats();
+  health.marketplace = marketplace.getStats();
+  health.hostedRuntime = hostedRuntime.getStats();
+  health.metering = metering.getStats();
   res.json(health);
 });
 
@@ -634,7 +645,7 @@ router.get('/registry/templates/:templateId', (req, res) => {
 /**
  * LLM completion
  */
-router.post('/llm/complete', async (req, res) => {
+router.post('/llm/complete', usageLimit('executionsPerDay'), async (req, res) => {
   try {
     const result = await llm.complete(req.body.prompt, req.body.options || req.body);
     metrics.increment('llm.api.requests');
@@ -1131,6 +1142,305 @@ router.get('/certification', (req, res) => {
 router.delete('/certification/:domain', (req, res) => {
   certificationEngine.revoke(req.params.domain);
   res.json({ success: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PLANS & PRICING
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * List available plans
+ */
+router.get('/plans', (req, res) => {
+  const plans = listPlans().map(p => ({
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    interval: p.interval,
+    description: p.description,
+    limits: p.limits,
+    features: Object.entries(p.features)
+      .filter(([, v]) => v === true)
+      .map(([k]) => k),
+  }));
+  res.json({ plans, usagePricing: USAGE_PRICING });
+});
+
+/**
+ * Get specific plan details
+ */
+router.get('/plans/:planId', (req, res) => {
+  const plan = getPlan(req.params.planId);
+  if (!plan || plan.id === 'free' && req.params.planId !== 'free') {
+    return res.status(404).json({ error: 'Plan not found' });
+  }
+  res.json(plan);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// USAGE METERING
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Get usage for current agent
+ */
+router.get('/usage', (req, res) => {
+  const entityId = req.agentId || req.ip;
+  const tier = req.agentTier || req.session?.tier || 'free';
+  res.json(metering.getUsage(entityId, tier));
+});
+
+/**
+ * Get billing summary (overages)
+ */
+router.get('/usage/billing', (req, res) => {
+  const entityId = req.agentId || req.ip;
+  res.json(metering.getBillingSummary(entityId));
+});
+
+/**
+ * Get metering stats (admin)
+ */
+router.get('/usage/stats', (req, res) => {
+  res.json(metering.getStats());
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MARKETPLACE
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Search marketplace
+ */
+router.get('/marketplace', (req, res) => {
+  const listings = marketplace.search({
+    type: req.query.type,
+    category: req.query.category,
+    query: req.query.q,
+    tag: req.query.tag,
+    free: req.query.free === 'true',
+    paid: req.query.paid === 'true',
+    minRating: req.query.minRating ? parseFloat(req.query.minRating) : undefined,
+    sortBy: req.query.sortBy,
+  }, parseInt(req.query.limit) || 50);
+  res.json({ listings, total: listings.length });
+});
+
+/**
+ * Get listing
+ */
+router.get('/marketplace/:listingId', (req, res) => {
+  const listing = marketplace.getListing(req.params.listingId);
+  if (!listing) return res.status(404).json({ error: 'Listing not found' });
+  res.json(listing);
+});
+
+/**
+ * Get reviews
+ */
+router.get('/marketplace/:listingId/reviews', (req, res) => {
+  res.json({ reviews: marketplace.getReviews(req.params.listingId) });
+});
+
+/**
+ * Publish listing
+ */
+router.post('/marketplace/publish', (req, res) => {
+  try {
+    const listing = marketplace.publish({
+      ...req.body,
+      sellerId: req.agentId || req.body.sellerId,
+    });
+    res.json(listing);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Purchase/install listing
+ */
+router.post('/marketplace/:listingId/purchase', (req, res) => {
+  try {
+    const buyerId = req.agentId || req.body.buyerId;
+    if (!buyerId) return res.status(400).json({ error: 'buyerId required' });
+    const purchase = marketplace.purchase(req.params.listingId, buyerId);
+    res.json(purchase);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Add review
+ */
+router.post('/marketplace/:listingId/review', (req, res) => {
+  try {
+    const review = marketplace.addReview(req.params.listingId, {
+      userId: req.agentId || req.body.userId,
+      rating: req.body.rating,
+      comment: req.body.comment,
+    });
+    res.json(review);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Get my purchases
+ */
+router.get('/marketplace/my/purchases', (req, res) => {
+  const buyerId = req.agentId || req.query.buyerId;
+  res.json({ purchases: marketplace.getPurchases(buyerId) });
+});
+
+/**
+ * Get seller earnings
+ */
+router.get('/marketplace/my/earnings', (req, res) => {
+  const sellerId = req.agentId || req.query.sellerId;
+  res.json(marketplace.getEarnings(sellerId));
+});
+
+/**
+ * Admin: pending listings
+ */
+router.get('/marketplace/admin/pending', (req, res) => {
+  res.json({ listings: marketplace.getPendingListings() });
+});
+
+/**
+ * Admin: approve listing
+ */
+router.post('/marketplace/admin/:listingId/approve', (req, res) => {
+  try {
+    const listing = marketplace.approve(req.params.listingId);
+    res.json(listing);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Admin: reject listing
+ */
+router.post('/marketplace/admin/:listingId/reject', (req, res) => {
+  try {
+    const listing = marketplace.reject(req.params.listingId, req.body.reason);
+    res.json(listing);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Marketplace stats
+ */
+router.get('/marketplace/stats', (req, res) => {
+  res.json(marketplace.getStats());
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOSTED RUNTIME
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Launch hosted instance
+ */
+router.post('/hosted/launch', (req, res) => {
+  try {
+    const instance = hostedRuntime.launch({
+      agentId: req.agentId || req.body.agentId,
+      tier: req.agentTier || req.session?.tier || 'starter',
+      region: req.body.region,
+      cpu: req.body.cpu,
+      memory: req.body.memory,
+      timeout: req.body.timeout,
+    });
+    res.json(instance);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Execute on hosted instance
+ */
+router.post('/hosted/:instanceId/execute', async (req, res) => {
+  try {
+    const execution = await hostedRuntime.execute(req.params.instanceId, req.body);
+    res.json(execution);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Complete execution
+ */
+router.post('/hosted/executions/:executionId/complete', (req, res) => {
+  const execution = hostedRuntime.completeExecution(
+    req.params.executionId,
+    req.body.result,
+    req.body.error ? new Error(req.body.error) : null
+  );
+  if (!execution) return res.status(404).json({ error: 'Execution not found' });
+  res.json(execution);
+});
+
+/**
+ * Stop hosted instance
+ */
+router.post('/hosted/:instanceId/stop', (req, res) => {
+  const success = hostedRuntime.stop(req.params.instanceId);
+  res.json({ success });
+});
+
+/**
+ * Get hosted instance
+ */
+router.get('/hosted/:instanceId', (req, res) => {
+  const instance = hostedRuntime.getInstance(req.params.instanceId);
+  if (!instance) return res.status(404).json({ error: 'Instance not found' });
+  res.json(instance);
+});
+
+/**
+ * List instances
+ */
+router.get('/hosted', (req, res) => {
+  const instances = hostedRuntime.listInstances({
+    agentId: req.query.agentId,
+    status: req.query.status,
+    region: req.query.region,
+  }, parseInt(req.query.limit) || 50);
+  res.json({ instances, total: instances.length });
+});
+
+/**
+ * List executions for instance
+ */
+router.get('/hosted/:instanceId/executions', (req, res) => {
+  const executions = hostedRuntime.listExecutions(
+    req.params.instanceId,
+    parseInt(req.query.limit) || 50
+  );
+  res.json({ executions, total: executions.length });
+});
+
+/**
+ * Get compute usage
+ */
+router.get('/hosted/usage/:agentId', (req, res) => {
+  res.json(hostedRuntime.getComputeUsage(req.params.agentId));
+});
+
+/**
+ * Hosted runtime stats
+ */
+router.get('/hosted/stats', (req, res) => {
+  res.json(hostedRuntime.getStats());
 });
 
 module.exports = router;

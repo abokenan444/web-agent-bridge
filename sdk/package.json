@@ -1,14 +1,22 @@
 {
   "name": "web-agent-bridge-sdk",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "SDK for building AI agents that interact with Web Agent Bridge (WAB)",
   "main": "index.js",
   "license": "MIT",
-  "keywords": ["wab", "ai-agent", "sdk", "web-automation", "bridge"],
+  "keywords": [
+    "wab",
+    "ai-agent",
+    "sdk",
+    "web-automation",
+    "bridge"
+  ],
   "peerDependencies": {
     "puppeteer": ">=20.0.0"
   },
   "peerDependenciesMeta": {
-    "puppeteer": { "optional": true }
+    "puppeteer": {
+      "optional": true
+    }
   }
 }
