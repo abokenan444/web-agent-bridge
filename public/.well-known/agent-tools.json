@@ -1,0 +1,180 @@
+{
+  "protocol": "wap",
+  "version": "1.0.0",
+  "name": "Web Agent Bridge",
+  "description": "Web Execution Layer for AI Agents — Protocol + Runtime + Security + Ecosystem",
+  "homepage": "https://webagentbridge.com",
+  "spec": "https://webagentbridge.com/.well-known/agent-tools.json",
+
+  "discovery": {
+    "protocol_endpoint": "/api/os/protocol",
+    "commands_endpoint": "/api/os/registry/commands",
+    "sites_endpoint": "/api/os/registry/sites",
+    "templates_endpoint": "/api/os/registry/templates",
+    "health_endpoint": "/api/os/observability/health"
+  },
+
+  "capabilities": {
+    "browser": {
+      "read": { "risk": "low", "description": "Read page content, text, attributes" },
+      "click": { "risk": "medium", "description": "Click interactive elements" },
+      "fill": { "risk": "medium", "description": "Fill form fields" },
+      "navigate": { "risk": "medium", "description": "Navigate to URLs" },
+      "scroll": { "risk": "low", "description": "Scroll the page" },
+      "screenshot": { "risk": "low", "description": "Capture screenshots" },
+      "execute": { "risk": "high", "description": "Execute JavaScript in page" }
+    },
+    "data": {
+      "extract": { "risk": "low", "description": "Extract structured data" },
+      "compare": { "risk": "low", "description": "Compare data across sources" },
+      "store": { "risk": "medium", "description": "Persist data" }
+    },
+    "agent": {
+      "spawn": { "risk": "high", "description": "Create child agents" },
+      "communicate": { "risk": "medium", "description": "Inter-agent messaging" },
+      "delegate": { "risk": "high", "description": "Delegate tasks to other agents" }
+    },
+    "system": {
+      "api": { "risk": "medium", "description": "Make API calls" },
+      "webhook": { "risk": "medium", "description": "Send webhook notifications" },
+      "schedule": { "risk": "medium", "description": "Schedule future tasks" }
+    },
+    "commerce": {
+      "price": { "risk": "low", "description": "Read prices" },
+      "negotiate": { "risk": "high", "description": "Negotiate prices" },
+      "purchase": { "risk": "critical", "description": "Complete purchases" }
+    },
+    "ai": {
+      "infer": { "risk": "medium", "description": "Run LLM inference" },
+      "vision": { "risk": "medium", "description": "Analyze images" },
+      "embed": { "risk": "low", "description": "Generate embeddings" }
+    }
+  },
+
+  "permissions": {
+    "levels": ["none", "read", "write", "execute", "admin", "owner"],
+    "default": "read",
+    "negotiable": true
+  },
+
+  "security": {
+    "authentication": ["api_key", "bearer_token"],
+    "signing": "HMAC-SHA256",
+    "isolation": "per-site-sandbox",
+    "audit": true
+  },
+
+  "runtime": {
+    "scheduler": {
+      "maxConcurrency": 50,
+      "retries": 3,
+      "backoff": "exponential",
+      "maxBackoff": 30000,
+      "priorities": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    },
+    "sandbox": {
+      "defaultTimeout": 30000,
+      "maxMemory": 134217728,
+      "maxNetworkCalls": 100,
+      "maxDomOperations": 1000
+    },
+    "state": {
+      "checkpoints": true,
+      "rollback": true,
+      "ttl": 86400000
+    }
+  },
+
+  "adapters": {
+    "mcp": { "endpoint": "/api/os/adapters/mcp", "spec": "Model Context Protocol" },
+    "rest": { "endpoint": "/api/os/adapters/rest", "spec": "REST/OpenAPI" },
+    "browser": { "endpoint": "/api/os/adapters/browser", "spec": "Puppeteer/Playwright/BiDi" }
+  },
+
+  "commands": [
+    {
+      "name": "wab.discover",
+      "version": "1.0.0",
+      "category": "discovery",
+      "description": "Discover available actions on a site",
+      "capabilities": ["browser.read"],
+      "input": { "type": "object", "properties": { "siteId": { "type": "string" }, "category": { "type": "string" } } },
+      "output": { "type": "object", "properties": { "actions": { "type": "array" }, "meta": { "type": "object" } } }
+    },
+    {
+      "name": "wab.execute",
+      "version": "1.0.0",
+      "category": "execution",
+      "description": "Execute a registered action",
+      "capabilities": ["browser.execute"],
+      "input": { "type": "object", "properties": { "action": { "type": "string" }, "params": { "type": "object" } }, "required": ["action"] },
+      "sideEffects": true
+    },
+    {
+      "name": "wab.semantic.execute",
+      "version": "1.0.0",
+      "category": "execution",
+      "description": "Execute semantic action (e.g., checkout.addItem) without raw selectors",
+      "capabilities": ["browser.execute"],
+      "input": { "type": "object", "properties": { "domain": { "type": "string" }, "action": { "type": "string" }, "params": { "type": "object" } }, "required": ["domain", "action"] },
+      "sideEffects": true
+    },
+    {
+      "name": "wab.agent.register",
+      "version": "1.0.0",
+      "category": "lifecycle",
+      "description": "Register an agent with the runtime",
+      "capabilities": [],
+      "input": { "type": "object", "properties": { "name": { "type": "string" }, "type": { "type": "string" }, "capabilities": { "type": "array" } }, "required": ["name", "type"] }
+    },
+    {
+      "name": "wab.task.submit",
+      "version": "1.0.0",
+      "category": "runtime",
+      "description": "Submit a task to the scheduler",
+      "capabilities": ["system.schedule"],
+      "input": { "type": "object", "properties": { "type": { "type": "string" }, "params": { "type": "object" }, "priority": { "type": "integer" } } }
+    },
+    {
+      "name": "wab.commerce.compare",
+      "version": "1.0.0",
+      "category": "commerce",
+      "description": "Compare prices across sources with fairness scoring",
+      "capabilities": ["commerce.price", "data.compare"]
+    },
+    {
+      "name": "wab.commerce.negotiate",
+      "version": "1.0.0",
+      "category": "commerce",
+      "description": "Open or continue a price negotiation session",
+      "capabilities": ["commerce.negotiate"],
+      "sideEffects": true
+    },
+    {
+      "name": "wab.ai.infer",
+      "version": "1.0.0",
+      "category": "ai",
+      "description": "Run LLM inference through the model abstraction layer",
+      "capabilities": ["ai.infer"],
+      "input": { "type": "object", "properties": { "prompt": { "type": "string" }, "model": { "type": "string" }, "provider": { "type": "string" } }, "required": ["prompt"] }
+    }
+  ],
+
+  "ecosystem": {
+    "sdks": {
+      "javascript": { "npm": "web-agent-bridge-sdk", "version": "2.5.0" },
+      "langchain": { "npm": "web-agent-bridge-langchain", "version": "2.5.0" },
+      "react": { "npm": "web-agent-bridge-react", "version": "2.5.0" },
+      "vue": { "npm": "web-agent-bridge-vue", "version": "2.5.0" },
+      "svelte": { "npm": "web-agent-bridge-svelte", "version": "2.5.0" }
+    },
+    "plugins": {
+      "wordpress": "web-agent-bridge-wordpress",
+      "mcp_adapter": "wab-mcp-adapter"
+    },
+    "certification": {
+      "endpoint": "/api/os/certification/verify",
+      "badge_url": "https://webagentbridge.com/badge/agent-compatible.svg"
+    }
+  }
+}

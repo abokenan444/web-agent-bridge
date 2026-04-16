@@ -185,6 +185,19 @@ class AgentIdentity {
   }
 
   /**
+   * Validate a session token and return session data
+   */
+  validateSession(token) {
+    const session = this._sessions.get(token);
+    if (!session) return null;
+    if (Date.now() > session.expiresAt) {
+      this._sessions.delete(token);
+      return null;
+    }
+    return session;
+  }
+
+  /**
    * Cleanup expired sessions
    */
   cleanup() {

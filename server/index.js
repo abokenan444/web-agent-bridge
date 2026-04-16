@@ -34,6 +34,7 @@ const workspaceRoutes = require('./routes/agent-workspace');
 const universalRoutes = require('./routes/universal');
 const runtimeRoutes = require('./routes/runtime');
 const { handleWebhookRequest } = require('./services/stripe');
+const { runtime } = require('./runtime');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -354,6 +355,9 @@ if (process.env.NODE_ENV !== 'test') {
 
   const server = http.createServer(app);
   setupWebSocket(server);
+
+  // Start Agent OS runtime
+  runtime.start();
 
   server.listen(PORT, () => {
     console.log(`\n  ╔══════════════════════════════════════════╗`);

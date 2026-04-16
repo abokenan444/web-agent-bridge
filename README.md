@@ -119,6 +119,20 @@ WAB v3.0 transforms the project from an advanced automation tool into a **real A
 - **Unified Runtime API** — All Agent OS layers exposed via RESTful endpoints at `/api/os/*`: protocol discovery, agent identity/auth, task CRUD, semantic execution, deployments, policies, isolation, observability (metrics/traces/logs), registry (commands/sites/templates), LLM operations, command signing, and Server-Sent Events for real-time streaming
 - **WABAgentOS SDK Client** — New `WABAgentOS` class in the SDK provides full TypeScript-typed API for all Agent OS operations: register → authenticate → negotiate capabilities → submit tasks → execute semantically → query observability → subscribe to events
 
+### v3.1 — WAP Deep Architecture (Protocol Hardening)
+
+v3.1 hardens the Agent OS into a production-grade system that *surpasses* MCP — making WAP (Web Agent Protocol) the top-level protocol with MCP as just one adapter.
+
+- **WAP Discovery Spec** — Formal `/.well-known/agent-tools.json` discovery document. AI agents can find all WAP capabilities, commands, permissions, runtime config, security model, and SDKs from a single standardized URL
+- **Adapter Layer** — WAP sits at the top; MCP, REST/GraphQL, and Browser automation are transport adapters beneath it. MCP Adapter exposes all WAB commands as MCP tools (list_tools / call_tool). REST Adapter registers external APIs as first-class WAP endpoints with auth, mapping, and rate limiting. Browser Adapter translates semantic actions (checkout.addItem, search.query, auth.login) into concrete browser step plans with selector fallbacks and verification
+- **Auth Middleware** — All `/api/os/*` mutation endpoints require authentication (Bearer token, API key, or agent header). Public read endpoints remain open for discovery. GET requests pass through for read-only access
+- **Deterministic Replay Engine** — Records all task inputs, outputs, and side-effects. Supports replay with verification mode (re-execute and compare), dry-run mode (inspect recorded steps), and diff between two recordings. Enables debugging, regression testing, and workflow certification
+- **Failure Analysis & Classification** — Automatic classification of failures into 9 categories (network, timeout, permission, validation, execution, rate_limit, resource, dependency, unknown). Root cause analysis, severity scoring, retryability assessment, suggested fixes, and pattern detection for recurring failures
+- **Session Engine** — Browser execution sessions with cookie jar (set/get/domain-scoped), localStorage/sessionStorage emulation, navigation history, variable store, session export/import for transfer, and TTL-based expiration
+- **Certification System** — Site compatibility verification with 13 weighted checks across 7 categories (integration, protocol, data, security, fairness, compliance, sovereignty). Issues certificates at 5 levels (none → basic → standard → premium → sovereign) with 90-day validity, HMAC-signed badges, and revocation
+- **DB Persistence Layer** — SQLite tables for all Agent OS entities: agents, sessions, tasks, deployments, registry commands/sites/templates, audit log (immutable append-only), capability grants, and policies. Auto-migrates on boot
+- **65+ API Endpoints** — Adapters (MCP tools, REST endpoints, browser mappings), replay (recordings, replay, diff, stats), sessions (CRUD, cookies, storage, export/import), failure analysis (query, patterns, summary, classify), certification (verify, certificates, revoke), plus all existing v3.0 endpoints
+
 > **Many more features** are available on the live website that aren't listed here — dashboards, analytics, admin tools, and more. Visit [webagentbridge.com](https://webagentbridge.com) to explore.
 
 ---
