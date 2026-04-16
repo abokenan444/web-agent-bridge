@@ -371,4 +371,249 @@ class WABUniversalAgent {
 const { WABMultiAgent } = require('./multi-agent');
 const { WABAgentMesh } = require('./agent-mesh');
 
-module.exports = { WABAgent, WABUniversalAgent, WABMultiAgent, WABAgentMesh };
+// ─── WAB Agent OS Client ────────────────────────────────────────────────────
+
+/**
+ * WABAgentOS — Client for the Agent OS runtime.
+ * Provides access to protocol, tasks, execution, registry, observability, and LLM.
+ */
+class WABAgentOS {
+  /**
+   * @param {object} options
+   * @param {string} options.serverUrl — WAB server base URL
+   * @param {string} [options.agentId] — Pre-registered agent ID
+   * @param {string} [options.apiKey] — Pre-registered API key
+   * @param {string} [options.sessionToken] — Active session token
+   */
+  constructor(options = {}) {
+    this.serverUrl = (options.serverUrl || 'http://localhost:3000').replace(/\/$/, '');
+    this.agentId = options.agentId || null;
+    this.apiKey = options.apiKey || null;
+    this.sessionToken = options.sessionToken || null;
+    this._base = `${this.serverUrl}/api/os`;
+  }
+
+  // ─── Agent Identity ───────────────────────────────────────────────────
+
+  async register(name, type, capabilities = []) {
+    const res = await this._post('/agents/register', { name, type, capabilities });
+    this.agentId = res.agentId;
+    this.apiKey = res.apiKey;
+    return res;
+  }
+
+  async authenticate(apiKey) {
+    const res = await this._post('/agents/authenticate', { apiKey: apiKey || this.apiKey });
+    if (res.sessionToken) this.sessionToken = res.sessionToken;
+    return res;
+  }
+
+  async negotiateCapabilities(capabilities, siteId) {
+    return this._post(`/agents/${this.agentId}/capabilities`, { capabilities, siteId });
+  }
+
+  // ─── Protocol ─────────────────────────────────────────────────────────
+
+  async getProtocol() {
+    return this._get('/protocol');
+  }
+
+  async sendMessage(command, payload = {}) {
+    return this._post('/protocol/message', { command, payload, agentId: this.agentId });
+  }
+
+  // ─── Tasks ────────────────────────────────────────────────────────────
+
+  async submitTask(task) {
+    return this._post('/tasks', task);
+  }
+
+  async getTask(taskId) {
+    return this._get(`/tasks/${taskId}`);
+  }
+
+  async listTasks(state, limit) {
+    const params = [];
+    if (state) params.push(`state=${state}`);
+    if (limit) params.push(`limit=${limit}`);
+    return this._get(`/tasks${params.length ? '?' + params.join('&') : ''}`);
+  }
+
+  async cancelTask(taskId) {
+    return this._delete(`/tasks/${taskId}`);
+  }
+
+  async pauseTask(taskId) {
+    return this._post(`/tasks/${taskId}/pause`);
+  }
+
+  async resumeTask(taskId) {
+    return this._post(`/tasks/${taskId}/resume`);
+  }
+
+  // ─── Execution ────────────────────────────────────────────────────────
+
+  async execute(command) {
+    return this._post('/execute', command);
+  }
+
+  async executeSemantic(domain, action, params = {}) {
+    return this._post('/execute/semantic', { domain, action, params, agentId: this.agentId });
+  }
+
+  async executePipeline(steps) {
+    return this._post('/execute/pipeline', { steps });
+  }
+
+  async resolveAction(domain, action, siteDomain) {
+    const params = `domain=${domain}&action=${action}${siteDomain ? `&siteDomain=${siteDomain}` : ''}`;
+    return this._get(`/execute/resolve?${params}`);
+  }
+
+  // ─── Registry ─────────────────────────────────────────────────────────
+
+  async searchCommands(query = {}) {
+    const params = Object.entries(query).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+    return this._get(`/registry/commands${params ? '?' + params : ''}`);
+  }
+
+  async registerCommand(siteId, command) {
+    return this._post('/registry/commands', { siteId, ...command });
+  }
+
+  async searchSites(query = {}) {
+    const params = Object.entries(query).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+    return this._get(`/registry/sites${params ? '?' + params : ''}`);
+  }
+
+  async registerSite(domain, info) {
+    return this._post('/registry/sites', { domain, ...info });
+  }
+
+  async searchTemplates(query = {}) {
+    const params = Object.entries(query).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+    return this._get(`/registry/templates${params ? '?' + params : ''}`);
+  }
+
+  async getTemplate(templateId) {
+    return this._get(`/registry/templates/${templateId}`);
+  }
+
+  // ─── LLM ──────────────────────────────────────────────────────────────
+
+  async complete(prompt, options = {}) {
+    return this._post('/llm/complete', { prompt, options });
+  }
+
+  async embed(text, options = {}) {
+    return this._post('/llm/embed', { text, options });
+  }
+
+  async listModels() {
+    return this._get('/llm/models');
+  }
+
+  // ─── Observability ────────────────────────────────────────────────────
+
+  async getMetrics() {
+    return this._get('/observability/metrics');
+  }
+
+  async getTraces(query = {}) {
+    const params = Object.entries(query).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+    return this._get(`/observability/traces${params ? '?' + params : ''}`);
+  }
+
+  async getTrace(traceId) {
+    return this._get(`/observability/traces/${traceId}`);
+  }
+
+  async getLogs(query = {}) {
+    const params = Object.entries(query).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+    return this._get(`/observability/logs${params ? '?' + params : ''}`);
+  }
+
+  async getHealth() {
+    return this._get('/observability/health');
+  }
+
+  // ─── Events (SSE) ────────────────────────────────────────────────────
+
+  subscribe(filter, onEvent) {
+    if (typeof EventSource === 'undefined') {
+      throw new Error('EventSource not available. Use a polyfill for Node.js.');
+    }
+    const url = `${this._base}/events${filter ? '?filter=' + encodeURIComponent(filter) : ''}`;
+    const es = new EventSource(url);
+    es.onmessage = (e) => {
+      try { onEvent(JSON.parse(e.data)); } catch { onEvent(e.data); }
+    };
+    return es; // Call es.close() to unsubscribe
+  }
+
+  // ─── Policies ─────────────────────────────────────────────────────────
+
+  async createPolicy(policy) {
+    return this._post('/policies', policy);
+  }
+
+  async evaluatePolicy(entityId, action, context = {}) {
+    return this._post('/policies/evaluate', { entityId, action, context });
+  }
+
+  // ─── Deploy ───────────────────────────────────────────────────────────
+
+  async deploy(config = {}) {
+    return this._post('/deployments', { agentId: this.agentId, config });
+  }
+
+  async listDeployments(query = {}) {
+    const params = Object.entries(query).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+    return this._get(`/deployments${params ? '?' + params : ''}`);
+  }
+
+  // ─── HTTP Helpers ─────────────────────────────────────────────────────
+
+  async _get(path) {
+    const url = `${this._base}${path}`;
+    const headers = this._headers();
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(body.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
+  async _post(path, body) {
+    const url = `${this._base}${path}`;
+    const headers = { ...this._headers(), 'Content-Type': 'application/json' };
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
+  async _delete(path) {
+    const url = `${this._base}${path}`;
+    const headers = this._headers();
+    const res = await fetch(url, { method: 'DELETE', headers });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
+  _headers() {
+    const h = {};
+    if (this.sessionToken) h['Authorization'] = `Bearer ${this.sessionToken}`;
+    else if (this.apiKey) h['X-WAB-Key'] = this.apiKey;
+    if (this.agentId) h['X-WAB-Agent'] = this.agentId;
+    return h;
+  }
+}
+
+module.exports = { WABAgent, WABUniversalAgent, WABMultiAgent, WABAgentMesh, WABAgentOS };

@@ -1,6 +1,6 @@
 {
   "name": "web-agent-bridge-vue",
-  "version": "2.3.0",
+  "version": "2.5.0",
   "description": "Vue 3 composables for Web Agent Bridge (WAB) browser client",
   "main": "index.js",
   "types": "index.d.ts",

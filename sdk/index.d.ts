@@ -292,3 +292,173 @@ export declare class WABUniversalAgent {
   /** Get all known competing sources. */
   sources(): Promise<any>;
 }
+
+// ─── WABAgentOS — Agent OS Runtime Client ──────────────────────────────
+
+export interface WABAgentOSOptions {
+  /** WAB server base URL (default http://localhost:3000). */
+  serverUrl?: string;
+  /** Pre-registered agent ID. */
+  agentId?: string;
+  /** Pre-registered API key. */
+  apiKey?: string;
+  /** Active session token. */
+  sessionToken?: string;
+}
+
+export interface AgentRegistration {
+  agentId: string;
+  apiKey: string;
+  message: string;
+}
+
+export interface AgentSession {
+  sessionToken?: string;
+  agentId: string;
+  expiresAt: number;
+}
+
+export interface ProtocolInfo {
+  protocol: string;
+  version: string;
+  commands: Array<{
+    name: string;
+    version: string;
+    category: string;
+    description: string;
+    capabilities: string[];
+  }>;
+  capabilities: string[];
+  permissionLevels: Record<string, number>;
+}
+
+export interface TaskSubmitResult {
+  taskId: string;
+  state: string;
+}
+
+export interface TaskInfo {
+  taskId: string;
+  type: string;
+  state: string;
+  priority: number;
+  result?: any;
+  error?: string;
+  createdAt: number;
+  startedAt?: number;
+  completedAt?: number;
+}
+
+export interface ExecuteResult {
+  success: boolean;
+  result?: any;
+  error?: string;
+  traceId?: string;
+  duration?: number;
+}
+
+export interface RegistryCommand {
+  id: string;
+  siteId: string;
+  name: string;
+  description: string;
+  category: string;
+  version: string;
+  tags: string[];
+  usageCount: number;
+}
+
+export interface RegistrySite {
+  domain: string;
+  name: string;
+  tier: string;
+  capabilities: string[];
+  verified: boolean;
+}
+
+export interface RegistryTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  steps: any[];
+  downloads: number;
+}
+
+export interface HealthInfo {
+  runtime: any;
+  identity: any;
+  registry: any;
+  executor: any;
+  llm: any;
+}
+
+export interface LLMCompletionResult {
+  text: string;
+  provider: string;
+  model: string;
+  tokens?: { input: number; output: number; total: number };
+  cached?: boolean;
+}
+
+export declare class WABAgentOS {
+  agentId: string | null;
+  apiKey: string | null;
+  sessionToken: string | null;
+
+  constructor(options?: WABAgentOSOptions);
+
+  // Agent Identity
+  register(name: string, type: string, capabilities?: string[]): Promise<AgentRegistration>;
+  authenticate(apiKey?: string): Promise<AgentSession>;
+  negotiateCapabilities(capabilities: string[], siteId?: string): Promise<any>;
+
+  // Protocol
+  getProtocol(): Promise<ProtocolInfo>;
+  sendMessage(command: string, payload?: Record<string, unknown>): Promise<any>;
+
+  // Tasks
+  submitTask(task: Record<string, unknown>): Promise<TaskSubmitResult>;
+  getTask(taskId: string): Promise<TaskInfo>;
+  listTasks(state?: string, limit?: number): Promise<{ tasks: TaskInfo[]; total: number }>;
+  cancelTask(taskId: string): Promise<{ success: boolean }>;
+  pauseTask(taskId: string): Promise<{ success: boolean }>;
+  resumeTask(taskId: string): Promise<{ success: boolean }>;
+
+  // Execution
+  execute(command: Record<string, unknown>): Promise<ExecuteResult>;
+  executeSemantic(domain: string, action: string, params?: Record<string, unknown>): Promise<ExecuteResult>;
+  executePipeline(steps: Array<Record<string, unknown>>): Promise<ExecuteResult>;
+  resolveAction(domain: string, action: string, siteDomain?: string): Promise<any>;
+
+  // Registry
+  searchCommands(query?: Record<string, string>): Promise<{ commands: RegistryCommand[]; total: number }>;
+  registerCommand(siteId: string, command: Record<string, unknown>): Promise<RegistryCommand>;
+  searchSites(query?: Record<string, string>): Promise<{ sites: RegistrySite[]; total: number }>;
+  registerSite(domain: string, info: Record<string, unknown>): Promise<RegistrySite>;
+  searchTemplates(query?: Record<string, string>): Promise<{ templates: RegistryTemplate[]; total: number }>;
+  getTemplate(templateId: string): Promise<RegistryTemplate>;
+
+  // LLM
+  complete(prompt: string, options?: Record<string, unknown>): Promise<LLMCompletionResult>;
+  embed(text: string, options?: Record<string, unknown>): Promise<any>;
+  listModels(): Promise<{ models: any[] }>;
+
+  // Observability
+  getMetrics(): Promise<any>;
+  getTraces(query?: Record<string, string>): Promise<any>;
+  getTrace(traceId: string): Promise<any>;
+  getLogs(query?: Record<string, string>): Promise<any>;
+  getHealth(): Promise<HealthInfo>;
+
+  // Events (SSE)
+  subscribe(filter: string | null, onEvent: (data: any) => void): EventSource;
+
+  // Policies
+  createPolicy(policy: Record<string, unknown>): Promise<any>;
+  evaluatePolicy(entityId: string, action: string, context?: Record<string, unknown>): Promise<any>;
+
+  // Deploy
+  deploy(config?: Record<string, unknown>): Promise<any>;
+  listDeployments(query?: Record<string, string>): Promise<any>;
+}
