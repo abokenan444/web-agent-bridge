@@ -143,9 +143,23 @@ app.use('/api/workspace', apiLimiter, workspaceRoutes);
 app.use('/api/universal', apiLimiter, universalRoutes);
 app.use('/api/os', apiLimiter, runtimeRoutes);
 
-// Convenience aliases for negotiation engine (documented at /api/sovereign/negotiation/*)
+// Convenience alias: /api/negotiate/* → /api/sovereign/negotiation/*
+app.get('/api/negotiate', apiLimiter, (req, res) => {
+  res.json({
+    engine: 'WAB Negotiation Engine',
+    endpoints: {
+      'POST /api/negotiate/rules': 'Create negotiation rules (auth required)',
+      'GET  /api/negotiate/rules/:siteId': 'Get rules for a site',
+      'PUT  /api/negotiate/rules/:ruleId': 'Update a rule (auth required)',
+      'POST /api/negotiate/sessions': 'Open negotiation session',
+      'POST /api/negotiate/sessions/:id/propose': 'Agent counter-offer',
+      'POST /api/negotiate/sessions/:id/confirm': 'Confirm deal',
+      'GET  /api/negotiate/stats/:siteId': 'Negotiation stats',
+    },
+  });
+});
 app.use('/api/negotiate', apiLimiter, (req, res, next) => {
-  req.url = '/negotiation' + (req.url === '/' ? '' : req.url);
+  req.url = '/negotiation' + req.url;
   sovereignRoutes(req, res, next);
 });
 
