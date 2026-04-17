@@ -16,7 +16,7 @@
   };
 
   let tabIdCounter = 0;
-  let NEW_TAB_URL = 'about:blank';
+  let NEW_TAB_URL = 'https://webagentbridge.com/pwa/';
 
   // ──────────── Performance: Tab Suspension ────────────
   const TAB_SUSPEND_DELAY = 5 * 60 * 1000; // 5 min inactive → suspend

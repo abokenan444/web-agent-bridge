@@ -34,6 +34,8 @@ const metering = require('../services/metering');
 const { marketplace } = require('../services/marketplace');
 const { hostedRuntime } = require('../services/hosted-runtime');
 const { sessionEngine } = require('../runtime/session-engine');
+const vision = require('../services/vision');
+const { lfdEngine } = require('../services/lfd');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // AUTH MIDDLEWARE
@@ -55,6 +57,12 @@ const PUBLIC_PATHS = [
   '/registry/templates',
   '/plans',
   '/marketplace',
+  '/recipes',
+  '/vision/models',
+  '/vision/extraction-script',
+  '/recipes',
+  '/vision/models',
+  '/vision/extraction-script',
 ];
 
 function authMiddleware(req, res, next) {
@@ -534,6 +542,7 @@ router.get('/observability/health', (req, res) => {
   health.marketplace = marketplace.getStats();
   health.hostedRuntime = hostedRuntime.getStats();
   health.metering = metering.getStats();
+  health.lfd = lfdEngine.getStats();
   res.json(health);
 });
 
@@ -1441,6 +1450,300 @@ router.get('/hosted/usage/:agentId', (req, res) => {
  */
 router.get('/hosted/stats', (req, res) => {
   res.json(hostedRuntime.getStats());
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOCAL VISION ENGINE (Self-contained — no external API)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Analyze page DOM locally (no external API calls)
+ */
+router.post('/vision/analyze-dom', async (req, res) => {
+  try {
+    const siteId = req.body.siteId || req.agentId || 'default';
+    const result = await vision.analyzePageDOM(siteId, {
+      domSnapshot: req.body.domSnapshot,
+      url: req.body.url,
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Get DOM extraction script to inject into pages
+ */
+router.get('/vision/extraction-script', (req, res) => {
+  res.json({ script: vision.getDomExtractionScript() });
+});
+
+/**
+ * Find elements in cached vision data
+ */
+router.get('/vision/elements', (req, res) => {
+  const siteId = req.query.siteId || req.agentId || 'default';
+  const results = vision.findElement(siteId, req.query.url, {
+    description: req.query.q,
+    type: req.query.type,
+    label: req.query.label,
+  });
+  res.json({ elements: results, total: results.length });
+});
+
+/**
+ * Vision history
+ */
+router.get('/vision/history', (req, res) => {
+  const siteId = req.query.siteId || req.agentId || 'default';
+  const history = vision.getVisionHistory(siteId, {
+    limit: parseInt(req.query.limit) || 50,
+    url: req.query.url,
+  });
+  res.json({ history, total: history.length });
+});
+
+/**
+ * Supported vision models
+ */
+router.get('/vision/models', (req, res) => {
+  res.json({ models: vision.getSupportedModels() });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LEARNING FROM DEMONSTRATION (LfD)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Start a recording session
+ */
+router.post('/lfd/record', (req, res) => {
+  try {
+    const session = lfdEngine.startRecording({
+      name: req.body.name,
+      description: req.body.description,
+      agentId: req.agentId || req.body.agentId,
+      startUrl: req.body.startUrl,
+      tags: req.body.tags,
+    });
+    res.json(session);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Record events into a session
+ */
+router.post('/lfd/:sessionId/events', (req, res) => {
+  try {
+    const events = req.body.events || [req.body];
+    const results = events.map(evt => lfdEngine.recordEvent(req.params.sessionId, evt));
+    res.json({ recorded: results.filter(Boolean).length });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Record a DOM snapshot
+ */
+router.post('/lfd/:sessionId/snapshot', (req, res) => {
+  try {
+    lfdEngine.recordSnapshot(req.params.sessionId, req.body);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Pause recording
+ */
+router.post('/lfd/:sessionId/pause', (req, res) => {
+  try { res.json(lfdEngine.pauseRecording(req.params.sessionId)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+/**
+ * Resume recording
+ */
+router.post('/lfd/:sessionId/resume', (req, res) => {
+  try { res.json(lfdEngine.resumeRecording(req.params.sessionId)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+/**
+ * Stop recording and generate recipe
+ */
+router.post('/lfd/:sessionId/stop', (req, res) => {
+  try { res.json(lfdEngine.stopRecording(req.params.sessionId)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+/**
+ * Cancel recording
+ */
+router.post('/lfd/:sessionId/cancel', (req, res) => {
+  try { res.json(lfdEngine.cancelRecording(req.params.sessionId)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+/**
+ * Get recording details
+ */
+router.get('/lfd/:sessionId', (req, res) => {
+  const recording = lfdEngine.getRecording(req.params.sessionId);
+  if (!recording) return res.status(404).json({ error: 'Recording not found' });
+  res.json(recording);
+});
+
+/**
+ * List recordings
+ */
+router.get('/lfd', (req, res) => {
+  res.json({ recordings: lfdEngine.listRecordings(parseInt(req.query.limit) || 50) });
+});
+
+/**
+ * Get recording script to inject into pages
+ */
+router.get('/lfd/:sessionId/script', (req, res) => {
+  const serverUrl = `${req.protocol}://${req.get('host')}`;
+  res.json({ script: lfdEngine.getRecordingScript(req.params.sessionId, serverUrl) });
+});
+
+// ── Recipes ──
+
+/**
+ * List recipes
+ */
+router.get('/recipes', (req, res) => {
+  const recipes = lfdEngine.listRecipes({
+    domain: req.query.domain,
+    tag: req.query.tag,
+    query: req.query.q,
+  }, parseInt(req.query.limit) || 50);
+  res.json({ recipes, total: recipes.length });
+});
+
+/**
+ * Get recipe
+ */
+router.get('/recipes/:recipeId', (req, res) => {
+  const recipe = lfdEngine.getRecipe(req.params.recipeId);
+  if (!recipe) return res.status(404).json({ error: 'Recipe not found' });
+  res.json(recipe);
+});
+
+/**
+ * Save/import recipe manually
+ */
+router.post('/recipes', (req, res) => {
+  try { res.json(lfdEngine.saveRecipe(req.body)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+/**
+ * Delete recipe
+ */
+router.delete('/recipes/:recipeId', (req, res) => {
+  const deleted = lfdEngine.deleteRecipe(req.params.recipeId);
+  res.json({ deleted });
+});
+
+/**
+ * Execute a recipe
+ */
+router.post('/recipes/:recipeId/execute', (req, res) => {
+  try {
+    const execution = lfdEngine.executeRecipe(req.params.recipeId, {
+      variables: req.body.variables,
+      speed: req.body.speed,
+      stopOnError: req.body.stopOnError,
+      skipWaits: req.body.skipWaits,
+      humanInTheLoop: req.body.humanInTheLoop,
+    });
+    res.json(execution);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Get next step in execution
+ */
+router.get('/executions/:executionId/next', (req, res) => {
+  const step = lfdEngine.getNextStep(req.params.executionId);
+  if (!step) {
+    const exec = lfdEngine.getExecution(req.params.executionId);
+    return res.json({ done: true, status: exec?.status || 'unknown' });
+  }
+  res.json(step);
+});
+
+/**
+ * Report step result
+ */
+router.post('/executions/:executionId/steps/:stepIndex', (req, res) => {
+  const exec = lfdEngine.reportStep(
+    req.params.executionId,
+    parseInt(req.params.stepIndex),
+    { success: req.body.success, error: req.body.error, duration: req.body.duration, selectorUsed: req.body.selectorUsed }
+  );
+  if (!exec) return res.status(404).json({ error: 'Execution not found' });
+  res.json({ status: exec.status, currentStep: exec.currentStep, totalSteps: exec.totalSteps });
+});
+
+/**
+ * Pause execution
+ */
+router.post('/executions/:executionId/pause', (req, res) => {
+  const exec = lfdEngine.pauseExecution(req.params.executionId);
+  if (!exec) return res.status(404).json({ error: 'Execution not found' });
+  res.json({ status: exec.status });
+});
+
+/**
+ * Resume execution
+ */
+router.post('/executions/:executionId/resume', (req, res) => {
+  const exec = lfdEngine.resumeExecution(req.params.executionId);
+  if (!exec) return res.status(404).json({ error: 'Execution not found' });
+  res.json({ status: exec.status });
+});
+
+/**
+ * Abort execution
+ */
+router.post('/executions/:executionId/abort', (req, res) => {
+  const exec = lfdEngine.abortExecution(req.params.executionId);
+  if (!exec) return res.status(404).json({ error: 'Execution not found' });
+  res.json({ status: exec.status });
+});
+
+/**
+ * Get execution details
+ */
+router.get('/executions/:executionId', (req, res) => {
+  const exec = lfdEngine.getExecution(req.params.executionId);
+  if (!exec) return res.status(404).json({ error: 'Execution not found' });
+  res.json(exec);
+});
+
+/**
+ * List executions
+ */
+router.get('/executions', (req, res) => {
+  res.json({ executions: lfdEngine.listExecutions(parseInt(req.query.limit) || 50) });
+});
+
+/**
+ * LfD stats
+ */
+router.get('/lfd/stats', (req, res) => {
+  res.json(lfdEngine.getStats());
 });
 
 module.exports = router;

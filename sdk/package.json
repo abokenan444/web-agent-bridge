@@ -1,6 +1,6 @@
 {
   "name": "web-agent-bridge-sdk",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "description": "SDK for building AI agents that interact with Web Agent Bridge (WAB)",
   "main": "index.js",
   "license": "MIT",

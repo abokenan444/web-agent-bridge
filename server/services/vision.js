@@ -849,6 +849,295 @@ function getVisionHistory(siteId, { limit, url } = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// LOCAL VISION ENGINE — Self-contained, no external API needed
+// DOM-based element detection, dark pattern analysis, ad detection,
+// layout analysis, accessibility audit — all computed locally.
+// ═══════════════════════════════════════════════════════════════════════
+
+const DARK_PATTERN_SIGNATURES = {
+  confirmshaming: [
+    /no,? i (don'?t|do not) (want|like|need|care)/i,
+    /no thanks,? i (prefer|like|want) (to )?(pay|miss|stay|lose)/i,
+    /i('?d rather|'?ll pass)/i, /keep (paying|losing|missing)/i,
+  ],
+  urgency: [
+    /only \d+ left/i, /limited (time|offer|stock|availability)/i,
+    /hurry|rush|act now|don'?t miss|last chance|expires? (soon|in|today)/i,
+    /\d+ (people|others|users) (are )?(viewing|watching|buying)/i,
+    /selling fast|almost gone/i,
+  ],
+  hiddenCosts: [/service fee|handling fee|processing fee|convenience fee/i, /additional charge|extra charge|booking fee/i],
+  forcedContinuity: [/free trial.*(auto|automatic).*(renew|bill|charge)/i, /will be charged after/i, /cancel anytime.*(before|or)/i],
+  sneakIntoBasket: [/added to (your )?cart|included (in|with) (your )?(order|purchase)/i, /protection plan|warranty|insurance/i],
+  privacyZuckering: [/share (your )?(data|info|details|location|contacts)/i, /personalize/i],
+};
+
+const AD_CLASS_PATTERNS = [
+  /\bad[s]?\b/i, /\badvert/i, /\bsponsor/i, /\bpromo(tion|ted)?\b/i,
+  /\bbanner[\-_]?ad/i, /\bgoogle[\-_]?ad/i, /\bdfp[\-_]/i, /\badsense/i, /\btaboola/i, /\boutbrain/i,
+];
+
+const AD_SIZES = [
+  [728, 90], [300, 250], [336, 280], [160, 600], [320, 50], [970, 250], [300, 600],
+];
+
+/**
+ * Analyze a DOM snapshot locally — no external API calls.
+ * @param {Array} domNodes - Flattened DOM nodes from the extraction script
+ * @param {Object} viewport - { width, height }
+ * @returns {Object} Full analysis result
+ */
+function analyzeLocally(domNodes, viewport = { width: 1280, height: 720 }) {
+  const elements = [];
+  const darkPatterns = [];
+  const adElements = [];
+  const accessibilityIssues = [];
+
+  // Layout detection
+  const layoutRegions = [];
+  const LAYOUT_SELECTORS = {
+    header: ['header', '[role="banner"]'],
+    navigation: ['nav', '[role="navigation"]'],
+    main: ['main', '[role="main"]', 'article'],
+    sidebar: ['aside', '[role="complementary"]'],
+    footer: ['footer', '[role="contentinfo"]'],
+  };
+
+  for (const node of domNodes) {
+    const tag = (node.tag || '').toLowerCase();
+    const cls = (node.attributes?.class || '').toLowerCase();
+    const id = (node.attributes?.id || '').toLowerCase();
+    const role = (node.attributes?.role || '').toLowerCase();
+    const text = (node.text || '').trim();
+    const rect = node.rect || {};
+
+    // ── Element detection ──
+    let elType = null;
+    let confidence = 0;
+
+    if (tag === 'button' || role === 'button' || (tag === 'input' && ['submit', 'button'].includes(node.attributes?.type))) {
+      elType = 'button'; confidence = 0.95;
+    } else if (tag === 'a' && node.attributes?.href) {
+      elType = 'link'; confidence = 0.9;
+    } else if (['input', 'textarea'].includes(tag) || role === 'textbox') {
+      elType = 'input'; confidence = 0.95;
+    } else if (tag === 'select' || role === 'listbox' || role === 'combobox') {
+      elType = 'dropdown'; confidence = 0.9;
+    } else if (tag === 'form' || role === 'form') {
+      elType = 'form'; confidence = 0.85;
+    } else if (['img', 'picture', 'svg', 'video', 'canvas'].includes(tag) || role === 'img') {
+      elType = 'image'; confidence = 0.8;
+    } else if (['nav', 'header', 'footer'].includes(tag) || ['navigation', 'banner', 'contentinfo'].includes(role) || cls.includes('nav') || cls.includes('menu')) {
+      elType = 'nav'; confidence = 0.75;
+    } else if (cls.includes('btn') || cls.includes('button') || cls.includes('cta')) {
+      elType = 'button'; confidence = 0.7;
+    } else if (cls.includes('dropdown') || cls.includes('select')) {
+      elType = 'dropdown'; confidence = 0.65;
+    }
+
+    if (elType) {
+      elements.push({
+        type: elType,
+        label: (text || node.attributes?.placeholder || node.attributes?.['aria-label'] || node.attributes?.alt || '').slice(0, 200),
+        description: `${tag} element${cls ? ' class=' + cls.slice(0, 80) : ''}`,
+        boundingBox: { x: rect.x || 0, y: rect.y || 0, width: rect.width || 0, height: rect.height || 0 },
+        suggestedSelector: node.selector || _buildFallbackSelector(node),
+        confidence,
+        interactable: ['button', 'link', 'input', 'dropdown', 'form'].includes(elType),
+      });
+    }
+
+    // ── Dark pattern detection ──
+    if (text.length > 5) {
+      for (const [patternName, regexes] of Object.entries(DARK_PATTERN_SIGNATURES)) {
+        for (const rx of regexes) {
+          if (rx.test(text)) {
+            darkPatterns.push({ type: patternName, text: text.slice(0, 200), selector: node.selector || '', severity: patternName === 'urgency' ? 'medium' : 'high', confidence: 0.85 });
+            break;
+          }
+        }
+      }
+    }
+
+    // Pre-checked upsell checkbox detection
+    if (tag === 'input' && node.attributes?.type === 'checkbox' && node.attributes?.checked != null) {
+      const lbl = text.toLowerCase();
+      if (/newsletter|marketing|promo|share|partner|third.party|sms|offer/i.test(lbl)) {
+        darkPatterns.push({ type: 'misdirection', text: `Pre-checked: "${text.slice(0, 100)}"`, selector: node.selector || '', severity: 'medium', confidence: 0.9 });
+      }
+    }
+
+    // ── Ad detection ──
+    let isAd = false;
+    for (const rx of AD_CLASS_PATTERNS) {
+      if (rx.test(cls) || rx.test(id)) { isAd = true; break; }
+    }
+    if (!isAd && rect.width && rect.height) {
+      for (const [w, h] of AD_SIZES) {
+        if (Math.abs(rect.width - w) < 10 && Math.abs(rect.height - h) < 10) { isAd = true; break; }
+      }
+    }
+    if (!isAd && tag === 'iframe' && node.attributes?.src) {
+      if (/doubleclick|googlesyndication|adnxs|criteo|taboola|outbrain/i.test(node.attributes.src)) isAd = true;
+    }
+    if (isAd) adElements.push({ tag, selector: node.selector || '', rect, reason: `class/id/size match` });
+
+    // ── Accessibility ──
+    if (tag === 'img' && !node.attributes?.alt) {
+      accessibilityIssues.push({ type: 'missing-alt', severity: 'high', selector: node.selector || '' });
+    }
+    if (['button', 'a', 'input'].includes(tag) && rect.width > 0 && (rect.width < 44 || rect.height < 44)) {
+      accessibilityIssues.push({ type: 'small-tap-target', severity: 'medium', selector: node.selector || '', size: `${rect.width}x${rect.height}` });
+    }
+    if (['input', 'select', 'textarea'].includes(tag) && !node.attributes?.['aria-label'] && !node.attributes?.['aria-labelledby'] && !node.attributes?.id) {
+      accessibilityIssues.push({ type: 'missing-label', severity: 'high', selector: node.selector || '' });
+    }
+
+    // ── Layout regions ──
+    for (const [regionName, selectors] of Object.entries(LAYOUT_SELECTORS)) {
+      if (selectors.some(s => {
+        if (s.startsWith('[role="')) return role === s.match(/\[role="(.+?)"\]/)?.[1];
+        return tag === s;
+      })) {
+        layoutRegions.push({ type: regionName, tag, rect, selector: node.selector || '' });
+        break;
+      }
+    }
+  }
+
+  // Build analysis text (human-readable summary for caching)
+  const analysisText = JSON.stringify({
+    summary: {
+      totalElements: elements.length,
+      buttons: elements.filter(e => e.type === 'button').length,
+      links: elements.filter(e => e.type === 'link').length,
+      inputs: elements.filter(e => e.type === 'input').length,
+      forms: elements.filter(e => e.type === 'form').length,
+      darkPatterns: darkPatterns.length,
+      ads: adElements.length,
+      accessibilityIssues: accessibilityIssues.length,
+    },
+    elements,
+    darkPatterns,
+    ads: adElements,
+    accessibility: {
+      issues: accessibilityIssues,
+      score: Math.max(0, 100 - accessibilityIssues.length * 5),
+    },
+    layout: { regions: layoutRegions, columns: layoutRegions.filter(r => r.type === 'sidebar').length > 0 ? 2 : 1 },
+  });
+
+  return {
+    text: analysisText,
+    tokens: 0, // Local analysis — no tokens used
+    elements,
+    darkPatterns,
+    ads: adElements,
+    accessibility: { issues: accessibilityIssues, score: Math.max(0, 100 - accessibilityIssues.length * 5) },
+    layout: { regions: layoutRegions },
+  };
+}
+
+function _buildFallbackSelector(node) {
+  const tag = node.tag || 'div';
+  if (node.attributes?.id) return '#' + node.attributes.id;
+  let s = tag;
+  if (node.attributes?.class) {
+    const cls = node.attributes.class.trim().split(/\s+/).slice(0, 2).join('.');
+    if (cls) s += '.' + cls;
+  }
+  return s;
+}
+
+/**
+ * DOM Extraction Script — inject into pages to capture DOM for local analysis.
+ * Returns minimal JSON with all interactive/layout elements + computed styles.
+ */
+function getDomExtractionScript() {
+  return `(function(){
+  var MAX_D=8,INT=new Set(['a','button','input','select','textarea','details','summary','label']),
+    LAY=new Set(['header','nav','main','aside','footer','article','section','div','form']),
+    SKIP=new Set(['script','style','noscript','meta','link','br','hr']);
+  function ext(el,d){
+    if(d>MAX_D)return null;var t=el.tagName;if(!t)return null;t=t.toLowerCase();
+    if(SKIP.has(t))return null;var r=el.getBoundingClientRect();
+    if(r.width===0&&r.height===0&&!LAY.has(t)&&!INT.has(t))return null;
+    var cs=window.getComputedStyle(el);if(cs.display==='none'||cs.visibility==='hidden')return null;
+    var n={tag:t,text:(el.textContent||'').trim().substring(0,200),selector:sel(el),attributes:{},
+      rect:{x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)},
+      visible:r.width>0&&r.height>0&&cs.opacity!=='0'};
+    ['id','class','href','src','alt','type','name','value','placeholder','role','aria-label',
+     'aria-labelledby','aria-checked','data-action','checked','disabled'].forEach(function(a){
+      if(el.hasAttribute(a))n.attributes[a]=el.getAttribute(a);
+    });if(el.checked)n.attributes.checked='checked';
+    if(LAY.has(t)||INT.has(t)){n.children=[];for(var c of el.children){var cn=ext(c,d+1);if(cn)n.children.push(cn);}}
+    return n;
+  }
+  function sel(el){if(el.id)return'#'+CSS.escape(el.id);var p=[];var c=el;
+    for(var i=0;i<4&&c&&c!==document.body;i++){var s=c.tagName.toLowerCase();
+      if(c.id){p.unshift('#'+CSS.escape(c.id));break;}
+      if(c.className&&typeof c.className==='string'){var cl=c.className.trim().split(/\\s+/).slice(0,2).map(function(x){return'.'+CSS.escape(x);}).join('');if(cl)s+=cl;}
+      p.unshift(s);c=c.parentElement;}return p.join(' > ');}
+  function flat(n,r){if(!n)return;var ch=n.children;delete n.children;r.push(n);if(ch)ch.forEach(function(c){flat(c,r);});}
+  var root=ext(document.body,0);var f=[];flat(root,f);
+  return JSON.stringify({url:location.href,title:document.title,viewport:{width:innerWidth,height:innerHeight},dom:f,
+    meta:{lang:document.documentElement.lang||'',charset:document.characterSet}});
+})();`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Enhanced analyzeScreenshot — use local engine when provider is 'local'
+// and DOM data is provided (no external API call needed)
+// ═══════════════════════════════════════════════════════════════════════
+
+async function analyzePageDOM(siteId, { domSnapshot, url } = {}) {
+  if (!domSnapshot || !domSnapshot.dom) throw new Error('domSnapshot with dom array is required');
+
+  const dataStr = JSON.stringify(domSnapshot.dom).slice(0, 2000);
+  const screenshotHash = crypto.createHash('sha256').update(dataStr).digest('hex');
+
+  // Check cache
+  const cached = stmts.getCacheByHash.get(siteId, screenshotHash);
+  if (cached) {
+    let elements = [];
+    try { elements = JSON.parse(cached.elements_found || '[]'); } catch {}
+    return { analysis: cached.analysis, elements, cached: true, latency_ms: cached.latency_ms, tokens_used: 0, cache_id: cached.id };
+  }
+
+  const startTime = Date.now();
+  const result = analyzeLocally(domSnapshot.dom || [], domSnapshot.viewport);
+  const latencyMs = Date.now() - startTime;
+
+  const cacheId = uuidv4();
+  const config = stmts.getConfig.get(siteId);
+  const cacheTtl = config?.cache_ttl || 300;
+  const expiresAt = new Date(Date.now() + cacheTtl * 1000).toISOString();
+
+  stmts.insertCache.run(cacheId, siteId, url || domSnapshot.url || null, screenshotHash, result.text, JSON.stringify(result.elements), 'local', 'dom-engine', 0, latencyMs, expiresAt);
+
+  const insertElements = db.transaction((elems) => {
+    for (const el of elems) {
+      stmts.insertElement.run(uuidv4(), cacheId, siteId, el.type, el.label, el.description, JSON.stringify(el.boundingBox), el.suggestedSelector, el.confidence, el.interactable ? 1 : 0);
+    }
+  });
+  insertElements(result.elements);
+
+  return {
+    analysis: result.text,
+    elements: result.elements,
+    darkPatterns: result.darkPatterns,
+    ads: result.ads,
+    accessibility: result.accessibility,
+    layout: result.layout,
+    cached: false,
+    latency_ms: latencyMs,
+    tokens_used: 0,
+    cache_id: cacheId,
+    engine: 'local-dom',
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // Exports
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -856,6 +1145,9 @@ module.exports = {
   configureVision,
   getVisionConfig,
   analyzeScreenshot,
+  analyzePageDOM,
+  analyzeLocally,
+  getDomExtractionScript,
   buildVisionPrompt,
   parseVisionResponse,
   extractElementsFromAnalysis,

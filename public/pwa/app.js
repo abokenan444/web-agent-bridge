@@ -678,7 +678,11 @@
   $('#search-close').addEventListener('click', closeSearchResults);
 
   // Bottom bar
-  $('#btn-back').addEventListener('click', () => { try { window.history.back(); } catch(e){} });
+  $('#btn-back').addEventListener('click', () => {
+    // Navigate WAB history, not browser history (avoids iframe Home→eBay issue)
+    if (currentUrl) { goHome(); }
+    else { try { window.history.back(); } catch(e){} }
+  });
   $('#btn-forward').addEventListener('click', () => { try { window.history.forward(); } catch(e){} });
   $('#btn-home').addEventListener('click', goHome);
   $('#btn-adblock').addEventListener('click', toggleAdblock);
