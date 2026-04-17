@@ -124,8 +124,56 @@
     // Track ad block
     if (adblockOn) trackAdblock(url);
 
-    // Open in new tab — actually loads the page
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // Load in iframe — works inside iOS PWA standalone mode
+    loadInFrame(url);
+  }
+
+  function loadInFrame(url) {
+    homeScreen.classList.add('hidden');
+    searchResults.classList.add('hidden');
+    showLoading(true);
+    updateSecureIcon(url);
+
+    // Set a timeout to detect if iframe failed to load (X-Frame-Options block)
+    let loadOk = false;
+    const failTimer = setTimeout(() => {
+      if (!loadOk) {
+        showLoading(false);
+        showFrameError(url);
+      }
+    }, 8000);
+
+    webView.onload = () => {
+      loadOk = true;
+      clearTimeout(failTimer);
+      showLoading(false);
+      webView.classList.add('active');
+      $('#btn-back').disabled = false;
+    };
+
+    webView.src = url;
+    webView.classList.add('active');
+  }
+
+  function showFrameError(url) {
+    webView.classList.remove('active');
+    const errDiv = document.getElementById('frame-error') || document.createElement('div');
+    errDiv.id = 'frame-error';
+    errDiv.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:var(--bg);z-index:7;padding:24px;text-align:center';
+    errDiv.innerHTML = `
+      <div style="font-size:48px">🔒</div>
+      <h2 style="font-size:18px;font-weight:700">This site can't be framed</h2>
+      <p style="font-size:14px;color:var(--text-muted);max-width:280px">This website blocks embedded viewing. You can open it in your default browser instead.</p>
+      <button onclick="window.open('${url.replace(/'/g, "\\'\'")}','_blank')" style="padding:12px 28px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer">🌐 Open in Browser</button>
+      <button onclick="document.getElementById('frame-error').style.display='none';goHome()" style="padding:8px 20px;border:1px solid var(--border);border-radius:10px;background:none;color:var(--text-muted);font-size:13px;cursor:pointer">← Back to Home</button>
+    `;
+    if (!document.getElementById('frame-error')) {
+      document.getElementById('browser-frame').appendChild(errDiv);
+    }
+  }
+
+  function openInBrowser() {
+    if (currentUrl) window.open(currentUrl, '_blank');
   }
 
   function doSearch(query) {
@@ -134,7 +182,7 @@
     webView.classList.remove('active');
     searchResults.classList.remove('hidden');
     searchQueryLabel.textContent = '\uD83D\uDD0D ' + query;
-    searchResultsList.innerHTML = '<div class="sr-powered">\u2026 \u062C\u0627\u0631\u064A \u0627\u0644\u0628\u062D\u062B</div>';
+    searchResultsList.innerHTML = '<div class="sr-powered">… Searching...</div>';
     urlInput.value = query;
     currentUrl = '';
 
@@ -161,7 +209,7 @@
   }
 
   function renderSearchResults(query, results) {
-    let html = '<div class="sr-result-count">' + results.length + ' \u0646\u062A\u064A\u062C\u0629 \u0644\u0640 "' + esc(query) + '"</div>';
+    let html = '<div class="sr-result-count">' + results.length + ' results for "' + esc(query) + '"</div>';
     html += results.map(r => {
       const domain = safeDomain(r.url);
       const favicon = 'https://www.google.com/s2/favicons?sz=32&domain=' + encodeURIComponent(domain);
@@ -172,7 +220,7 @@
         ${r.snippet ? '<div class="sr-snippet">' + esc(r.snippet) + '</div>' : ''}
       </a>`;
     }).join('');
-    html += '<div class="sr-powered">WAB Search \u2014 \u0645\u062D\u0631\u0643 \u0628\u062D\u062B \u0645\u0633\u062A\u0642\u0644</div>';
+    html += '<div class="sr-powered">WAB Search \u2014 Independent Search Engine</div>';
     searchResultsList.innerHTML = html;
     bindSearchResultClicks();
   }
@@ -184,8 +232,8 @@
   function renderFallbackSearch(query) {
     searchResultsList.innerHTML =
       '<div style="padding:32px 16px;text-align:center;">' +
-        '<p style="color:var(--text-muted);margin-bottom:16px;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u062A\u0627\u0626\u062C \u0644\u0640 "' + esc(query) + '"</p>' +
-        '<button class="sr-retry" onclick="document.getElementById(\x27url-input\x27).focus()">\uD83D\uDD04 \u062D\u0627\u0648\u0644 \u0628\u062D\u062B\u0627\u064B \u0622\u062E\u0631</button>' +
+        '<p style="color:var(--text-muted);margin-bottom:16px;">No results for "' + esc(query) + '"</p>' +
+        '<button class="sr-retry" onclick="document.getElementById(\x27url-input\x27).focus()">🔄 Try another search</button>' +
       '</div>';
   }
 
@@ -277,7 +325,7 @@
         adblockCount += 5;
         saveStore();
         updateAdblockBadge();
-        toast('success', '\uD83D\uDEE1\uFE0F \u062D\u064F\u0638\u0631\u062A \u0627\u0644\u0645\u062A\u062A\u0628\u0639\u0627\u062A \u0648\u0627\u0644\u0625\u0639\u0644\u0627\u0646\u0627\u062A');
+        toast('success', '🛡️ Blocked trackers & ads');
       }
     } catch(e) {}
   }
@@ -291,6 +339,9 @@
     urlInput.value = '';
     updateSecureIcon('');
     updateAdblockBadge();
+    // Hide frame error if present
+    const errDiv = document.getElementById('frame-error');
+    if (errDiv) errDiv.style.display = 'none';
   }
 
   function cleanUrl(url) {
@@ -324,7 +375,7 @@
     saveStore();
     updateAdblockBadge();
     updateMenuAdblock();
-    toast('info', adblockOn ? '🛡️ حجب الإعلانات مفعّل' : '⚠️ حجب الإعلانات معطّل');
+    toast('info', adblockOn ? '🛡️ Ad Blocker enabled' : '⚠️ Ad Blocker disabled');
     $('#btn-adblock').classList.toggle('active', adblockOn);
   }
 
@@ -337,7 +388,7 @@
 
   function updateMenuAdblock() {
     const s = $('#menu-adblock-status');
-    s.textContent = adblockOn ? 'مفعّل' : 'معطّل';
+    s.textContent = adblockOn ? 'ON' : 'OFF';
     s.className = adblockOn ? 'on' : 'off';
   }
 
@@ -351,40 +402,40 @@
 
       // TLD check
       const tld = '.' + hostname.split('.').pop();
-      if (SCAM_TLDS.includes(tld)) { risk += 25; flags.push('نطاق مشبوه'); }
+      if (SCAM_TLDS.includes(tld)) { risk += 25; flags.push('Suspicious TLD'); }
 
       // Brand impersonation
       for (const brand of BRAND_NAMES) {
         if (baseDomain.includes(brand.toLowerCase()) && !baseDomain.endsWith(brand.toLowerCase() + '.com')) {
-          risk += 30; flags.push('انتحال علامة تجارية'); break;
+          risk += 30; flags.push('Brand impersonation'); break;
         }
       }
 
       // Long domain
-      if (hostname.length > 30) { risk += 10; flags.push('عنوان طويل مشبوه'); }
+      if (hostname.length > 30) { risk += 10; flags.push('Suspicious long URL'); }
 
       // Lots of hyphens
-      if ((hostname.match(/-/g) || []).length > 3) { risk += 15; flags.push('واصلات كثيرة'); }
+      if ((hostname.match(/-/g) || []).length > 3) { risk += 15; flags.push('Too many hyphens'); }
 
       // HTTP only
-      if (url.startsWith('http://')) { risk += 10; flags.push('غير مشفّر'); }
+      if (url.startsWith('http://')) { risk += 10; flags.push('Not encrypted'); }
 
       risk = Math.min(risk, 100);
       const statusEl = $('#feat-shield .feat-status');
 
       if (risk >= 40) {
         statusEl.className = 'feat-status danger';
-        statusEl.textContent = 'خطر ' + risk + '%';
+        statusEl.textContent = 'Danger ' + risk + '%';
         toast('danger', `⚠️ درع الاحتيال: ${flags.join('، ')} — ${hostname}`);
         $('#btn-shield').classList.add('active');
         $('#btn-shield').style.color = 'var(--danger)';
       } else if (risk > 0) {
         statusEl.className = 'feat-status warn';
-        statusEl.textContent = 'تحذير ' + risk + '%';
+        statusEl.textContent = 'Warning ' + risk + '%';
         $('#btn-shield').style.color = 'var(--warning)';
       } else {
         statusEl.className = 'feat-status safe';
-        statusEl.textContent = 'آمن';
+        statusEl.textContent = 'Safe';
         $('#btn-shield').style.color = '';
         $('#btn-shield').classList.remove('active');
       }
@@ -400,22 +451,22 @@
       const reasons = [];
 
       if (BIG_TECH.has(baseDomain)) {
-        score -= 20; reasons.push('شركة كبيرة');
+        score -= 20; reasons.push('Big tech');
       } else {
-        score += 15; reasons.push('موقع مستقل');
+        score += 15; reasons.push('Independent site');
       }
 
       const tld = '.' + hostname.split('.').pop();
       if (['.org','.edu','.gov','.io','.dev','.blog'].includes(tld)) {
-        score += 10; reasons.push('نطاق موثوق');
+        score += 10; reasons.push('Trusted TLD');
       }
 
       const path = new URL(url).pathname.toLowerCase();
       if (['/blog','/docs','/guide','/tutorial','/learn'].some(p => path.includes(p))) {
-        score += 10; reasons.push('محتوى تعليمي');
+        score += 10; reasons.push('Educational content');
       }
 
-      if (url.startsWith('https://')) { score += 5; reasons.push('اتصال آمن'); }
+      if (url.startsWith('https://')) { score += 5; reasons.push('Secure connection'); }
       score = Math.max(0, Math.min(100, score));
 
       const cat = score >= 65 ? 'small-trusted' : score >= 40 ? 'neutral' : 'big-tech';
@@ -427,14 +478,14 @@
 
   function showFairness() {
     if (!currentUrl) {
-      toast('info', '⚖️ افتح موقعاً لتحليل العدالة');
+      toast('info', '⚖️ Open a website to analyze fairness');
       return;
     }
     const r = analyzeFairness(currentUrl);
     const stars = r.score >= 65 ? '⭐⭐⭐' : r.score >= 40 ? '⭐⭐' : '⭐';
-    const catAr = r.cat === 'small-trusted' ? '🟢 موقع صغير موثوق'
-      : r.cat === 'big-tech' ? '🔴 شركة كبيرة' : '🟡 محايد';
-    alert(`⚖️ نظام العدالة — ${r.domain}\n\n${catAr}\nالدرجة: ${r.score}/100 ${stars}\n\nالأسباب: ${r.reasons.join('، ')}`);
+    const catAr = r.cat === 'small-trusted' ? '🟢 Small Trusted Site'
+      : r.cat === 'big-tech' ? '🔴 Big Tech' : '🟡 Neutral';
+    alert(`⚖️ Fairness System \u2014 ${r.domain}\n\n${catAr}\nScore: ${r.score}/100 ${stars}\n\nReasons: ${r.reasons.join(', ')}`);
   }
 
   // ── Agent Chat ──
@@ -460,7 +511,7 @@
 
     const typing = document.createElement('div');
     typing.className = 'chat-msg agent typing';
-    typing.textContent = '⏳ الوكيل يعمل...';
+    typing.textContent = '⏳ Agent working...';
     $('#chat-messages').appendChild(typing);
     $('#chat-messages').scrollTop = $('#chat-messages').scrollHeight;
 
@@ -559,10 +610,10 @@
     if (!currentUrl) return;
     if (isBookmarked(currentUrl)) {
       bookmarks = bookmarks.filter(b => b.url !== currentUrl);
-      toast('info', '🔖 تم إزالة المفضلة');
+      toast('info', '🔖 Bookmark removed');
     } else {
       bookmarks.unshift({ url: currentUrl, title: cleanUrl(currentUrl), time: Date.now() });
-      toast('success', '🔖 تمت الإضافة للمفضلة');
+      toast('success', '🔖 Bookmarked');
     }
     saveStore();
   }
@@ -572,7 +623,7 @@
     panel.className = 'list-panel';
     panel.innerHTML = `
       <div class="list-panel-header"><span>${esc(title)}</span><button class="lp-close">✕</button></div>
-      <div class="list-panel-body">${items.length === 0 ? '<div class="list-empty">فارغ</div>' :
+      <div class="list-panel-body">${items.length === 0 ? '<div class="list-empty">Empty</div>' :
         items.map((it, i) => `
           <div class="list-item" data-index="${i}">
             <div class="list-item-text">
@@ -604,7 +655,7 @@
 
   function showBookmarks() {
     closeMenu();
-    showListPanel('🔖 المفضلة', bookmarks,
+    showListPanel('🔖 Bookmarks', bookmarks,
       (bm) => navigate(bm.url),
       (idx) => { bookmarks.splice(idx, 1); saveStore(); }
     );
@@ -612,7 +663,7 @@
 
   function showHistory() {
     closeMenu();
-    showListPanel('📜 السجل', history,
+    showListPanel('📜 History', history,
       (h) => navigate(h.url),
       (idx) => { history.splice(idx, 1); saveStore(); }
     );
@@ -627,7 +678,7 @@
     } else {
       try {
         await navigator.clipboard.writeText(currentUrl);
-        toast('success', '📋 تم نسخ الرابط');
+        toast('success', '📋 Link copied');
       } catch (e) {}
     }
   }
@@ -636,18 +687,18 @@
   function toggleDesktopMode() {
     desktopMode = !desktopMode;
     closeMenu();
-    toast('info', desktopMode ? '💻 وضع سطح المكتب' : '📱 وضع الهاتف');
+    toast('info', desktopMode ? '💻 Desktop Mode' : '📱 Mobile Mode');
     if (currentUrl) loadUrl(currentUrl);
   }
 
   // ── Clear data ──
   function clearData() {
     closeMenu();
-    if (confirm('هل تريد مسح جميع البيانات؟')) {
+    if (confirm('Clear all browsing data?')) {
       history = []; bookmarks = []; adblockCount = 0;
       saveStore();
       updateAdblockBadge();
-      toast('success', '🗑️ تم مسح البيانات');
+      toast('success', '🗑️ Data cleared');
     }
   }
 
@@ -688,7 +739,7 @@
   $('#btn-adblock').addEventListener('click', toggleAdblock);
   $('#btn-shield').addEventListener('click', () => {
     if (currentUrl) checkShield(currentUrl);
-    else toast('info', '🔰 افتح موقعاً لفحصه');
+    else toast('info', '🔰 Open a site to scan');
   });
   $('#btn-chat').addEventListener('click', toggleChat);
 
@@ -702,12 +753,13 @@
       if (action === 'home') { closeMenu(); goHome(); }
       else if (action === 'adblock-toggle') { toggleAdblock(); closeMenu(); }
       else if (action === 'fairness') { closeMenu(); showFairness(); }
-      else if (action === 'shield') { closeMenu(); if (currentUrl) checkShield(currentUrl); else toast('info', '🔰 افتح موقعاً'); }
+      else if (action === 'shield') { closeMenu(); if (currentUrl) checkShield(currentUrl); else toast('info', '🔰 Open a site first'); }
       else if (action === 'agent') { closeMenu(); toggleChat(); }
       else if (action === 'bookmarks') showBookmarks();
       else if (action === 'history') showHistory();
       else if (action === 'share') sharePage();
       else if (action === 'desktop') toggleDesktopMode();
+      else if (action === 'open-external') { closeMenu(); openInBrowser(); }
       else if (action === 'clear') clearData();
     });
   });

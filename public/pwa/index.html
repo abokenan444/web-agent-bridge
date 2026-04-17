@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="WAB Browser">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="description" content="WAB Browser — متصفح ذكي بحجب الإعلانات ودرع الاحتيال ونظام العدالة">
+  <meta name="description" content="WAB Browser — Smart browser with Ad Blocker, Scam Shield & Fairness System">
   <link rel="manifest" href="/pwa/manifest.json">
   <link rel="apple-touch-icon" href="/pwa/icons/icon-192.svg">
   <link rel="stylesheet" href="/pwa/app.css">
@@ -25,7 +25,7 @@
         <span id="secure-icon">
           <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3" y="6" width="8" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 6V4a2 2 0 014 0v2" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
         </span>
-        <input id="url-input" type="search" enterkeyhint="go" placeholder="ابحث أو أدخل عنوان..." autocomplete="off" spellcheck="false" />
+        <input id="url-input" type="search" enterkeyhint="go" placeholder="Search or enter URL..." autocomplete="off" spellcheck="false" />
       </div>
       <button id="go-btn" aria-label="Go">
         <svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 9h12M11 5l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -48,33 +48,33 @@
           <circle cx="60" cy="36" r="5" fill="#0ea5e9"/>
         </svg>
         <h1>WAB Browser</h1>
-        <p>المتصفح الذكي — مع حجب الإعلانات ونظام العدالة</p>
+        <p>Smart Browser — Ad Blocker, Scam Shield & Fairness</p>
       </div>
       <div id="quick-links">
-        <a class="quick-link" data-action="search">🔍<span>بحث</span></a>
-        <a class="quick-link" data-url="https://youtube.com">▶️<span>يوتيوب</span></a>
-        <a class="quick-link" data-url="https://wikipedia.org">📚<span>ويكيبيديا</span></a>
+        <a class="quick-link" data-action="search">🔍<span>Search</span></a>
+        <a class="quick-link" data-url="https://youtube.com">▶️<span>YouTube</span></a>
+        <a class="quick-link" data-url="https://wikipedia.org">📚<span>Wikipedia</span></a>
         <a class="quick-link" data-url="https://github.com">💻<span>GitHub</span></a>
       </div>
       <!-- Trending Searches -->
       <div id="trending-section">
-        <p class="trending-title">🔥 رائج الآن</p>
+        <p class="trending-title">🔥 Trending Now</p>
         <div id="trending-list"></div>
       </div>
       <div id="home-features">
         <div class="home-feat" id="feat-adblock">
           <span class="feat-icon">🛡️</span>
-          <span class="feat-label">حجب الإعلانات</span>
+          <span class="feat-label">Ad Blocker</span>
           <span class="feat-badge" id="home-adblock-count">0</span>
         </div>
         <div class="home-feat" id="feat-shield">
           <span class="feat-icon">🔰</span>
-          <span class="feat-label">درع الاحتيال</span>
-          <span class="feat-status safe">آمن</span>
+          <span class="feat-label">Scam Shield</span>
+          <span class="feat-status safe">Safe</span>
         </div>
         <div class="home-feat" id="feat-fairness">
           <span class="feat-icon">⚖️</span>
-          <span class="feat-label">نظام العدالة</span>
+          <span class="feat-label">Fairness System</span>
         </div>
       </div>
     </div>
@@ -122,18 +122,19 @@
         <button id="menu-close">✕</button>
       </div>
       <div class="menu-items">
-        <button class="menu-item" data-action="home"><span>🏠</span>الصفحة الرئيسية</button>
-        <button class="menu-item" data-action="adblock-toggle"><span>🛡️</span>حجب الإعلانات <small id="menu-adblock-status" class="on">مفعّل</small></button>
-        <button class="menu-item" data-action="fairness"><span>⚖️</span>نظام العدالة</button>
-        <button class="menu-item" data-action="shield"><span>🔰</span>درع الاحتيال</button>
-        <button class="menu-item" data-action="agent"><span>🤖</span>وكيل WAB</button>
+        <button class="menu-item" data-action="home"><span>🏠</span>Home</button>
+        <button class="menu-item" data-action="adblock-toggle"><span>🛡️</span>Ad Blocker <small id="menu-adblock-status" class="on">ON</small></button>
+        <button class="menu-item" data-action="fairness"><span>⚖️</span>Fairness System</button>
+        <button class="menu-item" data-action="shield"><span>🔰</span>Scam Shield</button>
+        <button class="menu-item" data-action="agent"><span>🤖</span>WAB Agent</button>
         <div class="menu-divider"></div>
-        <button class="menu-item" data-action="bookmarks"><span>🔖</span>المفضلة</button>
-        <button class="menu-item" data-action="history"><span>📜</span>السجل</button>
+        <button class="menu-item" data-action="bookmarks"><span>🔖</span>Bookmarks</button>
+        <button class="menu-item" data-action="history"><span>📜</span>History</button>
         <div class="menu-divider"></div>
-        <button class="menu-item" data-action="share"><span>📤</span>مشاركة الصفحة</button>
-        <button class="menu-item" data-action="desktop"><span>💻</span>عرض سطح المكتب</button>
-        <button class="menu-item" data-action="clear"><span>🗑️</span>مسح البيانات</button>
+        <button class="menu-item" data-action="share"><span>📤</span>Share Page</button>
+        <button class="menu-item" data-action="desktop"><span>💻</span>Desktop Mode</button>
+        <button class="menu-item" data-action="open-external"><span>🌐</span>Open in Browser</button>
+        <button class="menu-item" data-action="clear"><span>🗑️</span>Clear Data</button>
         <div class="menu-divider"></div>
         <div class="menu-about">
           <small>WAB Browser PWA v1.0.0</small><br>
@@ -146,14 +147,14 @@
   <!-- ══════ Chat Panel ══════ -->
   <div id="chat-panel" class="hidden">
     <div id="chat-header">
-      <span>🤖 وكيل WAB</span>
+      <span>🤖 WAB Agent</span>
       <button id="chat-close">✕</button>
     </div>
     <div id="chat-messages">
-      <div class="chat-msg agent">مرحباً! أنا وكيل WAB. كيف أساعدك؟</div>
+      <div class="chat-msg agent">Hello! I'm the WAB Agent. How can I help you?</div>
     </div>
     <div id="chat-input-area">
-      <input type="text" id="chat-input" placeholder="اسأل الوكيل..." autocomplete="off" />
+      <input type="text" id="chat-input" placeholder="Ask the agent..." autocomplete="off" />
       <button id="chat-send">➤</button>
     </div>
   </div>
