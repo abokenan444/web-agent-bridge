@@ -143,6 +143,12 @@ app.use('/api/workspace', apiLimiter, workspaceRoutes);
 app.use('/api/universal', apiLimiter, universalRoutes);
 app.use('/api/os', apiLimiter, runtimeRoutes);
 
+// Convenience aliases for negotiation engine (documented at /api/sovereign/negotiation/*)
+app.use('/api/negotiate', apiLimiter, (req, res, next) => {
+  req.url = '/negotiation' + (req.url === '/' ? '' : req.url);
+  sovereignRoutes(req, res, next);
+});
+
 // ─── WAB Search Engine ────────────────────────────────────────────────
 
 const searchLimiter = rateLimit({
@@ -338,6 +344,10 @@ app.use(`/v${pkg.version.split('.')[0]}`, express.static(path.join(__dirname, '.
 app.use('/latest', express.static(path.join(__dirname, '..', 'script')));
 
 app.get('*', (req, res) => {
+  // API routes always return JSON 404
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Not found', path: req.path });
+  }
   if (req.accepts('html')) {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
   } else {

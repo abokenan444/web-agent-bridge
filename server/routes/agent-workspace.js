@@ -67,11 +67,40 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS workspace_favorites (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    url TEXT NOT NULL,
+    title TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    favicon TEXT DEFAULT '',
+    folder TEXT DEFAULT 'default',
+    position INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS workspace_history (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    url TEXT NOT NULL,
+    title TEXT DEFAULT '',
+    visit_count INTEGER DEFAULT 1,
+    last_visited TEXT DEFAULT (datetime('now')),
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_ws_subs_user ON workspace_subscriptions(user_id);
   CREATE INDEX IF NOT EXISTS idx_ws_sessions_user ON workspace_sessions(user_id);
   CREATE INDEX IF NOT EXISTS idx_ws_deals_user ON workspace_deals(user_id);
   CREATE INDEX IF NOT EXISTS idx_ws_analytics_type ON workspace_analytics(event_type);
   CREATE INDEX IF NOT EXISTS idx_ws_analytics_date ON workspace_analytics(created_at);
+  CREATE INDEX IF NOT EXISTS idx_ws_favorites_user ON workspace_favorites(user_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_ws_favorites_user_url ON workspace_favorites(user_id, url);
+  CREATE INDEX IF NOT EXISTS idx_ws_history_user ON workspace_history(user_id);
+  CREATE INDEX IF NOT EXISTS idx_ws_history_visited ON workspace_history(last_visited);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_ws_history_user_url ON workspace_history(user_id, url);
 `);
 
 // ─── Plan Limits ─────────────────────────────────────────────────────
@@ -100,6 +129,26 @@ const stmts = {
   insertDeal: db.prepare('INSERT INTO workspace_deals (id, user_id, task_id, offer_source, offer_title, original_price, final_price, savings, deal_url, requires_login) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
   updateDealStatus: db.prepare('UPDATE workspace_deals SET status = ?, completed_at = datetime(\'now\') WHERE id = ?'),
   getUserDeals: db.prepare('SELECT * FROM workspace_deals WHERE user_id = ? ORDER BY created_at DESC LIMIT ?'),
+
+  // Favorites
+  insertFavorite: db.prepare('INSERT INTO workspace_favorites (id, user_id, url, title, description, favicon, folder, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
+  getFavorites: db.prepare('SELECT * FROM workspace_favorites WHERE user_id = ? ORDER BY folder, position, created_at DESC'),
+  getFavoritesByFolder: db.prepare('SELECT * FROM workspace_favorites WHERE user_id = ? AND folder = ? ORDER BY position, created_at DESC'),
+  deleteFavorite: db.prepare('DELETE FROM workspace_favorites WHERE id = ? AND user_id = ?'),
+  deleteFavoriteByUrl: db.prepare('DELETE FROM workspace_favorites WHERE user_id = ? AND url = ?'),
+  updateFavorite: db.prepare('UPDATE workspace_favorites SET title = ?, folder = ?, position = ? WHERE id = ? AND user_id = ?'),
+
+  // History
+  upsertHistory: db.prepare(`INSERT INTO workspace_history (id, user_id, url, title, visit_count, last_visited)
+    VALUES (?, ?, ?, ?, 1, datetime('now'))
+    ON CONFLICT(user_id, url) DO UPDATE SET
+      title = excluded.title,
+      visit_count = visit_count + 1,
+      last_visited = datetime('now')`),
+  getHistory: db.prepare('SELECT * FROM workspace_history WHERE user_id = ? ORDER BY last_visited DESC LIMIT ? OFFSET ?'),
+  searchHistory: db.prepare("SELECT * FROM workspace_history WHERE user_id = ? AND (url LIKE ? OR title LIKE ?) ORDER BY last_visited DESC LIMIT ?"),
+  deleteHistoryItem: db.prepare('DELETE FROM workspace_history WHERE id = ? AND user_id = ?'),
+  clearHistory: db.prepare('DELETE FROM workspace_history WHERE user_id = ?'),
 
   logEvent: db.prepare('INSERT INTO workspace_analytics (id, user_id, event_type, event_data) VALUES (?, ?, ?, ?)'),
 };
@@ -232,6 +281,119 @@ router.post('/event', authenticateToken, (req, res) => {
   if (!type) return res.status(400).json({ error: 'Event type required' });
   logEvent(req.user.id, type, data || {});
   res.json({ ok: true });
+});
+
+// ─── Favorites API ───────────────────────────────────────────────────
+
+/**
+ * GET /api/workspace/favorites — Get user's bookmarks
+ */
+router.get('/favorites', authenticateToken, (req, res) => {
+  const folder = req.query.folder;
+  const favorites = folder
+    ? stmts.getFavoritesByFolder.all(req.user.id, folder)
+    : stmts.getFavorites.all(req.user.id);
+  res.json({ favorites });
+});
+
+/**
+ * POST /api/workspace/favorites — Add a bookmark
+ */
+router.post('/favorites', authenticateToken, (req, res) => {
+  const { url, title, description, favicon, folder } = req.body;
+  if (!url) return res.status(400).json({ error: 'URL is required' });
+  const id = crypto.randomUUID();
+  const maxPos = db.prepare('SELECT MAX(position) as m FROM workspace_favorites WHERE user_id = ? AND folder = ?')
+    .get(req.user.id, folder || 'default');
+  const position = (maxPos?.m || 0) + 1;
+  try {
+    stmts.insertFavorite.run(id, req.user.id, url, title || '', description || '', favicon || '', folder || 'default', position);
+  } catch (e) {
+    if (e.message?.includes('UNIQUE')) return res.status(409).json({ error: 'Already bookmarked' });
+    throw e;
+  }
+  logEvent(req.user.id, 'favorite_added', { url });
+  res.json({ id, url, title, folder: folder || 'default', position });
+});
+
+/**
+ * PUT /api/workspace/favorites/:id — Update a bookmark
+ */
+router.put('/favorites/:id', authenticateToken, (req, res) => {
+  const { title, folder, position } = req.body;
+  const changes = stmts.updateFavorite.run(title ?? '', folder ?? 'default', position ?? 0, req.params.id, req.user.id);
+  if (!changes.changes) return res.status(404).json({ error: 'Favorite not found' });
+  res.json({ success: true });
+});
+
+/**
+ * DELETE /api/workspace/favorites/:id — Remove a bookmark by ID
+ */
+router.delete('/favorites/:id', authenticateToken, (req, res) => {
+  const changes = stmts.deleteFavorite.run(req.params.id, req.user.id);
+  if (!changes.changes) return res.status(404).json({ error: 'Favorite not found' });
+  logEvent(req.user.id, 'favorite_removed', { id: req.params.id });
+  res.json({ success: true });
+});
+
+/**
+ * DELETE /api/workspace/favorites?url=... — Remove a bookmark by URL
+ */
+router.delete('/favorites', authenticateToken, (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: 'URL query parameter required' });
+  const changes = stmts.deleteFavoriteByUrl.run(req.user.id, url);
+  if (!changes.changes) return res.status(404).json({ error: 'Favorite not found' });
+  logEvent(req.user.id, 'favorite_removed', { url });
+  res.json({ success: true });
+});
+
+// ─── History API ─────────────────────────────────────────────────────
+
+/**
+ * GET /api/workspace/history — Get browsing history
+ */
+router.get('/history', authenticateToken, (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  const offset = parseInt(req.query.offset) || 0;
+  const q = req.query.q;
+  let items;
+  if (q) {
+    const pattern = `%${q}%`;
+    items = stmts.searchHistory.all(req.user.id, pattern, pattern, limit);
+  } else {
+    items = stmts.getHistory.all(req.user.id, limit, offset);
+  }
+  res.json({ history: items });
+});
+
+/**
+ * POST /api/workspace/history — Record a history entry
+ */
+router.post('/history', authenticateToken, (req, res) => {
+  const { url, title } = req.body;
+  if (!url) return res.status(400).json({ error: 'URL is required' });
+  const id = crypto.randomUUID();
+  stmts.upsertHistory.run(id, req.user.id, url, title || '');
+  res.json({ success: true });
+});
+
+/**
+ * DELETE /api/workspace/history/:id — Delete a single history entry
+ */
+router.delete('/history/:id', authenticateToken, (req, res) => {
+  const changes = stmts.deleteHistoryItem.run(req.params.id, req.user.id);
+  if (!changes.changes) return res.status(404).json({ error: 'History entry not found' });
+  res.json({ success: true });
+});
+
+/**
+ * DELETE /api/workspace/history — Clear all history
+ */
+router.delete('/history', authenticateToken, (req, res) => {
+  stmts.clearHistory.run(req.user.id);
+  logEvent(req.user.id, 'history_cleared', {});
+  res.json({ success: true });
 });
 
 // ─── Admin Routes ────────────────────────────────────────────────────
