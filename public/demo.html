@@ -3,6 +3,1771 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB Interactive Demo — Web Agent Bridge v3.0</title>
+  <meta name="description" content="Interactive demo of all Web Agent Bridge capabilities: Agent Chat, Universal Analysis, Negotiation, Multi-Agent Mesh, Vision, LfD, Reputation, Price Shield, and more.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#050a12;--bg2:#0a1020;--bg3:#0d1528;--bg4:#111d35;--surface:#131d33;--border:#1a2744;--border2:#243352;--text:#e2e8f0;--text2:#cbd5e1;--muted:#64748b;--dim:#475569;--blue:#3b82f6;--purple:#8b5cf6;--green:#10b981;--emerald:#34d399;--amber:#f59e0b;--red:#ef4444;--cyan:#06b6d4;--pink:#ec4899;--indigo:#6366f1;--teal:#14b8a6;--sky:#0ea5e9;--orange:#f97316;--lime:#84cc16;--rose:#f43f5e;--grad1:linear-gradient(135deg,#3b82f6,#8b5cf6);--grad2:linear-gradient(135deg,#06b6d4,#3b82f6);--grad3:linear-gradient(135deg,#10b981,#06b6d4);--grad4:linear-gradient(135deg,#f59e0b,#f97316);--grad5:linear-gradient(135deg,#ec4899,#8b5cf6);--shadow:0 4px 24px rgba(0,0,0,0.4);--glow-blue:0 0 20px rgba(59,130,246,0.15);--glow-green:0 0 20px rgba(16,185,129,0.15);--glow-purple:0 0 20px rgba(139,92,246,0.15)}
+    html{scroll-behavior:smooth}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+    a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+    button{font-family:inherit;cursor:pointer}
+    code,.mono{font-family:'JetBrains Mono',monospace}
+    ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+    .nav{position:sticky;top:0;z-index:100;padding:0 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:rgba(5,10,18,0.92);backdrop-filter:blur(12px);height:52px}
+    .nav-brand{font-weight:900;font-size:1.05rem;display:flex;align-items:center;gap:10px}
+    .nav-brand span{background:var(--grad1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .nav-badge{font-size:0.6rem;background:var(--grad1);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700}
+    .nav-links{display:flex;gap:6px;align-items:center}
+    .nav-link{color:var(--muted);font-size:0.8rem;padding:6px 12px;border-radius:6px;transition:all 0.15s;text-decoration:none}
+    .nav-link:hover{color:var(--text);background:var(--bg3);text-decoration:none}
+
+    .hero{text-align:center;padding:48px 24px 32px;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 50% 50%,rgba(59,130,246,0.06) 0%,transparent 50%);pointer-events:none}
+    .hero h1{font-size:2.4rem;font-weight:900;line-height:1.15;margin-bottom:12px}
+    .hero h1 .grad{background:var(--grad1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .hero p{color:var(--muted);font-size:1rem;max-width:650px;margin:0 auto 24px;line-height:1.6}
+    .hero-stats{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+    .hero-stat{text-align:center}
+    .hero-stat .val{font-size:1.8rem;font-weight:900;background:var(--grad1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .hero-stat .lbl{font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+
+    .cat-nav{position:sticky;top:52px;z-index:90;background:rgba(5,10,18,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 16px;overflow-x:auto;white-space:nowrap;display:flex;gap:4px;-webkit-overflow-scrolling:touch}
+    .cat-nav::-webkit-scrollbar{height:0}
+    .cat-btn{padding:10px 16px;font-size:0.76rem;font-weight:600;color:var(--muted);border:none;background:none;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap}
+    .cat-btn:hover{color:var(--text)}
+    .cat-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+    .section{padding:40px 24px;max-width:1280px;margin:0 auto}
+    .section-head{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+    .section-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+    .section-title{font-size:1.25rem;font-weight:800}
+    .section-desc{font-size:0.82rem;color:var(--muted);margin-top:2px}
+
+    .demo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
+    @media(max-width:450px){.demo-grid{grid-template-columns:1fr}}
+
+    .demo-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:all 0.2s}
+    .demo-card:hover{border-color:var(--border2);box-shadow:var(--shadow)}
+    .demo-card-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .demo-card-head h3{font-size:0.88rem;font-weight:700;display:flex;align-items:center;gap:8px}
+    .demo-card-head .method{font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:4px;font-family:'JetBrains Mono',monospace}
+    .method-get{background:rgba(16,185,129,0.15);color:var(--green)}
+    .method-post{background:rgba(245,158,11,0.15);color:var(--amber)}
+    .demo-card-body{padding:18px}
+    .demo-card-body .endpoint{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--cyan);background:var(--bg2);padding:6px 10px;border-radius:6px;margin-bottom:12px;display:block;word-break:break-all}
+    .demo-card-body .desc{font-size:0.78rem;color:var(--muted);line-height:1.5;margin-bottom:14px}
+
+    .form-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+    .form-input{flex:1;min-width:120px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.78rem;outline:none;transition:border-color 0.15s}
+    .form-input:focus{border-color:var(--blue)}
+    .form-input::placeholder{color:var(--dim)}
+    .run-btn{padding:8px 18px;border:none;border-radius:6px;font-weight:700;font-size:0.78rem;color:#fff;transition:all 0.15s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+    .run-btn:hover{opacity:0.85;transform:translateY(-1px)}
+    .run-btn:active{transform:translateY(0)}
+    .run-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+    .run-btn.blue{background:var(--grad2)}
+    .run-btn.green{background:var(--grad3)}
+    .run-btn.purple{background:var(--grad5)}
+    .run-btn.orange{background:var(--grad4)}
+
+    .response-area{margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;display:none}
+    .response-area.show{display:block}
+    .response-head{padding:6px 12px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:0.68rem}
+    .response-status{font-weight:700;font-family:'JetBrains Mono',monospace}
+    .response-status.ok{color:var(--green)}.response-status.err{color:var(--red)}
+    .response-time{color:var(--dim);font-family:'JetBrains Mono',monospace}
+    .response-body{padding:12px;max-height:280px;overflow:auto;font-family:'JetBrains Mono',monospace;font-size:0.72rem;line-height:1.55;white-space:pre-wrap;word-break:break-word;color:var(--text2)}
+    .response-body .json-key{color:var(--purple)}.response-body .json-str{color:var(--green)}.response-body .json-num{color:var(--amber)}.response-body .json-bool{color:var(--blue)}.response-body .json-null{color:var(--dim)}
+
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .chat-container{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;max-width:700px}
+    .chat-messages{height:320px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+    .chat-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:0.82rem;line-height:1.5;animation:fadeIn 0.3s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    .chat-msg.user{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px}
+    .chat-msg.agent{align-self:flex-start;background:var(--bg3);border:1px solid var(--border);border-bottom-left-radius:4px}
+    .chat-msg.system{align-self:center;background:var(--bg2);color:var(--muted);font-size:0.75rem;border-radius:8px}
+    .chat-msg .intent-badge{display:inline-block;background:var(--grad5);color:#fff;font-size:0.65rem;padding:1px 8px;border-radius:8px;margin-top:6px;font-weight:600}
+    .chat-input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);background:var(--bg2)}
+    .chat-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:0.85rem;outline:none}
+    .chat-input:focus{border-color:var(--blue)}
+    .chat-send{background:var(--grad1);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:700;font-size:0.82rem}
+
+    .live-counter{display:flex;align-items:center;gap:6px;font-size:0.72rem;color:var(--green)}
+    .live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
+
+    .health-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px}
+    .health-item{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+    .health-item .h-val{font-size:1.1rem;font-weight:800;margin-bottom:2px}
+    .health-item .h-lbl{font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px}
+    .health-ok .h-val{color:var(--green)}
+    .health-warn .h-val{color:var(--amber)}
+
+    .footer{text-align:center;padding:40px 24px;color:var(--dim);font-size:0.78rem;border-top:1px solid var(--border);margin-top:40px}
+    .footer a{color:var(--blue)}
+
+    @media(max-width:768px){
+      .hero h1{font-size:1.6rem}
+      .hero-stats{gap:20px}
+      .hero-stat .val{font-size:1.3rem}
+      .demo-grid{grid-template-columns:1fr}
+      .section{padding:24px 16px}
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">&#9889; <span>Web Agent Bridge</span> <span class="nav-badge">v3.0 DEMO</span></div>
+  <div class="nav-links">
+    <a class="nav-link" href="/">Home</a>
+    <a class="nav-link" href="/docs">Docs</a>
+    <a class="nav-link" href="/pwa/">PWA Browser</a>
+    <a class="nav-link" href="https://github.com/AboKenan444/web-agent-bridge" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1>Experience the <span class="grad">Full Power</span> of WAB</h1>
+  <p>Interactive playground for every major capability &mdash; click &#9654; Run on any card to see live API responses from the production server.</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="val">200+</div><div class="lbl">API Endpoints</div></div>
+    <div class="hero-stat"><div class="val">31</div><div class="lbl">Services</div></div>
+    <div class="hero-stat"><div class="val" id="stat-uptime">&mdash;</div><div class="lbl">Uptime</div></div>
+    <div class="hero-stat"><div class="val" id="stat-version">3.0.0</div><div class="lbl">Version</div></div>
+  </div>
+</section>
+
+<nav class="cat-nav" id="cat-nav">
+  <button class="cat-btn active" data-cat="chat">&#128172; Chat</button>
+  <button class="cat-btn" data-cat="search">&#128269; Search</button>
+  <button class="cat-btn" data-cat="universal">&#127760; Universal</button>
+  <button class="cat-btn" data-cat="sovereign">&#128737; Sovereign</button>
+  <button class="cat-btn" data-cat="workspace">&#128194; Workspace</button>
+  <button class="cat-btn" data-cat="mesh">&#128376; Mesh</button>
+  <button class="cat-btn" data-cat="commander">&#127919; Commander</button>
+  <button class="cat-btn" data-cat="runtime">&#9881; Agent&nbsp;OS</button>
+  <button class="cat-btn" data-cat="vision">&#128065; Vision</button>
+  <button class="cat-btn" data-cat="discovery">&#128225; Discovery</button>
+  <button class="cat-btn" data-cat="health">&#128154; Health</button>
+</nav>
+
+<!-- ══ Agent Chat ══ -->
+<section class="section" id="sec-chat">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(59,130,246,0.12)">&#128172;</div>
+    <div><div class="section-title">AI Agent Chat</div><div class="section-desc">Natural language conversation with intent detection &mdash; supports shopping, booking, search, URL analysis in Arabic &amp; English</div></div>
+  </div>
+  <div class="chat-container">
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg system">&#128075; Send any message &mdash; the agent detects your intent and responds intelligently. Try Arabic or English!</div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" placeholder="Try: 'Find me cheap laptops' or '&#1571;&#1576;&#1581;&#1579; &#1593;&#1606; &#1601;&#1606;&#1575;&#1583;&#1602; &#1601;&#1610; &#1583;&#1576;&#1610;'">
+      <button class="chat-send" id="chat-send">Send &#10148;</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ Search ══ -->
+<section class="section" id="sec-search">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(6,182,212,0.12)">&#128269;</div>
+    <div><div class="section-title">Search Engine</div><div class="section-desc">Full-text search with autocomplete and trending analytics</div></div>
+  </div>
+  <div class="demo-grid">
+    <div class="demo-card"><div class="demo-card-head"><h3>Full-Text Search</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/search?q={query}</code><div class="desc">Search the WAB knowledge base with relevance scoring.</div><div class="form-row"><input class="form-input" id="search-q" placeholder="e.g. agent" value="agent"><button class="run-btn blue" onclick="D.get('/api/search?q='+encodeURIComponent(E('search-q')),'res-search')">&#9654; Search</button></div><div class="response-area" id="res-search"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>Autocomplete</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/search/suggest?q={prefix}</code><div class="desc">Real-time autocomplete suggestions as you type.</div><div class="form-row"><input class="form-input" id="suggest-q" placeholder="e.g. pri" value="pri"><button class="run-btn blue" onclick="D.get('/api/search/suggest?q='+encodeURIComponent(E('suggest-q')),'res-suggest')">&#9654; Suggest</button></div><div class="response-area" id="res-suggest"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>Trending Searches</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/search/trending</code><div class="desc">Most popular searches with count metrics.</div><div class="form-row"><button class="run-btn green" onclick="D.get('/api/search/trending','res-trending')">&#9654; Trending</button></div><div class="response-area" id="res-trending"></div></div></div>
+  </div>
+</section>
+
+<!-- ══ Universal Agent ══ -->
+<section class="section" id="sec-universal">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(16,185,129,0.12)">&#127760;</div>
+    <div><div class="section-title">Universal Agent</div><div class="section-desc">Analyze, compare, and find deals on ANY website &mdash; no bridge integration required</div></div>
+  </div>
+  <div class="demo-grid">
+    <div class="demo-card"><div class="demo-card-head"><h3>&#127991; Find Best Deals</h3><span class="method method-post">POST</span></div><div class="demo-card-body"><code class="endpoint">/api/universal/deals</code><div class="desc">Search across multiple sources with fairness ranking.</div><div class="form-row"><input class="form-input" id="deals-q" placeholder="Product..." value="laptop"><button class="run-btn green" onclick="D.post('/api/universal/deals',{query:E('deals-q')},'res-deals')">&#9654; Find</button></div><div class="response-area" id="res-deals"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#9878; Fairness Analysis</h3><span class="method method-post">POST</span></div><div class="demo-card-body"><code class="endpoint">/api/universal/fairness</code><div class="desc">Evaluate any website on trust, pricing transparency, openness. Score 0&ndash;100.</div><div class="form-row"><input class="form-input" id="fair-url" placeholder="Domain..." value="books.toscrape.com"><button class="run-btn green" onclick="D.post('/api/universal/fairness',{url:E('fair-url')},'res-fairness')">&#9654; Analyze</button></div><div class="response-area" id="res-fairness"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128300; Full Site Analysis</h3><span class="method method-post">POST</span></div><div class="demo-card-body"><code class="endpoint">/api/universal/analyze</code><div class="desc">Complete analysis: extraction, fraud detection, dark pattern scanning.</div><div class="form-row"><input class="form-input" id="analyze-url" placeholder="URL..." value="https://books.toscrape.com"><button class="run-btn green" onclick="D.post('/api/universal/analyze',{url:E('analyze-url')},'res-analyze')">&#9654; Analyze</button></div><div class="response-area" id="res-analyze"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#127942; Top Fair Sites</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/universal/top-fair</code><div class="desc">Leaderboard of fairest websites ranked by the fairness engine.</div><div class="form-row"><button class="run-btn green" onclick="D.get('/api/universal/top-fair','res-topfair')">&#9654; Leaderboard</button></div><div class="response-area" id="res-topfair"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128373; Dark Pattern Detection</h3><span class="method method-post">POST</span></div><div class="demo-card-body"><code class="endpoint">/api/universal/dark-patterns</code><div class="desc">Detect manipulative UI patterns: hidden fees, fake urgency, misleading options.</div><div class="form-row"><input class="form-input" id="dark-text" placeholder="Page text..." value="Only 2 left! Buy NOW before price goes up!"><button class="run-btn green" onclick="D.post('/api/universal/dark-patterns',{text:E('dark-text')},'res-dark')">&#9654; Detect</button></div><div class="response-area" id="res-dark"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128202; Sources</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/universal/sources</code><div class="desc">Competing sources by category for cross-site comparisons.</div><div class="form-row"><button class="run-btn green" onclick="D.get('/api/universal/sources','res-sources')">&#9654; Sources</button></div><div class="response-area" id="res-sources"></div></div></div>
+  </div>
+</section>
+
+<!-- ══ Sovereign ══ -->
+<section class="section" id="sec-sovereign">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(139,92,246,0.12)">&#128737;</div>
+    <div><div class="section-title">Sovereign Layer</div><div class="section-desc">Decentralized reputation, negotiation, anti-hallucination verification, price discrimination detection</div></div>
+  </div>
+  <div class="demo-grid">
+    <div class="demo-card"><div class="demo-card-head"><h3>&#11088; Reputation Leaderboard</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/sovereign/reputation/leaderboard</code><div class="desc">Rankings based on decentralized trust attestations from AI agents.</div><div class="form-row"><button class="run-btn purple" onclick="D.get('/api/sovereign/reputation/leaderboard','res-repl')">&#9654; Leaderboard</button></div><div class="response-area" id="res-repl"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#129309; Negotiation Engine</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/negotiate</code><div class="desc">Multi-round price negotiation between AI agents and websites.</div><div class="form-row"><button class="run-btn purple" onclick="D.get('/api/negotiate','res-neg')">&#9654; Explore</button></div><div class="response-area" id="res-neg"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128270; Anti-Hallucination Shield</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/sovereign/verify/stats</code><div class="desc">DOM vs Vision verification &mdash; catches AI hallucinations in real-time.</div><div class="form-row"><button class="run-btn purple" onclick="D.get('/api/sovereign/verify/stats','res-verify')">&#9654; Stats</button></div><div class="response-area" id="res-verify"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128176; Price Shield</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/sovereign/price-shield/stats</code><div class="desc">Detects dynamic pricing discrimination with multiple personas.</div><div class="form-row"><button class="run-btn purple" onclick="D.get('/api/sovereign/price-shield/stats','res-pshield')">&#9654; Stats</button></div><div class="response-area" id="res-pshield"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#127917; Identity Personas</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/sovereign/price-shield/personas</code><div class="desc">Stealth scanning personas: mobile, desktop, VPN, different regions.</div><div class="form-row"><button class="run-btn purple" onclick="D.get('/api/sovereign/price-shield/personas','res-personas')">&#9654; Personas</button></div><div class="response-area" id="res-personas"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128269; Reputation Search</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/sovereign/reputation/search?category=...</code><div class="desc">Search trusted sites by category and minimum reputation score.</div><div class="form-row"><input class="form-input" id="rep-cat" placeholder="Category" value="e-commerce"><input class="form-input" id="rep-min" type="number" value="0" style="max-width:80px"><button class="run-btn purple" onclick="D.get('/api/sovereign/reputation/search?category='+encodeURIComponent(E('rep-cat'))+'&minScore='+E('rep-min'),'res-reps')">&#9654; Search</button></div><div class="response-area" id="res-reps"></div></div></div>
+  </div>
+</section>
+
+<!-- ══ Workspace ══ -->
+<section class="section" id="sec-workspace">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(245,158,11,0.12)">&#128194;</div>
+    <div><div class="section-title">Workspace</div><div class="section-desc">Subscriptions, deal tracking, bookmarks, and browsing history (requires auth)</div></div>
+  </div>
+  <div class="demo-grid">
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128274; Register / Login</h3><span class="method method-post">POST</span></div><div class="demo-card-body"><code class="endpoint">/api/auth/register &rarr; /api/auth/login</code><div class="desc">Create account or login to get JWT token for authenticated demos.</div><div class="form-row"><input class="form-input" id="auth-email" placeholder="Email"><input class="form-input" id="auth-pass" placeholder="Password" type="password"></div><div class="form-row"><input class="form-input" id="auth-name" placeholder="Name (register)"><button class="run-btn orange" onclick="D.register()">Register</button><button class="run-btn blue" onclick="D.login()">Login</button></div><div style="margin-top:8px;font-size:0.72rem;color:var(--muted)" id="auth-status">&#9888; No token &mdash; register or login first</div><div class="response-area" id="res-auth"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128202; Subscription</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/workspace/subscription</code><div class="desc">Plan, usage stats, daily limits, and total savings.</div><div class="form-row"><button class="run-btn orange" onclick="D.auth('/api/workspace/subscription','res-sub')">&#9654; Get</button></div><div class="response-area" id="res-sub"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#11088; Bookmarks</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/workspace/favorites</code><div class="desc">Manage bookmarks &mdash; add, list, organize by folders.</div><div class="form-row"><button class="run-btn orange" onclick="D.auth('/api/workspace/favorites','res-fav')">&#9654; List</button><button class="run-btn blue" onclick="document.getElementById('fav-form').style.display=document.getElementById('fav-form').style.display==='none'?'flex':'none'">+ Add</button></div><div class="form-row" id="fav-form" style="display:none"><input class="form-input" id="fav-url" placeholder="URL" value="https://github.com"><input class="form-input" id="fav-title" value="GitHub"><input class="form-input" id="fav-folder" value="dev" style="max-width:80px"><button class="run-btn green" onclick="D.postAuth('/api/workspace/favorites',{url:E('fav-url'),title:E('fav-title'),folder:E('fav-folder')},'res-fav')">Save</button></div><div class="response-area" id="res-fav"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128220; History</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/workspace/history</code><div class="desc">Browse and search browsing history with pagination.</div><div class="form-row"><input class="form-input" id="hist-q" placeholder="Search..."><button class="run-btn orange" onclick="D.auth('/api/workspace/history'+(E('hist-q')?'?q='+encodeURIComponent(E('hist-q')):''),'res-hist')">&#9654; History</button></div><div class="response-area" id="res-hist"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128100; Profile</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/auth/me</code><div class="desc">View your authenticated user profile data.</div><div class="form-row"><button class="run-btn orange" onclick="D.auth('/api/auth/me','res-profile')">&#9654; Profile</button></div><div class="response-area" id="res-profile"></div></div></div>
+  </div>
+</section>
+
+<!-- ══ Mesh ══ -->
+<section class="section" id="sec-mesh">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(236,72,153,0.12)">&#128376;</div>
+    <div><div class="section-title">Agent Mesh Network</div><div class="section-desc">Multi-agent collaboration: registry, messaging, knowledge sharing, voting, RL, orchestration</div></div>
+  </div>
+  <div class="demo-grid">
+    <div class="demo-card"><div class="demo-card-head"><h3>&#129302; Active Agents</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/mesh/agents</code><div class="desc">All registered agents with roles, capabilities, and status.</div><div class="form-row"><button class="run-btn purple" onclick="D.get('/api/mesh/agents','res-ma')">&#9654; List</button></div><div class="response-area" id="res-ma"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128225; Channels</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/mesh/channels</code><div class="desc">Messaging channels for agent coordination.</div><div class="form-row"><button class="run-btn purple" onclick="D.get('/api/mesh/channels','res-mc')">&#9654; Channels</button></div><div class="response-area" id="res-mc"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#129504; Knowledge Base</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/mesh/knowledge</code><div class="desc">Shared knowledge graph &mdash; agents contribute and query verified learnings.</div><div class="form-row"><button class="run-btn purple" onclick="D.get('/api/mesh/knowledge','res-mk')">&#9654; Browse</button></div><div class="response-area" id="res-mk"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128202; Mesh Stats</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/mesh/stats</code><div class="desc">Agent counts, message throughput, and knowledge entries.</div><div class="form-row"><button class="run-btn purple" onclick="D.get('/api/mesh/stats','res-ms')">&#9654; Stats</button></div><div class="response-area" id="res-ms"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#127925; Symphony</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/mesh/symphony/templates</code><div class="desc">Multi-agent composition: parallel, sequential, conditional workflows.</div><div class="form-row"><button class="run-btn purple" onclick="D.get('/api/mesh/symphony/templates','res-sym')">&#9654; Templates</button></div><div class="response-area" id="res-sym"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#127891; Reinforcement Learning</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/mesh/learning/stats</code><div class="desc">Decisions, rewards, and strategy evolution over time.</div><div class="form-row"><button class="run-btn purple" onclick="D.get('/api/mesh/learning/stats','res-rl')">&#9654; Stats</button></div><div class="response-area" id="res-rl"></div></div></div>
+  </div>
+</section>
+
+<!-- ══ Commander ══ -->
+<section class="section" id="sec-commander">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(249,115,22,0.12)">&#127919;</div>
+    <div><div class="section-title">Commander &amp; Edge Computing</div><div class="section-desc">Mission decomposition, multi-step orchestration, distributed edge nodes</div></div>
+  </div>
+  <div class="demo-grid">
+    <div class="demo-card"><div class="demo-card-head"><h3>&#129513; Strategies</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/commander/strategies</code><div class="desc">Sequential, parallel, conditional, iterative, hybrid decomposition.</div><div class="form-row"><button class="run-btn orange" onclick="D.get('/api/commander/strategies','res-str')">&#9654; Get</button></div><div class="response-area" id="res-str"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128640; Missions</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/commander/missions</code><div class="desc">Complex multi-step operations decomposed into sub-tasks.</div><div class="form-row"><button class="run-btn orange" onclick="D.get('/api/commander/missions','res-mis')">&#9654; List</button></div><div class="response-area" id="res-mis"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#127758; Edge Nodes</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/commander/edge/nodes</code><div class="desc">Distributed edge computing nodes near data sources.</div><div class="form-row"><button class="run-btn orange" onclick="D.get('/api/commander/edge/nodes','res-edge')">&#9654; Nodes</button></div><div class="response-area" id="res-edge"></div></div></div>
+  </div>
+</section>
+
+<!-- ══ Agent OS ══ -->
+<section class="section" id="sec-runtime">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(99,102,241,0.12)">&#9881;</div>
+    <div><div class="section-title">Agent OS &mdash; Runtime Infrastructure</div><div class="section-desc">Full OS for AI agents: identity, tasks, execution, policies, adapters, marketplace, cluster, containers</div></div>
+  </div>
+  <div class="demo-grid">
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128203; Protocol</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/protocol</code><div class="desc">WAB protocol spec &mdash; commands, capabilities, and version.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/protocol','res-proto')">&#9654; Get</button></div><div class="response-area" id="res-proto"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128179; Plans &amp; Pricing</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/plans</code><div class="desc">Agent plans with rate limits and feature gates.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/plans','res-plans')">&#9654; Plans</button></div><div class="response-area" id="res-plans"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128268; Adapters</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/adapters</code><div class="desc">MCP, REST, and Browser adapters &mdash; connect via any protocol.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/adapters','res-adap')">&#9654; List</button></div><div class="response-area" id="res-adap"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#127978; Marketplace</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/marketplace</code><div class="desc">Agent templates, plugins, and compositions.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/marketplace','res-mkt')">&#9654; Browse</button></div><div class="response-area" id="res-mkt"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#127760; Cluster</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/cluster/status</code><div class="desc">Distributed execution cluster &mdash; workers, queues, capacity.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/cluster/status','res-clu')">&#9654; Status</button></div><div class="response-area" id="res-clu"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#9194; Replay Engine</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/replay/stats</code><div class="desc">Deterministic replay for debugging and audit.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/replay/stats','res-rep')">&#9654; Stats</button></div><div class="response-area" id="res-rep"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128293; Failure Analysis</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/failures/analysis/summary</code><div class="desc">Pattern detection, root cause, and recovery suggestions.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/failures/analysis/summary','res-fail')">&#9654; Summary</button></div><div class="response-area" id="res-fail"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#129504; LLM Gateway</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/llm/models</code><div class="desc">Available LLM models and gateway status.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/llm/models','res-llm')">&#9654; Models</button></div><div class="response-area" id="res-llm"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128202; Usage Metering</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/usage/stats</code><div class="desc">API call tracking, compute time, and billing.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/usage/stats','res-usg')">&#9654; Stats</button></div><div class="response-area" id="res-usg"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128220; Certification</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/certification</code><div class="desc">WAB-certified sites &mdash; verified for agent compatibility.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/certification','res-cert')">&#9654; List</button></div><div class="response-area" id="res-cert"></div></div></div>
+  </div>
+</section>
+
+<!-- ══ Vision & LfD ══ -->
+<section class="section" id="sec-vision">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(14,165,233,0.12)">&#128065;</div>
+    <div><div class="section-title">Vision Engine &amp; Learning from Demonstration</div><div class="section-desc">Local DOM analysis (no external API), element discovery, record-then-replay automation</div></div>
+  </div>
+  <div class="demo-grid">
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128301; Vision Models</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/vision/models</code><div class="desc">Supported vision models for local DOM analysis.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/vision/models','res-vm')">&#9654; Models</button></div><div class="response-area" id="res-vm"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128248; Vision History</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/vision/history</code><div class="desc">Cached analysis results &mdash; element maps and semantic labels.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/vision/history','res-vh')">&#9654; History</button></div><div class="response-area" id="res-vh"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#127916; LfD Stats</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/lfd/stats</code><div class="desc">Record user actions and auto-generate replayable recipes.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/lfd/stats','res-lfd')">&#9654; Stats</button></div><div class="response-area" id="res-lfd"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128214; Recipes</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/recipes</code><div class="desc">Replayable browser automation recipes.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/recipes','res-rcp')">&#9654; List</button></div><div class="response-area" id="res-rcp"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128268; Extraction Script</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/os/vision/extraction-script</code><div class="desc">Injectable browser script for DOM element extraction.</div><div class="form-row"><button class="run-btn blue" onclick="D.get('/api/os/vision/extraction-script','res-vex')">&#9654; Get Script</button></div><div class="response-area" id="res-vex"></div></div></div>
+  </div>
+</section>
+
+<!-- ══ Discovery ══ -->
+<section class="section" id="sec-discovery">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(20,184,166,0.12)">&#128225;</div>
+    <div><div class="section-title">Discovery &amp; Registry</div><div class="section-desc">Auto-discovery protocol, site registry with fairness scoring, standard endpoints</div></div>
+  </div>
+  <div class="demo-grid">
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128196; .well-known/wab.json</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/.well-known/wab.json</code><div class="desc">Standard auto-discovery for AI agents.</div><div class="form-row"><button class="run-btn green" onclick="D.get('/.well-known/wab.json','res-wk')">&#9654; Fetch</button></div><div class="response-area" id="res-wk"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128194; Public Registry</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/discovery/registry</code><div class="desc">Directory of WAB-enabled sites with fairness scores.</div><div class="form-row"><button class="run-btn green" onclick="D.get('/api/discovery/registry','res-reg')">&#9654; Browse</button></div><div class="response-area" id="res-reg"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128269; Discovery Search</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/api/discovery/search?q={query}</code><div class="desc">Fairness-weighted search across registered sites.</div><div class="form-row"><input class="form-input" id="disc-q" placeholder="Search..." value="shopping"><button class="run-btn green" onclick="D.get('/api/discovery/search?q='+encodeURIComponent(E('disc-q')),'res-ds')">&#9654; Search</button></div><div class="response-area" id="res-ds"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#128216; OpenAPI Spec</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/openapi.json</code><div class="desc">Machine-readable OpenAPI 3.0 specification.</div><div class="form-row"><button class="run-btn green" onclick="D.get('/openapi.json','res-oa')">&#9654; Fetch</button></div><div class="response-area" id="res-oa"></div></div></div>
+    <div class="demo-card"><div class="demo-card-head"><h3>&#129302; LLMs.txt</h3><span class="method method-get">GET</span></div><div class="demo-card-body"><code class="endpoint">/llms.txt</code><div class="desc">LLM-optimized text overview of the project.</div><div class="form-row"><button class="run-btn green" onclick="D.text('/llms.txt','res-llmtxt')">&#9654; Fetch</button></div><div class="response-area" id="res-llmtxt"></div></div></div>
+  </div>
+</section>
+
+<!-- ══ Health ══ -->
+<section class="section" id="sec-health">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(16,185,129,0.12)">&#128154;</div>
+    <div><div class="section-title">System Health &amp; Observability</div><div class="section-desc">Real-time monitoring, metrics, traces, logs, and subsystem status</div></div>
+  </div>
+  <div class="demo-grid">
+    <div class="demo-card" style="grid-column:1/-1">
+      <div class="demo-card-head">
+        <h3>&#127973; Full System Health</h3>
+        <div class="live-counter"><div class="live-dot"></div>Live from production</div>
+      </div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/observability/health</code>
+        <div class="desc">Comprehensive check across all subsystems &mdash; runtime, scheduler, queue, containers, replay, cluster.</div>
+        <div class="form-row">
+          <button class="run-btn green" onclick="D.health()">&#9654; Check Health</button>
+          <button class="run-btn blue" onclick="D.get('/api/os/observability/metrics','res-health')">&#128202; Metrics</button>
+          <button class="run-btn purple" onclick="D.get('/api/os/observability/traces','res-health')">&#128279; Traces</button>
+          <button class="run-btn orange" onclick="D.get('/api/os/observability/logs','res-health')">&#128221; Logs</button>
+        </div>
+        <div id="health-dashboard"></div>
+        <div class="response-area" id="res-health"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  <p>Web Agent Bridge v3.0.0 &mdash; The Infrastructure Layer Between AI Agents and the Web</p>
+  <p style="margin-top:4px"><a href="/">Home</a> &middot; <a href="/docs">Documentation</a> &middot; <a href="/pwa/">PWA Browser</a> &middot; <a href="https://github.com/AboKenan444/web-agent-bridge" target="_blank" rel="noopener">GitHub</a></p>
+</div>
+
+<script>
+(function(){
+'use strict';
+var B=location.origin,tk=null;
+function E(id){return document.getElementById(id).value}
+function hl(j){
+  if(typeof j!=='string')j=JSON.stringify(j,null,2);
+  return j.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      function(m){var c='json-num';if(/^"/.test(m))c=/:\s*$/.test(m)?'json-key':'json-str';else if(/true|false/.test(m))c='json-bool';else if(/null/.test(m))c='json-null';return'<span class="'+c+'">'+m+'</span>'});
+}
+function show(id,st,d,ms){
+  var el=document.getElementById(id);if(!el)return;
+  var ok=st>=200&&st<400;
+  el.className='response-area show';
+  el.innerHTML='<div class="response-head"><span class="response-status '+(ok?'ok':'err')+'">'+st+' '+(ok?'OK':'Error')+'</span><span class="response-time">'+ms+'ms</span></div><div class="response-body">'+(typeof d==='string'&&!/^[\[{]/.test(d.trim())?d.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):hl(d))+'</div>';
+}
+function loading(id){
+  var el=document.getElementById(id);if(!el)return;
+  el.className='response-area show';
+  el.innerHTML='<div class="response-head"><span class="response-status" style="color:var(--cyan)"><span class="spinner"></span> Loading...</span></div><div class="response-body" style="text-align:center;padding:20px;color:var(--muted)">Calling API...</div>';
+}
+function api(method,path,body,rid){
+  loading(rid);var t0=performance.now();
+  var o={method:method,headers:{}};
+  if(body){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body)}
+  if(tk)o.headers['Authorization']='Bearer '+tk;
+  return fetch(B+path,o).then(function(r){
+    var ms=Math.round(performance.now()-t0);
+    return r.json().then(function(d){show(rid,r.status,d,ms);return d})
+      .catch(function(){return r.text().then(function(t){show(rid,r.status,t,ms)})});
+  }).catch(function(e){show(rid,0,{error:e.message},Math.round(performance.now()-t0))});
+}
+function upAuth(){
+  var el=document.getElementById('auth-status');
+  el.innerHTML=tk?'\u2705 Token stored \u2014 <span style="color:var(--green);font-family:JetBrains Mono,monospace">'+tk.substring(0,24)+'...</span>':'\u26A0 No token \u2014 register or login first';
+}
+
+window.E=E;
+window.D={
+  get:function(p,r){return api('GET',p,null,r)},
+  post:function(p,b,r){return api('POST',p,b,r)},
+  text:function(p,r){
+    loading(r);var t0=performance.now();
+    fetch(B+p).then(function(x){return x.text().then(function(t){show(r,x.status,t,Math.round(performance.now()-t0))})})
+    .catch(function(e){show(r,0,e.message,Math.round(performance.now()-t0))});
+  },
+  auth:function(p,r){if(!tk)return alert('Please register or login first');return api('GET',p,null,r)},
+  postAuth:function(p,b,r){if(!tk)return alert('Please register or login first');return api('POST',p,b,r)},
+  register:function(){
+    var em=E('auth-email'),pw=E('auth-pass'),nm=E('auth-name');
+    if(!em||!pw)return alert('Email & password required');
+    api('POST','/api/auth/register',{email:em,password:pw,name:nm||'Demo User'},'res-auth')
+      .then(function(d){if(d&&d.token){tk=d.token;upAuth()}});
+  },
+  login:function(){
+    var em=E('auth-email'),pw=E('auth-pass');
+    if(!em||!pw)return alert('Email & password required');
+    api('POST','/api/auth/login',{email:em,password:pw},'res-auth')
+      .then(function(d){if(d&&d.token){tk=d.token;upAuth()}});
+  },
+  health:function(){
+    api('GET','/api/os/observability/health',null,'res-health').then(function(d){
+      if(!d||!d.status)return;
+      var dash=document.getElementById('health-dashboard');
+      var items=[
+        {l:'Status',v:d.status,ok:d.status==='healthy'},
+        {l:'Version',v:d.version||'\u2014',ok:true},
+        {l:'Uptime',v:d.uptime?Math.floor(d.uptime/3600)+'h '+Math.floor((d.uptime%3600)/60)+'m':'\u2014',ok:true},
+        {l:'Heap',v:d.memory?Math.round(d.memory.heapUsed/1048576)+'MB':'\u2014',ok:true}
+      ];
+      if(d.subsystems)Object.keys(d.subsystems).forEach(function(k){
+        var s=d.subsystems[k];items.push({l:k,v:s.status||'\u2014',ok:s.status==='healthy'||s.status==='ok'});
+      });
+      var h='<div class="health-grid">';
+      items.forEach(function(i){h+='<div class="health-item '+(i.ok?'health-ok':'health-warn')+'"><div class="h-val">'+i.v+'</div><div class="h-lbl">'+i.l+'</div></div>'});
+      dash.innerHTML=h+'</div>';
+    });
+  }
+};
+
+// NAV
+document.querySelectorAll('.cat-btn').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('.cat-btn').forEach(function(x){x.classList.remove('active')});
+    b.classList.add('active');
+    var t=document.getElementById('sec-'+b.dataset.cat);
+    if(t)t.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+});
+var secs=document.querySelectorAll('.section[id]'),btns=document.querySelectorAll('.cat-btn[data-cat]');
+window.addEventListener('scroll',function(){
+  var y=window.scrollY+160;
+  secs.forEach(function(s){
+    var id=s.id.replace('sec-','');
+    if(s.offsetTop<=y&&s.offsetTop+s.offsetHeight>y)
+      btns.forEach(function(b){b.classList.toggle('active',b.dataset.cat===id)});
+  });
+},{passive:true});
+
+// CHAT
+var chatBox=document.getElementById('chat-messages'),chatIn=document.getElementById('chat-input');
+var sid='demo-'+Math.random().toString(36).substr(2,8);
+function addMsg(t,c){var d=document.createElement('div');d.className='chat-msg '+c;d.innerHTML=t;chatBox.appendChild(d);chatBox.scrollTop=chatBox.scrollHeight}
+function sendChat(){
+  var msg=chatIn.value.trim();if(!msg)return;chatIn.value='';addMsg(msg,'user');
+  fetch(B+'/api/wab/agent-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,sessionId:sid})})
+  .then(function(r){return r.json()})
+  .then(function(d){
+    var html=d.response||d.message||JSON.stringify(d);
+    if(d.intent)html+='<div class="intent-badge">Intent: '+d.intent+'</div>';
+    if(d.task)html+='<div style="margin-top:6px;font-size:0.72rem;color:var(--cyan);font-family:JetBrains Mono,monospace">Task: '+d.task.id+' \u2014 '+d.task.status+'</div>';
+    addMsg(html,'agent');
+  }).catch(function(e){addMsg('Error: '+e.message,'agent')});
+}
+document.getElementById('chat-send').addEventListener('click',sendChat);
+chatIn.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat()});
+
+// INIT
+upAuth();
+fetch(B+'/api/os/observability/health').then(function(r){return r.json()}).then(function(d){
+  if(d.version)document.getElementById('stat-version').textContent=d.version;
+  if(d.uptime){var h=Math.floor(d.uptime/3600),m=Math.floor((d.uptime%3600)/60);document.getElementById('stat-uptime').textContent=h+'h '+m+'m'}
+}).catch(function(){});
+setTimeout(function(){D.health()},600);
+})();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB Interactive Demo — Web Agent Bridge v3.0</title>
+  <meta name="description" content="Interactive demo of all Web Agent Bridge capabilities: Agent Chat, Universal Analysis, Negotiation, Multi-Agent Mesh, Vision, LfD, Reputation, Price Shield, and more.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#050a12;--bg2:#0a1020;--bg3:#0d1528;--bg4:#111d35;--surface:#131d33;--border:#1a2744;--border2:#243352;--text:#e2e8f0;--text2:#cbd5e1;--muted:#64748b;--dim:#475569;--blue:#3b82f6;--purple:#8b5cf6;--green:#10b981;--emerald:#34d399;--amber:#f59e0b;--red:#ef4444;--cyan:#06b6d4;--pink:#ec4899;--indigo:#6366f1;--teal:#14b8a6;--sky:#0ea5e9;--orange:#f97316;--lime:#84cc16;--rose:#f43f5e;--grad1:linear-gradient(135deg,#3b82f6,#8b5cf6);--grad2:linear-gradient(135deg,#06b6d4,#3b82f6);--grad3:linear-gradient(135deg,#10b981,#06b6d4);--grad4:linear-gradient(135deg,#f59e0b,#f97316);--grad5:linear-gradient(135deg,#ec4899,#8b5cf6);--shadow:0 4px 24px rgba(0,0,0,0.4);--glow-blue:0 0 20px rgba(59,130,246,0.15);--glow-green:0 0 20px rgba(16,185,129,0.15);--glow-purple:0 0 20px rgba(139,92,246,0.15)}
+    html{scroll-behavior:smooth}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+    a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+    button{font-family:inherit;cursor:pointer}
+    code,.mono{font-family:'JetBrains Mono',monospace}
+    ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+    /* ─── NAV ─── */
+    .nav{position:sticky;top:0;z-index:100;padding:0 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:rgba(5,10,18,0.92);backdrop-filter:blur(12px);height:52px}
+    .nav-brand{font-weight:900;font-size:1.05rem;display:flex;align-items:center;gap:10px}
+    .nav-brand span{background:var(--grad1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .nav-badge{font-size:0.6rem;background:var(--grad1);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700}
+    .nav-links{display:flex;gap:6px;align-items:center}
+    .nav-link{color:var(--muted);font-size:0.8rem;padding:6px 12px;border-radius:6px;transition:all 0.15s;text-decoration:none}
+    .nav-link:hover{color:var(--text);background:var(--bg3);text-decoration:none}
+
+    /* ─── HERO ─── */
+    .hero{text-align:center;padding:48px 24px 32px;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 50% 50%,rgba(59,130,246,0.06) 0%,transparent 50%);pointer-events:none}
+    .hero h1{font-size:2.4rem;font-weight:900;line-height:1.15;margin-bottom:12px}
+    .hero h1 .grad{background:var(--grad1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .hero p{color:var(--muted);font-size:1rem;max-width:650px;margin:0 auto 24px;line-height:1.6}
+    .hero-stats{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+    .hero-stat{text-align:center}
+    .hero-stat .val{font-size:1.8rem;font-weight:900;background:var(--grad1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .hero-stat .lbl{font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+
+    /* ─── CATEGORY NAV ─── */
+    .cat-nav{position:sticky;top:52px;z-index:90;background:rgba(5,10,18,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 16px;overflow-x:auto;white-space:nowrap;display:flex;gap:4px;-webkit-overflow-scrolling:touch}
+    .cat-nav::-webkit-scrollbar{height:0}
+    .cat-btn{padding:10px 16px;font-size:0.76rem;font-weight:600;color:var(--muted);border:none;background:none;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap}
+    .cat-btn:hover{color:var(--text)}
+    .cat-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+    /* ─── SECTION ─── */
+    .section{padding:40px 24px;max-width:1280px;margin:0 auto}
+    .section-head{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+    .section-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+    .section-title{font-size:1.25rem;font-weight:800}
+    .section-desc{font-size:0.82rem;color:var(--muted);margin-top:2px}
+
+    /* ─── CARD GRID ─── */
+    .demo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
+    @media(max-width:450px){.demo-grid{grid-template-columns:1fr}}
+
+    /* ─── DEMO CARD ─── */
+    .demo-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:all 0.2s}
+    .demo-card:hover{border-color:var(--border2);box-shadow:var(--shadow)}
+    .demo-card-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .demo-card-head h3{font-size:0.88rem;font-weight:700;display:flex;align-items:center;gap:8px}
+    .demo-card-head .method{font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:4px;font-family:'JetBrains Mono',monospace}
+    .method-get{background:rgba(16,185,129,0.15);color:var(--green)}
+    .method-post{background:rgba(245,158,11,0.15);color:var(--amber)}
+    .demo-card-body{padding:18px}
+    .demo-card-body .endpoint{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--cyan);background:var(--bg2);padding:6px 10px;border-radius:6px;margin-bottom:12px;display:block;word-break:break-all}
+    .demo-card-body .desc{font-size:0.78rem;color:var(--muted);line-height:1.5;margin-bottom:14px}
+
+    /* Form controls */
+    .form-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+    .form-input{flex:1;min-width:120px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.78rem;outline:none;transition:border-color 0.15s}
+    .form-input:focus{border-color:var(--blue)}
+    .form-input::placeholder{color:var(--dim)}
+    textarea.form-input{min-height:60px;resize:vertical;font-size:0.74rem}
+    select.form-input{appearance:auto}
+    .run-btn{padding:8px 18px;border:none;border-radius:6px;font-weight:700;font-size:0.78rem;color:#fff;transition:all 0.15s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+    .run-btn:hover{opacity:0.85;transform:translateY(-1px)}
+    .run-btn:active{transform:translateY(0)}
+    .run-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+    .run-btn.blue{background:var(--grad2)}
+    .run-btn.green{background:var(--grad3)}
+    .run-btn.purple{background:var(--grad5)}
+    .run-btn.orange{background:var(--grad4)}
+
+    /* Response area */
+    .response-area{margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;display:none}
+    .response-area.show{display:block}
+    .response-head{padding:6px 12px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:0.68rem}
+    .response-status{font-weight:700;font-family:'JetBrains Mono',monospace}
+    .response-status.ok{color:var(--green)}.response-status.err{color:var(--red)}
+    .response-time{color:var(--dim);font-family:'JetBrains Mono',monospace}
+    .response-body{padding:12px;max-height:280px;overflow:auto;font-family:'JetBrains Mono',monospace;font-size:0.72rem;line-height:1.55;white-space:pre-wrap;word-break:break-word;color:var(--text2)}
+    .response-body .json-key{color:var(--purple)}.response-body .json-str{color:var(--green)}.response-body .json-num{color:var(--amber)}.response-body .json-bool{color:var(--blue)}.response-body .json-null{color:var(--dim)}
+
+    /* Status badges */
+    .badge{font-size:0.62rem;padding:2px 8px;border-radius:10px;font-weight:700}
+    .badge-live{background:rgba(16,185,129,0.15);color:var(--green)}
+    .badge-sim{background:rgba(139,92,246,0.15);color:var(--purple)}
+
+    /* Loading spinner */
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Agent Chat Section */
+    .chat-container{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;max-width:700px}
+    .chat-messages{height:320px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+    .chat-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:0.82rem;line-height:1.5;animation:fadeIn 0.3s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    .chat-msg.user{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px}
+    .chat-msg.agent{align-self:flex-start;background:var(--bg3);border:1px solid var(--border);border-bottom-left-radius:4px}
+    .chat-msg.system{align-self:center;background:var(--bg2);color:var(--muted);font-size:0.75rem;border-radius:8px}
+    .chat-msg .intent-badge{display:inline-block;background:var(--grad5);color:#fff;font-size:0.65rem;padding:1px 8px;border-radius:8px;margin-top:6px;font-weight:600}
+    .chat-input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);background:var(--bg2)}
+    .chat-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:0.85rem;outline:none}
+    .chat-input:focus{border-color:var(--blue)}
+    .chat-send{background:var(--grad1);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:700;font-size:0.82rem}
+
+    /* Live counter */
+    .live-counter{display:flex;align-items:center;gap:6px;font-size:0.72rem;color:var(--green)}
+    .live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
+
+    /* Health dashboard */
+    .health-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-top:12px}
+    .health-item{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+    .health-item .h-val{font-size:1.4rem;font-weight:800;margin-bottom:2px}
+    .health-item .h-lbl{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px}
+    .health-ok .h-val{color:var(--green)}
+    .health-warn .h-val{color:var(--amber)}
+
+    /* Tabs within cards */
+    .card-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg2)}
+    .card-tab{padding:8px 14px;font-size:0.72rem;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;transition:all 0.15s}
+    .card-tab:hover{color:var(--text)}
+    .card-tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+
+    /* Fairness meter */
+    .fairness-meter{margin-top:8px}
+    .meter-bar{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin-top:4px}
+    .meter-fill{height:100%;border-radius:4px;transition:width 0.6s ease}
+
+    /* Timeline */
+    .timeline{display:flex;flex-direction:column;gap:0}
+    .timeline-item{display:flex;gap:12px;padding:8px 0}
+    .timeline-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+    .timeline-content{flex:1;font-size:0.78rem;line-height:1.5}
+    .timeline-time{font-size:0.68rem;color:var(--dim);font-family:'JetBrains Mono',monospace}
+
+    /* Footer */
+    .footer{text-align:center;padding:40px 24px;color:var(--dim);font-size:0.78rem;border-top:1px solid var(--border);margin-top:40px}
+    .footer a{color:var(--blue)}
+
+    /* Responsive */
+    @media(max-width:768px){
+      .hero h1{font-size:1.6rem}
+      .hero-stats{gap:20px}
+      .hero-stat .val{font-size:1.3rem}
+      .demo-grid{grid-template-columns:1fr}
+      .section{padding:24px 16px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-brand">⚡ <span>Web Agent Bridge</span> <span class="nav-badge">v3.0 DEMO</span></div>
+  <div class="nav-links">
+    <a class="nav-link" href="/">Home</a>
+    <a class="nav-link" href="/docs">Docs</a>
+    <a class="nav-link" href="/pwa/">PWA Browser</a>
+    <a class="nav-link" href="https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <h1>Experience the <span class="grad">Full Power</span> of WAB</h1>
+  <p>Interactive playground for every major capability — click "Run" on any card to see live API responses from the production server.</p>
+  <div class="hero-stats" id="hero-stats">
+    <div class="hero-stat"><div class="val" id="stat-apis">—</div><div class="lbl">API Endpoints</div></div>
+    <div class="hero-stat"><div class="val" id="stat-services">31</div><div class="lbl">Services</div></div>
+    <div class="hero-stat"><div class="val" id="stat-uptime">—</div><div class="lbl">Uptime</div></div>
+    <div class="hero-stat"><div class="val" id="stat-version">3.0.0</div><div class="lbl">Version</div></div>
+  </div>
+</section>
+
+<!-- CATEGORY NAV -->
+<nav class="cat-nav" id="cat-nav">
+  <button class="cat-btn active" data-cat="chat">💬 Agent Chat</button>
+  <button class="cat-btn" data-cat="search">🔍 Search</button>
+  <button class="cat-btn" data-cat="universal">🌐 Universal Agent</button>
+  <button class="cat-btn" data-cat="sovereign">🛡️ Sovereign</button>
+  <button class="cat-btn" data-cat="workspace">📂 Workspace</button>
+  <button class="cat-btn" data-cat="mesh">🕸️ Agent Mesh</button>
+  <button class="cat-btn" data-cat="commander">🎯 Commander</button>
+  <button class="cat-btn" data-cat="runtime">⚙️ Agent OS</button>
+  <button class="cat-btn" data-cat="vision">👁️ Vision & LfD</button>
+  <button class="cat-btn" data-cat="discovery">📡 Discovery</button>
+  <button class="cat-btn" data-cat="health">💚 Health</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION: Agent Chat -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="section" id="sec-chat">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(59,130,246,0.12)">💬</div>
+    <div>
+      <div class="section-title">AI Agent Chat</div>
+      <div class="section-desc">Natural language conversation with intent detection — supports shopping, booking, search, and URL analysis</div>
+    </div>
+  </div>
+  <div class="chat-container">
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg system">👋 Send any message — the agent detects your intent (shopping, booking, analysis) and responds accordingly. Try Arabic or English!</div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" placeholder="Try: 'Find me cheap laptops' or 'أبحث عن فنادق في دبي'">
+      <button class="chat-send" id="chat-send">Send ➤</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION: Search Engine -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="section" id="sec-search">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(6,182,212,0.12)">🔍</div>
+    <div>
+      <div class="section-title">Search Engine</div>
+      <div class="section-desc">Full-text search with autocomplete suggestions and trending analytics</div>
+    </div>
+  </div>
+  <div class="demo-grid">
+
+    <!-- Search -->
+    <div class="demo-card" id="card-search">
+      <div class="demo-card-head"><h3>📄 Full-Text Search</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/search?q={query}</code>
+        <div class="desc">Search the WAB knowledge base — returns results with relevance scoring and text snippets.</div>
+        <div class="form-row">
+          <input class="form-input" id="search-q" placeholder="e.g. agent bridge" value="agent">
+          <button class="run-btn blue" onclick="runSearch()">▶ Search</button>
+        </div>
+        <div class="response-area" id="res-search"></div>
+      </div>
+    </div>
+
+    <!-- Suggest -->
+    <div class="demo-card" id="card-suggest">
+      <div class="demo-card-head"><h3>💡 Autocomplete Suggestions</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/search/suggest?q={prefix}</code>
+        <div class="desc">Get real-time autocomplete suggestions as you type.</div>
+        <div class="form-row">
+          <input class="form-input" id="suggest-q" placeholder="e.g. uni" value="pri">
+          <button class="run-btn blue" onclick="runSuggest()">▶ Suggest</button>
+        </div>
+        <div class="response-area" id="res-suggest"></div>
+      </div>
+    </div>
+
+    <!-- Trending -->
+    <div class="demo-card" id="card-trending">
+      <div class="demo-card-head"><h3>📈 Trending Searches</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/search/trending</code>
+        <div class="desc">See the most popular search queries with count metrics.</div>
+        <div class="form-row">
+          <button class="run-btn green" onclick="runTrending()">▶ Get Trending</button>
+        </div>
+        <div class="response-area" id="res-trending"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION: Universal Agent -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="section" id="sec-universal">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(16,185,129,0.12)">🌐</div>
+    <div>
+      <div class="section-title">Universal Agent</div>
+      <div class="section-desc">Analyze, compare, and find deals on ANY website — no bridge integration required</div>
+    </div>
+  </div>
+  <div class="demo-grid">
+
+    <!-- Deals -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🏷️ Find Best Deals</h3><span class="method method-post">POST</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/universal/deals</code>
+        <div class="desc">Search across multiple sources with fairness ranking to find the best deals.</div>
+        <div class="form-row">
+          <input class="form-input" id="deals-q" placeholder="Search product..." value="laptop">
+          <button class="run-btn green" onclick="runDeals()">▶ Find Deals</button>
+        </div>
+        <div class="response-area" id="res-deals"></div>
+      </div>
+    </div>
+
+    <!-- Fairness -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>⚖️ Fairness Analysis</h3><span class="method method-post">POST</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/universal/fairness</code>
+        <div class="desc">Evaluate any website on size, trust, pricing transparency, and openness. Get a fairness score 0–100.</div>
+        <div class="form-row">
+          <input class="form-input" id="fair-url" placeholder="Domain..." value="books.toscrape.com">
+          <button class="run-btn green" onclick="runFairness()">▶ Analyze</button>
+        </div>
+        <div class="response-area" id="res-fairness"></div>
+      </div>
+    </div>
+
+    <!-- Analyze -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🔬 Site Analysis</h3><span class="method method-post">POST</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/universal/analyze</code>
+        <div class="desc">Full analysis of any URL: extracts products, prices, detects fraud, dark patterns, and trust indicators.</div>
+        <div class="form-row">
+          <input class="form-input" id="analyze-url" placeholder="Full URL..." value="https://books.toscrape.com">
+          <button class="run-btn green" onclick="runAnalyze()">▶ Full Analysis</button>
+        </div>
+        <div class="response-area" id="res-analyze"></div>
+      </div>
+    </div>
+
+    <!-- Top Fair -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🏆 Top Fair Sites</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/universal/top-fair</code>
+        <div class="desc">Leaderboard of the fairest websites ranked by the WAB fairness engine.</div>
+        <div class="form-row">
+          <button class="run-btn green" onclick="runTopFair()">▶ Get Leaderboard</button>
+        </div>
+        <div class="response-area" id="res-topfair"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION: Sovereign -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="section" id="sec-sovereign">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(139,92,246,0.12)">🛡️</div>
+    <div>
+      <div class="section-title">Sovereign Layer</div>
+      <div class="section-desc">Decentralized reputation, real-time negotiation, anti-hallucination verification, and price discrimination detection</div>
+    </div>
+  </div>
+  <div class="demo-grid">
+
+    <!-- Reputation Leaderboard -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>⭐ Reputation Leaderboard</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/sovereign/reputation/leaderboard</code>
+        <div class="desc">Rankings of websites based on decentralized trust attestations from AI agents.</div>
+        <div class="form-row">
+          <button class="run-btn purple" onclick="runRepLeaderboard()">▶ Get Leaderboard</button>
+        </div>
+        <div class="response-area" id="res-rep-leaders"></div>
+      </div>
+    </div>
+
+    <!-- Negotiation Engine -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🤝 Negotiation Engine</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/negotiate</code>
+        <div class="desc">Real-time price negotiation between AI agents and websites. View available endpoints.</div>
+        <div class="form-row">
+          <button class="run-btn purple" onclick="runNegotiate()">▶ Explore Engine</button>
+        </div>
+        <div class="response-area" id="res-negotiate"></div>
+      </div>
+    </div>
+
+    <!-- Verification Stats -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🔎 Anti-Hallucination Shield</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/sovereign/verify/stats</code>
+        <div class="desc">Global statistics for the DOM vs Vision verification shield — catches agent hallucinations in real-time.</div>
+        <div class="form-row">
+          <button class="run-btn purple" onclick="runVerifyStats()">▶ Get Stats</button>
+        </div>
+        <div class="response-area" id="res-verify-stats"></div>
+      </div>
+    </div>
+
+    <!-- Price Shield Stats -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>💰 Price Shield</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/sovereign/price-shield/stats</code>
+        <div class="desc">Detects dynamic pricing discrimination by scanning sites from multiple personas (device, location, browser).</div>
+        <div class="form-row">
+          <button class="run-btn purple" onclick="runPriceShield()">▶ Get Stats</button>
+        </div>
+        <div class="response-area" id="res-price-shield"></div>
+      </div>
+    </div>
+
+    <!-- Price Shield Personas -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🎭 Scan Personas</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/sovereign/price-shield/personas</code>
+        <div class="desc">Available identity personas used for stealth price scanning (mobile, desktop, VPN, different regions, etc.)</div>
+        <div class="form-row">
+          <button class="run-btn purple" onclick="runPersonas()">▶ Get Personas</button>
+        </div>
+        <div class="response-area" id="res-personas"></div>
+      </div>
+    </div>
+
+    <!-- Reputation Search -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🔍 Reputation Search</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/sovereign/reputation/search?category={cat}</code>
+        <div class="desc">Search trusted sites by category — filtered by minimum reputation score.</div>
+        <div class="form-row">
+          <input class="form-input" id="rep-cat" placeholder="Category..." value="e-commerce">
+          <input class="form-input" id="rep-min" placeholder="Min score" value="0" type="number" style="max-width:80px">
+          <button class="run-btn purple" onclick="runRepSearch()">▶ Search</button>
+        </div>
+        <div class="response-area" id="res-rep-search"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION: Workspace -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="section" id="sec-workspace">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(245,158,11,0.12)">📂</div>
+    <div>
+      <div class="section-title">Workspace</div>
+      <div class="section-desc">User workspace with subscriptions, deal tracking, bookmarks, and browsing history (requires auth)</div>
+    </div>
+  </div>
+  <div class="demo-grid">
+
+    <!-- Auth Register -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🔐 Register / Login</h3><span class="method method-post">POST</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/auth/register  →  /api/auth/login</code>
+        <div class="desc">Create an account or login to get a JWT token. The token is stored for other authenticated demos below.</div>
+        <div class="form-row">
+          <input class="form-input" id="auth-email" placeholder="Email" value="">
+          <input class="form-input" id="auth-pass" placeholder="Password" value="" type="password">
+        </div>
+        <div class="form-row">
+          <input class="form-input" id="auth-name" placeholder="Name (for register)" value="">
+          <button class="run-btn orange" onclick="runRegister()">Register</button>
+          <button class="run-btn blue" onclick="runLogin()">Login</button>
+        </div>
+        <div style="margin-top:8px;font-size:0.72rem;color:var(--muted)" id="auth-status">No token stored</div>
+        <div class="response-area" id="res-auth"></div>
+      </div>
+    </div>
+
+    <!-- Subscription -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>📊 My Subscription</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/workspace/subscription</code>
+        <div class="desc">Get your workspace subscription plan, usage stats, daily task limits, and savings summary.</div>
+        <div class="form-row">
+          <button class="run-btn orange" onclick="runSubscription()">▶ Get Subscription</button>
+        </div>
+        <div class="response-area" id="res-subscription"></div>
+      </div>
+    </div>
+
+    <!-- Favorites -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>⭐ Bookmarks</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/workspace/favorites</code>
+        <div class="desc">Manage your bookmarks/favorites — add, list, organize by folders, and delete.</div>
+        <div class="form-row">
+          <button class="run-btn orange" onclick="runFavorites()">▶ My Bookmarks</button>
+          <button class="run-btn blue" onclick="runAddFavorite()">+ Add Bookmark</button>
+        </div>
+        <div class="form-row" id="fav-form" style="display:none">
+          <input class="form-input" id="fav-url" placeholder="URL" value="https://github.com">
+          <input class="form-input" id="fav-title" placeholder="Title" value="GitHub">
+          <input class="form-input" id="fav-folder" placeholder="Folder" value="dev" style="max-width:80px">
+        </div>
+        <div class="response-area" id="res-favorites"></div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>📜 Browsing History</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/workspace/history</code>
+        <div class="desc">Browse and search your browsing history — supports search, pagination, and clearing.</div>
+        <div class="form-row">
+          <input class="form-input" id="history-q" placeholder="Search history..." value="">
+          <button class="run-btn orange" onclick="runHistory()">▶ Get History</button>
+        </div>
+        <div class="response-area" id="res-history"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION: Agent Mesh -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="section" id="sec-mesh">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(236,72,153,0.12)">🕸️</div>
+    <div>
+      <div class="section-title">Agent Mesh Network</div>
+      <div class="section-desc">Multi-agent collaboration: registration, messaging, knowledge sharing, voting, reinforcement learning, and orchestration</div>
+    </div>
+  </div>
+  <div class="demo-grid">
+
+    <!-- Mesh Agents -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🤖 Active Agents</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/mesh/agents</code>
+        <div class="desc">List all currently registered agents in the mesh — with roles, capabilities, and status.</div>
+        <div class="form-row">
+          <button class="run-btn purple" onclick="runMeshAgents()">▶ List Agents</button>
+        </div>
+        <div class="response-area" id="res-mesh-agents"></div>
+      </div>
+    </div>
+
+    <!-- Mesh Channels -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>📡 Communication Channels</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/mesh/channels</code>
+        <div class="desc">View messaging channels where agents coordinate, share tactics, and broadcast alerts.</div>
+        <div class="form-row">
+          <button class="run-btn purple" onclick="runMeshChannels()">▶ List Channels</button>
+        </div>
+        <div class="response-area" id="res-mesh-channels"></div>
+      </div>
+    </div>
+
+    <!-- Mesh Knowledge -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🧠 Knowledge Base</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/mesh/knowledge</code>
+        <div class="desc">Shared knowledge graph — agents contribute learnings that other agents can query and verify.</div>
+        <div class="form-row">
+          <button class="run-btn purple" onclick="runMeshKnowledge()">▶ Browse Knowledge</button>
+        </div>
+        <div class="response-area" id="res-mesh-knowledge"></div>
+      </div>
+    </div>
+
+    <!-- Mesh Stats -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>📊 Mesh Statistics</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/mesh/stats</code>
+        <div class="desc">Overall mesh network health: agent count, message throughput, knowledge entries, and learning stats.</div>
+        <div class="form-row">
+          <button class="run-btn purple" onclick="runMeshStats()">▶ Get Stats</button>
+        </div>
+        <div class="response-area" id="res-mesh-stats"></div>
+      </div>
+    </div>
+
+    <!-- Symphony -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🎵 Symphony Orchestration</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/mesh/symphony/templates</code>
+        <div class="desc">Pre-built composition templates for multi-agent workflows — parallel, sequential, and conditional execution.</div>
+        <div class="form-row">
+          <button class="run-btn purple" onclick="runSymphony()">▶ Get Templates</button>
+        </div>
+        <div class="response-area" id="res-symphony"></div>
+      </div>
+    </div>
+
+    <!-- Learning -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🎓 Reinforcement Learning</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/mesh/learning/stats</code>
+        <div class="desc">Mesh learning engine: tracks agent decisions, rewards, and evolves strategies over time.</div>
+        <div class="form-row">
+          <button class="run-btn purple" onclick="runLearning()">▶ Learning Stats</button>
+        </div>
+        <div class="response-area" id="res-learning"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION: Commander -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="section" id="sec-commander">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(249,115,22,0.12)">🎯</div>
+    <div>
+      <div class="section-title">Commander & Edge Computing</div>
+      <div class="section-desc">Mission decomposition, multi-step task orchestration, and distributed edge computing</div>
+    </div>
+  </div>
+  <div class="demo-grid">
+
+    <!-- Strategies -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🧩 Decomposition Strategies</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/commander/strategies</code>
+        <div class="desc">Available strategies for breaking complex goals into executable tasks — sequential, parallel, conditional, iterative, and hybrid.</div>
+        <div class="form-row">
+          <button class="run-btn orange" onclick="runStrategies()">▶ Get Strategies</button>
+        </div>
+        <div class="response-area" id="res-strategies"></div>
+      </div>
+    </div>
+
+    <!-- Missions -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🚀 Missions</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/commander/missions</code>
+        <div class="desc">List all missions — complex multi-step operations decomposed into sub-tasks with dependency tracking.</div>
+        <div class="form-row">
+          <button class="run-btn orange" onclick="runMissions()">▶ List Missions</button>
+        </div>
+        <div class="response-area" id="res-missions"></div>
+      </div>
+    </div>
+
+    <!-- Edge Nodes -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🌍 Edge Computing Nodes</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/commander/edge/nodes</code>
+        <div class="desc">Distributed edge computing network — nodes in different regions execute tasks close to the data source.</div>
+        <div class="form-row">
+          <button class="run-btn orange" onclick="runEdgeNodes()">▶ List Nodes</button>
+        </div>
+        <div class="response-area" id="res-edge-nodes"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION: Agent OS / Runtime -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="section" id="sec-runtime">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(99,102,241,0.12)">⚙️</div>
+    <div>
+      <div class="section-title">Agent OS — Runtime Infrastructure</div>
+      <div class="section-desc">Full operating system for AI agents: identity, tasks, execution, policies, adapters, marketplace, cluster, containers, and more</div>
+    </div>
+  </div>
+  <div class="demo-grid">
+
+    <!-- Protocol -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>📋 Protocol Info</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/protocol</code>
+        <div class="desc">Complete WAB protocol specification — available commands, capabilities, and version info.</div>
+        <div class="form-row">
+          <button class="run-btn blue" onclick="runProtocol()">▶ Get Protocol</button>
+        </div>
+        <div class="response-area" id="res-protocol"></div>
+      </div>
+    </div>
+
+    <!-- Plans -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>💳 Plans & Pricing</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/plans</code>
+        <div class="desc">Available agent plans with rate limits, feature gates, and usage-based pricing details.</div>
+        <div class="form-row">
+          <button class="run-btn blue" onclick="runPlans()">▶ Get Plans</button>
+        </div>
+        <div class="response-area" id="res-plans"></div>
+      </div>
+    </div>
+
+    <!-- Adapters -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🔌 Protocol Adapters</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/adapters</code>
+        <div class="desc">MCP, REST, and Browser adapters — connect via any protocol. Includes MCP tool listing and REST endpoint registry.</div>
+        <div class="form-row">
+          <button class="run-btn blue" onclick="runAdapters()">▶ List Adapters</button>
+        </div>
+        <div class="response-area" id="res-adapters"></div>
+      </div>
+    </div>
+
+    <!-- Marketplace -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🏪 Agent Marketplace</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/marketplace</code>
+        <div class="desc">Browse the marketplace for agent templates, plugins, and compositions. Create, purchase, and review listings.</div>
+        <div class="form-row">
+          <button class="run-btn blue" onclick="runMarketplace()">▶ Browse</button>
+        </div>
+        <div class="response-area" id="res-marketplace"></div>
+      </div>
+    </div>
+
+    <!-- Cluster Status -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🌐 Cluster Status</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/cluster/status</code>
+        <div class="desc">Distributed execution cluster — view worker nodes, task queues, and compute capacity across the network.</div>
+        <div class="form-row">
+          <button class="run-btn blue" onclick="runCluster()">▶ Cluster Status</button>
+        </div>
+        <div class="response-area" id="res-cluster"></div>
+      </div>
+    </div>
+
+    <!-- Replay -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>⏪ Replay Engine</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/replay/stats</code>
+        <div class="desc">Deterministic replay — record agent executions and replay them for debugging, testing, or audit.</div>
+        <div class="form-row">
+          <button class="run-btn blue" onclick="runReplay()">▶ Get Stats</button>
+        </div>
+        <div class="response-area" id="res-replay"></div>
+      </div>
+    </div>
+
+    <!-- Failure Analysis -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🔥 Failure Analysis</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/failures/analysis/summary</code>
+        <div class="desc">Automated failure classification — pattern detection, root cause analysis, and recovery recommendations.</div>
+        <div class="form-row">
+          <button class="run-btn blue" onclick="runFailures()">▶ Get Summary</button>
+        </div>
+        <div class="response-area" id="res-failures"></div>
+      </div>
+    </div>
+
+    <!-- LLM -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🧠 LLM Gateway</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/llm/models</code>
+        <div class="desc">Available LLM models and gateway status — completion, embedding, and usage-metered access.</div>
+        <div class="form-row">
+          <button class="run-btn blue" onclick="runLLMModels()">▶ List Models</button>
+        </div>
+        <div class="response-area" id="res-llm"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION: Vision & LfD -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="section" id="sec-vision">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(14,165,233,0.12)">👁️</div>
+    <div>
+      <div class="section-title">Vision Engine & Learning from Demonstration</div>
+      <div class="section-desc">Local DOM analysis (no external API), element discovery, and record-then-replay automation recipes</div>
+    </div>
+  </div>
+  <div class="demo-grid">
+
+    <!-- Vision Models -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🔭 Vision Models</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/vision/models</code>
+        <div class="desc">Supported vision analysis models — local DOM analysis without sending data to external APIs.</div>
+        <div class="form-row">
+          <button class="run-btn blue" onclick="runVisionModels()">▶ List Models</button>
+        </div>
+        <div class="response-area" id="res-vision-models"></div>
+      </div>
+    </div>
+
+    <!-- Vision History -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>📸 Vision Analysis History</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/vision/history</code>
+        <div class="desc">Previous DOM analysis results cached by the vision engine — element maps, bounding boxes, and semantic labels.</div>
+        <div class="form-row">
+          <button class="run-btn blue" onclick="runVisionHistory()">▶ Get History</button>
+        </div>
+        <div class="response-area" id="res-vision-history"></div>
+      </div>
+    </div>
+
+    <!-- LfD Stats -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🎬 LfD — Learning from Demonstration</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/lfd/stats</code>
+        <div class="desc">Record user actions → auto-generate replayable recipes. Stats on recorded sessions, generated recipes, and step counts.</div>
+        <div class="form-row">
+          <button class="run-btn blue" onclick="runLfdStats()">▶ Get Stats</button>
+        </div>
+        <div class="response-area" id="res-lfd-stats"></div>
+      </div>
+    </div>
+
+    <!-- Recipes -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>📖 Automation Recipes</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/recipes</code>
+        <div class="desc">Saved automation recipes — replayable step-by-step browser actions generated from LfD recordings.</div>
+        <div class="form-row">
+          <button class="run-btn blue" onclick="runRecipes()">▶ List Recipes</button>
+        </div>
+        <div class="response-area" id="res-recipes"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION: Discovery -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="section" id="sec-discovery">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(20,184,166,0.12)">📡</div>
+    <div>
+      <div class="section-title">Discovery & Registry</div>
+      <div class="section-desc">Auto-discovery protocol, site registry with fairness scoring, and standard .well-known endpoints</div>
+    </div>
+  </div>
+  <div class="demo-grid">
+
+    <!-- Well-known -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>📄 WAB Discovery Document</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/.well-known/wab.json</code>
+        <div class="desc">Standard auto-discovery endpoint — any AI agent can find this to learn about the site's WAB capabilities.</div>
+        <div class="form-row">
+          <button class="run-btn green" onclick="runWellKnown()">▶ Fetch Document</button>
+        </div>
+        <div class="response-area" id="res-wellknown"></div>
+      </div>
+    </div>
+
+    <!-- Registry -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>📂 Public Registry</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/discovery/registry</code>
+        <div class="desc">Public directory of all WAB-enabled sites — with fairness scores, categories, and trust levels.</div>
+        <div class="form-row">
+          <button class="run-btn green" onclick="runRegistry()">▶ Browse Registry</button>
+        </div>
+        <div class="response-area" id="res-registry"></div>
+      </div>
+    </div>
+
+    <!-- Discovery Search -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>🔍 Discovery Search</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/discovery/search?q={query}</code>
+        <div class="desc">Fairness-weighted search across all registered WAB sites — finds the best match considering neutrality.</div>
+        <div class="form-row">
+          <input class="form-input" id="disc-q" placeholder="Search..." value="shopping">
+          <button class="run-btn green" onclick="runDiscSearch()">▶ Search</button>
+        </div>
+        <div class="response-area" id="res-disc-search"></div>
+      </div>
+    </div>
+
+    <!-- OpenAPI -->
+    <div class="demo-card">
+      <div class="demo-card-head"><h3>📘 OpenAPI Spec</h3><span class="method method-get">GET</span></div>
+      <div class="demo-card-body">
+        <code class="endpoint">/openapi.json</code>
+        <div class="desc">Full OpenAPI 3.0 specification — machine-readable API documentation for all endpoints.</div>
+        <div class="form-row">
+          <button class="run-btn green" onclick="runOpenAPI()">▶ Fetch Spec</button>
+        </div>
+        <div class="response-area" id="res-openapi"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION: Health -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="section" id="sec-health">
+  <div class="section-head">
+    <div class="section-icon" style="background:rgba(16,185,129,0.12)">💚</div>
+    <div>
+      <div class="section-title">System Health & Observability</div>
+      <div class="section-desc">Real-time health monitoring, metrics, traces, and full subsystem status</div>
+    </div>
+  </div>
+
+  <div class="demo-grid">
+    <!-- Full Health -->
+    <div class="demo-card" style="grid-column:1/-1">
+      <div class="demo-card-head">
+        <h3>🏥 Full System Health</h3>
+        <div class="live-counter"><div class="live-dot"></div>Live from production</div>
+      </div>
+      <div class="demo-card-body">
+        <code class="endpoint">/api/os/observability/health</code>
+        <div class="desc">Comprehensive health check across all subsystems — runtime, scheduler, queue, containers, replay, cluster, and more.</div>
+        <div class="form-row">
+          <button class="run-btn green" onclick="runHealth()">▶ Check Health</button>
+          <button class="run-btn blue" onclick="runMetrics()">📊 Metrics</button>
+        </div>
+        <div id="health-dashboard"></div>
+        <div class="response-area" id="res-health"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<div class="footer">
+  <p>Web Agent Bridge v3.0.0 — The Infrastructure Layer Between AI Agents and the Web</p>
+  <p style="margin-top:4px"><a href="/">Home</a> · <a href="/docs">Documentation</a> · <a href="/pwa/">PWA Browser</a> · <a href="https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener">GitHub</a></p>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var BASE = window.location.origin;
+  var authToken = null;
+
+  // ─── UTILS ──────────────────────────────────────────────────────────
+
+  function syntaxHighlight(json) {
+    if (typeof json !== 'string') json = JSON.stringify(json, null, 2);
+    return json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        function(m){
+          var cls='json-num';
+          if(/^"/.test(m)){cls=/:\s*$/.test(m)?'json-key':'json-str'}
+          else if(/true|false/.test(m)){cls='json-bool'}
+          else if(/null/.test(m)){cls='json-null'}
+          return '<span class="'+cls+'">'+m+'</span>';
+        });
+  }
+
+  function showResponse(id, status, data, ms) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var isOk = status >= 200 && status < 400;
+    el.className = 'response-area show';
+    el.innerHTML =
+      '<div class="response-head">' +
+        '<span class="response-status ' + (isOk ? 'ok' : 'err') + '">' + status + ' ' + (isOk ? 'OK' : 'Error') + '</span>' +
+        '<span class="response-time">' + ms + 'ms</span>' +
+      '</div>' +
+      '<div class="response-body">' + syntaxHighlight(data) + '</div>';
+  }
+
+  function showLoading(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'response-area show';
+    el.innerHTML =
+      '<div class="response-head"><span class="response-status" style="color:var(--cyan)"><span class="spinner"></span> Loading...</span></div>' +
+      '<div class="response-body" style="text-align:center;padding:20px;color:var(--muted)">Calling API...</div>';
+  }
+
+  function apiCall(method, path, body, resId) {
+    showLoading(resId);
+    var start = performance.now();
+    var opts = { method: method, headers: {} };
+    if (body) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    if (authToken) {
+      opts.headers['Authorization'] = 'Bearer ' + authToken;
+    }
+    return fetch(BASE + path, opts)
+      .then(function(r) {
+        var ms = Math.round(performance.now() - start);
+        return r.json().then(function(d) { showResponse(resId, r.status, d, ms); return d; })
+          .catch(function() { return r.text().then(function(t) { showResponse(resId, r.status, t, ms); }); });
+      })
+      .catch(function(e) {
+        var ms = Math.round(performance.now() - start);
+        showResponse(resId, 0, { error: 'Network error', message: e.message }, ms);
+      });
+  }
+
+  // ─── CATEGORY NAV ──────────────────────────────────────────────────
+
+  document.querySelectorAll('.cat-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.cat-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var target = document.getElementById('sec-' + btn.dataset.cat);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // Highlight active section on scroll
+  var sections = document.querySelectorAll('.section[id]');
+  var catBtns = document.querySelectorAll('.cat-btn[data-cat]');
+  window.addEventListener('scroll', function() {
+    var scrollY = window.scrollY + 160;
+    sections.forEach(function(sec) {
+      var id = sec.id.replace('sec-', '');
+      if (sec.offsetTop <= scrollY && sec.offsetTop + sec.offsetHeight > scrollY) {
+        catBtns.forEach(function(b) {
+          b.classList.toggle('active', b.dataset.cat === id);
+        });
+      }
+    });
+  }, { passive: true });
+
+  // ─── HERO STATS ─────────────────────────────────────────────────────
+
+  fetch(BASE + '/api/os/observability/health')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.version) document.getElementById('stat-version').textContent = d.version;
+      if (d.uptime) {
+        var h = Math.floor(d.uptime / 3600);
+        var m = Math.floor((d.uptime % 3600) / 60);
+        document.getElementById('stat-uptime').textContent = h + 'h ' + m + 'm';
+      }
+    })
+    .catch(function() {});
+
+  // Count endpoints from the page
+  var epCount = document.querySelectorAll('.endpoint').length;
+  document.getElementById('stat-apis').textContent = '200+';
+
+  // ─── SEARCH ─────────────────────────────────────────────────────────
+
+  window.runSearch = function() { apiCall('GET', '/api/search?q=' + encodeURIComponent(document.getElementById('search-q').value), null, 'res-search'); };
+  window.runSuggest = function() { apiCall('GET', '/api/search/suggest?q=' + encodeURIComponent(document.getElementById('suggest-q').value), null, 'res-suggest'); };
+  window.runTrending = function() { apiCall('GET', '/api/search/trending', null, 'res-trending'); };
+
+  // ─── UNIVERSAL ──────────────────────────────────────────────────────
+
+  window.runDeals = function() { apiCall('POST', '/api/universal/deals', { query: document.getElementById('deals-q').value }, 'res-deals'); };
+  window.runFairness = function() { apiCall('POST', '/api/universal/fairness', { url: document.getElementById('fair-url').value }, 'res-fairness'); };
+  window.runAnalyze = function() { apiCall('POST', '/api/universal/analyze', { url: document.getElementById('analyze-url').value }, 'res-analyze'); };
+  window.runTopFair = function() { apiCall('GET', '/api/universal/top-fair', null, 'res-topfair'); };
+
+  // ─── SOVEREIGN ──────────────────────────────────────────────────────
+
+  window.runRepLeaderboard = function() { apiCall('GET', '/api/sovereign/reputation/leaderboard', null, 'res-rep-leaders'); };
+  window.runNegotiate = function() { apiCall('GET', '/api/negotiate', null, 'res-negotiate'); };
+  window.runVerifyStats = function() { apiCall('GET', '/api/sovereign/verify/stats', null, 'res-verify-stats'); };
+  window.runPriceShield = function() { apiCall('GET', '/api/sovereign/price-shield/stats', null, 'res-price-shield'); };
+  window.runPersonas = function() { apiCall('GET', '/api/sovereign/price-shield/personas', null, 'res-personas'); };
+  window.runRepSearch = function() {
+    var cat = document.getElementById('rep-cat').value;
+    var min = document.getElementById('rep-min').value;
+    apiCall('GET', '/api/sovereign/reputation/search?category=' + encodeURIComponent(cat) + '&minScore=' + min, null, 'res-rep-search');
+  };
+
+  // ─── WORKSPACE (AUTH) ───────────────────────────────────────────────
+
+  function updateAuthStatus() {
+    var el = document.getElementById('auth-status');
+    if (authToken) {
+      el.innerHTML = '✅ Token stored — <span style="color:var(--green);font-family:JetBrains Mono,monospace">' + authToken.substring(0, 20) + '...</span>';
+    } else {
+      el.textContent = '⚠️ No token stored — register or login first';
+    }
+  }
+
+  window.runRegister = function() {
+    var email = document.getElementById('auth-email').value;
+    var pass = document.getElementById('auth-pass').value;
+    var name = document.getElementById('auth-name').value;
+    if (!email || !pass) return alert('Email and password required');
+    apiCall('POST', '/api/auth/register', { email: email, password: pass, name: name || 'Demo User' }, 'res-auth')
+      .then(function(d) { if (d && d.token) { authToken = d.token; updateAuthStatus(); } });
+  };
+
+  window.runLogin = function() {
+    var email = document.getElementById('auth-email').value;
+    var pass = document.getElementById('auth-pass').value;
+    if (!email || !pass) return alert('Email and password required');
+    apiCall('POST', '/api/auth/login', { email: email, password: pass }, 'res-auth')
+      .then(function(d) { if (d && d.token) { authToken = d.token; updateAuthStatus(); } });
+  };
+
+  window.runSubscription = function() {
+    if (!authToken) return alert('Please register or login first');
+    apiCall('GET', '/api/workspace/subscription', null, 'res-subscription');
+  };
+
+  window.runFavorites = function() {
+    if (!authToken) return alert('Please register or login first');
+    apiCall('GET', '/api/workspace/favorites', null, 'res-favorites');
+  };
+
+  window.runAddFavorite = function() {
+    var form = document.getElementById('fav-form');
+    if (form.style.display === 'none') {
+      form.style.display = 'flex';
+      return;
+    }
+    if (!authToken) return alert('Please register or login first');
+    apiCall('POST', '/api/workspace/favorites', {
+      url: document.getElementById('fav-url').value,
+      title: document.getElementById('fav-title').value,
+      folder: document.getElementById('fav-folder').value
+    }, 'res-favorites');
+  };
+
+  window.runHistory = function() {
+    if (!authToken) return alert('Please register or login first');
+    var q = document.getElementById('history-q').value;
+    var path = '/api/workspace/history' + (q ? '?q=' + encodeURIComponent(q) : '');
+    apiCall('GET', path, null, 'res-history');
+  };
+
+  // ─── MESH ───────────────────────────────────────────────────────────
+
+  window.runMeshAgents = function() { apiCall('GET', '/api/mesh/agents', null, 'res-mesh-agents'); };
+  window.runMeshChannels = function() { apiCall('GET', '/api/mesh/channels', null, 'res-mesh-channels'); };
+  window.runMeshKnowledge = function() { apiCall('GET', '/api/mesh/knowledge', null, 'res-mesh-knowledge'); };
+  window.runMeshStats = function() { apiCall('GET', '/api/mesh/stats', null, 'res-mesh-stats'); };
+  window.runSymphony = function() { apiCall('GET', '/api/mesh/symphony/templates', null, 'res-symphony'); };
+  window.runLearning = function() { apiCall('GET', '/api/mesh/learning/stats', null, 'res-learning'); };
+
+  // ─── COMMANDER ──────────────────────────────────────────────────────
+
+  window.runStrategies = function() { apiCall('GET', '/api/commander/strategies', null, 'res-strategies'); };
+  window.runMissions = function() { apiCall('GET', '/api/commander/missions', null, 'res-missions'); };
+  window.runEdgeNodes = function() { apiCall('GET', '/api/commander/edge/nodes', null, 'res-edge-nodes'); };
+
+  // ─── RUNTIME ────────────────────────────────────────────────────────
+
+  window.runProtocol = function() { apiCall('GET', '/api/os/protocol', null, 'res-protocol'); };
+  window.runPlans = function() { apiCall('GET', '/api/os/plans', null, 'res-plans'); };
+  window.runAdapters = function() { apiCall('GET', '/api/os/adapters', null, 'res-adapters'); };
+  window.runMarketplace = function() { apiCall('GET', '/api/os/marketplace', null, 'res-marketplace'); };
+  window.runCluster = function() { apiCall('GET', '/api/os/cluster/status', null, 'res-cluster'); };
+  window.runReplay = function() { apiCall('GET', '/api/os/replay/stats', null, 'res-replay'); };
+  window.runFailures = function() { apiCall('GET', '/api/os/failures/analysis/summary', null, 'res-failures'); };
+  window.runLLMModels = function() { apiCall('GET', '/api/os/llm/models', null, 'res-llm'); };
+
+  // ─── VISION & LFD ──────────────────────────────────────────────────
+
+  window.runVisionModels = function() { apiCall('GET', '/api/os/vision/models', null, 'res-vision-models'); };
+  window.runVisionHistory = function() { apiCall('GET', '/api/os/vision/history', null, 'res-vision-history'); };
+  window.runLfdStats = function() { apiCall('GET', '/api/os/lfd/stats', null, 'res-lfd-stats'); };
+  window.runRecipes = function() { apiCall('GET', '/api/os/recipes', null, 'res-recipes'); };
+
+  // ─── DISCOVERY ──────────────────────────────────────────────────────
+
+  window.runWellKnown = function() { apiCall('GET', '/.well-known/wab.json', null, 'res-wellknown'); };
+  window.runRegistry = function() { apiCall('GET', '/api/discovery/registry', null, 'res-registry'); };
+  window.runDiscSearch = function() { apiCall('GET', '/api/discovery/search?q=' + encodeURIComponent(document.getElementById('disc-q').value), null, 'res-disc-search'); };
+  window.runOpenAPI = function() { apiCall('GET', '/openapi.json', null, 'res-openapi'); };
+
+  // ─── HEALTH ─────────────────────────────────────────────────────────
+
+  window.runHealth = function() {
+    apiCall('GET', '/api/os/observability/health', null, 'res-health')
+      .then(function(d) {
+        if (!d || !d.status) return;
+        var dash = document.getElementById('health-dashboard');
+        var items = [
+          { label: 'Status', value: d.status, ok: d.status === 'healthy' },
+          { label: 'Version', value: d.version || '—', ok: true },
+          { label: 'Uptime', value: d.uptime ? Math.floor(d.uptime / 3600) + 'h' : '—', ok: true },
+          { label: 'Memory', value: d.memory ? Math.round(d.memory.heapUsed / 1048576) + 'MB' : '—', ok: true },
+        ];
+        if (d.subsystems) {
+          Object.keys(d.subsystems).forEach(function(k) {
+            var s = d.subsystems[k];
+            items.push({ label: k, value: s.status || '—', ok: s.status === 'healthy' || s.status === 'ok' });
+          });
+        }
+        var html = '<div class="health-grid">';
+        items.forEach(function(it) {
+          html += '<div class="health-item ' + (it.ok ? 'health-ok' : 'health-warn') + '">' +
+            '<div class="h-val">' + it.value + '</div>' +
+            '<div class="h-lbl">' + it.label + '</div></div>';
+        });
+        html += '</div>';
+        dash.innerHTML = html;
+      });
+  };
+
+  window.runMetrics = function() { apiCall('GET', '/api/os/observability/metrics', null, 'res-health'); };
+
+  // ─── AGENT CHAT ─────────────────────────────────────────────────────
+
+  var chatBox = document.getElementById('chat-messages');
+  var chatIn = document.getElementById('chat-input');
+  var sessionId = 'demo-' + Math.random().toString(36).substring(2, 10);
+
+  function addChatMsg(text, cls) {
+    var div = document.createElement('div');
+    div.className = 'chat-msg ' + cls;
+    div.innerHTML = text;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function sendChat() {
+    var msg = chatIn.value.trim();
+    if (!msg) return;
+    chatIn.value = '';
+    addChatMsg(msg, 'user');
+
+    fetch(BASE + '/api/wab/agent-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, sessionId: sessionId })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var html = d.response || d.message || JSON.stringify(d);
+      if (d.intent) {
+        html += '<div class="intent-badge">Intent: ' + d.intent + '</div>';
+      }
+      if (d.task) {
+        html += '<div style="margin-top:6px;font-size:0.72rem;color:var(--cyan);font-family:JetBrains Mono,monospace">Task ID: ' + d.task.id + ' — Status: ' + d.task.status + '</div>';
+      }
+      addChatMsg(html, 'agent');
+    })
+    .catch(function(e) {
+      addChatMsg('Error: ' + e.message, 'agent');
+    });
+  }
+
+  document.getElementById('chat-send').addEventListener('click', sendChat);
+  chatIn.addEventListener('keydown', function(e) { if (e.key === 'Enter') sendChat(); });
+
+  // ─── INIT ───────────────────────────────────────────────────────────
+
+  updateAuthStatus();
+  // Auto-load health on page load
+  setTimeout(function() { window.runHealth(); }, 500);
+})();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WAB Protocol Demo — Full Shopping Experience via Protocol</title>
   <meta name="description" content="WAB demo: shop, AI agent, and network log. Uses live Railway store when available; falls back to an in-browser protocol simulator (no external server required).">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
