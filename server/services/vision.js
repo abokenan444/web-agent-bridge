@@ -1070,10 +1070,10 @@ function getDomExtractionScript() {
      'aria-labelledby','aria-checked','data-action','checked','disabled'].forEach(function(a){
       if(el.hasAttribute(a))n.attributes[a]=el.getAttribute(a);
     });if(el.checked)n.attributes.checked='checked';
-    if(LAY.has(t)||INT.has(t)){n.children=[];for(var c of el.children){var cn=ext(c,d+1);if(cn)n.children.push(cn);}}
+    if(LAY.has(t)||INT.has(t)){n.children=[];var ch=Array.from(el.children);for(var j=0;j<ch.length;j++){var cn=ext(ch[j],d+1);if(cn)n.children.push(cn);}}
     return n;
   }
-  function sel(el){if(el.id)return'#'+CSS.escape(el.id);var p=[];var c=el;
+  function sel(el){if(!el||!el.tagName)return'unknown';if(el.id)return'#'+CSS.escape(el.id);var p=[];var c=el;
     for(var i=0;i<4&&c&&c!==document.body;i++){var s=c.tagName.toLowerCase();
       if(c.id){p.unshift('#'+CSS.escape(c.id));break;}
       if(c.className&&typeof c.className==='string'){var cl=c.className.trim().split(/\\s+/).slice(0,2).map(function(x){return'.'+CSS.escape(x);}).join('');if(cl)s+=cl;}

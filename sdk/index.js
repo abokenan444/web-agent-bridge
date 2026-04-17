@@ -616,4 +616,10 @@ class WABAgentOS {
   }
 }
 
-module.exports = { WABAgent, WABUniversalAgent, WABMultiAgent, WABAgentMesh, WABAgentOS };
+// Re-export WABToolkit from langchain package for convenience
+let WABToolkit;
+try { WABToolkit = require('../packages/langchain').WABToolkit; } catch {
+  try { WABToolkit = require('web-agent-bridge-langchain').WABToolkit; } catch {}
+}
+
+module.exports = { WABAgent, WABUniversalAgent, WABMultiAgent, WABAgentMesh, WABAgentOS, WABToolkit };

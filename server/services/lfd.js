@@ -277,11 +277,10 @@ class RecipeExecutor {
       errors: [],
     };
 
-    // Variable substitution in steps
+    // Variable substitution in steps — substitute in all string fields
     if (Object.keys(execution.variables).length > 0) {
       for (const step of execution.steps) {
-        if (step.value) step.value = this._substituteVars(step.value, execution.variables);
-        if (step.url) step.url = this._substituteVars(step.url, execution.variables);
+        this._substituteStepVars(step, execution.variables);
       }
     }
 
@@ -379,6 +378,23 @@ class RecipeExecutor {
     return str.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] !== undefined ? String(vars[key]) : `{{${key}}}`);
   }
 
+  _substituteStepVars(step, vars) {
+    if (step.value) step.value = this._substituteVars(step.value, vars);
+    if (step.url) step.url = this._substituteVars(step.url, vars);
+    if (step.selector) step.selector = this._substituteVars(step.selector, vars);
+    if (step.description) step.description = this._substituteVars(step.description, vars);
+    if (step.fallback) {
+      if (step.fallback.text) step.fallback.text = this._substituteVars(step.fallback.text, vars);
+      if (step.fallback.xpath) step.fallback.xpath = this._substituteVars(step.fallback.xpath, vars);
+      if (step.fallback.ariaLabel) step.fallback.ariaLabel = this._substituteVars(step.fallback.ariaLabel, vars);
+    }
+    if (step.options && typeof step.options === 'object') {
+      for (const k of Object.keys(step.options)) {
+        if (typeof step.options[k] === 'string') step.options[k] = this._substituteVars(step.options[k], vars);
+      }
+    }
+  }
+
   getStats() {
     const execs = [...this.executions.values()];
     return {
@@ -447,6 +463,9 @@ class LfdEngine {
   stopRecording(sessionId) {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error('Recording session not found');
+    if (session.status !== 'recording' && session.status !== 'paused') {
+      throw new Error(`Cannot stop recording in state: ${session.status}`);
+    }
     session.complete();
 
     // Auto-convert to recipe
