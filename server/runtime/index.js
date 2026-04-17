@@ -38,8 +38,23 @@ class WABRuntime {
     });
 
     this.events = bus;
+    this.replay = null;
+    this.container = null;
     this._started = false;
     this._cleanupTimer = null;
+
+    // Attach optional services
+    try {
+      const { replayEngine } = require('./replay');
+      this.replay = replayEngine;
+      this.scheduler.setReplayEngine(replayEngine);
+    } catch {}
+
+    try {
+      const { containerRunner } = require('./container');
+      this.container = containerRunner;
+      this.scheduler.setContainerRunner(containerRunner);
+    } catch {}
 
     // Register built-in task handlers
     this._registerBuiltinHandlers();
@@ -125,10 +140,13 @@ class WABRuntime {
    */
   getCapabilities() {
     return {
-      scheduler: { maxConcurrent: 20, retries: true, deadlines: true, dependencies: true },
+      scheduler: { maxConcurrent: 20, retries: true, deadlines: true, dependencies: true, externalQueue: true },
       state: { checkpoints: true, rollback: true, ttl: true },
       sandbox: { isolation: true, resourceLimits: true, auditTrail: true },
       events: { async: true, replay: true, wildcards: true, deadLetter: true },
+      replay: { persistent: true, eventSourcing: true, checkpoints: true, diff: true },
+      containers: { processIsolation: true, docker: !!this.container, resourceLimits: true },
+      workers: { distributed: true, pullBased: true, pushNotification: true },
     };
   }
 
@@ -143,6 +161,8 @@ class WABRuntime {
       state: this.state.getStats(),
       sandbox: this.sandbox.getStats(),
       events: this.events.getStats(),
+      replay: this.replay ? this.replay.getStats() : null,
+      containers: this.container ? this.container.getStats() : null,
     };
   }
 

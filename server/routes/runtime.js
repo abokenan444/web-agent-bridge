@@ -1940,4 +1940,208 @@ router.get('/cluster/events', (req, res) => {
   res.json({ events });
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// CONTAINER ISOLATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+let containerRunner;
+try { containerRunner = require('../runtime/container').containerRunner; } catch {}
+
+/**
+ * Run a task in an isolated container
+ */
+router.post('/containers/run', async (req, res) => {
+  if (!containerRunner) return res.status(501).json({ error: 'Container isolation not available' });
+  try {
+    const result = await containerRunner.runInProcess(
+      req.body.taskId || `ctr_task_${Date.now()}`,
+      req.body.code || '',
+      {
+        params: req.body.params || {},
+        timeout: req.body.timeout || 60000,
+        maxMemory: req.body.maxMemory || 256 * 1024 * 1024,
+        allowNetwork: req.body.allowNetwork !== false,
+      }
+    );
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * List active containers
+ */
+router.get('/containers', (req, res) => {
+  if (!containerRunner) return res.json({ containers: [] });
+  res.json({ containers: containerRunner.listContainers() });
+});
+
+/**
+ * Get container details
+ */
+router.get('/containers/:containerId', (req, res) => {
+  if (!containerRunner) return res.status(404).json({ error: 'Not found' });
+  const c = containerRunner.getContainer(req.params.containerId);
+  if (!c) return res.status(404).json({ error: 'Container not found' });
+  res.json(c);
+});
+
+/**
+ * Kill a container
+ */
+router.post('/containers/:containerId/kill', (req, res) => {
+  if (!containerRunner) return res.status(404).json({ error: 'Not found' });
+  const ok = containerRunner.kill(req.params.containerId);
+  res.json({ success: ok });
+});
+
+/**
+ * Container stats
+ */
+router.get('/containers/stats/summary', (req, res) => {
+  if (!containerRunner) return res.json({ active: 0 });
+  res.json(containerRunner.getStats());
+});
+
+/**
+ * Check Docker availability
+ */
+router.get('/containers/docker/status', (req, res) => {
+  if (!containerRunner) return res.json({ available: false });
+  res.json({ available: containerRunner.isDockerAvailable() });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXTERNAL QUEUE MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════
+
+let queueModule;
+try { queueModule = require('../runtime/queue'); } catch {}
+
+/**
+ * Queue stats
+ */
+router.get('/queue/stats', (req, res) => {
+  if (!queueModule) return res.json({ backend: 'memory' });
+  const q = queueModule.createQueue('scheduler');
+  res.json(q.getStats());
+});
+
+/**
+ * Purge completed items from queue
+ */
+router.post('/queue/purge', (req, res) => {
+  if (!queueModule) return res.json({ purged: 0 });
+  const q = queueModule.createQueue('scheduler');
+  const purged = q.purgeCompleted(parseInt(req.body.maxAge) || 3600_000);
+  res.json({ purged });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ENHANCED REPLAY
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Export a recording (full data for download)
+ */
+router.get('/replay/recordings/:taskId/export', (req, res) => {
+  const data = replayEngine.exportRecording(req.params.taskId);
+  if (!data) return res.status(404).json({ error: 'Recording not found' });
+  res.json(data);
+});
+
+/**
+ * Import a recording
+ */
+router.post('/replay/recordings/import', (req, res) => {
+  try {
+    const id = replayEngine.importRecording(req.body);
+    res.json({ success: true, recordingId: id });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Delete a recording
+ */
+router.delete('/replay/recordings/:taskId', (req, res) => {
+  replayEngine.deleteRecording(req.params.taskId);
+  res.json({ success: true });
+});
+
+/**
+ * Replay from a specific checkpoint
+ */
+router.post('/replay/:taskId/from-checkpoint', async (req, res) => {
+  try {
+    const result = await replayEngine.replay(req.params.taskId, {
+      verify: req.body.verify !== false,
+      continueOnMismatch: !!req.body.continueOnMismatch,
+      fromCheckpoint: req.body.checkpoint,
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Purge old recordings
+ */
+router.post('/replay/purge', (req, res) => {
+  const maxAge = parseInt(req.body.maxAge) || 7 * 24 * 3600_000;
+  replayEngine.purgeOld(maxAge);
+  res.json({ success: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKER PULL ENDPOINT (for distributed workers)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Workers pull tasks from here
+ */
+router.post('/cluster/nodes/:nodeId/pull', (req, res) => {
+  const limit = parseInt(req.body.limit) || 5;
+  // Fetch pending tasks from the cluster task distributor
+  const tasks = [];
+  try {
+    const pending = distributor.getPendingTasks ? distributor.getPendingTasks(req.params.nodeId, limit) : [];
+    tasks.push(...pending);
+  } catch {}
+  res.json({ tasks });
+});
+
+/**
+ * Worker reports task started
+ */
+router.post('/cluster/tasks/:taskId/started', (req, res) => {
+  bus.emit('cluster.task.started', { taskId: req.params.taskId, nodeId: req.body.nodeId });
+  res.json({ ok: true });
+});
+
+/**
+ * Worker reports task completed
+ */
+router.post('/cluster/tasks/:taskId/completed', (req, res) => {
+  bus.emit('cluster.task.completed', {
+    taskId: req.params.taskId,
+    result: req.body.result,
+  });
+  res.json({ ok: true });
+});
+
+/**
+ * Worker reports task failed
+ */
+router.post('/cluster/tasks/:taskId/failed', (req, res) => {
+  bus.emit('cluster.task.failed', {
+    taskId: req.params.taskId,
+    error: req.body.error,
+  });
+  res.json({ ok: true });
+});
+
 module.exports = router;
