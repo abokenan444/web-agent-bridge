@@ -36,6 +36,7 @@ const { hostedRuntime } = require('../services/hosted-runtime');
 const { sessionEngine } = require('../runtime/session-engine');
 const vision = require('../services/vision');
 const { lfdEngine } = require('../services/lfd');
+const { cluster, distributor } = require('../services/cluster');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // AUTH MIDDLEWARE
@@ -60,9 +61,7 @@ const PUBLIC_PATHS = [
   '/recipes',
   '/vision/models',
   '/vision/extraction-script',
-  '/recipes',
-  '/vision/models',
-  '/vision/extraction-script',
+  '/cluster/status',
 ];
 
 function authMiddleware(req, res, next) {
@@ -543,6 +542,7 @@ router.get('/observability/health', (req, res) => {
   health.hostedRuntime = hostedRuntime.getStats();
   health.metering = metering.getStats();
   health.lfd = lfdEngine.getStats();
+  health.cluster = cluster.getClusterStatus();
   res.json(health);
 });
 
@@ -1744,6 +1744,200 @@ router.get('/executions', (req, res) => {
  */
 router.get('/lfd/stats', (req, res) => {
   res.json(lfdEngine.getStats());
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CLUSTER — DISTRIBUTED EXECUTION & WORKER NODES
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Get cluster status (public)
+ */
+router.get('/cluster/status', (req, res) => {
+  res.json(cluster.getClusterStatus());
+});
+
+/**
+ * Register a worker node
+ */
+router.post('/cluster/nodes', (req, res) => {
+  try {
+    const result = cluster.registerNode({
+      name: req.body.name,
+      endpoint: req.body.endpoint,
+      region: req.body.region,
+      zone: req.body.zone,
+      role: req.body.role,
+      capacity: req.body.capacity,
+      tags: req.body.tags,
+      hardware: req.body.hardware,
+      version: req.body.version,
+      secret: req.body.secret,
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * List cluster nodes
+ */
+router.get('/cluster/nodes', (req, res) => {
+  const nodes = cluster.listNodes({
+    region: req.query.region,
+    active: req.query.active === 'true',
+  });
+  res.json({ nodes });
+});
+
+/**
+ * Get a specific node
+ */
+router.get('/cluster/nodes/:nodeId', (req, res) => {
+  const node = cluster.getNode(req.params.nodeId);
+  if (!node) return res.status(404).json({ error: 'Node not found' });
+  res.json(node);
+});
+
+/**
+ * Remove a node
+ */
+router.delete('/cluster/nodes/:nodeId', (req, res) => {
+  const result = cluster.deregisterNode(req.params.nodeId);
+  if (!result) return res.status(404).json({ error: 'Node not found' });
+  res.json(result);
+});
+
+/**
+ * Worker heartbeat
+ */
+router.post('/cluster/nodes/:nodeId/heartbeat', (req, res) => {
+  const result = cluster.heartbeat(req.params.nodeId, {
+    capacityUsed: req.body.capacityUsed,
+    capacityTotal: req.body.capacityTotal,
+    hardware: req.body.hardware,
+    tags: req.body.tags,
+    version: req.body.version,
+  });
+  if (!result) return res.status(404).json({ error: 'Node not found' });
+  res.json(result);
+});
+
+/**
+ * Drain a node (stop new tasks, wait for running)
+ */
+router.post('/cluster/nodes/:nodeId/drain', (req, res) => {
+  const result = cluster.drainNode(req.params.nodeId);
+  if (!result) return res.status(404).json({ error: 'Node not found' });
+  res.json(result);
+});
+
+/**
+ * Cordon a node (prevent scheduling)
+ */
+router.post('/cluster/nodes/:nodeId/cordon', (req, res) => {
+  const result = cluster.cordonNode(req.params.nodeId);
+  if (!result) return res.status(404).json({ error: 'Node not found' });
+  res.json(result);
+});
+
+/**
+ * Uncordon a node (allow scheduling again)
+ */
+router.post('/cluster/nodes/:nodeId/uncordon', (req, res) => {
+  const result = cluster.uncordonNode(req.params.nodeId);
+  if (!result) return res.status(404).json({ error: 'Node not found' });
+  res.json(result);
+});
+
+/**
+ * Submit a task for distributed execution
+ */
+router.post('/cluster/tasks', (req, res) => {
+  try {
+    const result = distributor.submit({
+      type: req.body.type,
+      objective: req.body.objective,
+      params: req.body.params,
+      priority: req.body.priority,
+      affinityTags: req.body.affinityTags,
+      affinityRegion: req.body.affinityRegion,
+      timeout: req.body.timeout,
+      maxAttempts: req.body.maxAttempts,
+      externalId: req.body.externalId,
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Get task details
+ */
+router.get('/cluster/tasks/:taskId', (req, res) => {
+  const task = cluster.getTask(req.params.taskId);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  res.json(task);
+});
+
+/**
+ * List tasks
+ */
+router.get('/cluster/tasks', (req, res) => {
+  const tasks = cluster.listTasks({
+    status: req.query.status,
+    nodeId: req.query.nodeId,
+    limit: parseInt(req.query.limit) || 50,
+  });
+  res.json({ tasks });
+});
+
+/**
+ * Worker pulls tasks (poll-based)
+ */
+router.post('/cluster/nodes/:nodeId/pull', (req, res) => {
+  const tasks = distributor.pullTasks(req.params.nodeId, parseInt(req.body.limit) || 5);
+  res.json({ tasks });
+});
+
+/**
+ * Worker reports task started
+ */
+router.post('/cluster/tasks/:taskId/started', (req, res) => {
+  const result = cluster.reportTaskStarted(req.params.taskId);
+  if (!result) return res.status(404).json({ error: 'Task not found' });
+  res.json(result);
+});
+
+/**
+ * Worker reports task completed
+ */
+router.post('/cluster/tasks/:taskId/completed', (req, res) => {
+  const result = cluster.reportTaskCompleted(req.params.taskId, req.body.result);
+  if (!result) return res.status(404).json({ error: 'Task not found' });
+  res.json(result);
+});
+
+/**
+ * Worker reports task failed
+ */
+router.post('/cluster/tasks/:taskId/failed', (req, res) => {
+  const result = cluster.reportTaskFailed(req.params.taskId, req.body.error);
+  if (!result) return res.status(404).json({ error: 'Task not found' });
+  res.json(result);
+});
+
+/**
+ * Get cluster events log
+ */
+router.get('/cluster/events', (req, res) => {
+  const events = cluster.getEvents(
+    parseInt(req.query.limit) || 100,
+    req.query.nodeId || null
+  );
+  res.json({ events });
 });
 
 module.exports = router;

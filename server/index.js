@@ -15,6 +15,7 @@ const { maybeBootstrapAdmin, db } = require('./models/db');
 const { initSearchEngine, search, getSuggestions, getTrendingSearches, getSearchStats, purgeOldCache } = require('./services/search-engine');
 const { processMessage: agentChat } = require('./services/agent-chat');
 const agentTasks = require('./services/agent-tasks');
+const { cluster } = require('./services/cluster');
 
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
@@ -358,6 +359,9 @@ if (process.env.NODE_ENV !== 'test') {
 
   // Start Agent OS runtime
   runtime.start();
+
+  // Start Cluster Orchestrator
+  cluster.start();
 
   server.listen(PORT, () => {
     console.log(`\n  ╔══════════════════════════════════════════╗`);
