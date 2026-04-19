@@ -229,7 +229,7 @@ router.get('/score/:domain', (req, res) => {
   if (!domain || domain.length < 3) return res.status(400).json({ error: 'Valid domain required' });
 
   // Check cache (valid for 24 hours)
-  const cached = db.prepare('SELECT * FROM wab_scores WHERE domain = ? AND expires_at > datetime("now")').get(domain);
+  const cached = db.prepare(`SELECT * FROM wab_scores WHERE domain = ? AND expires_at > datetime('now')`).get(domain);
   if (cached) {
     return res.json({
       domain,
@@ -315,7 +315,7 @@ router.post('/score/batch', (req, res) => {
   const results = [];
   for (const d of domains) {
     const domain = d.toLowerCase().replace(/^www\./, '').replace(/^https?:\/\//, '');
-    const cached = db.prepare('SELECT * FROM wab_scores WHERE domain = ? AND expires_at > datetime("now")').get(domain);
+    const cached = db.prepare(`SELECT * FROM wab_scores WHERE domain = ? AND expires_at > datetime('now')`).get(domain);
     if (cached) {
       results.push({ domain, score: cached.overall_score, grade: cached.grade, grade_label: cached.grade_label });
     } else {
@@ -325,7 +325,7 @@ router.post('/score/batch', (req, res) => {
       if (site) { fairness = calculateNeutralityScore(site); security = 75; }
       const overall = Math.round(fairness * 0.7 + security * 0.3);
       const g = getGrade(overall);
-      db.prepare('INSERT OR REPLACE INTO wab_scores (domain, overall_score, fairness_score, security_score, grade, grade_label, details, computed_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime("now"), datetime("now", "+1 day"))').run(domain, overall, fairness, security, g.grade, g.label, '{}');
+      db.prepare(`INSERT OR REPLACE INTO wab_scores (domain, overall_score, fairness_score, security_score, grade, grade_label, details, computed_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now', '+1 day'))`).run(domain, overall, fairness, security, g.grade, g.label, '{}');
       results.push({ domain, score: overall, grade: g.grade, grade_label: g.label });
     }
   }
@@ -343,7 +343,7 @@ router.get('/trust/verify/:domain', async (req, res) => {
   const domain = req.params.domain.toLowerCase().replace(/^www\./, '');
 
   // Check cache
-  const cached = db.prepare('SELECT * FROM trust_manifests WHERE domain = ? AND last_verified_at > datetime("now", "-1 day")').get(domain);
+  const cached = db.prepare(`SELECT * FROM trust_manifests WHERE domain = ? AND last_verified_at > datetime('now', '-1 day')`).get(domain);
   if (cached) {
     return res.json({
       domain,
@@ -392,7 +392,7 @@ router.get('/trust/verify/:domain', async (req, res) => {
   };
 
   // Cache
-  db.prepare('INSERT OR REPLACE INTO trust_manifests (domain, manifest, verified, verification_result, last_verified_at) VALUES (?, ?, ?, ?, datetime("now"))').run(domain, JSON.stringify(manifest || {}), verified ? 1 : 0, JSON.stringify(verification));
+  db.prepare(`INSERT OR REPLACE INTO trust_manifests (domain, manifest, verified, verification_result, last_verified_at) VALUES (?, ?, ?, ?, datetime('now'))`).run(domain, JSON.stringify(manifest || {}), verified ? 1 : 0, JSON.stringify(verification));
 
   res.json({
     domain,
@@ -424,7 +424,7 @@ router.post('/trust/register', authenticateToken, (req, res) => {
     },
   };
 
-  db.prepare('INSERT OR REPLACE INTO trust_manifests (domain, manifest, verified, verification_result, last_verified_at, registered_at) VALUES (?, ?, 0, ?, datetime("now"), datetime("now"))').run(domain, JSON.stringify(manifest), JSON.stringify({ self_registered: true }));
+  db.prepare(`INSERT OR REPLACE INTO trust_manifests (domain, manifest, verified, verification_result, last_verified_at, registered_at) VALUES (?, ?, 0, ?, datetime('now'), datetime('now'))`).run(domain, JSON.stringify(manifest), JSON.stringify({ self_registered: true }));
 
   res.json({
     domain,
@@ -545,7 +545,7 @@ function verifyBountyInternal(bountyId, url, reporterId) {
 
     const reward = REWARD_TIERS[tier];
 
-    db.prepare('UPDATE bounties SET status = ?, reward_tier = ?, credits_awarded = ?, scan_result = ?, verified_at = datetime("now") WHERE id = ?').run(tier === 'INVALID' ? 'REJECTED' : 'VERIFIED', tier, reward.credits, JSON.stringify({ risk_score: riskScore }), bountyId);
+    db.prepare(`UPDATE bounties SET status = ?, reward_tier = ?, credits_awarded = ?, scan_result = ?, verified_at = datetime('now') WHERE id = ?`).run(tier === 'INVALID' ? 'REJECTED' : 'VERIFIED', tier, reward.credits, JSON.stringify({ risk_score: riskScore }), bountyId);
 
     if (reward.credits > 0) {
       db.prepare('UPDATE bounty_reporters SET credits = credits + ?, verified_reports = verified_reports + 1 WHERE id = ?').run(reward.credits, reporterId);
@@ -769,7 +769,7 @@ router.post('/email/scan', (req, res) => {
 router.get('/email/stats', (req, res) => {
   const total = db.prepare('SELECT COUNT(*) as c FROM email_scans').get().c;
   const critical = db.prepare('SELECT COUNT(*) as c FROM email_scans WHERE overall_risk = ?').get('CRITICAL').c;
-  const last24h = db.prepare('SELECT COUNT(*) as c FROM email_scans WHERE scanned_at > datetime("now", "-1 day")').get().c;
+  const last24h = db.prepare(`SELECT COUNT(*) as c FROM email_scans WHERE scanned_at > datetime('now', '-1 day')`).get().c;
   res.json({
     total_scans: total,
     critical_detected: critical,
@@ -798,7 +798,7 @@ router.get('/affiliate/analyze/:networkId', (req, res) => {
   if (!network) return res.status(404).json({ error: 'Unknown network', known_networks: Object.keys(KNOWN_NETWORKS) });
 
   // Check cache
-  const cached = db.prepare('SELECT * FROM affiliate_reports WHERE network_id = ? AND analyzed_at > datetime("now", "-1 day")').get(networkId);
+  const cached = db.prepare(`SELECT * FROM affiliate_reports WHERE network_id = ? AND analyzed_at > datetime('now', '-1 day')`).get(networkId);
   if (cached) {
     return res.json({
       network_id: networkId,
