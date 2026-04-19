@@ -1,6 +1,6 @@
 {
   "name": "web-agent-bridge-vue",
-  "version": "2.6.0",
+  "version": "3.0.0",
   "description": "Vue 3 composables for Web Agent Bridge (WAB) browser client",
   "main": "index.js",
   "types": "index.d.ts",
@@ -9,10 +9,15 @@
     "vue": ">=3.2.0"
   },
   "license": "MIT",
+  "author": "Web Agent Bridge <dev@webagentbridge.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/anthropics/web-agent-bridge.git",
+    "url": "git+https://github.com/abokenan444/web-agent-bridge.git",
     "directory": "packages/vue"
+  },
+  "homepage": "https://www.webagentbridge.com",
+  "bugs": {
+    "url": "https://github.com/abokenan444/web-agent-bridge/issues"
   },
   "keywords": [
     "wab",

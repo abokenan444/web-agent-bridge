@@ -11,10 +11,15 @@
     "web-agent-bridge"
   ],
   "license": "MIT",
+  "author": "Web Agent Bridge <dev@webagentbridge.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/abokenan444/web-agent-bridge.git",
     "directory": "wab-mcp-adapter"
+  },
+  "homepage": "https://www.webagentbridge.com",
+  "bugs": {
+    "url": "https://github.com/abokenan444/web-agent-bridge/issues"
   },
   "peerDependencies": {
     "@anthropic-ai/sdk": ">=0.20.0"

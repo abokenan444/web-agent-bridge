@@ -3,7 +3,18 @@
   "version": "3.0.0",
   "description": "SDK for building AI agents that interact with Web Agent Bridge (WAB)",
   "main": "index.js",
+  "types": "index.d.ts",
   "license": "MIT",
+  "author": "Web Agent Bridge <dev@webagentbridge.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abokenan444/web-agent-bridge.git",
+    "directory": "sdk"
+  },
+  "homepage": "https://www.webagentbridge.com",
+  "bugs": {
+    "url": "https://github.com/abokenan444/web-agent-bridge/issues"
+  },
   "keywords": [
     "wab",
     "ai-agent",

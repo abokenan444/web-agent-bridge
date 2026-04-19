@@ -5,10 +5,15 @@
   "main": "index.js",
   "types": "index.d.ts",
   "license": "MIT",
+  "author": "Web Agent Bridge <dev@webagentbridge.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/anthropics/web-agent-bridge.git",
+    "url": "git+https://github.com/abokenan444/web-agent-bridge.git",
     "directory": "packages/langchain"
+  },
+  "homepage": "https://www.webagentbridge.com",
+  "bugs": {
+    "url": "https://github.com/abokenan444/web-agent-bridge/issues"
   },
   "peerDependencies": {
     "@langchain/core": ">=0.1.0"

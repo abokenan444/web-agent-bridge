@@ -1,20 +1,14 @@
 {
-  "name": "web-agent-bridge-svelte",
+  "name": "wab-widget",
   "version": "3.0.0",
-  "description": "Svelte stores and helpers for Web Agent Bridge (WAB) browser client",
-  "main": "index.js",
-  "types": "index.d.ts",
-  "svelte": "index.js",
-  "sideEffects": false,
-  "peerDependencies": {
-    "svelte": ">=3.0.0"
-  },
+  "description": "WAB Widget — Drop-in link protection for any website. Scans external links via WAB Shield API.",
+  "main": "wab-widget.js",
   "license": "MIT",
   "author": "Web Agent Bridge <dev@webagentbridge.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/abokenan444/web-agent-bridge.git",
-    "directory": "packages/svelte"
+    "directory": "packages/widget"
   },
   "homepage": "https://www.webagentbridge.com",
   "bugs": {
@@ -22,9 +16,10 @@
   },
   "keywords": [
     "wab",
-    "web-agent-bridge",
-    "ai-agent",
-    "svelte",
-    "store"
+    "widget",
+    "security",
+    "phishing",
+    "link-protection",
+    "web-agent-bridge"
   ]
 }

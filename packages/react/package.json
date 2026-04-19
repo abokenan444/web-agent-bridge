@@ -9,11 +9,13 @@
     "react": ">=17.0.0"
   },
   "license": "MIT",
+  "author": "Web Agent Bridge <dev@webagentbridge.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/abokenan444/web-agent-bridge.git",
     "directory": "packages/react"
   },
+  "homepage": "https://www.webagentbridge.com",
   "bugs": {
     "url": "https://github.com/abokenan444/web-agent-bridge/issues"
   },

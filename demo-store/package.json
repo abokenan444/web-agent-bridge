@@ -1,8 +1,10 @@
 {
   "name": "wab-demo-store",
   "version": "3.0.0",
+  "private": true,
   "description": "WAB-enabled demo store — showcases the Web Agent Bridge protocol",
   "main": "server.js",
+  "license": "MIT",
   "scripts": {
     "start": "node server.js"
   },
