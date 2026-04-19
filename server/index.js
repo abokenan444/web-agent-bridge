@@ -35,6 +35,7 @@ const workspaceRoutes = require('./routes/agent-workspace');
 const universalRoutes = require('./routes/universal');
 const runtimeRoutes = require('./routes/runtime');
 const demoShowcaseRoutes = require('./routes/demo-showcase');
+const growthRoutes = require('./routes/growth');
 const { handleWebhookRequest } = require('./services/stripe');
 const { runtime } = require('./runtime');
 
@@ -144,6 +145,7 @@ app.use('/api/workspace', apiLimiter, workspaceRoutes);
 app.use('/api/universal', apiLimiter, universalRoutes);
 app.use('/api/os', apiLimiter, runtimeRoutes);
 app.use('/api/demo', apiLimiter, demoShowcaseRoutes);
+app.use('/api/growth', apiLimiter, growthRoutes);
 
 // Convenience alias: /api/negotiate/* → /api/sovereign/negotiation/*
 app.get('/api/negotiate', apiLimiter, (req, res) => {
@@ -243,6 +245,9 @@ app.get('/workspace', (req, res) => {
 });
 app.get('/growth', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'growth.html'));
+});
+app.get('/score', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'score.html'));
 });
 
 // Browser downloads
