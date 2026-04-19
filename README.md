@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/web-agent-bridge)](https://www.npmjs.com/package/web-agent-bridge)
 [![CI](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Open Core](https://img.shields.io/badge/License-Open_Core-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
@@ -1532,4 +1532,12 @@ The full normative specification is available at [`docs/SPEC.md`](docs/SPEC.md):
 
 ## License
 
-MIT — Free to use, modify, and distribute.
+WAB uses an **Open Core** dual-license model:
+
+| Layer | License | Components |
+|-------|---------|------------|
+| **Open Source** | MIT | SDK, Widget, MCP Server, Trust Protocol Spec, Browser Extension |
+| **Proprietary** | Closed | Detection Engine, Threat DB, WAB Score Model, Fairness Algorithm |
+| **Commercial** | Paid API | Data Marketplace, Affiliate Intelligence, AI Safety Layer, Enterprise SDK |
+
+See [LICENSE](LICENSE) for full details.

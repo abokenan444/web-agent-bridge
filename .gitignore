@@ -6,8 +6,13 @@ data-test/
 dist/
 *.tgz
 
-# Proprietary — Growth Suite (closed-source)
+# ═══════════════════════════════════════════════════════
+# CLOSED SOURCE — Proprietary (server-side only)
+# Detection Engine, Threat DB, WAB Score Model,
+# Fairness Algorithm, Trust Verifier, Affiliate Detection
+# ═══════════════════════════════════════════════════════
 wab-growth-suite/
 server/routes/growth.js
 server/migrations/006_growth_suite.sql
+server/services/fairness.js
 public/score.html

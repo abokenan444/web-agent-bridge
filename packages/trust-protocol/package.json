@@ -1,0 +1,14 @@
+{
+  "name": "wab-trust-protocol",
+  "version": "2.5.0",
+  "description": "WAB Trust Layer Protocol — Open manifest spec for platform trust and fairness",
+  "main": "index.js",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abokenan444/web-agent-bridge",
+    "directory": "packages/trust-protocol"
+  },
+  "homepage": "https://www.webagentbridge.com",
+  "keywords": ["wab", "trust", "protocol", "fairness", "web-agent-bridge"]
+}

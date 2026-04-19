@@ -1,8 +1,58 @@
 # WAB Growth Suite
 
-> **Proprietary — Closed Source**
-> The Growth Suite implementation is proprietary and not included in this repository.
-> These features run exclusively on the official WAB platform at [webagentbridge.com](https://www.webagentbridge.com).
+> **Hybrid Model — Open Core**
+>
+> WAB follows the ["Open Core" model](https://en.wikipedia.org/wiki/Open-core_model) used by Cloudflare, MongoDB, Elastic, and Grafana.
+> Open-source components attract developers. Proprietary engines protect against manipulation.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   WAB Platform                      │
+│                                                     │
+│  ┌───────────────────────────────────────────────┐  │
+│  │       OPEN SOURCE (MIT License)               │  │
+│  │  • WAB SDK    • Widget    • MCP Server        │  │
+│  │  • Trust Protocol Spec   • Email Extension    │  │
+│  │  → Attracts developers, ensures viral spread  │  │
+│  └───────────────────────────────────────────────┘  │
+│                       ↓                             │
+│  ┌───────────────────────────────────────────────┐  │
+│  │       CLOSED SOURCE (Proprietary)             │  │
+│  │  • Detection Engine  • Threat Database        │  │
+│  │  • WAB Score Model   • Fairness Algorithm     │  │
+│  │  → Real value that cannot be copied           │  │
+│  └───────────────────────────────────────────────┘  │
+│                       ↓                             │
+│  ┌───────────────────────────────────────────────┐  │
+│  │       COMMERCIAL LICENSE (Paid API)           │  │
+│  │  • Enterprise SDK    • Data Marketplace       │  │
+│  │  • Affiliate Intel   • AI Safety Layer        │  │
+│  │  → Primary revenue source                     │  │
+│  └───────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
+## Why Closed Source for Detection?
+
+| Component | Reason |
+|-----------|--------|
+| Detection Engine | If scammers see the algorithm, they bypass it in hours |
+| Threat Database | Core competitive asset of WAB |
+| WAB Score Model | Scoring formula must stay secret to prevent manipulation |
+| Trust Verifier | If verification is known, certificates can be forged |
+| Fairness Algorithm | Platforms would game their results if they knew how it's calculated |
+| Affiliate Fraud Detection | Fraudulent networks would adapt to discovered patterns |
+
+## Protection Layers
+
+Even with closed source, additional protections ensure integrity:
+
+1. **Server-Side Only** — All detection algorithms run on the server. Clients only receive final results.
+2. **Rate Limiting** — Automated probing to reverse-engineer patterns is blocked.
+3. **Cryptographic Signing** — All results are signed and tamper-proof.
+4. **Continuous Versioning** — Algorithms evolve with new data — even if someone understands the current version, it will change.
 
 ## Overview
 

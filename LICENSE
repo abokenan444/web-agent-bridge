@@ -1,3 +1,22 @@
+WAB — Web Agent Bridge
+Dual License Model
+
+════════════════════════════════════════════════════════════════
+OPEN SOURCE COMPONENTS — MIT License
+════════════════════════════════════════════════════════════════
+
+The following components are licensed under the MIT License:
+
+  • WAB SDK (sdk/)
+  • WAB Widget (packages/widget/)
+  • WAB MCP Server (wab-mcp/, wab-mcp-adapter/)
+  • WAB Trust Protocol Spec (packages/trust-protocol/)
+  • WAB Browser Extension (wab-extension/)
+  • Framework Integrations (packages/react/, packages/vue/, packages/svelte/, packages/langchain/)
+  • WAB Browser (wab-browser/)
+  • API Documentation (docs/)
+  • Examples (examples/)
+
 MIT License
 
 Copyright (c) 2026 Web Agent Bridge Contributors
@@ -19,3 +38,35 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+════════════════════════════════════════════════════════════════
+PROPRIETARY COMPONENTS — All Rights Reserved
+════════════════════════════════════════════════════════════════
+
+The following components are proprietary and NOT included in this repository.
+They run exclusively on the official WAB platform (webagentbridge.com):
+
+  • Detection Engine — Threat scanning algorithms and pattern matching
+  • Threat Database — Aggregated threat intelligence data
+  • WAB Score Model — Domain trust and fairness scoring algorithm
+  • Fairness Algorithm — Neutrality-weighted search ranking system
+  • Trust Verifier — Server-side manifest verification engine
+  • Affiliate Fraud Detection — Network fraud analysis algorithms
+
+These components are protected by trade secret law. Unauthorized access,
+reverse engineering, or reproduction is prohibited.
+
+════════════════════════════════════════════════════════════════
+COMMERCIAL LICENSE — Paid Features
+════════════════════════════════════════════════════════════════
+
+The following features are available under commercial license:
+
+  • Enterprise SDK — Advanced agent orchestration
+  • Data Marketplace — Licensed threat and market datasets
+  • Affiliate Intelligence API — Network analysis and fraud reports
+  • AI Safety Layer API — Pre-navigation agent safety checks
+  • WAB Score API — Domain scoring and batch analysis
+  • Email Protection API — Phishing detection and sender analysis
+
+For commercial licensing, contact: https://www.webagentbridge.com
