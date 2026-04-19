@@ -246,7 +246,7 @@ router.get('/score/:domain', (req, res) => {
   }
 
   // Compute score
-  const site = db.prepare('SELECT * FROM sites WHERE LOWER(REPLACE(domain, "www.", "")) = ? AND active = 1').get(domain);
+  const site = db.prepare(`SELECT * FROM sites WHERE LOWER(REPLACE(domain, 'www.', '')) = ? AND active = 1`).get(domain);
 
   let fairnessScore = 50; // default for unknown sites
   let securityScore = 70;
@@ -321,7 +321,7 @@ router.post('/score/batch', (req, res) => {
     } else {
       // Quick compute with defaults
       let fairness = 50, security = 60;
-      const site = db.prepare('SELECT * FROM sites WHERE LOWER(REPLACE(domain, "www.", "")) = ? AND active = 1').get(domain);
+      const site = db.prepare(`SELECT * FROM sites WHERE LOWER(REPLACE(domain, 'www.', '')) = ? AND active = 1`).get(domain);
       if (site) { fairness = calculateNeutralityScore(site); security = 75; }
       const overall = Math.round(fairness * 0.7 + security * 0.3);
       const g = getGrade(overall);
