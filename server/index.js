@@ -125,7 +125,13 @@ const licenseLimiter = rateLimit({
   }
 });
 
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    }
+  }
+}));
 app.use('/script', express.static(path.join(__dirname, '..', 'script')));
 
 app.use('/api/auth', apiLimiter, authRoutes);
