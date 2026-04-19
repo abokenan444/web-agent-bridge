@@ -293,13 +293,13 @@ A: robots.txt says "what you can crawl." WAB says "what you can do" — it's act
 
 ## 14. MCP Server — AI Coding Tool Integration
 
-WAB provides a standalone MCP (Model Context Protocol) server package `@wab/mcp-server` that integrates with AI coding tools like Cursor, Claude Desktop, Cline, and Windsurf.
+WAB provides a standalone MCP (Model Context Protocol) server package `wab-mcp-server` that integrates with AI coding tools like Cursor, Claude Desktop, Cline, and Windsurf.
 
 ### Installation
 ```bash
-npm install -g @wab/mcp-server
+npm install -g wab-mcp-server
 # or run directly
-npx @wab/mcp-server
+npx wab-mcp-server
 ```
 
 ### Configuration
@@ -309,7 +309,7 @@ Add to `.cursor/mcp.json` or Claude Desktop config:
   "mcpServers": {
     "wab": {
       "command": "npx",
-      "args": ["-y", "@wab/mcp-server"]
+      "args": ["-y", "wab-mcp-server"]
     }
   }
 }
@@ -334,7 +334,7 @@ All generated code snippets automatically include WAB attribution comments, ensu
 | JavaScript/Node.js | `@wab/sdk` | `npm install @wab/sdk` |
 | React | `@wab/react` | `npm install @wab/react` |
 | Python | `wab-sdk` | `pip install wab-sdk` |
-| MCP Server | `@wab/mcp-server` | `npm install -g @wab/mcp-server` |
+| MCP Server | `wab-mcp-server` | `npm install -g wab-mcp-server` |
 
 ---
 

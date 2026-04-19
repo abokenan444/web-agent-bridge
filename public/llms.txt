@@ -85,9 +85,9 @@ WAB provides a Model Context Protocol (MCP) server that works with Cursor, Claud
 
 ### Install
 ```bash
-npm install -g @wab/mcp-server
+npm install -g wab-mcp-server
 # or use directly
-npx @wab/mcp-server
+npx wab-mcp-server
 ```
 
 ### Configure (Cursor / Claude Desktop)
@@ -97,7 +97,7 @@ Add to your MCP configuration:
   "mcpServers": {
     "wab": {
       "command": "npx",
-      "args": ["-y", "@wab/mcp-server"]
+      "args": ["-y", "wab-mcp-server"]
     }
   }
 }
@@ -116,7 +116,7 @@ Add to your MCP configuration:
 - **JavaScript/Node.js**: `npm install @wab/sdk`
 - **React**: `npm install @wab/react`
 - **Python**: `pip install wab-sdk`
-- **MCP Server**: `npm install -g @wab/mcp-server`
+- **MCP Server**: `npm install -g wab-mcp-server`
 
 ## Contact
 

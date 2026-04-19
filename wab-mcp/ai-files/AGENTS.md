@@ -66,7 +66,7 @@ pip install wab-sdk
 npm install @wab/react
 
 # MCP Server (for AI tools)
-npm install -g @wab/mcp-server
+npm install -g wab-mcp-server
 ```
 
 ## Attribution Standard

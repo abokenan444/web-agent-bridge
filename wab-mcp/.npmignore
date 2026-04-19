@@ -1,0 +1,9 @@
+src/
+test/
+ai-files/
+docs/
+examples/
+tsconfig.json
+*.ts
+!*.d.ts
+.gitignore

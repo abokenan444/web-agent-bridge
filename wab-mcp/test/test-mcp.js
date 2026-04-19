@@ -180,7 +180,7 @@ console.log('═'.repeat(60));
 if (failed === 0) {
   console.log('\n🎉 ALL TESTS PASSED — WAB MCP Server is ready for deployment!\n');
   console.log('📦 Next steps:');
-  console.log('   1. npm publish (publish @wab/mcp-server to npm)');
+  console.log('   1. npm publish (publish wab-mcp-server to npm)');
   console.log('   2. Copy ai-files/ to webagentbridge.com public root');
   console.log('   3. Add llms.txt to https://www.webagentbridge.com/llms.txt');
   console.log('   4. Submit to Cursor MCP marketplace');

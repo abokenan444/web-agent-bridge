@@ -1,10 +1,10 @@
 {
-  "name": "@wab/mcp-server",
+  "name": "wab-mcp-server",
   "version": "1.0.0",
   "description": "WAB (Web Agent Bridge) MCP Server — AI-native browser automation, scam protection, fairness scoring & deals intelligence for AI coding tools",
   "main": "dist/index.js",
   "bin": {
-    "wab-mcp": "dist/index.js"
+    "wab-mcp-server": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -22,7 +22,8 @@
   "homepage": "https://www.webagentbridge.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/webagentbridge/wab-mcp-server"
+    "url": "git+https://github.com/abokenan444/web-agent-bridge.git",
+    "directory": "wab-mcp"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
