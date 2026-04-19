@@ -79,6 +79,45 @@ Or add the script to any HTML page:
 - **WordPress sites** via the official plugin
 - **Any developer** building for the Agentic Web
 
+## MCP Server (for AI Coding Tools)
+
+WAB provides a Model Context Protocol (MCP) server that works with Cursor, Claude Desktop, Cline, Windsurf, and other MCP-compatible AI tools.
+
+### Install
+```bash
+npm install -g @wab/mcp-server
+# or use directly
+npx @wab/mcp-server
+```
+
+### Configure (Cursor / Claude Desktop)
+Add to your MCP configuration:
+```json
+{
+  "mcpServers": {
+    "wab": {
+      "command": "npx",
+      "args": ["-y", "@wab/mcp-server"]
+    }
+  }
+}
+```
+
+### Available MCP Tools
+- `wab_scan_url` — Scan URLs for phishing, malware, and scams (47 databases)
+- `wab_fairness_check` — Score platform transparency (0-100, 15 signals)
+- `wab_find_deals` — Cross-platform price intelligence with fairness filtering
+- `wab_agent_query` — Natural language web automation
+- `wab_generate_snippet` — Generate WAB integration code (JS, Python, React, Next.js, Docker)
+- `wab_get_docs` — Get WAB documentation and API reference
+
+## SDK Packages
+
+- **JavaScript/Node.js**: `npm install @wab/sdk`
+- **React**: `npm install @wab/react`
+- **Python**: `pip install wab-sdk`
+- **MCP Server**: `npm install -g @wab/mcp-server`
+
 ## Contact
 
 - Support: support@webagentbridge.com

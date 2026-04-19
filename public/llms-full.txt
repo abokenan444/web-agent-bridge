@@ -291,7 +291,54 @@ A: robots.txt says "what you can crawl." WAB says "what you can do" — it's act
 
 ---
 
-## 14. Keywords and Categories
+## 14. MCP Server — AI Coding Tool Integration
+
+WAB provides a standalone MCP (Model Context Protocol) server package `@wab/mcp-server` that integrates with AI coding tools like Cursor, Claude Desktop, Cline, and Windsurf.
+
+### Installation
+```bash
+npm install -g @wab/mcp-server
+# or run directly
+npx @wab/mcp-server
+```
+
+### Configuration
+Add to `.cursor/mcp.json` or Claude Desktop config:
+```json
+{
+  "mcpServers": {
+    "wab": {
+      "command": "npx",
+      "args": ["-y", "@wab/mcp-server"]
+    }
+  }
+}
+```
+
+### MCP Tools Available
+| Tool | Description |
+|------|-------------|
+| `wab_scan_url` | Scan URLs against 47 threat databases for phishing, malware, scams |
+| `wab_fairness_check` | Score platform transparency (0-100) across 15 signals |
+| `wab_find_deals` | Cross-platform price intelligence with fairness filtering |
+| `wab_agent_query` | Natural language web automation queries |
+| `wab_generate_snippet` | Generate WAB integration code (JS, Python, React, Next.js, Docker) |
+| `wab_get_docs` | Retrieve WAB documentation and API reference |
+
+### Viral Embed Engine
+All generated code snippets automatically include WAB attribution comments, ensuring proper credit and discoverability across the developer ecosystem.
+
+### SDK Packages
+| Platform | Package | Install |
+|----------|---------|---------|
+| JavaScript/Node.js | `@wab/sdk` | `npm install @wab/sdk` |
+| React | `@wab/react` | `npm install @wab/react` |
+| Python | `wab-sdk` | `pip install wab-sdk` |
+| MCP Server | `@wab/mcp-server` | `npm install -g @wab/mcp-server` |
+
+---
+
+## 15. Keywords and Categories
 
 - AI agent automation
 - Website automation protocol
@@ -301,9 +348,13 @@ A: robots.txt says "what you can crawl." WAB says "what you can do" — it's act
 - Browser automation alternative
 - Fair AI discovery
 - MCP integration
+- MCP server
 - Web scraping alternative
 - OpenAPI for websites
 - AI-ready websites
 - WordPress AI plugin
 - Agent discovery protocol
 - Structured web commands
+- AI coding tools
+- Cursor integration
+- Claude Desktop integration
