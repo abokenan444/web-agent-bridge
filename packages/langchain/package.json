@@ -1,6 +1,6 @@
 {
   "name": "web-agent-bridge-langchain",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "LangChain tool wrapper for Web Agent Bridge — lets LLM agents call WAB actions as LangChain tools",
   "main": "index.js",
   "types": "index.d.ts",

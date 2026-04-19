@@ -1,6 +1,6 @@
 {
   "name": "web-agent-bridge-sdk",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "SDK for building AI agents that interact with Web Agent Bridge (WAB)",
   "main": "index.js",
   "types": "index.d.ts",
