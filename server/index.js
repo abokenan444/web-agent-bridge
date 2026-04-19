@@ -211,49 +211,55 @@ app.get('/api/search/stats', apiLimiter, (req, res) => {
   res.json(stats);
 });
 
-app.get('/dashboard', (req, res) => {
+// Prevent browsers from caching HTML page routes
+function noCache(req, res, next) {
+  res.set('Cache-Control', 'no-cache, must-revalidate');
+  next();
+}
+
+app.get('/dashboard', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));
 });
-app.get('/mesh-dashboard', (req, res) => {
+app.get('/mesh-dashboard', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'mesh-dashboard.html'));
 });
-app.get('/commander-dashboard', (req, res) => {
+app.get('/commander-dashboard', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'commander-dashboard.html'));
 });
-app.get('/docs', (req, res) => {
+app.get('/docs', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'docs.html'));
 });
-app.get('/login', (req, res) => {
+app.get('/login', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
 });
-app.get('/register', (req, res) => {
+app.get('/register', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'register.html'));
 });
-app.get('/admin/login', (req, res) => {
+app.get('/admin/login', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'login.html'));
 });
-app.get('/admin', (req, res) => {
+app.get('/admin', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'dashboard.html'));
 });
-app.get('/privacy', (req, res) => {
+app.get('/privacy', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'privacy.html'));
 });
-app.get('/terms', (req, res) => {
+app.get('/terms', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'terms.html'));
 });
-app.get('/cookies', (req, res) => {
+app.get('/cookies', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'cookies.html'));
 });
-app.get('/browser', (req, res) => {
+app.get('/browser', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'browser.html'));
 });
-app.get('/workspace', (req, res) => {
+app.get('/workspace', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'agent-workspace.html'));
 });
-app.get('/growth', (req, res) => {
+app.get('/growth', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'growth.html'));
 });
-app.get('/score', (req, res) => {
+app.get('/score', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'score.html'));
 });
 
