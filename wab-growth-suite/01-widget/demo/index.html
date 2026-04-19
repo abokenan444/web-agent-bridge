@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB Widget Demo — Web Agent Bridge</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; }
+    header { background: linear-gradient(135deg, #0f172a, #1e3a5f); color: #fff; padding: 40px 24px; text-align: center; }
+    header h1 { font-size: 28px; margin-bottom: 8px; }
+    header p { color: #94a3b8; font-size: 15px; }
+    .container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
+    .card { background: #fff; border-radius: 12px; padding: 28px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .card h2 { font-size: 18px; margin-bottom: 16px; color: #0f172a; }
+    .link-list { list-style: none; }
+    .link-list li { padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+    .link-list li:last-child { border-bottom: none; }
+    .link-list a { color: #3b82f6; text-decoration: none; }
+    .link-list a:hover { text-decoration: underline; }
+    .code-block { background: #0f172a; color: #e2e8f0; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto; margin-top: 12px; line-height: 1.6; }
+    .badge-demo { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+    .badge-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; font-size: 13px; }
+    footer { text-align: center; padding: 32px; color: #94a3b8; font-size: 13px; }
+    footer a { color: #3b82f6; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🛡️ WAB Widget Demo</h1>
+  <p>Drop-in link protection for any website — Powered by <a href="https://www.webagentbridge.com" style="color:#60a5fa">WAB — Web Agent Bridge</a></p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>🔗 Live Link Protection Demo</h2>
+    <p style="font-size:13px;color:#64748b;margin-bottom:16px">The WAB Widget automatically scans all external links below. Hover over the shield badges to see scan results.</p>
+    <ul class="link-list">
+      <li>✅ Safe site: <a href="https://www.google.com">https://www.google.com</a></li>
+      <li>✅ Safe site: <a href="https://github.com">https://github.com</a></li>
+      <li>✅ Safe site: <a href="https://www.amazon.com">https://www.amazon.com</a></li>
+      <li>⚠️ Suspicious: <a href="https://paypa1-secure-login.xyz">https://paypa1-secure-login.xyz</a></li>
+      <li>🚫 Phishing: <a href="https://amazon-prize-winner-claim.ru">https://amazon-prize-winner-claim.ru</a></li>
+      <li>🚫 Malware: <a href="https://free-iphone-giveaway-click-here.tk">https://free-iphone-giveaway-click-here.tk</a></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>📦 Installation (1 line)</h2>
+    <p style="font-size:13px;color:#64748b">Add this single line to any website to protect all external links:</p>
+    <div class="code-block">&lt;script src="https://cdn.webagentbridge.com/widget.js"
+        data-wab-key="YOUR_API_KEY"
+        data-wab-mode="badge"&gt;&lt;/script&gt;</div>
+    <p style="font-size:12px;color:#94a3b8;margin-top:12px">Get your free API key at <a href="https://www.webagentbridge.com/workspace" style="color:#3b82f6">webagentbridge.com/workspace</a></p>
+  </div>
+
+  <div class="card">
+    <h2>⚙️ Configuration Options</h2>
+    <div class="badge-demo">
+      <div class="badge-item"><strong>data-wab-mode="badge"</strong><br><span style="color:#64748b;font-size:12px">Show shield icon next to links</span></div>
+      <div class="badge-item"><strong>data-wab-mode="tooltip"</strong><br><span style="color:#64748b;font-size:12px">Show details on hover</span></div>
+      <div class="badge-item"><strong>data-wab-mode="block"</strong><br><span style="color:#64748b;font-size:12px">Block dangerous links with overlay</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🔌 Embed in iFrame</h2>
+    <p style="font-size:13px;color:#64748b">Embed the WAB Widget demo directly in your website:</p>
+    <div class="code-block">&lt;iframe src="https://www.webagentbridge.com/widget-demo"
+        width="100%" height="600"
+        frameborder="0" style="border-radius:12px"&gt;
+&lt;/iframe&gt;</div>
+  </div>
+
+</div>
+
+<footer>
+  Powered by <a href="https://www.webagentbridge.com">WAB — Web Agent Bridge</a> · 
+  <a href="https://www.webagentbridge.com/docs">Docs</a> · 
+  <a href="https://www.webagentbridge.com/workspace">Get API Key</a>
+</footer>
+
+<!-- WAB Widget — replace YOUR_API_KEY with your actual key -->
+<script src="../src/wab-widget.js" data-wab-key="demo" data-wab-mode="tooltip"></script>
+
+</body>
+</html>

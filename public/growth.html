@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB Growth Suite — 8 Modules to Protect & Power the Web</title>
+  <meta name="description" content="WAB Growth Suite: Widget protection, AI Safety Layer, WAB Score, Trust Protocol, Bounty Network, Data Marketplace, Email Protection, and Affiliate Intelligence.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .gs-hero { padding: 100px 20px 60px; background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); color: #fff; text-align: center; }
+    .gs-hero h1 { font-size: 48px; font-weight: 900; margin-bottom: 16px; }
+    .gs-hero p { font-size: 20px; color: #94a3b8; max-width: 640px; margin: 0 auto 32px; line-height: 1.6; }
+    .gs-hero .badge { display: inline-block; background: rgba(59,130,246,0.15); color: #60a5fa; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 24px; }
+
+    .gs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+    .gs-section { padding: 80px 20px; }
+    .gs-section h2 { font-size: 36px; font-weight: 800; color: #0f172a; margin-bottom: 16px; text-align: center; }
+    .gs-section .subtitle { font-size: 18px; color: #64748b; text-align: center; max-width: 700px; margin: 0 auto 48px; line-height: 1.6; }
+
+    .gs-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 32px; transition: transform 0.2s, box-shadow 0.2s; }
+    .gs-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }
+    .gs-card .icon { font-size: 40px; margin-bottom: 16px; }
+    .gs-card h3 { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    .gs-card p { font-size: 14px; color: #64748b; line-height: 1.6; margin-bottom: 16px; }
+    .gs-card .tag { display: inline-block; background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+
+    .gs-dark { background: #0f172a; color: #fff; }
+    .gs-dark h2 { color: #fff; }
+    .gs-dark .subtitle { color: #94a3b8; }
+
+    .gs-code { background: #0f172a; color: #e2e8f0; padding: 24px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7; overflow-x: auto; max-width: 700px; margin: 0 auto; }
+    .gs-code .kw { color: #c678dd; }
+    .gs-code .fn { color: #61afef; }
+    .gs-code .st { color: #98c379; }
+    .gs-code .cm { color: #5c6370; }
+    .gs-code .num { color: #d19a66; }
+
+    .gs-score-badge { display: inline-flex; align-items: center; gap: 12px; border: 2px solid; border-radius: 12px; padding: 16px 24px; background: #fff; }
+    .gs-score-grade { font-size: 32px; font-weight: 900; line-height: 1; }
+
+    .gs-cta { text-align: center; padding: 80px 20px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: #fff; }
+    .gs-cta h2 { font-size: 36px; font-weight: 800; margin-bottom: 16px; color: #fff; }
+    .gs-cta p { font-size: 18px; color: rgba(255,255,255,0.8); margin-bottom: 32px; }
+    .gs-cta .btn { display: inline-block; padding: 14px 32px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 16px; }
+    .gs-cta .btn-white { background: #fff; color: #0f172a; }
+    .gs-cta .btn-outline { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.3); margin-left: 12px; }
+
+    .gs-detail { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+    .gs-detail.reverse { direction: rtl; }
+    .gs-detail.reverse > * { direction: ltr; }
+    @media (max-width: 768px) {
+      .gs-detail, .gs-detail.reverse { grid-template-columns: 1fr; }
+      .gs-hero h1 { font-size: 32px; }
+      .gs-section h2 { font-size: 28px; }
+    }
+
+    .gs-mockup { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; color: #e2e8f0; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7; }
+    .gs-feature-list { list-style: none; padding: 0; }
+    .gs-feature-list li { padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 15px; color: #334155; }
+    .gs-feature-list li:last-child { border-bottom: none; }
+
+    .gs-stats { display: flex; justify-content: center; gap: 48px; flex-wrap: wrap; margin-bottom: 48px; }
+    .gs-stat { text-align: center; }
+    .gs-stat .num { font-size: 48px; font-weight: 900; color: #3b82f6; line-height: 1; }
+    .gs-stat .label { font-size: 14px; color: #64748b; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <div class="brand-icon">⚡</div>
+        <span>WAB</span>
+      </a>
+      <ul class="navbar-links">
+        <li><a href="/#features">Features</a></li>
+        <li><a href="#modules">Modules</a></li>
+        <li><a href="#quickstart">Quick Start</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/demo">Demo</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <a href="/login" class="btn btn-ghost" data-wab-auth="guest">Sign In</a>
+        <a href="/dashboard" class="btn btn-ghost" data-wab-auth="signed-in" style="display:none">Dashboard</a>
+        <a href="/register" class="btn btn-primary btn-sm" data-wab-auth="guest">Get Started</a>
+      </div>
+      <button class="mobile-menu-btn" onclick="document.querySelector('.navbar-links').classList.toggle('active')">☰</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="gs-hero">
+    <div class="badge">WAB Growth Suite v2.5</div>
+    <h1>8 Modules to Protect &<br>Power the Web</h1>
+    <p>Production-ready growth modules designed to spread safety, fairness, and intelligence across the web, AI ecosystems, and developer tools.</p>
+    <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
+      <a href="#modules" class="btn btn-primary btn-lg">Explore Modules</a>
+      <a href="#quickstart" class="btn btn-secondary btn-lg">Quick Start</a>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="gs-section" style="padding-bottom:0;">
+    <div class="gs-stats">
+      <div class="gs-stat"><div class="num">8</div><div class="label">Growth Modules</div></div>
+      <div class="gs-stat"><div class="num">47</div><div class="label">Threat Databases</div></div>
+      <div class="gs-stat"><div class="num">15</div><div class="label">Fairness Signals</div></div>
+      <div class="gs-stat"><div class="num">500+</div><div class="label">Platforms Scored</div></div>
+    </div>
+  </section>
+
+  <!-- ALL 8 MODULES -->
+  <section class="gs-section" id="modules">
+    <h2>Growth Modules</h2>
+    <p class="subtitle">Each module targets a different audience and use case — from individual bloggers to Fortune 500 AI companies.</p>
+
+    <div class="gs-grid">
+      <!-- 1. WAB Widget -->
+      <div class="gs-card">
+        <div class="icon">🛡️</div>
+        <h3>WAB Widget</h3>
+        <p>Drop-in link protection for any website. One line of code adds a security shield next to every external link, blocking phishing and scam sites in real-time.</p>
+        <span class="tag">Website Owners</span> <span class="tag">Bloggers</span>
+      </div>
+
+      <!-- 2. AI Safety Layer -->
+      <div class="gs-card">
+        <div class="icon">🤖</div>
+        <h3>AI Safety Layer</h3>
+        <p>Mandatory security layer for AI agents browsing the web. Compatible with OpenAI Operator, Anthropic Computer Use, and all major AI agent frameworks.</p>
+        <span class="tag">AI Companies</span> <span class="tag">Developers</span>
+      </div>
+
+      <!-- 3. WAB Score -->
+      <div class="gs-card">
+        <div class="icon">📊</div>
+        <h3>WAB Score</h3>
+        <p>Credit rating system for digital platforms. Scores are based on 15 fairness signals + security analysis — like a credit score for websites.</p>
+        <span class="tag">Consumers</span> <span class="tag">Media</span>
+      </div>
+
+      <!-- 4. Trust Layer Protocol -->
+      <div class="gs-card">
+        <div class="icon">🔐</div>
+        <h3>Trust Layer Protocol</h3>
+        <p>Open <code>wab.json</code> protocol — like HTTPS for trust. Websites publish a trust manifest that can be verified by any agent or browser.</p>
+        <span class="tag">E-commerce</span> <span class="tag">Platforms</span>
+      </div>
+
+      <!-- 5. Bounty Network -->
+      <div class="gs-card">
+        <div class="icon">💰</div>
+        <h3>Bounty Network</h3>
+        <p>Crowdsourced scam detection. Users earn credits for reporting phishing sites, malware, and fraud — before automated systems catch them.</p>
+        <span class="tag">General Public</span> <span class="tag">Researchers</span>
+      </div>
+
+      <!-- 6. Data Marketplace -->
+      <div class="gs-card">
+        <div class="icon">🗄️</div>
+        <h3>Data Marketplace</h3>
+        <p>Buy and sell curated threat intelligence datasets. Real-time phishing feeds, platform fairness data, and affiliate intelligence for AI training.</p>
+        <span class="tag">Security Firms</span> <span class="tag">AI Companies</span>
+      </div>
+
+      <!-- 7. Email Protection -->
+      <div class="gs-card">
+        <div class="icon">📧</div>
+        <h3>Email Protection</h3>
+        <p>Gmail &amp; Outlook phishing protection. Scans every link and sender in your inbox — 94% of breaches start with a phishing email.</p>
+        <span class="tag">All Users</span> <span class="tag">Enterprise</span>
+      </div>
+
+      <!-- 8. Affiliate Intelligence -->
+      <div class="gs-card">
+        <div class="icon">📈</div>
+        <h3>Affiliate Intelligence</h3>
+        <p>Protect affiliate marketers from fraud. Detects cookie stuffing, commission shaving, and payment delays across all major networks.</p>
+        <span class="tag">Marketers</span> <span class="tag">Affiliates</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL: WAB Widget -->
+  <section class="gs-section" style="background:#f8fafc;">
+    <div class="gs-detail">
+      <div>
+        <h2 style="text-align:left; font-size:28px;">One Line of Code. Full Link Protection.</h2>
+        <p style="color:#64748b; line-height:1.6; margin-bottom:24px;">Add the WAB Widget to any website and every external link gets scanned against 47 threat databases. Safe links get a green shield, suspicious ones get warnings, and phishing sites get blocked.</p>
+        <ul class="gs-feature-list">
+          <li>✅ Zero configuration — just add the script tag</li>
+          <li>✅ Badge, tooltip, or full blocking mode</li>
+          <li>✅ Cached results — no performance impact</li>
+          <li>✅ Works with any CMS or framework</li>
+        </ul>
+      </div>
+      <div class="gs-code">
+        <span class="cm">&lt;!-- Add WAB Widget to your site --&gt;</span><br>
+        <span class="kw">&lt;script</span> <span class="fn">src</span>=<span class="st">"https://webagentbridge.com/script/ai-agent-bridge.js"</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">data-wab-key</span>=<span class="st">"YOUR_API_KEY"</span><span class="kw">&gt;&lt;/script&gt;</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL: AI Safety Layer -->
+  <section class="gs-section gs-dark">
+    <div class="gs-detail reverse">
+      <div>
+        <div style="color:#3b82f6; font-weight:700; margin-bottom:8px; letter-spacing:1px; font-size:12px;">FOR AI COMPANIES</div>
+        <h2 style="text-align:left; font-size:28px; color:#fff;">Mandatory Safety for AI Agents</h2>
+        <p style="color:#94a3b8; line-height:1.6; margin-bottom:24px;">Building an AI agent that browses the web? WAB Safety Layer wraps any agent with automatic threat scanning and fairness checks. Compatible with OpenAI Operator &amp; Anthropic Computer Use.</p>
+        <ul class="gs-feature-list" style="border-color:#334155;">
+          <li style="color:#cbd5e1; border-color:#334155;">✅ Compatible with OpenAI Operator & Anthropic</li>
+          <li style="color:#cbd5e1; border-color:#334155;">✅ Blocks fraudulent financial transactions</li>
+          <li style="color:#cbd5e1; border-color:#334155;">✅ Lifts legal liability from your company</li>
+        </ul>
+      </div>
+      <div class="gs-mockup">
+        <span style="color:#c678dd">import</span> { WABAgentWrapper } <span style="color:#c678dd">from</span> <span style="color:#98c379">'@wab/sdk'</span>;<br><br>
+        <span style="color:#5c6370">// Wrap your AI Agent with WAB Safety</span><br>
+        <span style="color:#c678dd">const</span> safeAgent = <span style="color:#c678dd">new</span> <span style="color:#61afef">WABAgentWrapper</span>(myAgent, {<br>
+        &nbsp;&nbsp;<span style="color:#d19a66">blockCritical</span>: <span style="color:#d19a66">true</span>,<br>
+        &nbsp;&nbsp;<span style="color:#d19a66">minFairness</span>: <span style="color:#d19a66">60</span>,<br>
+        });<br><br>
+        <span style="color:#5c6370">// WAB blocks scam sites automatically</span><br>
+        <span style="color:#c678dd">await</span> safeAgent.<span style="color:#61afef">browse</span>(<span style="color:#98c379">'https://scam-site.xyz'</span>);<br>
+        <span style="color:#e06c75">→ WABBlockedError: Phishing detected</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL: WAB Score -->
+  <section class="gs-section" style="background:white;">
+    <div style="max-width:800px; margin:0 auto; text-align:center;">
+      <h2>The Digital World's Credit Rating</h2>
+      <p class="subtitle">Like credit agencies rate banks, WAB Score rates digital platforms. Search for any platform and get a transparency score based on 15 fairness signals.</p>
+
+      <div style="display:flex; justify-content:center; gap:24px; flex-wrap:wrap; margin-bottom:40px;">
+        <!-- Amazon -->
+        <div class="gs-score-badge" style="border-color:#22c55e;">
+          <div class="gs-score-grade" style="color:#22c55e;">A-</div>
+          <div style="text-align:left;">
+            <div style="font-weight:700; color:#1e293b;">Very Good</div>
+            <div style="font-size:12px; color:#64748b;">86/100 · amazon.com</div>
+          </div>
+        </div>
+        <!-- AliExpress -->
+        <div class="gs-score-badge" style="border-color:#f59e0b;">
+          <div class="gs-score-grade" style="color:#f59e0b;">C+</div>
+          <div style="text-align:left;">
+            <div style="font-weight:700; color:#1e293b;">Below Average</div>
+            <div style="font-size:12px; color:#64748b;">68/100 · aliexpress.com</div>
+          </div>
+        </div>
+      </div>
+
+      <form action="/score" method="GET" style="display:flex; max-width:500px; margin:0 auto; gap:8px;">
+        <input type="text" name="domain" placeholder="Enter platform domain (e.g. shein.com)" style="flex:1; padding:12px 16px; border:1px solid #e2e8f0; border-radius:8px; font-size:15px;">
+        <button type="submit" style="background:#0f172a; color:white; border:none; padding:12px 24px; border-radius:8px; font-weight:700; cursor:pointer;">Check Score</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- DETAIL: Trust Protocol -->
+  <section class="gs-section" style="background:#f1f5f9;">
+    <div class="gs-detail">
+      <div>
+        <h2 style="text-align:left; font-size:28px;">The Open Trust Protocol</h2>
+        <p style="color:#475569; line-height:1.6; margin-bottom:20px;">Prove to your customers that your store is fair and safe. Add a <code>wab.json</code> file to your site and print a verified trust badge — like the SSL padlock for platform fairness.</p>
+        <a href="/docs" style="color:#3b82f6; font-weight:600; text-decoration:none;">Learn how to get certified →</a>
+      </div>
+      <div style="background:white; padding:20px; border-radius:12px; border:1px solid #e2e8f0;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#334155;">
+          <span style="color:#94a3b8">// /.well-known/wab.json</span><br>
+          {<br>
+          &nbsp;&nbsp;"wab_certified": <span style="color:#22c55e">true</span>,<br>
+          &nbsp;&nbsp;"fairness_score": <span style="color:#3b82f6">92</span>,<br>
+          &nbsp;&nbsp;"last_audit": <span style="color:#a3e635">"2026-04-01"</span><br>
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL: Bounty Network -->
+  <section class="gs-section gs-dark" style="text-align:center;">
+    <div style="max-width:700px; margin:0 auto;">
+      <div style="font-size:48px; margin-bottom:16px;">💰</div>
+      <h2 style="color:#fff;">Earn Money by Discovering Fraud</h2>
+      <p style="font-size:18px; color:#94a3b8; margin-bottom:32px; line-height:1.6;">Join the <strong>WAB Bounty Network</strong> and report phishing sites, scams, and malware that automated systems haven't caught yet. Earn credits redeemable for cash or subscriptions.</p>
+
+      <div style="display:flex; justify-content:center; gap:24px; margin-bottom:32px; flex-wrap:wrap;">
+        <div style="background:#1e293b; padding:16px 24px; border-radius:8px;">
+          <div style="font-size:24px; font-weight:700; color:#ef4444;">50 Credits</div>
+          <div style="font-size:13px; color:#94a3b8;">Critical Threats</div>
+        </div>
+        <div style="background:#1e293b; padding:16px 24px; border-radius:8px;">
+          <div style="font-size:24px; font-weight:700; color:#f59e0b;">25 Credits</div>
+          <div style="font-size:13px; color:#94a3b8;">Confirmed Scams</div>
+        </div>
+        <div style="background:#1e293b; padding:16px 24px; border-radius:8px;">
+          <div style="font-size:24px; font-weight:700; color:#3b82f6;">10 Credits</div>
+          <div style="font-size:13px; color:#94a3b8;">Suspicious Sites</div>
+        </div>
+      </div>
+
+      <a href="/register" class="btn btn-primary btn-lg">Start Earning →</a>
+    </div>
+  </section>
+
+  <!-- DETAIL: Data Marketplace -->
+  <section class="gs-section" style="background:white;">
+    <div style="max-width:1000px; margin:0 auto; text-align:center;">
+      <h2>Threat Intelligence for AI &amp; Security</h2>
+      <p class="subtitle"><strong>WAB Data Marketplace</strong> provides curated datasets for cybersecurity companies and AI model training — real-time threat feeds, fairness data, and more.</p>
+
+      <div class="gs-grid" style="grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));">
+        <div class="gs-card">
+          <h3>Threat Intelligence Feed</h3>
+          <p>Real-time phishing, malware, and scam URL data from 47 databases. Updated continuously.</p>
+          <a href="/workspace" style="color:#3b82f6; font-weight:600; text-decoration:none;">Explore Data →</a>
+        </div>
+        <div class="gs-card">
+          <h3>Platform Fairness Data</h3>
+          <p>Quarterly transparency scores for 500+ marketplaces — hidden fees, return policies, dark patterns, and more.</p>
+          <a href="/workspace" style="color:#3b82f6; font-weight:600; text-decoration:none;">Explore Data →</a>
+        </div>
+        <div class="gs-card">
+          <h3>Affiliate Intelligence</h3>
+          <p>Commission benchmarks, fraud pattern datasets, and network reliability scores across all major affiliate platforms.</p>
+          <a href="/workspace" style="color:#3b82f6; font-weight:600; text-decoration:none;">Explore Data →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL: Email Protection -->
+  <section class="gs-section" style="background:#f8fafc;">
+    <div class="gs-detail">
+      <div>
+        <h3 style="font-size:28px; color:#0f172a; margin-bottom:16px;">Email Protection</h3>
+        <p style="color:#475569; font-size:16px; line-height:1.6; margin-bottom:24px;">94% of cyber breaches start with a phishing email. Install the WAB extension and every link and sender in your inbox gets scanned automatically.</p>
+        <div style="display:flex; gap:12px;">
+          <a href="/downloads" style="background:#fff; border:1px solid #cbd5e1; padding:10px 20px; border-radius:8px; text-decoration:none; color:#1e293b; font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px;">🌐 Chrome Extension</a>
+          <a href="/downloads" style="background:#fff; border:1px solid #cbd5e1; padding:10px 20px; border-radius:8px; text-decoration:none; color:#1e293b; font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px;">🦊 Firefox Add-on</a>
+        </div>
+      </div>
+      <div style="background:white; padding:16px; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+        <div style="background:#fef2f2; border-left:4px solid #ef4444; padding:12px 16px; border-radius:4px; margin-bottom:16px;">
+          <strong style="color:#991b1b; font-size:13px;">🚫 WAB Security Alert:</strong>
+          <span style="font-size:13px; color:#991b1b;"> This email contains a dangerous link</span>
+          <div style="color:#b91c1c; font-size:12px; margin-top:4px;">PHISHING DETECTED — paypa1-secure-login.xyz scored 95/100 risk</div>
+        </div>
+        <div style="height:12px; background:#f1f5f9; width:60%; margin-bottom:8px; border-radius:4px;"></div>
+        <div style="height:12px; background:#f1f5f9; width:80%; margin-bottom:8px; border-radius:4px;"></div>
+        <div style="height:12px; background:#f1f5f9; width:40%; border-radius:4px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL: Affiliate Intelligence -->
+  <section class="gs-section gs-dark">
+    <div style="max-width:800px; margin:0 auto; text-align:center;">
+      <h2 style="color:#fff;">Are Affiliate Networks Stealing Your Commissions?</h2>
+      <p style="font-size:18px; color:#94a3b8; margin-bottom:32px; line-height:1.6;"><strong>WAB Affiliate Intelligence</strong> analyzes your affiliate data and compares it with industry benchmarks to detect commission shaving, cookie stuffing, and payment fraud.</p>
+
+      <div class="gs-mockup" style="text-align:left; margin-bottom:32px;">
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid #334155; padding-bottom:12px; margin-bottom:12px;">
+          <div>
+            <div style="color:#94a3b8; font-size:12px; margin-bottom:4px;">Network</div>
+            <div style="font-weight:700; font-size:16px;">ClickBank</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="color:#94a3b8; font-size:12px; margin-bottom:4px;">Fraud Risk</div>
+            <div style="font-weight:700; font-size:16px; color:#f59e0b;">MEDIUM</div>
+          </div>
+        </div>
+        <div style="color:#cbd5e1; font-size:14px; margin-bottom:8px;">⚠️ <strong>Commission Shaving:</strong> 12% of valid sales cancelled</div>
+        <div style="color:#cbd5e1; font-size:14px;">⚠️ <strong>Payment Delays:</strong> Average 45 days vs industry 30</div>
+      </div>
+
+      <a href="/register" class="btn btn-primary btn-lg">Analyze Your Networks →</a>
+    </div>
+  </section>
+
+  <!-- QUICK START -->
+  <section class="gs-section" style="background:white;" id="quickstart">
+    <h2>Quick Start</h2>
+    <p class="subtitle">Get started with the WAB Growth Suite in seconds.</p>
+
+    <div class="gs-code">
+      <span class="kw">const</span> { WABGrowthSuite } = <span class="fn">require</span>(<span class="st">'wab-growth-suite'</span>);<br><br>
+      <span class="kw">const</span> wab = <span class="kw">new</span> <span class="fn">WABGrowthSuite</span>(<span class="st">'YOUR_WAB_API_KEY'</span>);<br><br>
+      <span class="cm">// Scan a URL for threats</span><br>
+      <span class="kw">const</span> result = <span class="kw">await</span> wab.<span class="fn">scan</span>(<span class="st">'https://suspicious-site.com'</span>);<br><br>
+      <span class="cm">// Full domain audit (score + trust + security)</span><br>
+      <span class="kw">const</span> audit = <span class="kw">await</span> wab.<span class="fn">auditDomain</span>(<span class="st">'amazon.com'</span>);<br><br>
+      <span class="cm">// Wrap an AI Agent with safety</span><br>
+      <span class="kw">const</span> safeAgent = wab.<span class="fn">wrapAgent</span>(myAIAgent, {<br>
+      &nbsp;&nbsp;blockCritical: <span class="num">true</span>,<br>
+      &nbsp;&nbsp;minFairness: <span class="num">60</span><br>
+      });
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="gs-cta">
+    <h2>Make the Web Safer, Fairer, Smarter</h2>
+    <p>Start with the free tier — 100 scans/day, no credit card required.</p>
+    <div>
+      <a href="/register" class="gs-cta .btn btn-white" style="background:#fff; color:#0f172a; padding:14px 32px; border-radius:8px; font-weight:700; text-decoration:none; font-size:16px;">Create Free Account</a>
+      <a href="https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener" class="gs-cta .btn btn-outline" style="padding:14px 32px; border-radius:8px; font-weight:700; text-decoration:none; font-size:16px; border:2px solid rgba(255,255,255,0.3); color:#fff; margin-left:12px;">⭐ Star on GitHub</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="navbar-brand">
+            <div class="brand-icon">⚡</div>
+            <span>Web Agent Bridge</span>
+          </a>
+          <p style="color:var(--text-secondary); margin-top:12px; font-size:14px; line-height:1.6;">
+            Open-source middleware for the Agentic Web.
+          </p>
+        </div>
+        <div class="footer-links">
+          <h4>Product</h4>
+          <a href="/#features">Features</a>
+          <a href="/#pricing">Pricing</a>
+          <a href="/demo">Demo</a>
+          <a href="/docs">Documentation</a>
+        </div>
+        <div class="footer-links">
+          <h4>Growth Suite</h4>
+          <a href="/growth#modules">All Modules</a>
+          <a href="/growth#quickstart">Quick Start</a>
+          <a href="/workspace">Get API Key</a>
+        </div>
+        <div class="footer-links">
+          <h4>Community</h4>
+          <a href="https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener">GitHub</a>
+          <a href="/CONTRIBUTING.md">Contribute</a>
+          <a href="/terms">Terms</a>
+          <a href="/privacy">Privacy</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Web Agent Bridge — Open Source (MIT)</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/auth-nav.js"></script>
+</body>
+</html>

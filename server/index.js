@@ -241,6 +241,9 @@ app.get('/browser', (req, res) => {
 app.get('/workspace', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'agent-workspace.html'));
 });
+app.get('/growth', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'growth.html'));
+});
 
 // Browser downloads
 app.use('/downloads', express.static(path.join(__dirname, '..', 'downloads'), {
