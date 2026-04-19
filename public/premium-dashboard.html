@@ -1943,7 +1943,7 @@
           document.querySelectorAll('#cdnEdges input').forEach(cb => { cb.checked = edges.includes(cb.value); });
           document.getElementById('cdnStatReqs').textContent = c.requests_count || 0;
           document.getElementById('cdnStatBw').textContent = fmtBytes(c.bandwidth_used || 0);
-          const cdnUrl = c.custom_domain ? 'https://' + c.custom_domain + '/bridge/' + sid + '/ai-agent-bridge.js' : 'https://cdn.webagentbridge.com/bridge/' + sid + '/ai-agent-bridge.js';
+          const cdnUrl = c.custom_domain ? 'https://' + c.custom_domain + '/bridge/' + sid + '/ai-agent-bridge.js' : 'https://webagentbridge.com/bridge/' + sid + '/ai-agent-bridge.js';
           document.getElementById('cdnUrlDisplay').textContent = cdnUrl;
 
           try {
@@ -1957,7 +1957,7 @@
             }
           } catch {}
         } else {
-          document.getElementById('cdnUrlDisplay').textContent = 'https://cdn.webagentbridge.com/bridge/' + sid + '/ai-agent-bridge.js';
+          document.getElementById('cdnUrlDisplay').textContent = 'https://webagentbridge.com/bridge/' + sid + '/ai-agent-bridge.js';
         }
       } catch (err) { console.error('loadCdn:', err); }
     }

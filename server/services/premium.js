@@ -1392,7 +1392,7 @@ function generateCdnUrl(siteId, customDomain) {
   if (customDomain) {
     return `https://${customDomain}/bridge/${siteId}/ai-agent-bridge.js`;
   }
-  return `https://cdn.webagentbridge.com/bridge/${siteId}/ai-agent-bridge.js`;
+  return `https://webagentbridge.com/bridge/${siteId}/ai-agent-bridge.js`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
