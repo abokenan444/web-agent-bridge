@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WAB Platform — Interactive Demo</title>
+  <meta name="description" content="Experience the Web Agent Bridge platform live. Test Fairness System, Scam Shield, AI Agent Chat, and Deals Engine." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ HERO ═══ -->
+<header class="hero">
+  <nav class="nav">
+    <div class="nav-brand">
+      <div class="nav-logo">
+        <svg width="32" height="32" viewBox="0 0 120 120">
+          <defs><linearGradient x2="100%" y2="100%" y1="0%" x1="0%" id="lg"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs>
+          <circle stroke="url(#lg)" cy="60" r="54" stroke-width="3" cx="60" fill="none"/>
+          <path d="M36 78 L48 42 L60 66 L72 42 L84 78" stroke="url(#lg)" fill="none" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle fill="#0ea5e9" r="6" cx="60" cy="36"/>
+        </svg>
+      </div>
+      <div>
+        <span class="nav-title">WAB Platform</span>
+        <span class="nav-badge">Interactive Demo</span>
+      </div>
+    </div>
+    <div class="nav-links">
+      <a href="#features" class="nav-link">Features</a>
+      <a href="#architecture" class="nav-link">Architecture</a>
+      <a href="#demo" class="nav-link">Live Demo</a>
+      <a href="/" class="nav-cta">Get Started →</a>
+    </div>
+  </nav>
+
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Live Demo Environment — Isolated from Production
+    </div>
+    <h1 class="hero-title">
+      The AI Agent Middleware<br/>
+      <span class="gradient-text">for the Modern Web</span>
+    </h1>
+    <p class="hero-subtitle">
+      Web Agent Bridge (WAB) is the universal middleware layer that enables AI agents to interact with any website — with built-in fairness scoring, scam protection, and intelligent deal discovery.
+    </p>
+    <div class="hero-actions">
+      <a href="#demo" class="btn-primary">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Try Live Demo
+      </a>
+      <a href="#architecture" class="btn-secondary">View Architecture</a>
+    </div>
+    <div class="hero-stats" id="heroStats">
+      <div class="stat-item"><span class="stat-value" id="stat-sites">50,000+</span><span class="stat-label">Supported Sites</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat-item"><span class="stat-value" id="stat-agents">12,847</span><span class="stat-label">Active Agents</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat-item"><span class="stat-value" id="stat-uptime">99.97%</span><span class="stat-label">Uptime</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat-item"><span class="stat-value" id="stat-latency">142ms</span><span class="stat-label">Avg Latency</span></div>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="code-window">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <span class="code-title">agent-integration.js</span>
+      </div>
+      <pre class="code-body"><code><span class="c">// Connect your AI agent to any website</span>
+<span class="k">import</span> { WABAgent } <span class="k">from</span> <span class="s">'@wab/agent-sdk'</span>;
+
+<span class="k">const</span> agent = <span class="k">new</span> <span class="f">WABAgent</span>({
+  apiKey: <span class="s">'wab_live_••••••••'</span>,
+  permissions: [<span class="s">'read'</span>, <span class="s">'click'</span>, <span class="s">'fill'</span>],
+  fairnessThreshold: <span class="n">70</span>,
+  scamShield: <span class="n">true</span>,
+});
+
+<span class="c">// Navigate and interact with any site</span>
+<span class="k">await</span> agent.<span class="f">navigate</span>(<span class="s">'https://amazon.com'</span>);
+<span class="k">const</span> fairness = <span class="k">await</span> agent.<span class="f">getFairnessScore</span>();
+<span class="c">// → { score: 58, verdict: "Moderate", commission: "15%" }</span>
+
+<span class="k">const</span> deals = <span class="k">await</span> agent.<span class="f">findBestDeals</span>(<span class="s">'laptop'</span>);
+<span class="c">// → [{ platform: "Direct", price: 24.99, savings: "21%" }]</span></code></pre>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════ FEATURES ═══ -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Platform Capabilities</span>
+      <h2 class="section-title">Everything Your AI Agent Needs</h2>
+      <p class="section-subtitle">WAB provides a complete toolkit for building intelligent web agents that respect users and platforms alike.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card feature-card--highlight">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #0ea5e9, #0284c7)">
+          <svg width="24" height="24" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+        </div>
+        <h3>Universal Site Compatibility</h3>
+        <p>Works with 50,000+ websites out of the box. Auto-discovers interactive elements, forms, and data structures using our proprietary DOM intelligence engine.</p>
+        <div class="feature-tags"><span>Auto-Discovery</span><span>DOM Intelligence</span><span>50K+ Sites</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #10b981, #059669)">
+          <svg width="24" height="24" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+        </div>
+        <h3>Fairness System</h3>
+        <p>Real-time scoring of platform fairness across 15+ signals including commission transparency, price honesty, and hidden fee detection.</p>
+        <div class="feature-tags"><span>15+ Signals</span><span>Real-time</span><span>Commission Detect</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706)">
+          <svg width="24" height="24" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        </div>
+        <h3>Scam Shield</h3>
+        <p>Multi-layer threat detection using 47+ security databases. Catches phishing, homograph attacks, and fraudulent domains in real-time before your agent proceeds.</p>
+        <div class="feature-tags"><span>47 Databases</span><span>Homograph Detection</span><span>Zero-day</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)">
+          <svg width="24" height="24" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        </div>
+        <h3>AI Agent Chat</h3>
+        <p>Natural language interface for complex web tasks. Understands shopping, booking, research, and comparison intents with 90%+ accuracy across 12 languages.</p>
+        <div class="feature-tags"><span>12 Languages</span><span>Intent Detection</span><span>Multi-step Tasks</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626)">
+          <svg width="24" height="24" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+        </div>
+        <h3>Deals Engine</h3>
+        <p>Cross-platform price aggregation with commission transparency. Identifies the true cost of purchases across marketplaces and surfaces direct-seller alternatives.</p>
+        <div class="feature-tags"><span>Price Comparison</span><span>Fee Transparency</span><span>Direct Booking</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2)">
+          <svg width="24" height="24" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        </div>
+        <h3>Permission System</h3>
+        <p>Granular per-site, per-action permissions. Every agent action is audited and logged. Users maintain full control over what agents can and cannot do.</p>
+        <div class="feature-tags"><span>Granular Control</span><span>Full Audit Log</span><span>GDPR Ready</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ ARCHITECTURE ═══ -->
+<section class="architecture" id="architecture">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Technical Architecture</span>
+      <h2 class="section-title">Built for Scale & Security</h2>
+      <p class="section-subtitle">WAB's layered architecture ensures every agent interaction is safe, auditable, and performant.</p>
+    </div>
+    <div class="arch-diagram">
+      <div class="arch-layer arch-layer--top">
+        <div class="arch-label">AI Agent Layer</div>
+        <div class="arch-nodes">
+          <div class="arch-node">OpenAI GPT-4</div>
+          <div class="arch-node">Anthropic Claude</div>
+          <div class="arch-node">Google Gemini</div>
+          <div class="arch-node">LangChain</div>
+          <div class="arch-node">Custom Agents</div>
+        </div>
+      </div>
+      <div class="arch-arrow">
+        <div class="arch-arrow-line"></div>
+        <span class="arch-arrow-label">Standardized WAB API</span>
+      </div>
+      <div class="arch-layer arch-layer--mid">
+        <div class="arch-label">WAB Middleware Core</div>
+        <div class="arch-nodes arch-nodes--core">
+          <div class="arch-node arch-node--core">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            Permission Engine
+          </div>
+          <div class="arch-node arch-node--core">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+            Fairness Engine
+          </div>
+          <div class="arch-node arch-node--core">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            Scam Shield
+          </div>
+          <div class="arch-node arch-node--core">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            Audit Logger
+          </div>
+          <div class="arch-node arch-node--core">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Rate Limiter
+          </div>
+        </div>
+      </div>
+      <div class="arch-arrow">
+        <div class="arch-arrow-line"></div>
+        <span class="arch-arrow-label">WAB Script Injector</span>
+      </div>
+      <div class="arch-layer arch-layer--bot">
+        <div class="arch-label">Website Layer (50,000+ Sites)</div>
+        <div class="arch-nodes">
+          <div class="arch-node">E-Commerce</div>
+          <div class="arch-node">Travel & Booking</div>
+          <div class="arch-node">Marketplaces</div>
+          <div class="arch-node">SaaS Platforms</div>
+          <div class="arch-node">Any Website</div>
+        </div>
+      </div>
+    </div>
+    <div class="arch-metrics">
+      <div class="metric-card">
+        <div class="metric-value">8</div>
+        <div class="metric-label">Supported Agent Actions</div>
+        <div class="metric-detail">navigate · click · fill · submit · extract · screenshot · scroll · wait</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">15+</div>
+        <div class="metric-label">Fairness Signals</div>
+        <div class="metric-detail">Commission, trust, price honesty, transparency, direct booking</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">47</div>
+        <div class="metric-label">Security Databases</div>
+        <div class="metric-detail">Phishing feeds, malware lists, reputation scores, domain intelligence</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">2.4M+</div>
+        <div class="metric-label">Daily Agent Actions</div>
+        <div class="metric-detail">Processed with 99.97% uptime and 142ms average response time</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ LIVE DEMO ═══ -->
+<section class="demo-section" id="demo">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Live Interactive Demo</span>
+      <h2 class="section-title">Experience WAB in Action</h2>
+      <p class="section-subtitle">All demos run against a live isolated backend. No mock data — real API responses.</p>
+    </div>
+
+    <!-- Demo Tabs -->
+    <div class="demo-tabs">
+      <button class="demo-tab active" data-tab="agent">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        AI Agent Chat
+      </button>
+      <button class="demo-tab" data-tab="fairness">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+        Fairness System
+      </button>
+      <button class="demo-tab" data-tab="shield">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        Scam Shield
+      </button>
+      <button class="demo-tab" data-tab="deals">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+        Deals Engine
+      </button>
+    </div>
+
+    <!-- Agent Chat Tab -->
+    <div class="demo-panel active" id="tab-agent">
+      <div class="demo-layout">
+        <div class="demo-main">
+          <div class="chat-window">
+            <div class="chat-header">
+              <div class="chat-agent-info">
+                <div class="agent-avatar">
+                  <svg width="20" height="20" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2"/></svg>
+                </div>
+                <div>
+                  <div class="agent-name">WAB Agent v2.5</div>
+                  <div class="agent-status"><span class="status-dot"></span> Online — Ready</div>
+                </div>
+              </div>
+              <div class="chat-model-badge">GPT-4 Powered</div>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+              <div class="chat-message chat-message--agent">
+                <div class="message-avatar">W</div>
+                <div class="message-content">
+                  <p>Hello! I'm the <strong>WAB Agent</strong> — your intelligent web assistant. I can help you shop smarter, book travel directly, compare prices, and stay safe online.</p>
+                  <p>Try asking me to find deals, check a website's fairness, or detect scams. What would you like to do?</p>
+                  <div class="message-actions">
+                    <button class="quick-action" onclick="sendQuickMessage('Find me the cheapest laptop under $500')">🛒 Find cheap laptops</button>
+                    <button class="quick-action" onclick="sendQuickMessage('Book a hotel in Paris for 3 nights')">🏨 Book a hotel</button>
+                    <button class="quick-action" onclick="sendQuickMessage('Compare Amazon vs eBay prices')">📊 Compare platforms</button>
+                    <button class="quick-action" onclick="sendQuickMessage('Is this website safe to use?')">🛡️ Check safety</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="chat-input-area">
+              <div class="chat-input-wrapper">
+                <input type="text" id="chatInput" placeholder="Ask the WAB Agent anything..." class="chat-input" />
+                <button class="chat-send" id="chatSend" onclick="sendAgentMessage()">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                </button>
+              </div>
+              <div class="chat-disclaimer">Demo environment — responses are simulated to showcase platform capabilities</div>
+            </div>
+          </div>
+        </div>
+        <div class="demo-sidebar">
+          <div class="sidebar-card">
+            <h4>Intent Detection</h4>
+            <div id="intentDisplay" class="intent-display">
+              <div class="intent-placeholder">Send a message to see intent analysis</div>
+            </div>
+          </div>
+          <div class="sidebar-card">
+            <h4>Supported Intents</h4>
+            <div class="intent-list">
+              <div class="intent-item"><span class="intent-icon">🛒</span><span>Shopping & Price Search</span></div>
+              <div class="intent-item"><span class="intent-icon">🏨</span><span>Travel & Booking</span></div>
+              <div class="intent-item"><span class="intent-icon">📊</span><span>Price Comparison</span></div>
+              <div class="intent-item"><span class="intent-icon">🔍</span><span>Product Research</span></div>
+              <div class="intent-item"><span class="intent-icon">🛡️</span><span>Security Check</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fairness Tab -->
+    <div class="demo-panel" id="tab-fairness">
+      <div class="demo-layout">
+        <div class="demo-main">
+          <div class="tool-card">
+            <div class="tool-header">
+              <h3>Fairness System Analyzer</h3>
+              <p>Enter any website URL to get a real-time fairness score based on 15+ signals.</p>
+            </div>
+            <div class="tool-input-group">
+              <div class="url-presets">
+                <span class="preset-label">Quick test:</span>
+                <button class="preset-btn" onclick="setFairnessUrl('https://www.amazon.com')">Amazon</button>
+                <button class="preset-btn" onclick="setFairnessUrl('https://www.booking.com')">Booking.com</button>
+                <button class="preset-btn" onclick="setFairnessUrl('https://www.etsy.com')">Etsy</button>
+                <button class="preset-btn" onclick="setFairnessUrl('https://www.ebay.com')">eBay</button>
+                <button class="preset-btn" onclick="setFairnessUrl('https://www.airbnb.com')">Airbnb</button>
+              </div>
+              <div class="input-row">
+                <input type="url" id="fairnessUrl" placeholder="https://www.example.com" class="tool-input" value="https://www.amazon.com" />
+                <button class="tool-btn" onclick="runFairnessCheck()">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                  Analyze
+                </button>
+              </div>
+            </div>
+            <div id="fairnessResult" class="tool-result hidden"></div>
+          </div>
+        </div>
+        <div class="demo-sidebar">
+          <div class="sidebar-card">
+            <h4>Scoring Signals</h4>
+            <div class="signal-list">
+              <div class="signal-item"><div class="signal-dot signal-dot--green"></div><span>Trust Score</span></div>
+              <div class="signal-item"><div class="signal-dot signal-dot--blue"></div><span>Price Honesty</span></div>
+              <div class="signal-item"><div class="signal-dot signal-dot--purple"></div><span>Transparency</span></div>
+              <div class="signal-item"><div class="signal-dot signal-dot--orange"></div><span>Commission Load</span></div>
+              <div class="signal-item"><div class="signal-dot signal-dot--red"></div><span>Hidden Fees</span></div>
+              <div class="signal-item"><div class="signal-dot signal-dot--cyan"></div><span>Direct Booking</span></div>
+            </div>
+          </div>
+          <div class="sidebar-card">
+            <h4>Score Guide</h4>
+            <div class="score-guide">
+              <div class="score-range score-range--green"><span>80–100</span><span>Excellent ✅</span></div>
+              <div class="score-range score-range--blue"><span>65–79</span><span>Good 🔵</span></div>
+              <div class="score-range score-range--orange"><span>50–64</span><span>Moderate ⚠️</span></div>
+              <div class="score-range score-range--red"><span>0–49</span><span>Poor ❌</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scam Shield Tab -->
+    <div class="demo-panel" id="tab-shield">
+      <div class="demo-layout">
+        <div class="demo-main">
+          <div class="tool-card">
+            <div class="tool-header">
+              <h3>Scam Shield — Threat Detector</h3>
+              <p>Test any URL against 47 security databases for phishing, malware, and fraud detection.</p>
+            </div>
+            <div class="tool-input-group">
+              <div class="url-presets">
+                <span class="preset-label">Test with:</span>
+                <button class="preset-btn preset-btn--safe" onclick="setShieldUrl('https://www.amazon.com')">✅ Amazon (safe)</button>
+                <button class="preset-btn preset-btn--danger" onclick="setShieldUrl('https://paypa1-secure-login.xyz')">🚨 Phishing Site</button>
+                <button class="preset-btn preset-btn--danger" onclick="setShieldUrl('https://amaz0n-verify.net')">🚨 Fake Amazon</button>
+                <button class="preset-btn preset-btn--warn" onclick="setShieldUrl('https://crypto-doubler.io')">⚠️ Suspicious</button>
+              </div>
+              <div class="input-row">
+                <input type="url" id="shieldUrl" placeholder="https://www.example.com" class="tool-input" value="https://paypa1-secure-login.xyz" />
+                <button class="tool-btn tool-btn--shield" onclick="runShieldCheck()">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                  Scan URL
+                </button>
+              </div>
+            </div>
+            <div id="shieldResult" class="tool-result hidden"></div>
+          </div>
+        </div>
+        <div class="demo-sidebar">
+          <div class="sidebar-card">
+            <h4>Detection Methods</h4>
+            <div class="method-list">
+              <div class="method-item">🗄️ 47 Threat Databases</div>
+              <div class="method-item">🔤 Homograph Detection</div>
+              <div class="method-item">📅 Domain Age Analysis</div>
+              <div class="method-item">🔒 SSL Verification</div>
+              <div class="method-item">🦠 Malware Scanning</div>
+              <div class="method-item">⭐ Reputation Scoring</div>
+            </div>
+          </div>
+          <div class="sidebar-card">
+            <h4>Live Stats</h4>
+            <div class="live-stats">
+              <div class="live-stat"><span class="live-stat-value" id="scamBlocked">0</span><span class="live-stat-label">Scams Blocked Today</span></div>
+              <div class="live-stat"><span class="live-stat-value" id="adsBlocked">1,247</span><span class="live-stat-label">Ads Blocked</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deals Tab -->
+    <div class="demo-panel" id="tab-deals">
+      <div class="demo-layout">
+        <div class="demo-main">
+          <div class="tool-card">
+            <div class="tool-header">
+              <h3>Deals Engine — Price Intelligence</h3>
+              <p>Find the best deals across platforms with full commission transparency and fairness scoring.</p>
+            </div>
+            <div class="tool-input-group">
+              <div class="url-presets">
+                <span class="preset-label">Try searching:</span>
+                <button class="preset-btn" onclick="setDealsQuery('laptop')">💻 Laptop</button>
+                <button class="preset-btn" onclick="setDealsQuery('wireless headphones')">🎧 Headphones</button>
+                <button class="preset-btn" onclick="setDealsQuery('mystery books')">📚 Books</button>
+                <button class="preset-btn" onclick="setDealsQuery('running shoes')">👟 Shoes</button>
+              </div>
+              <div class="input-row">
+                <input type="text" id="dealsQuery" placeholder="Search for any product..." class="tool-input" value="laptop" />
+                <button class="tool-btn tool-btn--deals" onclick="runDealsSearch()">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                  Find Deals
+                </button>
+              </div>
+            </div>
+            <div id="dealsResult" class="tool-result hidden"></div>
+          </div>
+        </div>
+        <div class="demo-sidebar">
+          <div class="sidebar-card">
+            <h4>How It Works</h4>
+            <div class="how-list">
+              <div class="how-item"><span class="how-num">1</span><span>Scan 50,000+ supported sites</span></div>
+              <div class="how-item"><span class="how-num">2</span><span>Calculate true cost (price + fees)</span></div>
+              <div class="how-item"><span class="how-num">3</span><span>Apply Fairness Score filter</span></div>
+              <div class="how-item"><span class="how-num">4</span><span>Surface direct-seller alternatives</span></div>
+              <div class="how-item"><span class="how-num">5</span><span>Show commission transparency</span></div>
+            </div>
+          </div>
+          <div class="sidebar-card">
+            <h4>Average Savings</h4>
+            <div class="savings-display">
+              <div class="savings-big">21%</div>
+              <div class="savings-label">vs. marketplace pricing</div>
+              <div class="savings-sub">$312/year estimated savings</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════ EMBED ═══ -->
+<section class="embed-section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Integration</span>
+      <h2 class="section-title">Embed WAB in Minutes</h2>
+      <p class="section-subtitle">Add WAB to any website with a single script tag. No backend changes required.</p>
+    </div>
+    <div class="code-tabs">
+      <button class="code-tab active" data-code="script">Script Tag</button>
+      <button class="code-tab" data-code="npm">NPM Package</button>
+      <button class="code-tab" data-code="docker">Docker</button>
+    </div>
+    <div class="code-panel active" id="code-script">
+      <div class="code-window code-window--embed">
+        <div class="code-header">
+          <div class="code-dots"><span></span><span></span><span></span></div>
+          <span class="code-title">index.html</span>
+          <button class="copy-btn" onclick="copyCode('script')">Copy</button>
+        </div>
+        <pre class="code-body"><code id="embed-script"><span class="c">&lt;!-- Add WAB to any page --&gt;</span>
+<span class="k">&lt;script</span>
+  <span class="attr">src</span>=<span class="s">"https://cdn.webagentbridge.com/wab.min.js"</span>
+  <span class="attr">data-api-key</span>=<span class="s">"YOUR_API_KEY"</span>
+  <span class="attr">data-fairness</span>=<span class="s">"true"</span>
+  <span class="attr">data-scam-shield</span>=<span class="s">"true"</span>
+  <span class="attr">data-deals</span>=<span class="s">"true"</span>
+<span class="k">&gt;&lt;/script&gt;</span>
+
+<span class="c">&lt;!-- WAB is now active on this page --&gt;</span>
+<span class="c">&lt;!-- AI agents can interact via window.AICommands --&gt;</span></code></pre>
+      </div>
+    </div>
+    <div class="code-panel" id="code-npm">
+      <div class="code-window code-window--embed">
+        <div class="code-header">
+          <div class="code-dots"><span></span><span></span><span></span></div>
+          <span class="code-title">Terminal</span>
+          <button class="copy-btn" onclick="copyCode('npm')">Copy</button>
+        </div>
+        <pre class="code-body"><code id="embed-npm"><span class="c"># Install the WAB SDK</span>
+<span class="k">npm install</span> @wab/agent-sdk
+
+<span class="c"># In your application</span>
+<span class="k">import</span> { WABAgent } <span class="k">from</span> <span class="s">'@wab/agent-sdk'</span>;
+
+<span class="k">const</span> agent = <span class="k">new</span> <span class="f">WABAgent</span>({ apiKey: <span class="s">'YOUR_API_KEY'</span> });
+<span class="k">await</span> agent.<span class="f">navigate</span>(<span class="s">'https://target-site.com'</span>);
+<span class="k">const</span> score = <span class="k">await</span> agent.<span class="f">getFairnessScore</span>();</code></pre>
+      </div>
+    </div>
+    <div class="code-panel" id="code-docker">
+      <div class="code-window code-window--embed">
+        <div class="code-header">
+          <div class="code-dots"><span></span><span></span><span></span></div>
+          <span class="code-title">docker-compose.yml</span>
+          <button class="copy-btn" onclick="copyCode('docker')">Copy</button>
+        </div>
+        <pre class="code-body"><code id="embed-docker"><span class="k">version:</span> <span class="s">'3.8'</span>
+<span class="k">services:</span>
+  <span class="k">wab-demo:</span>
+    <span class="k">image:</span> <span class="s">webagentbridge/demo:latest</span>
+    <span class="k">ports:</span>
+      - <span class="s">"8080:80"</span>
+    <span class="k">environment:</span>
+      - <span class="s">WAB_API_KEY=your_key_here</span>
+      - <span class="s">WAB_ENV=demo</span>
+    <span class="k">restart:</span> <span class="s">unless-stopped</span>
+    <span class="c"># Isolated from production databases</span>
+    <span class="c"># Uses in-memory storage only</span></code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════ CTA ═══ -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-card">
+      <div class="cta-content">
+        <h2>Ready to Build Smarter Web Agents?</h2>
+        <p>Join 12,000+ developers using WAB to build the next generation of intelligent web automation.</p>
+        <div class="cta-actions">
+          <a href="/" class="btn-primary btn-primary--large">
+            Start Free Trial
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </a>
+          <a href="/docs" class="btn-ghost">Read the Docs</a>
+        </div>
+      </div>
+      <div class="cta-visual">
+        <div class="cta-stat"><span class="cta-stat-value">Free</span><span class="cta-stat-label">Starter Plan</span></div>
+        <div class="cta-stat"><span class="cta-stat-value">5 min</span><span class="cta-stat-label">Integration Time</span></div>
+        <div class="cta-stat"><span class="cta-stat-value">24/7</span><span class="cta-stat-label">Support</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <div class="nav-logo" style="width:28px;height:28px">
+          <svg width="28" height="28" viewBox="0 0 120 120">
+            <defs><linearGradient x2="100%" y2="100%" y1="0%" x1="0%" id="lg2"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs>
+            <circle stroke="url(#lg2)" cy="60" r="54" stroke-width="3" cx="60" fill="none"/>
+            <path d="M36 78 L48 42 L60 66 L72 42 L84 78" stroke="url(#lg2)" fill="none" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span>Web Agent Bridge</span>
+      </div>
+      <div class="footer-links">
+        <a href="/">Website</a>
+        <a href="/docs">Documentation</a>
+        <a href="/browser">Download</a>
+      </div>
+      <div class="footer-note">
+        <span class="demo-badge-footer">DEMO</span>
+        Isolated environment — no production data
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

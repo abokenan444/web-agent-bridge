@@ -34,6 +34,7 @@ const adminPremiumRoutes = require('./routes/admin-premium');
 const workspaceRoutes = require('./routes/agent-workspace');
 const universalRoutes = require('./routes/universal');
 const runtimeRoutes = require('./routes/runtime');
+const demoShowcaseRoutes = require('./routes/demo-showcase');
 const { handleWebhookRequest } = require('./services/stripe');
 const { runtime } = require('./runtime');
 
@@ -142,6 +143,7 @@ app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);
 app.use('/api/workspace', apiLimiter, workspaceRoutes);
 app.use('/api/universal', apiLimiter, universalRoutes);
 app.use('/api/os', apiLimiter, runtimeRoutes);
+app.use('/api/demo', apiLimiter, demoShowcaseRoutes);
 
 // Convenience alias: /api/negotiate/* → /api/sovereign/negotiation/*
 app.get('/api/negotiate', apiLimiter, (req, res) => {
