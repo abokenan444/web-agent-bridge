@@ -5,3 +5,9 @@ data-test/
 *.db
 dist/
 *.tgz
+
+# Proprietary — Growth Suite (closed-source)
+wab-growth-suite/
+server/routes/growth.js
+server/migrations/006_growth_suite.sql
+public/score.html
