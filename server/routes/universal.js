@@ -11,7 +11,15 @@ const express = require('express');
 const router = express.Router();
 const scraper = require('../services/universal-scraper');
 const priceIntel = require('../services/price-intelligence');
-const fairness = require('../services/fairness-engine');
+let fairness;
+try { fairness = require('../services/fairness-engine'); } catch {
+  fairness = {
+    calculateFairnessScore: () => ({ score: 0, label: 'unrated' }),
+    rankWithFairness: (_items) => _items,
+    detectDarkPatterns: () => [],
+    getTopFairSites: () => []
+  };
+}
 
 // ─── POST /api/universal/extract ─────────────────────────────────────
 // Extract prices/products from a URL (server-side fetch)

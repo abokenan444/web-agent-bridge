@@ -14,12 +14,22 @@ const { findSiteById, findSiteByLicense, recordAnalytic, db } = require('../mode
 const { broadcastAnalytic } = require('../ws');
 const { wabAuthenticateLimiter, wabActionLimiter, searchLimiter } = require('../middleware/rateLimits');
 const { auditLog } = require('../services/security');
-const {
-  calculateNeutralityScore,
-  fairnessWeightedSearch,
-  getDirectoryListings,
-  generateFairnessReport
-} = require('../services/fairness');
+
+// Fairness module is proprietary — provide stubs when not available
+let calculateNeutralityScore, fairnessWeightedSearch, getDirectoryListings, generateFairnessReport;
+try {
+  ({
+    calculateNeutralityScore,
+    fairnessWeightedSearch,
+    getDirectoryListings,
+    generateFairnessReport
+  } = require('../services/fairness'));
+} catch {
+  calculateNeutralityScore = () => ({ score: 0, label: 'unrated' });
+  fairnessWeightedSearch = (_q, candidates) => candidates;
+  getDirectoryListings = () => [];
+  generateFairnessReport = () => ({ status: 'unavailable' });
+}
 
 const WAB_VERSION = '1.2.0';
 const PROTOCOL_VERSION = '1.0';

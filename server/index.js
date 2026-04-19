@@ -35,7 +35,8 @@ const workspaceRoutes = require('./routes/agent-workspace');
 const universalRoutes = require('./routes/universal');
 const runtimeRoutes = require('./routes/runtime');
 const demoShowcaseRoutes = require('./routes/demo-showcase');
-const growthRoutes = require('./routes/growth');
+let growthRoutes;
+try { growthRoutes = require('./routes/growth'); } catch { growthRoutes = require('express').Router(); }
 const { handleWebhookRequest } = require('./services/stripe');
 const { runtime } = require('./runtime');
 

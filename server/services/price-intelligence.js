@@ -15,7 +15,8 @@
 const crypto = require('crypto');
 const { db } = require('../models/db');
 const scraper = require('./universal-scraper');
-const { getWabBridgeInfo } = require('./fairness-engine');
+let getWabBridgeInfo;
+try { ({ getWabBridgeInfo } = require('./fairness-engine')); } catch { getWabBridgeInfo = () => null; }
 
 // ─── Schema ──────────────────────────────────────────────────────────
 
