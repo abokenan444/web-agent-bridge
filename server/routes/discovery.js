@@ -7,13 +7,24 @@ const express = require('express');
 const router = express.Router();
 const { findSiteById, db } = require('../models/db');
 const { authenticateToken } = require('../middleware/auth');
-const {
-  calculateNeutralityScore,
-  fairnessWeightedSearch,
-  registerInDirectory,
-  getDirectoryListings,
-  generateFairnessReport
-} = require('../services/fairness');
+
+// Fairness module is proprietary — provide stubs when not available
+let calculateNeutralityScore, fairnessWeightedSearch, registerInDirectory, getDirectoryListings, generateFairnessReport;
+try {
+  ({
+    calculateNeutralityScore,
+    fairnessWeightedSearch,
+    registerInDirectory,
+    getDirectoryListings,
+    generateFairnessReport
+  } = require('../services/fairness'));
+} catch {
+  calculateNeutralityScore = () => ({ score: 0, label: 'unrated' });
+  fairnessWeightedSearch = (_q, candidates) => candidates;
+  registerInDirectory = () => ({});
+  getDirectoryListings = () => [];
+  generateFairnessReport = () => ({ status: 'unavailable' });
+}
 
 const WAB_VERSION = '1.2.0';
 
