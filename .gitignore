@@ -15,4 +15,5 @@ wab-growth-suite/
 server/routes/growth.js
 server/migrations/006_growth_suite.sql
 server/services/fairness.js
+server/services/fairness-engine.js
 public/score.html
