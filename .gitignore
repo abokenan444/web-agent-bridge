@@ -17,3 +17,16 @@ server/migrations/006_growth_suite.sql
 server/services/fairness.js
 server/services/fairness-engine.js
 public/score.html
+
+# ═══════════════════════════════════════════════════════
+# API MODULE ENGINES — Proprietary (closed-source)
+# ═══════════════════════════════════════════════════════
+server/services/modules/neural-engine.js
+server/services/modules/dark-pattern-engine.js
+server/services/modules/gov-engine.js
+server/services/modules/notary-engine.js
+server/services/modules/firewall-engine.js
+server/services/modules/price-engine.js
+server/services/modules/bargaining-engine.js
+server/services/modules/bounty-verification.js
+server/services/modules/affiliate-db.js

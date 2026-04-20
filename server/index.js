@@ -35,6 +35,7 @@ const workspaceRoutes = require('./routes/agent-workspace');
 const universalRoutes = require('./routes/universal');
 const runtimeRoutes = require('./routes/runtime');
 const demoShowcaseRoutes = require('./routes/demo-showcase');
+const gatewayRoutes = require('./routes/gateway');
 let growthRoutes;
 try { growthRoutes = require('./routes/growth'); } catch { growthRoutes = require('express').Router(); }
 const { handleWebhookRequest } = require('./services/stripe');
@@ -153,6 +154,7 @@ app.use('/api/universal', apiLimiter, universalRoutes);
 app.use('/api/os', apiLimiter, runtimeRoutes);
 app.use('/api/demo', apiLimiter, demoShowcaseRoutes);
 app.use('/api/growth', apiLimiter, growthRoutes);
+app.use('/api/v1', gatewayRoutes);
 
 // Convenience alias: /api/negotiate/* → /api/sovereign/negotiation/*
 app.get('/api/negotiate', apiLimiter, (req, res) => {
@@ -261,6 +263,9 @@ app.get('/growth', noCache, (req, res) => {
 });
 app.get('/score', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'score.html'));
+});
+app.get('/api', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'api.html'));
 });
 
 // Browser downloads

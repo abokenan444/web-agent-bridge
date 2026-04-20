@@ -44,6 +44,7 @@
         <a href="#" data-view="ads">📢 Ads Manager</a>
         <a href="#" data-view="ad-submissions">📋 Ad Submissions</a>
         <a href="#" data-view="workspace">🤖 Agent Workspace</a>
+        <a href="#" data-view="api-modules">🔌 API Modules</a>
       </nav>
       <div class="sidebar-footer">
         <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;" id="adminName"></div>
@@ -412,6 +413,48 @@
         </div>
       </div>
 
+      <!-- ═══════════ API MODULES ═══════════ -->
+      <div id="view-api-modules" class="view">
+        <div class="page-header">
+          <h1>🔌 API Modules</h1>
+          <a href="/api" target="_blank" class="btn btn-primary btn-sm">View Public API Docs</a>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card"><div class="label">Total Modules</div><div class="value">10</div></div>
+          <div class="stat-card"><div class="label">Open Source</div><div class="value" style="color:#4ade80">1</div></div>
+          <div class="stat-card"><div class="label">Partial Open</div><div class="value" style="color:#fbbf24">5</div></div>
+          <div class="stat-card"><div class="label">Fully Closed</div><div class="value" style="color:#f87171">4</div></div>
+          <div class="stat-card"><div class="label">API Keys Issued</div><div class="value" id="apiKeysCount">–</div></div>
+        </div>
+
+        <div class="card" style="margin-top:24px">
+          <h3 style="margin-bottom:16px;">Module Status</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Module</th><th>Route</th><th>Type</th><th>Min Plan</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td>Agent Firewall</td><td><code>/api/v1/firewall</code></td><td>🟡 Partial</td><td>PRO</td><td><span style="color:#4ade80">● Active</span></td></tr>
+                <tr><td>Cryptographic Notary</td><td><code>/api/v1/notary</code></td><td>🔴 Closed</td><td>BUSINESS</td><td><span style="color:#94a3b8">● Engine Required</span></td></tr>
+                <tr><td>Dark Pattern Detector</td><td><code>/api/v1/dark-pattern</code></td><td>🔴 Closed</td><td>FREE</td><td><span style="color:#94a3b8">● Engine Required</span></td></tr>
+                <tr><td>Collective Bargaining</td><td><code>/api/v1/bargaining</code></td><td>🟡 Partial</td><td>PRO</td><td><span style="color:#4ade80">● Active</span></td></tr>
+                <tr><td>Gov Intelligence</td><td><code>/api/v1/gov</code></td><td>🔴 Closed</td><td>BUSINESS</td><td><span style="color:#94a3b8">● Engine Required</span></td></tr>
+                <tr><td>Price Time Machine</td><td><code>/api/v1/price</code></td><td>🟡 Partial</td><td>FREE</td><td><span style="color:#4ade80">● Active</span></td></tr>
+                <tr><td>Neural Engine</td><td><code>/api/v1/neural</code></td><td>🔴 Closed</td><td>PRO</td><td><span style="color:#94a3b8">● Engine Required</span></td></tr>
+                <tr><td>WAB Protocol</td><td><code>/api/v1/protocol</code></td><td>🟢 Open</td><td>FREE</td><td><span style="color:#4ade80">● Active</span></td></tr>
+                <tr><td>Bounty Network</td><td><code>/api/v1/bounty</code></td><td>🟡 Partial</td><td>FREE</td><td><span style="color:#4ade80">● Active</span></td></tr>
+                <tr><td>Affiliate Intelligence</td><td><code>/api/v1/affiliate</code></td><td>🟡 Partial</td><td>PRO</td><td><span style="color:#4ade80">● Active</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:24px">
+          <h3 style="margin-bottom:16px;">Gateway Health</h3>
+          <div id="gatewayHealth" style="color:#94a3b8">Loading...</div>
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -478,6 +521,21 @@
     async function init() {
       if (admin) document.getElementById('adminName').textContent = admin.name;
       await loadStats();
+      loadGatewayHealth();
+    }
+
+    async function loadGatewayHealth() {
+      try {
+        const res = await fetch('/api/v1/health');
+        const data = await res.json();
+        const el = document.getElementById('gatewayHealth');
+        if (el) {
+          el.innerHTML = `<span style="color:#4ade80">● Online</span> — ${data.modules || 10} modules, uptime: ${data.uptime || 'N/A'}`;
+        }
+      } catch (e) {
+        const el = document.getElementById('gatewayHealth');
+        if (el) el.innerHTML = '<span style="color:#f87171">● Offline</span>';
+      }
     }
 
     // ─── Stats ──────────────────────────────────────────────────────────

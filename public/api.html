@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB API — Web Agent Bridge Platform API</title>
+  <meta name="description" content="WAB API Gateway — 10 advanced modules for AI agent protection, price tracking, dark pattern detection, and more. RESTful API with API key authentication.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>body{background:#0a0e1a;color:#f0f4ff;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;min-height:100vh}</style>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="/css/styles.css?v=3.0.1">
+  <style>
+    .api-hero{padding:120px 0 60px;text-align:center}
+    .api-hero h1{font-size:3rem;margin:0 0 16px}
+    .api-hero .subtitle{font-size:1.2rem;color:#94a3b8;max-width:700px;margin:0 auto 32px}
+    .lang-switch{display:flex;justify-content:center;gap:8px;margin-bottom:40px}
+    .lang-switch button{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#f0f4ff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:.9rem;transition:.2s}
+    .lang-switch button.active{background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:transparent}
+    .module-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:24px;padding:0 20px;max-width:1200px;margin:0 auto 60px}
+    .module-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:28px;transition:.3s}
+    .module-card:hover{border-color:rgba(99,102,241,.4);transform:translateY(-2px)}
+    .module-card .badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:.75rem;font-weight:600;margin-bottom:12px}
+    .badge-free{background:rgba(34,197,94,.15);color:#4ade80}
+    .badge-pro{background:rgba(99,102,241,.15);color:#818cf8}
+    .badge-business{background:rgba(245,158,11,.15);color:#fbbf24}
+    .module-card h3{font-size:1.2rem;margin:0 0 8px}
+    .module-card p{color:#94a3b8;font-size:.9rem;line-height:1.6;margin:0 0 16px}
+    .endpoint{background:rgba(0,0,0,.3);border-radius:8px;padding:12px 16px;margin:6px 0;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:#a5b4fc;display:flex;align-items:center;gap:8px}
+    .endpoint .method{color:#4ade80;font-weight:600;min-width:40px}
+    .section-title{text-align:center;font-size:2rem;margin:60px 0 32px;color:#f0f4ff}
+    .auth-section{max-width:800px;margin:0 auto 60px;padding:0 20px}
+    .auth-section .code-block{background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px;font-family:'JetBrains Mono',monospace;font-size:.85rem;color:#a5b4fc;overflow-x:auto;line-height:1.7}
+    .plans-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;max-width:1100px;margin:0 auto 60px;padding:0 20px}
+    .plan-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:28px;text-align:center}
+    .plan-card h3{margin:0 0 8px}
+    .plan-card .price{font-size:2rem;font-weight:800;margin:12px 0}
+    .plan-card .price span{font-size:.9rem;font-weight:400;color:#94a3b8}
+    .plan-card ul{list-style:none;padding:0;text-align:left;margin:16px 0}
+    .plan-card li{padding:6px 0;color:#94a3b8;font-size:.9rem}
+    .plan-card li::before{content:'✓ ';color:#4ade80}
+    .plan-card li.no::before{content:'✗ ';color:#ef4444}
+    .plan-card.featured{border-color:rgba(99,102,241,.5);background:rgba(99,102,241,.06)}
+    .gateway-info{max-width:800px;margin:0 auto 60px;padding:0 20px}
+    .gateway-info .info-box{background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:12px;padding:24px;margin:16px 0}
+    .gateway-info .info-box h4{margin:0 0 8px;color:#a5b4fc}
+    .gateway-info .info-box p{color:#94a3b8;margin:0;line-height:1.6}
+    [dir="rtl"] .endpoint{direction:ltr;text-align:left}
+    [dir="rtl"] .code-block{direction:ltr;text-align:left}
+    .status-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:600}
+    .status-open{background:rgba(34,197,94,.15);color:#4ade80}
+    .status-closed{background:rgba(239,68,68,.15);color:#f87171}
+    .status-partial{background:rgba(245,158,11,.15);color:#fbbf24}
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════ NAVBAR ═══════════ -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <div class="brand-icon">⚡</div>
+        <span>WAB</span>
+      </a>
+      <ul class="navbar-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/api" class="active">API</a></li>
+        <li><a href="/workspace">Workspace</a></li>
+        <li><a href="/growth">Growth Suite</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <a href="/login" class="btn btn-ghost" data-wab-auth="guest">Sign In</a>
+        <a href="/dashboard" class="btn btn-ghost" data-wab-auth="signed-in" style="display:none">Dashboard</a>
+        <a href="/register" class="btn btn-primary btn-sm" data-wab-auth="guest">Get Started</a>
+      </div>
+      <button class="mobile-menu-btn" onclick="document.querySelector('.navbar-links').classList.toggle('active')">☰</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════ HERO ═══════════ -->
+  <section class="api-hero">
+    <div class="container">
+      <div class="lang-switch">
+        <button class="active" onclick="switchLang('en')">English</button>
+        <button onclick="switchLang('ar')">العربية</button>
+      </div>
+      <h1 id="hero-title">WAB API Gateway</h1>
+      <p class="subtitle" id="hero-subtitle">10 advanced modules for AI agent protection, consumer rights, price tracking, and regulatory compliance — all behind one authenticated API.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <a href="#modules" class="btn btn-primary" id="btn-explore">Explore Modules</a>
+        <a href="#auth" class="btn btn-ghost" id="btn-getkey">Get API Key</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ BASE URL ═══════════ -->
+  <div class="gateway-info">
+    <div class="info-box">
+      <h4 id="baseurl-title">Base URL</h4>
+      <div class="endpoint" style="font-size:1rem">
+        <span>https://www.webagentbridge.com/api/v1</span>
+      </div>
+      <p id="baseurl-desc" style="margin-top:12px">All module endpoints are accessed through this single gateway. Internal microservices are never exposed directly.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════ MODULES ═══════════ -->
+  <h2 class="section-title" id="modules" data-en="API Modules" data-ar="وحدات الـ API">API Modules</h2>
+  <div class="module-grid">
+
+    <!-- 01: Agent Firewall -->
+    <div class="module-card">
+      <span class="badge badge-pro">PRO</span>
+      <span class="status-badge status-partial" data-en="API Open · Engine Closed" data-ar="API مفتوح · المحرك مغلق">API Open · Engine Closed</span>
+      <h3 data-en="Agent Firewall" data-ar="جدار حماية الوكلاء">Agent Firewall</h3>
+      <p data-en="Scans URLs and content for prompt injections, phishing attempts, and malicious domains. Protects AI agents from manipulation." data-ar="يفحص الروابط والمحتوى للكشف عن حقن الأوامر ومحاولات التصيد والنطاقات الخبيثة. يحمي وكلاء الذكاء الاصطناعي من التلاعب.">Scans URLs and content for prompt injections, phishing attempts, and malicious domains. Protects AI agents from manipulation.</p>
+      <div class="endpoint"><span class="method">POST</span> /v1/firewall/scan</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/firewall/stats</div>
+    </div>
+
+    <!-- 02: Notary -->
+    <div class="module-card">
+      <span class="badge badge-business">BUSINESS</span>
+      <span class="status-badge status-closed" data-en="Fully Closed" data-ar="مغلق بالكامل">Fully Closed</span>
+      <h3 data-en="Cryptographic Notary" data-ar="كاتب العدل التشفيري">Cryptographic Notary</h3>
+      <p data-en="Issues legally admissible cryptographic certificates proving price discrimination and platform manipulation. Blockchain-anchored." data-ar="يصدر شهادات تشفيرية مقبولة قانونياً لإثبات التمييز السعري وتلاعب المنصات. مرتبطة بالبلوكتشين.">Issues legally admissible cryptographic certificates proving price discrimination and platform manipulation. Blockchain-anchored.</p>
+      <div class="endpoint"><span class="method">POST</span> /v1/notary/price</div>
+      <div class="endpoint"><span class="method">POST</span> /v1/notary/transaction</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/notary/verify/:certId</div>
+    </div>
+
+    <!-- 03: Dark Pattern Detector -->
+    <div class="module-card">
+      <span class="badge badge-free">FREE</span>
+      <span class="status-badge status-closed" data-en="Fully Closed" data-ar="مغلق بالكامل">Fully Closed</span>
+      <h3 data-en="Dark Pattern Detector" data-ar="كاشف الأنماط المظلمة">Dark Pattern Detector</h3>
+      <p data-en="Detects all 17 OECD-classified dark patterns. Generates EU DSA/DMA compliant audit reports with legal references." data-ar="يكشف جميع الأنماط المظلمة الـ 17 المصنفة من OECD. يولد تقارير تدقيق متوافقة مع قانون DSA/DMA الأوروبي.">Detects all 17 OECD-classified dark patterns. Generates EU DSA/DMA compliant audit reports with legal references.</p>
+      <div class="endpoint"><span class="method">POST</span> /v1/dark-pattern/audit</div>
+      <div class="endpoint"><span class="method">POST</span> /v1/dark-pattern/scan</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/dark-pattern/patterns</div>
+    </div>
+
+    <!-- 04: Collective Bargaining -->
+    <div class="module-card">
+      <span class="badge badge-pro">PRO</span>
+      <span class="status-badge status-partial" data-en="Join Open · Engine Closed" data-ar="الانضمام مفتوح · المحرك مغلق">Join Open · Engine Closed</span>
+      <h3 data-en="Collective Bargaining" data-ar="التفاوض الجماعي">Collective Bargaining</h3>
+      <p data-en="Groups buyers anonymously to negotiate bulk discounts. Automatic demand pooling and negotiation triggering." data-ar="يجمع المشترين بشكل مجهول للتفاوض على خصومات جماعية. تجميع الطلب والتفاوض التلقائي.">Groups buyers anonymously to negotiate bulk discounts. Automatic demand pooling and negotiation triggering.</p>
+      <div class="endpoint"><span class="method">POST</span> /v1/bargaining/join</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/bargaining/pools</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/bargaining/pool/:id</div>
+    </div>
+
+    <!-- 05: Gov Intelligence -->
+    <div class="module-card">
+      <span class="badge badge-business">BUSINESS</span>
+      <span class="status-badge status-closed" data-en="Fully Closed" data-ar="مغلق بالكامل">Fully Closed</span>
+      <h3 data-en="Gov Intelligence" data-ar="الاستخبارات الحكومية">Gov Intelligence</h3>
+      <p data-en="Regulatory compliance database and government intelligence. Checks domain compliance against international regulations." data-ar="قاعدة بيانات الامتثال التنظيمي والاستخبارات الحكومية. يفحص امتثال النطاقات للتشريعات الدولية.">Regulatory compliance database and government intelligence. Checks domain compliance against international regulations.</p>
+      <div class="endpoint"><span class="method">GET</span> /v1/gov/check/:domain</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/gov/regulations</div>
+      <div class="endpoint"><span class="method">POST</span> /v1/gov/compliance-report</div>
+    </div>
+
+    <!-- 06: Price Time Machine -->
+    <div class="module-card">
+      <span class="badge badge-free">FREE</span>
+      <span class="status-badge status-partial" data-en="API Open · DB Closed" data-ar="API مفتوح · قاعدة البيانات مغلقة">API Open · DB Closed</span>
+      <h3 data-en="Price Time Machine" data-ar="آلة الزمن السعرية">Price Time Machine</h3>
+      <p data-en="Historical price tracking and fake discount detection. Track prices across platforms and detect artificial price inflation before sales." data-ar="تتبع الأسعار التاريخية وكشف التخفيضات الوهمية. تتبع الأسعار عبر المنصات وكشف التضخم السعري المصطنع.">Historical price tracking and fake discount detection. Track prices across platforms and detect artificial price inflation before sales.</p>
+      <div class="endpoint"><span class="method">POST</span> /v1/price/track</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/price/history/:platform/:productId</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/price/compare?product_name=...</div>
+    </div>
+
+    <!-- 07: Neural Engine -->
+    <div class="module-card">
+      <span class="badge badge-pro">PRO</span>
+      <span class="status-badge status-closed" data-en="Fully Closed" data-ar="مغلق بالكامل">Fully Closed</span>
+      <h3 data-en="WAB Neural Engine" data-ar="المحرك العصبي">WAB Neural Engine</h3>
+      <p data-en="Local AI inference engine for URL analysis, content classification, and text embeddings. Runs entirely on WAB infrastructure." data-ar="محرك ذكاء اصطناعي محلي لتحليل الروابط وتصنيف المحتوى. يعمل بالكامل على بنية WAB التحتية.">Local AI inference engine for URL analysis, content classification, and text embeddings. Runs entirely on WAB infrastructure.</p>
+      <div class="endpoint"><span class="method">POST</span> /v1/neural/analyze-url</div>
+      <div class="endpoint"><span class="method">POST</span> /v1/neural/classify</div>
+      <div class="endpoint"><span class="method">POST</span> /v1/neural/embeddings</div>
+    </div>
+
+    <!-- 08: WAB Protocol -->
+    <div class="module-card">
+      <span class="badge badge-free">FREE</span>
+      <span class="status-badge status-open" data-en="Fully Open" data-ar="مفتوح بالكامل">Fully Open</span>
+      <h3 data-en="WAB Protocol" data-ar="بروتوكول WAB">WAB Protocol</h3>
+      <p data-en="Open wab.json trust protocol specification. Validate any website's WAB compliance. Designed to become a web standard." data-ar="مواصفة بروتوكول الثقة wab.json المفتوحة. تحقق من امتثال أي موقع. مصمم ليصبح معياراً للويب.">Open wab.json trust protocol specification. Validate any website's WAB compliance. Designed to become a web standard.</p>
+      <div class="endpoint"><span class="method">POST</span> /v1/protocol/validate</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/protocol/check/:domain</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/protocol/schema</div>
+    </div>
+
+    <!-- 09: Bounty Network -->
+    <div class="module-card">
+      <span class="badge badge-free">FREE</span>
+      <span class="status-badge status-partial" data-en="Report Open · Rules Closed" data-ar="الإبلاغ مفتوح · القواعد مغلقة">Report Open · Rules Closed</span>
+      <h3 data-en="Bounty Network" data-ar="شبكة المكافآت">Bounty Network</h3>
+      <p data-en="Community-powered threat reporting and bug bounty network. Report dark patterns, fake reviews, and manipulation for rewards." data-ar="شبكة مكافآت وبلاغات التهديدات المدعومة من المجتمع. بلّغ عن الأنماط المظلمة والتلاعب واحصل على مكافآت.">Community-powered threat reporting and bug bounty network. Report dark patterns, fake reviews, and manipulation for rewards.</p>
+      <div class="endpoint"><span class="method">POST</span> /v1/bounty/report</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/bounty/report/:id</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/bounty/leaderboard</div>
+    </div>
+
+    <!-- 10: Affiliate Intelligence -->
+    <div class="module-card">
+      <span class="badge badge-pro">PRO</span>
+      <span class="status-badge status-partial" data-en="API Open · DB Closed" data-ar="API مفتوح · قاعدة البيانات مغلقة">API Open · DB Closed</span>
+      <h3 data-en="Affiliate Intelligence" data-ar="استخبارات التسويق بالعمولة">Affiliate Intelligence</h3>
+      <p data-en="Detects affiliate link manipulation, cookie stuffing, and tracking pixel abuse. Protects creators and marketers from fraud." data-ar="يكشف التلاعب بروابط التسويق بالعمولة وحشو ملفات تعريف الارتباط. يحمي المسوقين من الاحتيال.">Detects affiliate link manipulation, cookie stuffing, and tracking pixel abuse. Protects creators and marketers from fraud.</p>
+      <div class="endpoint"><span class="method">POST</span> /v1/affiliate/scan-url</div>
+      <div class="endpoint"><span class="method">POST</span> /v1/affiliate/scan-html</div>
+      <div class="endpoint"><span class="method">GET</span> /v1/affiliate/stats</div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════ AUTHENTICATION ═══════════ -->
+  <h2 class="section-title" id="auth" data-en="Authentication" data-ar="المصادقة">Authentication</h2>
+  <div class="auth-section">
+    <p data-en="All module endpoints require an API key. Get your key from the WAB Workspace, then include it in every request:" data-ar="جميع نقاط النهاية تتطلب مفتاح API. احصل على مفتاحك من مساحة عمل WAB، ثم أضفه في كل طلب:" style="color:#94a3b8;margin-bottom:20px">All module endpoints require an API key. Get your key from the WAB Workspace, then include it in every request:</p>
+
+    <h4 data-en="Option 1: Authorization Header (Recommended)" data-ar="الخيار 1: ترويسة التفويض (موصى بها)">Option 1: Authorization Header (Recommended)</h4>
+    <div class="code-block">
+curl -X POST https://www.webagentbridge.com/api/v1/firewall/scan \
+  -H "Authorization: Bearer wab_live_pro_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com", "content": "page content..."}'
+    </div>
+
+    <h4 style="margin-top:24px" data-en="Option 2: X-WAB-Key Header" data-ar="الخيار 2: ترويسة X-WAB-Key">Option 2: X-WAB-Key Header</h4>
+    <div class="code-block">
+curl -H "X-WAB-Key: wab_live_pro_YOUR_KEY" \
+  https://www.webagentbridge.com/api/v1/protocol/check/example.com
+    </div>
+
+    <h4 style="margin-top:24px" data-en="Option 3: Query Parameter" data-ar="الخيار 3: معامل الاستعلام">Option 3: Query Parameter</h4>
+    <div class="code-block">
+GET /api/v1/bounty/stats?api_key=wab_live_fre_YOUR_KEY
+    </div>
+
+    <h4 style="margin-top:32px" data-en="Generate API Key" data-ar="إنشاء مفتاح API">Generate API Key</h4>
+    <div class="code-block">
+curl -X POST https://www.webagentbridge.com/api/v1/keys/generate \
+  -H "Content-Type: application/json" \
+  -d '{"plan": "FREE", "owner": "Your Name", "email": "you@example.com"}'
+    </div>
+
+    <h4 style="margin-top:32px" data-en="Key Management Endpoints" data-ar="نقاط إدارة المفاتيح">Key Management Endpoints</h4>
+    <div class="code-block" style="line-height:2">
+POST /api/v1/keys/generate    — <span data-en="Create a new API key" data-ar="إنشاء مفتاح جديد">Create a new API key</span>
+POST /api/v1/keys/validate    — <span data-en="Validate an existing key" data-ar="التحقق من صلاحية مفتاح">Validate an existing key</span>
+GET  /api/v1/keys/usage       — <span data-en="Check usage and quotas" data-ar="التحقق من الاستخدام والحصص">Check usage and quotas</span>
+POST /api/v1/keys/revoke      — <span data-en="Revoke a key" data-ar="إلغاء مفتاح">Revoke a key</span>
+POST /api/v1/keys/rotate      — <span data-en="Rotate a key (revoke old, issue new)" data-ar="تدوير مفتاح (إلغاء القديم، إصدار جديد)">Rotate a key (revoke old, issue new)</span>
+    </div>
+  </div>
+
+  <!-- ═══════════ PRICING PLANS ═══════════ -->
+  <h2 class="section-title" id="pricing" data-en="API Plans" data-ar="خطط الـ API">API Plans</h2>
+  <div class="plans-grid">
+    <div class="plan-card">
+      <h3>Free</h3>
+      <div class="price">$0<span>/mo</span></div>
+      <ul>
+        <li data-en="100 requests/day" data-ar="100 طلب/يوم">100 requests/day</li>
+        <li data-en="10 requests/min" data-ar="10 طلبات/دقيقة">10 requests/min</li>
+        <li data-en="Dark Pattern Detector" data-ar="كاشف الأنماط المظلمة">Dark Pattern Detector</li>
+        <li data-en="Price Time Machine" data-ar="آلة الزمن السعرية">Price Time Machine</li>
+        <li data-en="WAB Protocol" data-ar="بروتوكول WAB">WAB Protocol</li>
+        <li data-en="Bounty Network" data-ar="شبكة المكافآت">Bounty Network</li>
+        <li class="no" data-en="Agent Firewall" data-ar="جدار الحماية">Agent Firewall</li>
+        <li class="no" data-en="Neural Engine" data-ar="المحرك العصبي">Neural Engine</li>
+        <li data-en="Community support" data-ar="دعم مجتمعي">Community support</li>
+      </ul>
+    </div>
+    <div class="plan-card featured">
+      <h3>Pro</h3>
+      <div class="price">$29<span>/mo</span></div>
+      <ul>
+        <li data-en="10,000 requests/day" data-ar="10,000 طلب/يوم">10,000 requests/day</li>
+        <li data-en="100 requests/min" data-ar="100 طلب/دقيقة">100 requests/min</li>
+        <li data-en="All Free modules +" data-ar="جميع وحدات Free +">All Free modules +</li>
+        <li data-en="Agent Firewall" data-ar="جدار الحماية">Agent Firewall</li>
+        <li data-en="Neural Engine" data-ar="المحرك العصبي">Neural Engine</li>
+        <li data-en="Collective Bargaining" data-ar="التفاوض الجماعي">Collective Bargaining</li>
+        <li data-en="Affiliate Intelligence" data-ar="استخبارات التسويق">Affiliate Intelligence</li>
+        <li data-en="Email support" data-ar="دعم بريد إلكتروني">Email support</li>
+      </ul>
+    </div>
+    <div class="plan-card">
+      <h3>Business</h3>
+      <div class="price">$149<span>/mo</span></div>
+      <ul>
+        <li data-en="100,000 requests/day" data-ar="100,000 طلب/يوم">100,000 requests/day</li>
+        <li data-en="500 requests/min" data-ar="500 طلب/دقيقة">500 requests/min</li>
+        <li data-en="All 10 modules" data-ar="جميع الوحدات العشر">All 10 modules</li>
+        <li data-en="Cryptographic Notary" data-ar="كاتب العدل التشفيري">Cryptographic Notary</li>
+        <li data-en="Gov Intelligence" data-ar="الاستخبارات الحكومية">Gov Intelligence</li>
+        <li data-en="Priority support" data-ar="دعم أولوية">Priority support</li>
+        <li data-en="365-day data retention" data-ar="حفظ البيانات 365 يوم">365-day data retention</li>
+      </ul>
+    </div>
+    <div class="plan-card">
+      <h3>Enterprise</h3>
+      <div class="price" data-en="Custom" data-ar="مخصص">Custom</div>
+      <ul>
+        <li data-en="Unlimited requests" data-ar="طلبات غير محدودة">Unlimited requests</li>
+        <li data-en="All 10 modules" data-ar="جميع الوحدات العشر">All 10 modules</li>
+        <li data-en="Dedicated support" data-ar="دعم مخصص">Dedicated support</li>
+        <li data-en="Custom SLA" data-ar="اتفاقية SLA مخصصة">Custom SLA</li>
+        <li data-en="On-premise option" data-ar="خيار التشغيل المحلي">On-premise option</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="navbar-brand">
+            <div class="brand-icon">⚡</div>
+            <span>Web Agent Bridge</span>
+          </a>
+          <p data-en="Open-source middleware for AI agent and website interaction. Built for the future of intelligent automation." data-ar="وسيط مفتوح المصدر لتفاعل وكلاء الذكاء الاصطناعي مع المواقع. مبني لمستقبل الأتمتة الذكية.">Open-source middleware for AI agent and website interaction. Built for the future of intelligent automation.</p>
+        </div>
+        <div class="footer-col">
+          <h4 data-en="Product" data-ar="المنتج">Product</h4>
+          <ul>
+            <li><a href="/#features" data-en="Features" data-ar="الميزات">Features</a></li>
+            <li><a href="/docs" data-en="Documentation" data-ar="التوثيق">Documentation</a></li>
+            <li><a href="/api" data-en="API Reference" data-ar="مرجع الـ API">API Reference</a></li>
+            <li><a href="/workspace" data-en="Agent Workspace" data-ar="مساحة العمل">Agent Workspace</a></li>
+            <li><a href="/growth" data-en="Growth Suite" data-ar="مجموعة النمو">Growth Suite</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 data-en="Developers" data-ar="المطورون">Developers</h4>
+          <ul>
+            <li><a href="/docs#quick-start" data-en="Quick Start" data-ar="البدء السريع">Quick Start</a></li>
+            <li><a href="/api#auth" data-en="API Keys" data-ar="مفاتيح API">API Keys</a></li>
+            <li><a href="https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener">GitHub</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 data-en="Legal" data-ar="قانوني">Legal</h4>
+          <ul>
+            <li><a href="/privacy" data-en="Privacy Policy" data-ar="سياسة الخصوصية">Privacy Policy</a></li>
+            <li><a href="/terms" data-en="Terms of Service" data-ar="شروط الخدمة">Terms of Service</a></li>
+            <li><a href="/cookies" data-en="Cookie Policy" data-ar="سياسة ملفات تعريف الارتباط">Cookie Policy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 Web Agent Bridge. MIT License. Operated from the Netherlands.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/auth-nav.js?v=3.0.1"></script>
+  <script src="/js/cookie-consent.js?v=3.0.1"></script>
+  <script>
+    // ─── i18n ──────────────────────────────────────────────
+    const translations = {
+      en: {
+        'hero-title': 'WAB API Gateway',
+        'hero-subtitle': '10 advanced modules for AI agent protection, consumer rights, price tracking, and regulatory compliance — all behind one authenticated API.',
+        'btn-explore': 'Explore Modules',
+        'btn-getkey': 'Get API Key',
+        'baseurl-title': 'Base URL',
+        'baseurl-desc': 'All module endpoints are accessed through this single gateway. Internal microservices are never exposed directly.',
+      },
+      ar: {
+        'hero-title': 'بوابة WAB API',
+        'hero-subtitle': '10 وحدات متقدمة لحماية وكلاء الذكاء الاصطناعي وحقوق المستهلك وتتبع الأسعار والامتثال التنظيمي — كلها خلف API واحد مصادق عليه.',
+        'btn-explore': 'استكشف الوحدات',
+        'btn-getkey': 'احصل على مفتاح API',
+        'baseurl-title': 'عنوان URL الأساسي',
+        'baseurl-desc': 'يتم الوصول لجميع نقاط النهاية عبر هذه البوابة الواحدة. الخدمات الداخلية لا تُكشف مباشرة أبداً.',
+      }
+    };
+
+    function switchLang(lang) {
+      const isAr = lang === 'ar';
+      document.documentElement.lang = lang;
+      document.documentElement.dir = isAr ? 'rtl' : 'ltr';
+
+      document.querySelectorAll('.lang-switch button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.lang-switch button')[isAr ? 1 : 0].classList.add('active');
+
+      // Update static-id elements
+      const t = translations[lang];
+      for (const [id, text] of Object.entries(t)) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      }
+
+      // Update data-en/data-ar elements
+      document.querySelectorAll('[data-' + lang + ']').forEach(el => {
+        el.textContent = el.getAttribute('data-' + lang);
+      });
+    }
+  </script>
+</body>
+</html>
