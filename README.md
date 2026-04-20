@@ -135,6 +135,85 @@ v3.1 hardens the Agent OS into a production-grade system that *surpasses* MCP �
 
 > **Many more features** are available on the live website that aren't listed here — dashboards, analytics, admin tools, and more. Visit [webagentbridge.com](https://webagentbridge.com) to explore.
 
+### v3.2 — API Gateway & Advanced Modules
+
+v3.2 introduces a **unified API gateway** at `/api/v1` with 10 advanced modules for AI agent protection, consumer rights, price intelligence, and regulatory compliance. All modules use centralized API key authentication with plan-based access control.
+
+🌐 **Live API Docs:** [webagentbridge.com/api](https://webagentbridge.com/api) (English / العربية)
+
+#### API Plans & Pricing
+
+| Plan | Price | Requests/Day | Requests/Min | Modules |
+|------|-------|-------------|-------------|----------|
+| **Free** | $0/mo | 100 | 10 | Protocol, Price Time Machine, Dark Pattern, Bounty |
+| **Pro** | $29/mo | 10,000 | 100 | All Free + Firewall, Neural, Bargaining, Affiliate |
+| **Business** | $149/mo | 100,000 | 500 | All 10 modules (incl. Notary, Gov Intelligence) |
+| **Enterprise** | Custom | Unlimited | Custom | All 10 + SLA + on-premise option |
+
+**Get your API key:** `POST /api/v1/keys/generate` with `{"plan": "FREE", "owner": "name", "email": "you@example.com"}`
+
+#### The 10 Modules
+
+| # | Module | Route | Type | Min Plan | Description |
+|---|--------|-------|------|----------|-------------|
+| 01 | **Agent Firewall** | `/api/v1/firewall` | 🟡 API Open · Engine Closed | PRO | Scans URLs/content for prompt injection, phishing, malicious domains |
+| 02 | **Cryptographic Notary** | `/api/v1/notary` | 🔴 Fully Closed | BUSINESS | Issues legally admissible cryptographic certificates for price discrimination proof |
+| 03 | **Dark Pattern Detector** | `/api/v1/dark-pattern` | 🔴 Fully Closed | FREE | Detects all 17 OECD-classified dark patterns with EU DSA/DMA audit reports |
+| 04 | **Collective Bargaining** | `/api/v1/bargaining` | 🟡 Join Open · Engine Closed | PRO | Anonymous buyer grouping for bulk discount negotiation |
+| 05 | **Gov Intelligence** | `/api/v1/gov` | 🔴 Fully Closed | BUSINESS | Regulatory compliance database and domain compliance checking |
+| 06 | **Price Time Machine** | `/api/v1/price` | 🟡 API Open · DB Closed | FREE | Historical price tracking and fake discount detection |
+| 07 | **WAB Neural Engine** | `/api/v1/neural` | 🔴 Fully Closed | PRO | Local AI inference for URL analysis, content classification, embeddings |
+| 08 | **WAB Protocol** | `/api/v1/protocol` | 🟢 Fully Open Source | FREE | Open wab.json trust protocol validator and schema endpoint |
+| 09 | **Bounty Network** | `/api/v1/bounty` | 🟡 Report Open · Rules Closed | FREE | Community-powered threat reporting and bug bounty with leaderboard |
+| 10 | **Affiliate Intelligence** | `/api/v1/affiliate` | 🟡 API Open · DB Closed | PRO | Detects affiliate link manipulation, cookie stuffing, tracking pixel abuse |
+
+**Type Legend:** 🟢 Fully open source · 🟡 Public API interface, proprietary engine · 🔴 Fully closed (returns 503 without engine)
+
+#### Authentication
+
+All module endpoints require an API key via one of three methods:
+
+```bash
+# Option 1: Authorization header (recommended)
+curl -X POST https://www.webagentbridge.com/api/v1/firewall/scan \
+  -H "Authorization: Bearer wab_live_pro_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com", "content": "page content..."}'
+
+# Option 2: X-WAB-Key header
+curl -H "X-WAB-Key: wab_live_pro_YOUR_KEY" \
+  https://www.webagentbridge.com/api/v1/protocol/check/example.com
+
+# Option 3: Query parameter
+curl https://www.webagentbridge.com/api/v1/bounty/stats?api_key=wab_live_fre_YOUR_KEY
+```
+
+#### Key Management
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/keys/generate` | POST | Create a new API key |
+| `/api/v1/keys/validate` | POST | Validate an existing key |
+| `/api/v1/keys/usage` | GET | Check usage and quotas |
+| `/api/v1/keys/revoke` | POST | Revoke a key |
+| `/api/v1/keys/rotate` | POST | Rotate a key (revoke old, issue new) |
+
+#### Gateway Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/health` | GET | Gateway health check (public) |
+| `/api/v1/plans` | GET | List available plans and pricing (public) |
+| `/api/v1/modules` | GET | List all available modules (public) |
+
+#### How to Subscribe
+
+1. Visit [webagentbridge.com/api](https://webagentbridge.com/api) to explore available modules
+2. Generate a **Free** API key: `POST /api/v1/keys/generate` with your name and email
+3. Start making requests to any Free-tier module immediately
+4. Upgrade to **Pro** ($29/mo) or **Business** ($149/mo) for access to advanced modules
+5. Manage your keys via the `/api/v1/keys/*` endpoints
+
 ---
 
 ## Quick Start
@@ -214,7 +293,8 @@ web-agent-bridge/
 │   │   ├── premium-v2.js           # v2 premium (memory, vision, healing, swarm, plugins)
 │   │   ├── discovery.js            # WAB discovery + fairness-weighted search
 │   │   ├── wab-api.js              # WAB HTTP transport (alternative to JS/WS)
-│   │   └── noscript.js             # NoScript tracking pixel fallback
+│   │   ├── noscript.js             # NoScript tracking pixel fallback
+│   │   └── gateway.js              # v3.2: Unified API Gateway (/api/v1)
 │   ├── services/
 │   │   ├── negotiation.js          # Real-time negotiation engine
 │   │   ├── verification.js         # Anti-hallucination shield
@@ -233,7 +313,19 @@ web-agent-bridge/
 │   │   ├── plugins.js              # Plugin architecture (hooks, registry)
 │   │   ├── premium.js              # Premium traffic intelligence & bot detection
 │   │   ├── email.js                # SMTP email service
-│   │   └── stripe.js               # Stripe payment integration
+│   │   ├── stripe.js               # Stripe payment integration
+│   │   ├── api-key-engine.js       # v3.2: API key auth, rate limiting, plans
+│   │   └── modules/               # v3.2: API Gateway modules
+│   │       ├── protocol.js         # WAB Protocol validator (open)
+│   │       ├── agent-firewall.js   # Agent Firewall (partial)
+│   │       ├── price-time-machine.js # Price Time Machine (partial)
+│   │       ├── bounty.js           # Bounty Network (partial)
+│   │       ├── collective-bargaining.js # Collective Bargaining (partial)
+│   │       ├── affiliate-intelligence.js # Affiliate Intelligence (partial)
+│   │       ├── neural.js           # Neural Engine (closed)
+│   │       ├── dark-pattern.js     # Dark Pattern Detector (closed)
+│   │       ├── gov-intelligence.js # Gov Intelligence (closed)
+│   │       └── notary.js           # Cryptographic Notary (closed)
 │   ├── middleware/
 │   │   ├── auth.js                 # JWT authentication middleware
 │   │   ├── adminAuth.js            # Admin authentication
@@ -1536,8 +1628,8 @@ WAB uses an **Open Core** dual-license model:
 
 | Layer | License | Components |
 |-------|---------|------------|
-| **Open Source** | MIT | SDK, Widget, MCP Server, Trust Protocol Spec, Browser Extension |
-| **Proprietary** | Closed | Detection Engine, Threat DB, WAB Score Model, Fairness Algorithm |
-| **Commercial** | Paid API | Data Marketplace, Affiliate Intelligence, AI Safety Layer, Enterprise SDK |
+| **Open Source** | MIT | SDK, Widget, MCP Server, Trust Protocol Spec, Browser Extension, Protocol module, Public module APIs |
+| **Proprietary** | Closed | Detection Engine, Threat DB, WAB Score Model, Fairness Algorithm, Neural Engine, Dark Pattern Engine, Gov Engine, Notary Engine, Firewall Engine, Price Engine, Bargaining Engine, Bounty Verification, Affiliate DB |
+| **Commercial** | Paid API | API Gateway modules (Free/Pro/Business/Enterprise tiers), Data Marketplace, AI Safety Layer, Enterprise SDK |
 
 See [LICENSE](LICENSE) for full details.
