@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+  wab-agent-firewall:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: wab-agent-firewall
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      - WAB_FIREWALL_PORT=8888
+      - WAB_BLOCK_INJECTIONS=true
+      - WAB_BLOCK_MALICIOUS=true
+      - WAB_STRIP_INJECTIONS=true
+      - WAB_SECRET=${WAB_SECRET:-wab-firewall-production-secret}
+      - WAB_API_URL=${WAB_API_URL:-https://www.webagentbridge.com/api}
+      - NODE_ENV=production
+    networks:
+      - wab-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/wab/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  wab-firewall-dashboard:
+    image: nginx:alpine
+    container_name: wab-firewall-dashboard
+    restart: unless-stopped
+    ports:
+      - "8889:80"
+    volumes:
+      - ../frontend:/usr/share/nginx/html:ro
+    networks:
+      - wab-network
+    depends_on:
+      - wab-agent-firewall
+
+networks:
+  wab-network:
+    name: wab-network
+    driver: bridge

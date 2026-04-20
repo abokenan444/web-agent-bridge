@@ -1,0 +1,14 @@
+{
+  "name": "@wab/agent-firewall",
+  "version": "1.0.0",
+  "description": "WAB Agent Firewall — Real-time AI agent request protection",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node test.js"
+  },
+  "keywords": ["wab", "ai-agent", "firewall", "proxy", "security", "prompt-injection"],
+  "license": "MIT",
+  "dependencies": {}
+}

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAB Agent Firewall — Live Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --success: #10b981;
+    --text: #e2e8f0;
+    --muted: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, #0a0e1a 0%, #111827 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .logo-text h1 { font-size: 18px; font-weight: 700; }
+  .logo-text span { font-size: 12px; color: var(--muted); }
+  .status-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    padding: 6px 16px; border-radius: 20px;
+    font-size: 13px; color: var(--success);
+  }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Layout */
+  main { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+
+  /* Stats Grid */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .stat-card.total::before { background: var(--accent); }
+  .stat-card.blocked::before { background: var(--danger); }
+  .stat-card.stripped::before { background: var(--warning); }
+  .stat-card.dark::before { background: var(--accent2); }
+  .stat-card.clean::before { background: var(--success); }
+  .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .stat-value { font-size: 32px; font-weight: 700; line-height: 1; }
+  .stat-card.total .stat-value { color: var(--accent); }
+  .stat-card.blocked .stat-value { color: var(--danger); }
+  .stat-card.stripped .stat-value { color: var(--warning); }
+  .stat-card.dark .stat-value { color: var(--accent2); }
+  .stat-card.clean .stat-value { color: var(--success); }
+  .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  /* Charts Row */
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .chart-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+  .chart-container { position: relative; height: 200px; }
+
+  /* Scan Tool */
+  .scan-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .scan-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  .scan-form { display: flex; gap: 12px; flex-wrap: wrap; }
+  .scan-input {
+    flex: 1; min-width: 300px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+  }
+  .scan-input:focus { border-color: var(--accent); }
+  .scan-btn {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .scan-btn:hover { opacity: 0.85; }
+  .scan-result {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 8px;
+    display: none;
+  }
+  .scan-result.show { display: block; }
+  .scan-result.clean { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); }
+  .scan-result.warning { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); }
+  .scan-result.danger { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); }
+  .verdict-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .verdict-badge.CLEAN { background: rgba(16,185,129,0.2); color: var(--success); }
+  .verdict-badge.WARNING { background: rgba(245,158,11,0.2); color: var(--warning); }
+  .verdict-badge.BLOCKED { background: rgba(239,68,68,0.2); color: var(--danger); }
+  .threat-list { list-style: none; }
+  .threat-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .threat-item:last-child { border-bottom: none; }
+  .threat-badge {
+    padding: 2px 8px; border-radius: 4px;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase;
+  }
+  .threat-badge.CRITICAL { background: rgba(239,68,68,0.2); color: #ef4444; }
+  .threat-badge.HIGH { background: rgba(245,158,11,0.2); color: #f59e0b; }
+  .threat-badge.MEDIUM { background: rgba(124,58,237,0.2); color: #7c3aed; }
+  .threat-badge.LOW { background: rgba(100,116,139,0.2); color: #94a3b8; }
+
+  /* Request Log */
+  .log-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .log-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .log-header h3 { font-size: 14px; font-weight: 600; }
+  .log-filter { display: flex; gap: 8px; }
+  .filter-btn {
+    padding: 4px 12px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+  .log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .log-table th {
+    text-align: left; padding: 8px 12px;
+    color: var(--muted); font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px; text-transform: uppercase;
+  }
+  .log-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .log-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .verdict-pill {
+    padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 600;
+  }
+  .verdict-pill.CLEAN { background: rgba(16,185,129,0.15); color: #10b981; }
+  .verdict-pill.WARNING { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .verdict-pill.BLOCKED { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .url-cell { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  .risk-bar { display: flex; align-items: center; gap: 8px; }
+  .risk-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; max-width: 80px; }
+  .risk-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+
+  /* Config Panel */
+  .config-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .config-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+  .config-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-radius: 8px;
+  }
+  .config-label { font-size: 13px; }
+  .config-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .toggle {
+    width: 44px; height: 24px;
+    background: var(--border);
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    background: white;
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(20px); }
+
+  /* Integration Code */
+  .code-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #e6edf3;
+    overflow-x: auto;
+    margin-top: 12px;
+  }
+  .code-block .comment { color: #8b949e; }
+  .code-block .keyword { color: #ff7b72; }
+  .code-block .string { color: #a5d6ff; }
+  .code-block .number { color: #79c0ff; }
+
+  @media (max-width: 768px) {
+    main { padding: 16px; }
+    .charts-row { grid-template-columns: 1fr; }
+    header { padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    <div class="logo-text">
+      <h1>WAB Agent Firewall</h1>
+      <span>Real-time AI Agent Protection</span>
+    </div>
+  </div>
+  <div class="status-badge">
+    <div class="status-dot"></div>
+    <span id="statusText">Firewall Active</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card total">
+      <div class="stat-label">Total Requests</div>
+      <div class="stat-value" id="statTotal">0</div>
+      <div class="stat-sub" id="statRps">0 req/s</div>
+    </div>
+    <div class="stat-card blocked">
+      <div class="stat-label">Blocked</div>
+      <div class="stat-value" id="statBlocked">0</div>
+      <div class="stat-sub" id="statBlockRate">0% block rate</div>
+    </div>
+    <div class="stat-card stripped">
+      <div class="stat-label">Injections Stripped</div>
+      <div class="stat-value" id="statStripped">0</div>
+      <div class="stat-sub">Prompt injection attacks</div>
+    </div>
+    <div class="stat-card dark">
+      <div class="stat-label">Dark Patterns</div>
+      <div class="stat-value" id="statDark">0</div>
+      <div class="stat-sub">Manipulation detected</div>
+    </div>
+    <div class="stat-card clean">
+      <div class="stat-label">Clean Requests</div>
+      <div class="stat-value" id="statClean">0</div>
+      <div class="stat-sub" id="statUptime">Uptime: 0s</div>
+    </div>
+  </div>
+
+  <!-- Config Panel -->
+  <div class="config-section">
+    <h3>Firewall Configuration</h3>
+    <div class="config-grid">
+      <div class="config-item">
+        <div>
+          <div class="config-label">Block Malicious Domains</div>
+          <div class="config-sub">Block requests to known phishing/malware domains</div>
+        </div>
+        <div class="toggle on" id="toggleMalicious"></div>
+      </div>
+      <div class="config-item">
+        <div>
+          <div class="config-label">Strip Prompt Injections</div>
+          <div class="config-sub">Remove injection attempts from response content</div>
+        </div>
+        <div class="toggle on" id="toggleInjection"></div>
+      </div>
+      <div class="config-item">
+        <div>
+          <div class="config-label">Dark Pattern Detection</div>
+          <div class="config-sub">Detect and flag manipulative UI patterns</div>
+        </div>
+        <div class="toggle on" id="toggleDark"></div>
+      </div>
+      <div class="config-item">
+        <div>
+          <div class="config-label">Real-time Alerts</div>
+          <div class="config-sub">Notify on critical threats immediately</div>
+        </div>
+        <div class="toggle on" id="toggleAlerts"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Request Activity (Last 60s)</h3>
+      <div class="chart-container">
+        <canvas id="activityChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Threat Distribution</h3>
+      <div class="chart-container">
+        <canvas id="threatChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Scan Tool -->
+  <div class="scan-section">
+    <h3>🔍 Live URL & Content Scanner</h3>
+    <div class="scan-form">
+      <input type="text" class="scan-input" id="scanUrl" placeholder="Enter URL to scan (e.g. https://example.com/checkout)">
+      <button class="scan-btn" onclick="scanUrl()">Scan URL</button>
+    </div>
+    <div class="scan-result" id="scanResult"></div>
+  </div>
+
+  <!-- Integration Code -->
+  <div class="config-section">
+    <h3>🔗 Integration — Connect Your AI Agent</h3>
+    <div class="code-block">
+<span class="comment">// Option 1: HTTP Proxy (works with any AI agent)</span>
+<span class="keyword">const</span> agent = <span class="keyword">new</span> OpenAI({
+  httpAgent: <span class="keyword">new</span> HttpsProxyAgent(<span class="string">'http://localhost:8888'</span>),
+  defaultHeaders: { <span class="string">'X-WAB-Agent-ID'</span>: <span class="string">'my-agent-v1'</span> }
+});
+
+<span class="comment">// Option 2: LangChain integration</span>
+<span class="keyword">import</span> { WABFirewallTool } <span class="keyword">from</span> <span class="string">'@wab/langchain'</span>;
+<span class="keyword">const</span> tools = [<span class="keyword">new</span> WABFirewallTool({ proxyUrl: <span class="string">'http://localhost:8888'</span> })];
+
+<span class="comment">// Option 3: Direct scan API</span>
+<span class="keyword">const</span> result = <span class="keyword">await</span> fetch(<span class="string">'http://localhost:8888/wab/scan'</span>, {
+  method: <span class="string">'POST'</span>,
+  body: JSON.stringify({ url: <span class="string">'https://target.com'</span>, content: htmlContent })
+});
+    </div>
+  </div>
+
+  <!-- Request Log -->
+  <div class="log-section">
+    <div class="log-header">
+      <h3>Live Request Log</h3>
+      <div class="log-filter">
+        <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+        <button class="filter-btn" onclick="setFilter('BLOCKED', this)">Blocked</button>
+        <button class="filter-btn" onclick="setFilter('WARNING', this)">Warning</button>
+        <button class="filter-btn" onclick="setFilter('CLEAN', this)">Clean</button>
+      </div>
+    </div>
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>URL</th>
+          <th>Agent</th>
+          <th>Verdict</th>
+          <th>Risk Score</th>
+          <th>Threats</th>
+          <th>Time (ms)</th>
+        </tr>
+      </thead>
+      <tbody id="logBody">
+        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Waiting for requests...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<script>
+const API = 'http://localhost:8888';
+let currentFilter = 'all';
+let allLogs = [];
+let activityData = Array(60).fill(0);
+let threatData = { MALICIOUS_DOMAIN: 0, PROMPT_INJECTION: 0, DARK_PATTERN: 0, PHISHING_URL: 0, DATA_EXFILTRATION: 0 };
+
+// ── Charts ──
+const activityCtx = document.getElementById('activityChart').getContext('2d');
+const activityChart = new Chart(activityCtx, {
+  type: 'line',
+  data: {
+    labels: Array(60).fill('').map((_, i) => i === 59 ? 'now' : `-${59-i}s`),
+    datasets: [{
+      label: 'Requests/s',
+      data: activityData,
+      borderColor: '#00d4ff',
+      backgroundColor: 'rgba(0,212,255,0.1)',
+      borderWidth: 2,
+      fill: true,
+      tension: 0.4,
+      pointRadius: 0,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', maxTicksLimit: 6 } },
+      y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' }, beginAtZero: true }
+    }
+  }
+});
+
+const threatCtx = document.getElementById('threatChart').getContext('2d');
+const threatChart = new Chart(threatCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Malicious Domain', 'Prompt Injection', 'Dark Pattern', 'Phishing URL', 'Data Exfiltration'],
+    datasets: [{
+      data: [0, 0, 0, 0, 0],
+      backgroundColor: ['#ef4444','#f59e0b','#7c3aed','#ec4899','#06b6d4'],
+      borderWidth: 0,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12 } }
+    }
+  }
+});
+
+// ── Stats Polling ──
+let lastTotal = 0;
+async function fetchStats() {
+  try {
+    const res = await fetch(`${API}/wab/stats`);
+    const data = await res.json();
+    document.getElementById('statTotal').textContent = data.totalRequests.toLocaleString();
+    document.getElementById('statBlocked').textContent = data.blockedRequests.toLocaleString();
+    document.getElementById('statStripped').textContent = data.injectionStripped.toLocaleString();
+    document.getElementById('statDark').textContent = data.darkPatternsDetected.toLocaleString();
+    document.getElementById('statClean').textContent = data.cleanRequests.toLocaleString();
+    document.getElementById('statRps').textContent = `${data.requests_per_second} req/s`;
+    document.getElementById('statBlockRate').textContent = data.block_rate;
+    const uptime = Math.floor(data.uptime_seconds);
+    document.getElementById('statUptime').textContent = `Uptime: ${uptime < 60 ? uptime + 's' : Math.floor(uptime/60) + 'm ' + (uptime%60) + 's'}`;
+
+    // Update activity chart
+    const delta = data.totalRequests - lastTotal;
+    lastTotal = data.totalRequests;
+    activityData.push(delta);
+    activityData.shift();
+    activityChart.data.datasets[0].data = [...activityData];
+    activityChart.update('none');
+  } catch (e) {}
+}
+
+// ── Log Polling ──
+async function fetchLogs() {
+  try {
+    const res = await fetch(`${API}/wab/logs?limit=100`);
+    const logs = await res.json();
+    allLogs = logs.reverse();
+    renderLogs();
+
+    // Update threat chart
+    const threats = { MALICIOUS_DOMAIN: 0, PROMPT_INJECTION: 0, DARK_PATTERN: 0, PHISHING_URL: 0, DATA_EXFILTRATION: 0 };
+    logs.forEach(log => {
+      (log.threats || []).forEach(t => {
+        if (threats[t] !== undefined) threats[t]++;
+        else if (t.includes('INJECTION')) threats.PROMPT_INJECTION++;
+        else if (t.includes('PATTERN')) threats.DARK_PATTERN++;
+      });
+    });
+    threatChart.data.datasets[0].data = Object.values(threats);
+    threatChart.update('none');
+  } catch (e) {}
+}
+
+function renderLogs() {
+  const filtered = currentFilter === 'all' ? allLogs : allLogs.filter(l => l.verdict === currentFilter);
+  if (filtered.length === 0) {
+    document.getElementById('logBody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">No requests matching filter</td></tr>';
+    return;
+  }
+  document.getElementById('logBody').innerHTML = filtered.slice(0, 50).map(log => {
+    const riskColor = log.riskScore >= 70 ? '#ef4444' : log.riskScore >= 30 ? '#f59e0b' : '#10b981';
+    const time = new Date(log.timestamp).toLocaleTimeString();
+    const threats = (log.threats || []).slice(0, 2).join(', ') || '—';
+    return `<tr>
+      <td style="color:var(--muted);font-size:12px">${time}</td>
+      <td class="url-cell" title="${log.url}">${log.url || '—'}</td>
+      <td style="color:var(--muted);font-size:12px">${(log.agentId || '').substring(0, 20)}</td>
+      <td><span class="verdict-pill ${log.verdict}">${log.verdict}</span></td>
+      <td>
+        <div class="risk-bar">
+          <div class="risk-track"><div class="risk-fill" style="width:${log.riskScore}%;background:${riskColor}"></div></div>
+          <span style="font-size:12px;color:${riskColor}">${log.riskScore}</span>
+        </div>
+      </td>
+      <td style="font-size:12px;color:var(--muted)">${threats}</td>
+      <td style="font-size:12px;color:var(--muted)">${log.processingTime || 0}ms</td>
+    </tr>`;
+  }).join('');
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLogs();
+}
+
+// ── Toggle Config ──
+document.querySelectorAll('.toggle').forEach(t => {
+  t.addEventListener('click', () => t.classList.toggle('on'));
+});
+
+// ── Scan Tool ──
+async function scanUrl() {
+  const urlVal = document.getElementById('scanUrl').value.trim();
+  if (!urlVal) return;
+  const resultEl = document.getElementById('scanResult');
+  resultEl.className = 'scan-result show warning';
+  resultEl.innerHTML = '<div style="color:var(--muted)">Scanning...</div>';
+
+  try {
+    const res = await fetch(`${API}/wab/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: urlVal }),
+    });
+    const data = await res.json();
+    const allThreats = [...(data.url_threats || []), ...(data.content_threats?.injections || []).map(i => ({ type: 'PROMPT_INJECTION', severity: 'HIGH', detail: 'Injection pattern found' })), ...(data.content_threats?.darkPatterns || [])];
+    const riskScore = data.overall_risk || 0;
+    const verdict = riskScore >= 70 ? 'BLOCKED' : riskScore >= 20 ? 'WARNING' : 'CLEAN';
+
+    resultEl.className = `scan-result show ${verdict === 'BLOCKED' ? 'danger' : verdict === 'WARNING' ? 'warning' : 'clean'}`;
+    resultEl.innerHTML = `
+      <div class="verdict-badge ${verdict}">🛡️ ${verdict} — Risk Score: ${riskScore}/100</div>
+      ${allThreats.length > 0 ? `
+        <ul class="threat-list">
+          ${allThreats.map(t => `
+            <li class="threat-item">
+              <span class="threat-badge ${t.severity || 'MEDIUM'}">${t.severity || 'MEDIUM'}</span>
+              <strong>${t.type}</strong>
+              ${t.detail ? `<span style="color:var(--muted)">— ${t.detail}</span>` : ''}
+            </li>
+          `).join('')}
+        </ul>
+      ` : '<div style="color:var(--success);font-size:13px">✓ No threats detected. URL appears safe for AI agents.</div>'}
+    `;
+  } catch (e) {
+    resultEl.className = 'scan-result show warning';
+    resultEl.innerHTML = `<div style="color:var(--warning)">Could not connect to firewall. Make sure it's running on port 8888.</div>`;
+  }
+}
+
+document.getElementById('scanUrl').addEventListener('keydown', e => {
+  if (e.key === 'Enter') scanUrl();
+});
+
+// ── Polling ──
+fetchStats();
+fetchLogs();
+setInterval(fetchStats, 2000);
+setInterval(fetchLogs, 3000);
+</script>
+</body>
+</html>

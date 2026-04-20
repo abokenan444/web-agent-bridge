@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAB Notary — Cryptographic Price Certificates</title>
+<style>
+  :root {
+    --bg: #0a0e1a; --surface: #111827; --surface2: #1a2235;
+    --border: #1e2d45; --accent: #00d4ff; --accent2: #7c3aed;
+    --danger: #ef4444; --warning: #f59e0b; --success: #10b981;
+    --text: #e2e8f0; --muted: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; }
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+  }
+  .logo-icon { font-size: 28px; }
+  h1 { font-size: 20px; font-weight: 700; }
+  h1 span { color: var(--accent); }
+  .subtitle { font-size: 13px; color: var(--muted); }
+  main { max-width: 1200px; margin: 0 auto; padding: 32px; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 10px 20px; cursor: pointer; font-size: 14px; font-weight: 500;
+    color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.2s;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-input {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 14px; outline: none;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .btn {
+    padding: 10px 24px; border-radius: 8px; border: none;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+  /* Certificate Display */
+  .cert-display {
+    background: linear-gradient(135deg, #0d1b2a, #1a2235);
+    border: 1px solid var(--accent);
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cert-display::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--success));
+  }
+  .cert-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+  .cert-logo { display: flex; align-items: center; gap: 10px; }
+  .cert-logo-icon {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .cert-logo-text h3 { font-size: 16px; font-weight: 700; }
+  .cert-logo-text span { font-size: 12px; color: var(--muted); }
+  .cert-validity {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; color: var(--success); font-weight: 600;
+  }
+  .cert-id { font-family: monospace; font-size: 13px; color: var(--accent); margin-bottom: 20px; }
+  .cert-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .cert-field { }
+  .cert-field-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .cert-field-value { font-size: 15px; font-weight: 600; }
+  .cert-field-value.price { font-size: 24px; color: var(--accent); }
+  .cert-field-value.discrimination { color: var(--danger); }
+  .cert-field-value.fair { color: var(--success); }
+
+  .price-stats {
+    background: var(--surface2); border-radius: 10px; padding: 16px; margin-bottom: 20px;
+  }
+  .price-stats h4 { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .price-bar-container { margin-bottom: 8px; }
+  .price-bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .price-bar-track { height: 8px; background: var(--border); border-radius: 4px; position: relative; }
+  .price-bar-fill { height: 100%; border-radius: 4px; }
+  .price-bar-marker {
+    position: absolute; top: -4px; width: 16px; height: 16px;
+    background: var(--accent); border-radius: 50%; transform: translateX(-50%);
+    border: 2px solid var(--bg);
+  }
+
+  .cert-signature {
+    background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px;
+    font-family: monospace; font-size: 11px; color: var(--muted);
+    word-break: break-all; margin-bottom: 16px;
+  }
+  .cert-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .cert-action-btn {
+    padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: 13px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .cert-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Verify Tab */
+  .verify-result {
+    padding: 20px; border-radius: 12px; margin-top: 16px; display: none;
+  }
+  .verify-result.show { display: block; }
+  .verify-result.valid { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); }
+  .verify-result.invalid { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-mini { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+  .stat-mini-value { font-size: 28px; font-weight: 700; color: var(--accent); }
+  .stat-mini-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">📜</div>
+  <div>
+    <h1>WAB <span>Notary</span></h1>
+    <div class="subtitle">Cryptographic proof of price discrimination & platform manipulation</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-mini"><div class="stat-mini-value" id="sTotal">0</div><div class="stat-mini-label">Certificates Issued</div></div>
+    <div class="stat-mini"><div class="stat-mini-value" id="sDiscrim" style="color:var(--danger)">0</div><div class="stat-mini-label">Discrimination Cases</div></div>
+    <div class="stat-mini"><div class="stat-mini-value" id="sPlatforms">0</div><div class="stat-mini-label">Platforms Monitored</div></div>
+    <div class="stat-mini"><div class="stat-mini-value" id="sProducts">0</div><div class="stat-mini-label">Products Tracked</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('issue', this)">📋 Issue Certificate</div>
+    <div class="tab" onclick="switchTab('verify', this)">✅ Verify Certificate</div>
+    <div class="tab" onclick="switchTab('compare', this)">📊 Price Comparison</div>
+  </div>
+
+  <!-- Issue Tab -->
+  <div class="tab-content active" id="tab-issue">
+    <div class="card">
+      <h2>Issue a Price Observation Certificate</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Platform</label>
+          <input class="form-input" id="f-platform" placeholder="amazon.com" value="amazon.com">
+        </div>
+        <div class="form-group">
+          <label>Product ID / ASIN</label>
+          <input class="form-input" id="f-productId" placeholder="B08N5WRWNW" value="B08N5WRWNW">
+        </div>
+        <div class="form-group">
+          <label>Product Name</label>
+          <input class="form-input" id="f-productName" placeholder="Apple AirPods Pro" value="Apple AirPods Pro (2nd Gen)">
+        </div>
+        <div class="form-group">
+          <label>Price Shown ($)</label>
+          <input class="form-input" id="f-price" type="number" placeholder="249.99" value="279.99">
+        </div>
+        <div class="form-group">
+          <label>Currency</label>
+          <input class="form-input" id="f-currency" placeholder="USD" value="USD">
+        </div>
+        <div class="form-group">
+          <label>Country</label>
+          <input class="form-input" id="f-country" placeholder="US" value="US">
+        </div>
+        <div class="form-group">
+          <label>Region</label>
+          <input class="form-input" id="f-region" placeholder="CA" value="CA">
+        </div>
+        <div class="form-group">
+          <label>Session ID (optional)</label>
+          <input class="form-input" id="f-session" placeholder="Auto-generated if empty">
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="issueCert()">📜 Issue Certificate</button>
+        <button class="btn btn-secondary" onclick="simulateMultiple()">🔄 Simulate 10 Users (Demo)</button>
+      </div>
+    </div>
+
+    <div id="certContainer" class="hidden">
+      <div class="cert-display" id="certDisplay"></div>
+    </div>
+  </div>
+
+  <!-- Verify Tab -->
+  <div class="tab-content" id="tab-verify">
+    <div class="card">
+      <h2>Verify a WAB Certificate</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+        Enter a certificate ID to verify its authenticity and check if it has been tampered with.
+      </p>
+      <div style="display:flex;gap:12px">
+        <input class="form-input" id="verifyId" placeholder="WAB-XXXXXXXX-XXXXXXXXXXXX" style="flex:1">
+        <button class="btn btn-primary" onclick="verifyCert()">✅ Verify</button>
+      </div>
+      <div class="verify-result" id="verifyResult"></div>
+    </div>
+  </div>
+
+  <!-- Compare Tab -->
+  <div class="tab-content" id="tab-compare">
+    <div class="card">
+      <h2>Price Comparison Across Users</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+        See how prices vary across different users, regions, and devices for the same product.
+      </p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <input class="form-input" id="cmpPlatform" placeholder="amazon.com" value="amazon.com" style="flex:1;min-width:150px">
+        <input class="form-input" id="cmpProduct" placeholder="B08N5WRWNW" value="B08N5WRWNW" style="flex:1;min-width:150px">
+        <button class="btn btn-primary" onclick="comparePrice()">📊 Compare</button>
+      </div>
+      <div id="compareResult" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const API = 'http://localhost:3002';
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+async function fetchStats() {
+  try {
+    const res = await fetch(`${API}/notary/stats`);
+    const d = await res.json();
+    document.getElementById('sTotal').textContent = d.total_certificates;
+    document.getElementById('sDiscrim').textContent = d.discrimination_detected;
+    document.getElementById('sPlatforms').textContent = d.platforms_monitored;
+    document.getElementById('sProducts').textContent = d.products_tracked;
+  } catch(e) {}
+}
+
+async function issueCert() {
+  const data = {
+    platform: document.getElementById('f-platform').value,
+    productId: document.getElementById('f-productId').value,
+    productName: document.getElementById('f-productName').value,
+    priceShown: parseFloat(document.getElementById('f-price').value),
+    currency: document.getElementById('f-currency').value,
+    country: document.getElementById('f-country').value,
+    region: document.getElementById('f-region').value,
+    sessionId: document.getElementById('f-session').value || undefined,
+    userAgent: navigator.userAgent,
+  };
+
+  try {
+    const res = await fetch(`${API}/notary/price`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const cert = await res.json();
+    displayCert(cert);
+    fetchStats();
+  } catch(e) {
+    alert('Could not connect to WAB Notary server. Make sure it is running on port 3002.');
+  }
+}
+
+async function simulateMultiple() {
+  const prices = [249.99, 259.99, 279.99, 299.99, 249.99, 269.99, 289.99, 249.99, 309.99, 259.99];
+  const countries = ['US', 'US', 'US', 'DE', 'FR', 'US', 'UK', 'US', 'AU', 'US'];
+  const regions = ['CA', 'NY', 'TX', 'BE', 'IDF', 'FL', 'ENG', 'WA', 'NSW', 'IL'];
+
+  for (let i = 0; i < prices.length; i++) {
+    await fetch(`${API}/notary/price`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        platform: document.getElementById('f-platform').value,
+        productId: document.getElementById('f-productId').value,
+        productName: document.getElementById('f-productName').value,
+        priceShown: prices[i],
+        currency: 'USD',
+        country: countries[i],
+        region: regions[i],
+        sessionId: 'sim-user-' + i,
+      }),
+    });
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  // Issue one more with the current price to show discrimination
+  await issueCert();
+  fetchStats();
+}
+
+function displayCert(cert) {
+  const container = document.getElementById('certContainer');
+  const display = document.getElementById('certDisplay');
+  container.classList.remove('hidden');
+
+  const ps = cert.price_statistics || {};
+  const isDiscrim = cert.discrimination_detected;
+  const pctPos = ps.sample_size > 1 ? Math.min(95, Math.max(5, ps.percentile || 50)) : 50;
+
+  display.innerHTML = `
+    <div class="cert-header">
+      <div class="cert-logo">
+        <div class="cert-logo-icon">📜</div>
+        <div class="cert-logo-text">
+          <h3>WAB Notary Certificate</h3>
+          <span>Web Agent Bridge — Cryptographic Proof</span>
+        </div>
+      </div>
+      <div class="cert-validity">✓ Cryptographically Signed</div>
+    </div>
+
+    <div class="cert-id">Certificate ID: ${cert.cert_id}</div>
+
+    <div class="cert-grid">
+      <div class="cert-field">
+        <div class="cert-field-label">Platform</div>
+        <div class="cert-field-value">${cert.platform}</div>
+      </div>
+      <div class="cert-field">
+        <div class="cert-field-label">Product</div>
+        <div class="cert-field-value" style="font-size:13px">${cert.product_name}</div>
+      </div>
+      <div class="cert-field">
+        <div class="cert-field-label">Price Observed</div>
+        <div class="cert-field-value price">${cert.currency} ${cert.price_observed}</div>
+      </div>
+      <div class="cert-field">
+        <div class="cert-field-label">Issued At</div>
+        <div class="cert-field-value" style="font-size:13px">${new Date(cert.issued_at).toLocaleString()}</div>
+      </div>
+      <div class="cert-field">
+        <div class="cert-field-label">User Hash (Anon)</div>
+        <div class="cert-field-value" style="font-family:monospace;font-size:12px">${cert.user_hash}</div>
+      </div>
+      <div class="cert-field">
+        <div class="cert-field-label">Device Type</div>
+        <div class="cert-field-value">${cert.device_type}</div>
+      </div>
+      <div class="cert-field">
+        <div class="cert-field-label">Discrimination</div>
+        <div class="cert-field-value ${isDiscrim ? 'discrimination' : 'fair'}">
+          ${isDiscrim ? '⚠️ DETECTED (' + cert.discrimination_confidence + ')' : '✓ None Detected'}
+        </div>
+      </div>
+    </div>
+
+    ${ps.sample_size > 1 ? `
+    <div class="price-stats">
+      <h4>Price Distribution (${ps.sample_size} observations)</h4>
+      <div class="price-bar-container">
+        <div class="price-bar-label">
+          <span>Min: ${cert.currency} ${ps.min_price}</span>
+          <span>Avg: ${cert.currency} ${ps.average_price}</span>
+          <span>Max: ${cert.currency} ${ps.max_price}</span>
+        </div>
+        <div class="price-bar-track">
+          <div class="price-bar-fill" style="width:100%;background:linear-gradient(90deg,#10b981,#f59e0b,#ef4444)"></div>
+          <div class="price-bar-marker" style="left:${pctPos}%" title="Your price: ${cert.currency} ${cert.price_observed}"></div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">
+        Your price is at the <strong style="color:${pctPos > 70 ? '#ef4444' : pctPos > 40 ? '#f59e0b' : '#10b981'}">${ps.percentile?.toFixed(0) || 50}th percentile</strong>
+        — ${ps.price_deviation_pct > 0 ? '+' : ''}${ps.price_deviation_pct}% vs average
+      </div>
+    </div>
+    ` : '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">First observation for this product. Click "Simulate 10 Users" to see price comparison.</div>'}
+
+    <div class="cert-signature">
+      <div style="color:var(--muted);font-size:10px;margin-bottom:4px">ECDSA-P256 Signature:</div>
+      ${cert.signature?.substring(0, 80)}...
+    </div>
+
+    <div style="font-size:11px;color:var(--muted);margin-bottom:16px;padding:10px;background:rgba(0,0,0,0.3);border-radius:6px">
+      🔗 Blockchain Anchor: <span style="font-family:monospace;color:var(--accent)">${cert.blockchain_anchor}</span>
+    </div>
+
+    <div class="cert-actions">
+      <button class="cert-action-btn" onclick="navigator.clipboard.writeText('${cert.cert_id}').then(()=>alert('Certificate ID copied!'))">📋 Copy Cert ID</button>
+      <button class="cert-action-btn" onclick="downloadCert(${JSON.stringify(cert).replace(/"/g, '&quot;')})">⬇️ Download JSON</button>
+      <button class="cert-action-btn" onclick="document.getElementById('verifyId').value='${cert.cert_id}';switchTab('verify',document.querySelectorAll('.tab')[1])">✅ Verify This Cert</button>
+    </div>
+  `;
+}
+
+function downloadCert(cert) {
+  const blob = new Blob([JSON.stringify(cert, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `WAB-Certificate-${cert.cert_id}.json`;
+  a.click();
+}
+
+async function verifyCert() {
+  const certId = document.getElementById('verifyId').value.trim();
+  if (!certId) return;
+  const resultEl = document.getElementById('verifyResult');
+  resultEl.className = 'verify-result show';
+  resultEl.innerHTML = '<div style="color:var(--muted)">Verifying...</div>';
+
+  try {
+    const res = await fetch(`${API}/notary/verify/${certId}`);
+    const data = await res.json();
+    if (res.status === 404) {
+      resultEl.className = 'verify-result show invalid';
+      resultEl.innerHTML = `<div style="color:var(--danger)">❌ Certificate not found: ${certId}</div>`;
+      return;
+    }
+    resultEl.className = `verify-result show ${data.valid ? 'valid' : 'invalid'}`;
+    resultEl.innerHTML = `
+      <div style="font-size:18px;font-weight:700;margin-bottom:12px;color:${data.valid ? 'var(--success)' : 'var(--danger)'}">
+        ${data.valid ? '✅ Certificate Valid' : '❌ Certificate Invalid'}
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">${data.message}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;font-size:13px">
+        <div><span style="color:var(--muted)">Type:</span> ${data.cert_type}</div>
+        <div><span style="color:var(--muted)">Platform:</span> ${data.platform}</div>
+        <div><span style="color:var(--muted)">Issued:</span> ${new Date(data.issued_at).toLocaleDateString()}</div>
+        <div><span style="color:var(--muted)">Blockchain:</span> <span style="font-family:monospace;font-size:11px">${data.blockchain_anchor?.substring(0,20)}...</span></div>
+      </div>
+    `;
+  } catch(e) {
+    resultEl.className = 'verify-result show invalid';
+    resultEl.innerHTML = '<div style="color:var(--warning)">Could not connect to WAB Notary server.</div>';
+  }
+}
+
+async function comparePrice() {
+  const platform = document.getElementById('cmpPlatform').value;
+  const productId = document.getElementById('cmpProduct').value;
+  const resultEl = document.getElementById('compareResult');
+  resultEl.innerHTML = '<div style="color:var(--muted)">Loading comparison data...</div>';
+
+  try {
+    const res = await fetch(`${API}/notary/compare?platform=${encodeURIComponent(platform)}&productId=${encodeURIComponent(productId)}`);
+    if (res.status === 404) {
+      resultEl.innerHTML = '<div style="color:var(--muted)">No data yet. Issue some certificates first.</div>';
+      return;
+    }
+    const d = await res.json();
+    resultEl.innerHTML = `
+      <div style="background:var(--surface2);border-radius:10px;padding:20px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-bottom:20px">
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">SAMPLE SIZE</div><div style="font-size:24px;font-weight:700;color:var(--accent)">${d.sample_size}</div></div>
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">AVERAGE PRICE</div><div style="font-size:24px;font-weight:700">$${d.average_price}</div></div>
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">MIN PRICE</div><div style="font-size:24px;font-weight:700;color:var(--success)">$${d.min_price}</div></div>
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">MAX PRICE</div><div style="font-size:24px;font-weight:700;color:var(--danger)">$${d.max_price}</div></div>
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">PRICE RANGE</div><div style="font-size:24px;font-weight:700;color:var(--warning)">${d.price_range_pct}%</div></div>
+        </div>
+        ${d.discrimination_likely ? `
+          <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--danger)">
+            ⚠️ <strong>Price Discrimination Likely Detected</strong> — Price varies significantly across regions (${d.price_range_pct}% range). This may violate EU DSA Article 25.
+          </div>
+        ` : ''}
+        ${d.geo_variance?.length > 0 ? `
+          <div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">PRICE BY REGION (anonymized)</div>
+            ${d.geo_variance.map(g => `
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px">
+                <span style="font-family:monospace;color:var(--muted);width:80px">${g.geo_hash}</span>
+                <div style="flex:1;height:6px;background:var(--border);border-radius:3px">
+                  <div style="height:100%;border-radius:3px;background:var(--accent);width:${Math.min(100,(g.avg_price/d.max_price*100))}%"></div>
+                </div>
+                <span style="font-weight:600">$${g.avg_price}</span>
+                <span style="color:var(--muted);font-size:11px">(n=${g.sample_size})</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  } catch(e) {
+    resultEl.innerHTML = '<div style="color:var(--warning)">Could not connect to WAB Notary server.</div>';
+  }
+}
+
+fetchStats();
+setInterval(fetchStats, 5000);
+</script>
+</body>
+</html>
