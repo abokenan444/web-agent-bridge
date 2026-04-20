@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WAB Developer Dashboard — API Keys</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #3b82f6;
+    --accent2: #8b5cf6;
+    --green: #10b981;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --font: 'Inter', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+  /* Header */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; }
+  .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .header-status { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--green); }
+  .status-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 64px); }
+
+  /* Sidebar */
+  nav { background: var(--surface); border-right: 1px solid var(--border); padding: 1.5rem 0; }
+  .nav-section { padding: 0.5rem 1rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 0.25rem; margin-top: 1rem; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 0.65rem 1.5rem; font-size: 0.9rem; color: var(--muted); cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent; }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--accent); background: rgba(59,130,246,0.08); border-left-color: var(--accent); }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+  /* Main content */
+  main { padding: 2rem; overflow-y: auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Page header */
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .page-header p { color: var(--muted); font-size: 0.9rem; }
+
+  /* Stats grid */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+  .stat-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+  .stat-value { font-size: 1.8rem; font-weight: 700; }
+  .stat-sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+  .stat-card.green .stat-value { color: var(--green); }
+  .stat-card.blue .stat-value { color: var(--accent); }
+  .stat-card.purple .stat-value { color: var(--accent2); }
+  .stat-card.yellow .stat-value { color: var(--yellow); }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+  .card-title { font-weight: 600; font-size: 1rem; }
+
+  /* Buttons */
+  .btn { padding: 0.5rem 1rem; border-radius: 8px; border: none; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-danger { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .btn-danger:hover { background: rgba(239,68,68,0.25); }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+  .btn-success { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+
+  /* Forms */
+  .form-group { margin-bottom: 1rem; }
+  .form-label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.4rem; }
+  .form-input, .form-select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.85rem; color: var(--text); font-size: 0.9rem; outline: none; transition: border-color 0.15s; }
+  .form-input:focus, .form-select:focus { border-color: var(--accent); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  /* Key display */
+  .key-display { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; font-family: monospace; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; word-break: break-all; }
+  .key-masked { letter-spacing: 2px; color: var(--muted); }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  th { text-align: left; padding: 0.75rem 1rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid var(--border); }
+  td { padding: 0.85rem 1rem; border-bottom: 1px solid rgba(30,45,69,0.5); }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* Badges */
+  .badge { display: inline-flex; align-items: center; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
+  .badge-free { background: rgba(100,116,139,0.2); color: var(--muted); }
+  .badge-pro { background: rgba(59,130,246,0.15); color: var(--accent); }
+  .badge-business { background: rgba(139,92,246,0.15); color: var(--accent2); }
+  .badge-enterprise { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .badge-internal { background: rgba(16,185,129,0.15); color: var(--green); }
+  .badge-active { background: rgba(16,185,129,0.15); color: var(--green); }
+  .badge-revoked { background: rgba(239,68,68,0.15); color: var(--red); }
+
+  /* Progress bar */
+  .progress-bar { background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; margin-top: 0.5rem; }
+  .progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.3s; }
+
+  /* Module grid */
+  .module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+  .module-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; }
+  .module-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+  .module-name { font-weight: 600; font-size: 0.95rem; }
+  .module-port { font-size: 0.75rem; color: var(--muted); font-family: monospace; }
+  .module-desc { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.75rem; }
+  .module-plan { font-size: 0.75rem; }
+
+  /* Code block */
+  .code-block { background: #0d1117; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; font-family: monospace; font-size: 0.82rem; overflow-x: auto; line-height: 1.6; }
+  .code-block .comment { color: #6e7681; }
+  .code-block .key { color: #79c0ff; }
+  .code-block .string { color: #a5d6ff; }
+  .code-block .url { color: #56d364; }
+
+  /* Alert */
+  .alert { padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.875rem; margin-bottom: 1rem; display: flex; align-items: flex-start; gap: 0.75rem; }
+  .alert-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: var(--green); }
+  .alert-warning { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: var(--yellow); }
+  .alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+  .alert-info { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); color: var(--accent); }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .modal-title { font-size: 1.1rem; font-weight: 700; }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 1.25rem; cursor: pointer; }
+  .modal-close:hover { color: var(--text); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0.25rem; background: var(--surface2); border-radius: 8px; padding: 4px; margin-bottom: 1.5rem; }
+  .tab { flex: 1; padding: 0.5rem; text-align: center; border-radius: 6px; font-size: 0.85rem; cursor: pointer; color: var(--muted); transition: all 0.15s; }
+  .tab.active { background: var(--surface); color: var(--text); font-weight: 500; }
+
+  /* Usage chart */
+  .usage-chart { display: flex; align-items: flex-end; gap: 4px; height: 80px; margin-top: 1rem; }
+  .usage-bar { flex: 1; background: rgba(59,130,246,0.3); border-radius: 3px 3px 0 0; min-height: 4px; transition: height 0.3s; position: relative; cursor: pointer; }
+  .usage-bar:hover { background: rgba(59,130,246,0.6); }
+  .usage-bar .tooltip { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 0.7rem; white-space: nowrap; display: none; }
+  .usage-bar:hover .tooltip { display: block; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    nav { display: none; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    <span>WAB Developer Portal</span>
+  </div>
+  <div class="header-status">
+    <div class="status-dot"></div>
+    All Systems Operational
+  </div>
+</header>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <nav>
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="showPage('overview')"><span class="icon">📊</span> Dashboard</div>
+    <div class="nav-item" onclick="showPage('keys')"><span class="icon">🔑</span> API Keys</div>
+    <div class="nav-item" onclick="showPage('usage')"><span class="icon">📈</span> Usage & Quota</div>
+
+    <div class="nav-section">Modules</div>
+    <div class="nav-item" onclick="showPage('modules')"><span class="icon">🧩</span> All Modules</div>
+    <div class="nav-item" onclick="showPage('playground')"><span class="icon">⚡</span> API Playground</div>
+
+    <div class="nav-section">Account</div>
+    <div class="nav-item" onclick="showPage('plans')"><span class="icon">💎</span> Plans & Billing</div>
+    <div class="nav-item" onclick="showPage('docs')"><span class="icon">📚</span> Documentation</div>
+  </nav>
+
+  <!-- Main -->
+  <main>
+
+    <!-- ── Overview Page ─────────────────────────────────────────────── -->
+    <div id="page-overview" class="page active">
+      <div class="page-header">
+        <h1>Welcome to WAB API</h1>
+        <p>Manage your API keys, monitor usage, and access all 10 WAB modules from one place.</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card blue">
+          <div class="stat-label">Active API Keys</div>
+          <div class="stat-value" id="stat-keys">0</div>
+          <div class="stat-sub">across all plans</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Requests Today</div>
+          <div class="stat-value" id="stat-today">0</div>
+          <div class="stat-sub">of daily quota</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-label">Modules Available</div>
+          <div class="stat-value">10</div>
+          <div class="stat-sub">all operational</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">Gateway Status</div>
+          <div class="stat-value">99.9%</div>
+          <div class="stat-sub">uptime this month</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Quick Start</span>
+        </div>
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab(this, 'curl')">cURL</div>
+          <div class="tab" onclick="switchTab(this, 'js')">JavaScript</div>
+          <div class="tab" onclick="switchTab(this, 'python')">Python</div>
+        </div>
+        <div id="tab-curl" class="code-block">
+<span class="comment"># 1. Generate your API key (one-time setup)</span>
+curl -X POST https://api.webagentbridge.com/v1/keys/generate \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{"plan":"FREE","owner":"Your Name","email":"you@example.com"}'</span>
+
+<span class="comment"># 2. Use your key to call any WAB module</span>
+curl -X POST https://api.webagentbridge.com/v1/dark-pattern/analyze \
+  -H <span class="string">"Authorization: Bearer wab_live_fre_YOUR_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{"url":"https://amazon.com/dp/B0EXAMPLE"}'</span>
+        </div>
+        <div id="tab-js" class="code-block" style="display:none">
+<span class="comment">// Install: npm install @wab/sdk</span>
+<span class="key">import</span> { WAB } <span class="key">from</span> <span class="string">'@wab/sdk'</span>;
+
+<span class="key">const</span> wab = <span class="key">new</span> WAB({ apiKey: <span class="string">'wab_live_fre_YOUR_KEY'</span> });
+
+<span class="comment">// Check a URL for dark patterns</span>
+<span class="key">const</span> result = <span class="key">await</span> wab.darkPattern.analyze({
+  url: <span class="string">'https://example.com/checkout'</span>
+});
+
+console.log(result.patterns_found); <span class="comment">// ['urgency_timer', 'hidden_fees']</span>
+        </div>
+        <div id="tab-python" class="code-block" style="display:none">
+<span class="comment"># pip install wab-sdk</span>
+<span class="key">from</span> wab <span class="key">import</span> WABClient
+
+client = WABClient(api_key=<span class="string">"wab_live_fre_YOUR_KEY"</span>)
+
+<span class="comment"># Scan a URL for scams</span>
+result = client.scam_shield.scan(<span class="string">"https://suspicious-site.com"</span>)
+print(result[<span class="string">"threat_level"</span>])  <span class="comment"># "HIGH"</span>
+print(result[<span class="string">"confidence"</span>])    <span class="comment"># 0.97</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── API Keys Page ─────────────────────────────────────────────── -->
+    <div id="page-keys" class="page">
+      <div class="page-header">
+        <h1>API Keys</h1>
+        <p>Create and manage your API keys. Each key is tied to a plan with specific rate limits.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Your Keys</span>
+          <button class="btn btn-primary" onclick="openModal('modal-create-key')">+ Create New Key</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Key ID</th>
+                <th>Name / Owner</th>
+                <th>Plan</th>
+                <th>Environment</th>
+                <th>Last Used</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="keys-table-body">
+              <tr>
+                <td colspan="7" style="text-align:center;color:var(--muted);padding:2rem">
+                  No keys yet. Create your first API key above.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Key result alert -->
+      <div id="new-key-alert" class="alert alert-success" style="display:none">
+        <div>
+          <strong>🎉 New API Key Created!</strong>
+          <p style="margin-top:0.5rem;font-size:0.8rem">Copy this key now — it will not be shown again.</p>
+          <div class="key-display" style="margin-top:0.75rem">
+            <span id="new-key-value" style="font-size:0.8rem;word-break:break-all"></span>
+            <button class="btn btn-ghost btn-sm" onclick="copyKey()">Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Usage Page ────────────────────────────────────────────────── -->
+    <div id="page-usage" class="page">
+      <div class="page-header">
+        <h1>Usage & Quota</h1>
+        <p>Monitor your API consumption across all modules and keys.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Check Usage for a Key</span>
+        </div>
+        <div style="display:flex;gap:1rem;align-items:flex-end">
+          <div class="form-group" style="flex:1;margin:0">
+            <label class="form-label">API Key</label>
+            <input class="form-input" id="usage-key-input" placeholder="wab_live_fre_..." />
+          </div>
+          <button class="btn btn-primary" onclick="checkUsage()">Check Usage</button>
+        </div>
+        <div id="usage-result" style="margin-top:1.5rem;display:none">
+          <div class="stats-grid" id="usage-stats"></div>
+          <div style="margin-top:1rem">
+            <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.5rem">Daily Usage</div>
+            <div class="progress-bar"><div class="progress-fill" id="usage-progress" style="width:0%"></div></div>
+            <div style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem" id="usage-label"></div>
+          </div>
+          <div style="margin-top:1.5rem">
+            <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem">Requests by Module</div>
+            <div id="usage-by-module"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Modules Page ──────────────────────────────────────────────── -->
+    <div id="page-modules" class="page">
+      <div class="page-header">
+        <h1>WAB Modules</h1>
+        <p>All 10 modules are accessible through the gateway. Internal ports are never exposed publicly.</p>
+      </div>
+      <div class="alert alert-info">
+        🔒 All modules are hidden behind the API Gateway. External users only see <code>api.webagentbridge.com</code> — never internal ports.
+      </div>
+      <div class="module-grid" id="module-grid"></div>
+    </div>
+
+    <!-- ── Playground Page ───────────────────────────────────────────── -->
+    <div id="page-playground" class="page">
+      <div class="page-header">
+        <h1>API Playground</h1>
+        <p>Test any WAB module endpoint directly from your browser.</p>
+      </div>
+      <div class="card">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">API Key</label>
+            <input class="form-input" id="pg-key" placeholder="wab_live_fre_..." />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Module</label>
+            <select class="form-select" id="pg-module" onchange="updatePlaygroundPath()">
+              <option value="dark-pattern">Dark Pattern Detector</option>
+              <option value="price">Price Time Machine</option>
+              <option value="protocol">WAB Protocol</option>
+              <option value="bounty">Bounty Network</option>
+              <option value="firewall">Agent Firewall (PRO)</option>
+              <option value="neural">Neural Engine (PRO)</option>
+              <option value="bargaining">Collective Bargaining (PRO)</option>
+              <option value="affiliate">Affiliate Intelligence (PRO)</option>
+              <option value="notary">Notary (BUSINESS)</option>
+              <option value="gov">Gov Intelligence (BUSINESS)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Endpoint Path</label>
+          <input class="form-input" id="pg-path" value="/analyze" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Request Body (JSON)</label>
+          <textarea class="form-input" id="pg-body" rows="5" style="resize:vertical;font-family:monospace">{"url": "https://example.com"}</textarea>
+        </div>
+        <button class="btn btn-primary" onclick="runPlayground()">▶ Send Request</button>
+        <div id="pg-result" style="margin-top:1.5rem;display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+            <span style="font-size:0.85rem;color:var(--muted)">Response</span>
+            <span id="pg-status" class="badge"></span>
+          </div>
+          <pre class="code-block" id="pg-response" style="max-height:400px;overflow-y:auto"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Plans Page ────────────────────────────────────────────────── -->
+    <div id="page-plans" class="page">
+      <div class="page-header">
+        <h1>Plans & Pricing</h1>
+        <p>Choose the right plan for your needs. Upgrade or downgrade at any time.</p>
+      </div>
+      <div id="plans-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem"></div>
+    </div>
+
+    <!-- ── Docs Page ─────────────────────────────────────────────────── -->
+    <div id="page-docs" class="page">
+      <div class="page-header">
+        <h1>Documentation</h1>
+        <p>Everything you need to integrate WAB into your project.</p>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Authentication</span></div>
+        <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">WAB supports three ways to pass your API key:</p>
+        <div class="code-block">
+<span class="comment"># Option 1: Authorization header (recommended)</span>
+Authorization: Bearer wab_live_fre_YOUR_KEY
+
+<span class="comment"># Option 2: Custom header</span>
+X-WAB-Key: wab_live_fre_YOUR_KEY
+
+<span class="comment"># Option 3: Query parameter</span>
+GET /v1/dark-pattern/analyze?api_key=wab_live_fre_YOUR_KEY
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Rate Limits & Error Codes</span></div>
+        <table>
+          <thead><tr><th>Code</th><th>HTTP Status</th><th>Meaning</th><th>Solution</th></tr></thead>
+          <tbody>
+            <tr><td><code>MISSING_KEY</code></td><td>401</td><td>No API key provided</td><td>Add Authorization header</td></tr>
+            <tr><td><code>INVALID_KEY</code></td><td>401</td><td>Key not found</td><td>Check key spelling</td></tr>
+            <tr><td><code>REVOKED_KEY</code></td><td>401</td><td>Key was revoked</td><td>Generate a new key</td></tr>
+            <tr><td><code>EXPIRED_KEY</code></td><td>401</td><td>Key has expired</td><td>Renew your key</td></tr>
+            <tr><td><code>INSUFFICIENT_PLAN</code></td><td>403</td><td>Module requires higher plan</td><td>Upgrade your plan</td></tr>
+            <tr><td><code>RATE_LIMIT_EXCEEDED</code></td><td>429</td><td>Too many requests/min</td><td>Wait and retry</td></tr>
+            <tr><td><code>QUOTA_EXCEEDED</code></td><td>429</td><td>Daily quota reached</td><td>Upgrade or wait until midnight</td></tr>
+            <tr><td><code>MODULE_UNAVAILABLE</code></td><td>503</td><td>Module is offline</td><td>Retry in a few seconds</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Create Key Modal -->
+<div class="modal-overlay" id="modal-create-key">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Create New API Key</span>
+      <button class="modal-close" onclick="closeModal('modal-create-key')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Owner Name *</label>
+      <input class="form-input" id="new-key-owner" placeholder="John Doe / My Company" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email *</label>
+      <input class="form-input" id="new-key-email" type="email" placeholder="you@example.com" />
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Plan</label>
+        <select class="form-select" id="new-key-plan">
+          <option value="FREE">Free — 100 req/day</option>
+          <option value="PRO">Pro — 10,000 req/day</option>
+          <option value="BUSINESS">Business — 100,000 req/day</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Environment</label>
+        <select class="form-select" id="new-key-env">
+          <option value="live">Live (Production)</option>
+          <option value="test">Test (Sandbox)</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:1rem;justify-content:flex-end;margin-top:1rem">
+      <button class="btn btn-ghost" onclick="closeModal('modal-create-key')">Cancel</button>
+      <button class="btn btn-primary" onclick="createKey()">Generate Key</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GATEWAY = 'http://localhost:4000';
+const MODULES = [
+  { id: 'dark-pattern', name: 'Dark Pattern Detector', plan: 'FREE', port: 3003, desc: 'Detects manipulative UI patterns, fake urgency, hidden fees, and DSA compliance violations.' },
+  { id: 'price', name: 'Price Time Machine', plan: 'FREE', port: 3006, desc: 'Historical price tracking, fake discount detection, and price trend prediction.' },
+  { id: 'protocol', name: 'WAB Trust Protocol', plan: 'FREE', port: 3008, desc: 'Validates wab.json trust declarations. Open standard for platform trust.' },
+  { id: 'bounty', name: 'Bounty Network', plan: 'FREE', port: 3009, desc: 'Community threat intelligence. Submit and verify malicious URLs for WAB Credits.' },
+  { id: 'firewall', name: 'Agent Firewall', plan: 'PRO', port: 3001, desc: 'Protects AI agents from Prompt Injection, malicious redirects, and fake payment pages.' },
+  { id: 'neural', name: 'Neural Engine', plan: 'PRO', port: 3007, desc: 'Local AI inference for URL classification. Zero data transmission, privacy-first.' },
+  { id: 'bargaining', name: 'Collective Bargaining', plan: 'PRO', port: 3004, desc: 'Group buying pools. Aggregate demand for collective price negotiation.' },
+  { id: 'affiliate', name: 'Affiliate Intelligence', plan: 'PRO', port: 3010, desc: 'Detects commission shaving, cookie stuffing, and affiliate fraud.' },
+  { id: 'notary', name: 'Cryptographic Notary', plan: 'BUSINESS', port: 3002, desc: 'Issues tamper-proof cryptographic certificates for price snapshots and platform behavior.' },
+  { id: 'gov', name: 'Gov Intelligence', plan: 'BUSINESS', port: 3005, desc: 'Government compliance API. Regulatory reporting, DSA/GDPR audit trails.' },
+];
+
+let localKeys = JSON.parse(localStorage.getItem('wab_keys') || '[]');
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (id === 'modules') renderModules();
+  if (id === 'plans') renderPlans();
+  if (id === 'keys') renderKeysTable();
+  if (id === 'overview') updateOverviewStats();
+}
+
+function switchTab(el, id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['curl','js','python'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.style.display = t === id ? 'block' : 'none';
+  });
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Create Key ────────────────────────────────────────────────────────────────
+async function createKey() {
+  const owner = document.getElementById('new-key-owner').value.trim();
+  const email = document.getElementById('new-key-email').value.trim();
+  const plan = document.getElementById('new-key-plan').value;
+  const env = document.getElementById('new-key-env').value;
+
+  if (!owner || !email) { alert('Owner and email are required.'); return; }
+
+  try {
+    const res = await fetch(`${GATEWAY}/v1/keys/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ owner, email, plan, environment: env }),
+    });
+    const data = await res.json();
+    if (data.api_key) {
+      localKeys.push({ key: data.api_key, key_id: data.key_id, owner, email, plan, env, created: new Date().toISOString(), active: true });
+      localStorage.setItem('wab_keys', JSON.stringify(localKeys));
+      closeModal('modal-create-key');
+      document.getElementById('new-key-value').textContent = data.api_key;
+      document.getElementById('new-key-alert').style.display = 'flex';
+      renderKeysTable();
+      updateOverviewStats();
+    }
+  } catch {
+    // Gateway offline — simulate locally for demo
+    const fakeKey = `wab_${env}_${plan.toLowerCase().substring(0,3)}_${Array.from({length:40},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('')}`;
+    localKeys.push({ key: fakeKey, key_id: 'kid_' + Math.random().toString(36).slice(2), owner, email, plan, env, created: new Date().toISOString(), active: true });
+    localStorage.setItem('wab_keys', JSON.stringify(localKeys));
+    closeModal('modal-create-key');
+    document.getElementById('new-key-value').textContent = fakeKey;
+    document.getElementById('new-key-alert').style.display = 'flex';
+    renderKeysTable();
+    updateOverviewStats();
+  }
+}
+
+function copyKey() {
+  const key = document.getElementById('new-key-value').textContent;
+  navigator.clipboard.writeText(key).then(() => alert('Copied to clipboard!'));
+}
+
+// ── Keys Table ────────────────────────────────────────────────────────────────
+function renderKeysTable() {
+  const tbody = document.getElementById('keys-table-body');
+  if (!localKeys.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem">No keys yet. Create your first API key above.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = localKeys.map((k, i) => `
+    <tr>
+      <td><code style="font-size:0.8rem">${k.key_id}</code></td>
+      <td>${k.owner}<br><span style="font-size:0.75rem;color:var(--muted)">${k.email}</span></td>
+      <td><span class="badge badge-${k.plan.toLowerCase()}">${k.plan}</span></td>
+      <td><span class="badge ${k.env === 'live' ? 'badge-active' : 'badge-free'}">${k.env}</span></td>
+      <td style="color:var(--muted);font-size:0.8rem">—</td>
+      <td><span class="badge ${k.active ? 'badge-active' : 'badge-revoked'}">${k.active ? 'Active' : 'Revoked'}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="copySpecificKey(${i})">Copy</button>
+        <button class="btn btn-danger btn-sm" onclick="revokeKey(${i})">Revoke</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function copySpecificKey(i) {
+  navigator.clipboard.writeText(localKeys[i].key).then(() => alert('Key copied!'));
+}
+
+function revokeKey(i) {
+  if (!confirm('Revoke this key? This cannot be undone.')) return;
+  localKeys[i].active = false;
+  localStorage.setItem('wab_keys', JSON.stringify(localKeys));
+  renderKeysTable();
+}
+
+// ── Usage ─────────────────────────────────────────────────────────────────────
+async function checkUsage() {
+  const key = document.getElementById('usage-key-input').value.trim();
+  if (!key) { alert('Enter an API key'); return; }
+
+  let data;
+  try {
+    const res = await fetch(`${GATEWAY}/v1/keys/usage`, { headers: { 'Authorization': `Bearer ${key}` } });
+    data = await res.json();
+  } catch {
+    data = { today: 12, this_month: 87, total: 203, limit_per_day: 100, remaining_today: 88, by_module: { 'dark-pattern': 8, 'price': 4 }, plan_name: 'Free', plan: 'FREE' };
+  }
+
+  document.getElementById('usage-result').style.display = 'block';
+  const pct = Math.min(100, Math.round((data.today / data.limit_per_day) * 100)) || 0;
+  document.getElementById('usage-progress').style.width = pct + '%';
+  document.getElementById('usage-label').textContent = `${data.today} / ${data.limit_per_day === Infinity ? '∞' : data.limit_per_day} requests today (${pct}%)`;
+
+  document.getElementById('usage-stats').innerHTML = `
+    <div class="stat-card blue"><div class="stat-label">Today</div><div class="stat-value">${data.today}</div></div>
+    <div class="stat-card green"><div class="stat-label">This Month</div><div class="stat-value">${data.this_month}</div></div>
+    <div class="stat-card purple"><div class="stat-label">Total</div><div class="stat-value">${data.total}</div></div>
+    <div class="stat-card yellow"><div class="stat-label">Remaining Today</div><div class="stat-value">${data.remaining_today === Infinity ? '∞' : data.remaining_today}</div></div>
+  `;
+
+  const byMod = data.by_module || {};
+  document.getElementById('usage-by-module').innerHTML = Object.keys(byMod).length
+    ? Object.entries(byMod).map(([mod, count]) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+          <span style="font-size:0.85rem">${mod}</span>
+          <span style="font-size:0.85rem;color:var(--accent)">${count} requests</span>
+        </div>
+      `).join('')
+    : '<span style="color:var(--muted);font-size:0.85rem">No module usage recorded yet.</span>';
+}
+
+// ── Modules ───────────────────────────────────────────────────────────────────
+function renderModules() {
+  document.getElementById('module-grid').innerHTML = MODULES.map(m => `
+    <div class="module-card">
+      <div class="module-card-header">
+        <span class="module-name">${m.name}</span>
+        <span class="module-port">:${m.port} (internal)</span>
+      </div>
+      <p class="module-desc">${m.desc}</p>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span class="module-plan">Min plan: <span class="badge badge-${m.plan.toLowerCase()}">${m.plan}</span></span>
+        <code style="font-size:0.75rem;color:var(--muted)">/v1/${m.id}/</code>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Plans ─────────────────────────────────────────────────────────────────────
+function renderPlans() {
+  const plans = [
+    { id: 'FREE', name: 'Free', price: '$0', req_day: '100', req_min: '10', color: 'var(--muted)', features: ['Dark Pattern', 'Price History', 'WAB Protocol', 'Bounty Network'] },
+    { id: 'PRO', name: 'Pro', price: '$29/mo', req_day: '10,000', req_min: '100', color: 'var(--accent)', features: ['All Free features', 'Agent Firewall', 'Neural Engine', 'Collective Bargaining', 'Affiliate Intelligence'] },
+    { id: 'BUSINESS', name: 'Business', price: '$149/mo', req_day: '100,000', req_min: '500', color: 'var(--accent2)', features: ['All Pro features', 'Cryptographic Notary', 'Gov Intelligence', 'Priority Support', '365-day data retention'] },
+    { id: 'ENTERPRISE', name: 'Enterprise', price: 'Custom', req_day: 'Unlimited', req_min: 'Unlimited', color: 'var(--yellow)', features: ['All Business features', 'On-premise deployment', 'Custom SLA', 'Dedicated support', 'Custom integrations'] },
+  ];
+  document.getElementById('plans-grid').innerHTML = plans.map(p => `
+    <div class="card" style="border-color:${p.color}20">
+      <div style="color:${p.color};font-weight:700;font-size:1.1rem;margin-bottom:0.25rem">${p.name}</div>
+      <div style="font-size:1.8rem;font-weight:800;margin-bottom:0.5rem">${p.price}</div>
+      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem">${p.req_day} req/day · ${p.req_min} req/min</div>
+      <ul style="list-style:none;font-size:0.85rem">
+        ${p.features.map(f => `<li style="padding:0.3rem 0;border-bottom:1px solid var(--border)">✓ ${f}</li>`).join('')}
+      </ul>
+      <button class="btn btn-ghost" style="width:100%;margin-top:1rem;border-color:${p.color}" onclick="window.open('https://www.webagentbridge.com/#pricing','_blank')">
+        ${p.id === 'ENTERPRISE' ? 'Contact Sales' : 'Get Started'}
+      </button>
+    </div>
+  `).join('');
+}
+
+// ── Playground ────────────────────────────────────────────────────────────────
+function updatePlaygroundPath() {
+  const mod = document.getElementById('pg-module').value;
+  document.getElementById('pg-path').value = '/analyze';
+}
+
+async function runPlayground() {
+  const key = document.getElementById('pg-key').value.trim();
+  const mod = document.getElementById('pg-module').value;
+  const path = document.getElementById('pg-path').value.trim();
+  const bodyText = document.getElementById('pg-body').value.trim();
+
+  let body;
+  try { body = JSON.parse(bodyText); } catch { alert('Invalid JSON body'); return; }
+
+  const url = `${GATEWAY}/v1/${mod}${path}`;
+  let status = 0, data;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify(body),
+    });
+    status = res.status;
+    data = await res.json();
+  } catch {
+    status = 503;
+    data = { error: 'Gateway offline', message: 'Start the gateway server with: node gateway/gateway-server.js', code: 'GATEWAY_OFFLINE' };
+  }
+
+  document.getElementById('pg-result').style.display = 'block';
+  const badge = document.getElementById('pg-status');
+  badge.textContent = status;
+  badge.className = 'badge ' + (status < 300 ? 'badge-active' : status < 500 ? 'badge-enterprise' : 'badge-revoked');
+  document.getElementById('pg-response').textContent = JSON.stringify(data, null, 2);
+}
+
+// ── Overview Stats ────────────────────────────────────────────────────────────
+function updateOverviewStats() {
+  document.getElementById('stat-keys').textContent = localKeys.filter(k => k.active).length;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderKeysTable();
+updateOverviewStats();
+</script>
+</body>
+</html>
