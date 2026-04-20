@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.webagentbridge.com/protocol/v1/wab.json",
+  "title": "WAB Trust Protocol v1.0",
+  "description": "Open standard for platform trust declarations. A wab.json file placed at the root of any website declares its compliance with WAB Trust Protocol, enabling automated consumer protection tools to verify platform behavior.",
+  "type": "object",
+  "required": ["wab_version", "platform", "compliance", "contact"],
+  "properties": {
+    "wab_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "WAB Protocol version this declaration conforms to",
+      "example": "1.0"
+    },
+    "platform": {
+      "type": "object",
+      "required": ["name", "domain", "type", "jurisdiction"],
+      "properties": {
+        "name": { "type": "string", "description": "Legal name of the platform" },
+        "domain": { "type": "string", "format": "hostname", "description": "Primary domain" },
+        "type": {
+          "type": "string",
+          "enum": ["marketplace", "travel", "finance", "social", "software", "media", "other"],
+          "description": "Platform category"
+        },
+        "jurisdiction": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Legal jurisdictions where the platform operates",
+          "example": ["EU", "US", "UK"]
+        },
+        "founded": { "type": "string", "format": "date" },
+        "employees": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "description": "Regulatory compliance declarations",
+      "properties": {
+        "eu_dsa": {
+          "type": "object",
+          "properties": {
+            "status": { "type": "string", "enum": ["compliant", "partial", "non_compliant", "exempt"] },
+            "last_audit": { "type": "string", "format": "date" },
+            "audit_report_url": { "type": "string", "format": "uri" },
+            "transparency_report_url": { "type": "string", "format": "uri" }
+          }
+        },
+        "eu_dma": {
+          "type": "object",
+          "properties": {
+            "gatekeeper_status": { "type": "boolean", "description": "Is this platform designated as a DMA gatekeeper?" },
+            "compliance_status": { "type": "string", "enum": ["compliant", "under_review", "non_compliant"] }
+          }
+        },
+        "gdpr": {
+          "type": "object",
+          "properties": {
+            "status": { "type": "string", "enum": ["compliant", "partial", "non_compliant"] },
+            "dpo_email": { "type": "string", "format": "email" },
+            "privacy_policy_url": { "type": "string", "format": "uri" }
+          }
+        },
+        "dark_patterns": {
+          "type": "object",
+          "description": "Self-declaration of dark pattern practices",
+          "properties": {
+            "confirmshaming": { "type": "boolean" },
+            "hidden_costs": { "type": "boolean" },
+            "fake_urgency": { "type": "boolean" },
+            "roach_motel": { "type": "boolean" },
+            "misdirection": { "type": "boolean" },
+            "price_comparison_prevention": { "type": "boolean" },
+            "disguised_ads": { "type": "boolean" },
+            "last_audit_date": { "type": "string", "format": "date" }
+          }
+        }
+      }
+    },
+    "pricing": {
+      "type": "object",
+      "description": "Pricing transparency declarations",
+      "properties": {
+        "dynamic_pricing": { "type": "boolean", "description": "Does the platform use dynamic/personalized pricing?" },
+        "price_history_available": { "type": "boolean" },
+        "price_history_days": { "type": "integer", "minimum": 30, "description": "Days of price history shown (EU Omnibus: min 30)" },
+        "hidden_fees": { "type": "boolean" },
+        "fee_disclosure_url": { "type": "string", "format": "uri" }
+      }
+    },
+    "fairness": {
+      "type": "object",
+      "description": "Algorithmic fairness declarations",
+      "properties": {
+        "ranking_algorithm_disclosed": { "type": "boolean" },
+        "ranking_disclosure_url": { "type": "string", "format": "uri" },
+        "paid_ranking": { "type": "boolean", "description": "Are paid listings mixed with organic results?" },
+        "paid_ranking_labeled": { "type": "boolean" },
+        "review_verification": { "type": "boolean" },
+        "fake_review_policy_url": { "type": "string", "format": "uri" },
+        "wab_fairness_score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "wab_fairness_last_updated": { "type": "string", "format": "date" }
+      }
+    },
+    "security": {
+      "type": "object",
+      "properties": {
+        "bug_bounty_program": { "type": "boolean" },
+        "bug_bounty_url": { "type": "string", "format": "uri" },
+        "security_contact": { "type": "string", "format": "email" },
+        "two_factor_auth": { "type": "boolean" },
+        "data_breach_notification_days": { "type": "integer", "description": "Days to notify users after breach" }
+      }
+    },
+    "contact": {
+      "type": "object",
+      "required": ["legal_email"],
+      "properties": {
+        "legal_email": { "type": "string", "format": "email" },
+        "consumer_protection_email": { "type": "string", "format": "email" },
+        "wab_integration_email": { "type": "string", "format": "email" },
+        "press_email": { "type": "string", "format": "email" }
+      }
+    },
+    "wab_integration": {
+      "type": "object",
+      "description": "WAB SDK integration details",
+      "properties": {
+        "sdk_version": { "type": "string" },
+        "features_enabled": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["scam_shield", "fairness_check", "price_history", "agent_firewall", "dark_pattern_detection", "collective_bargaining"]
+          }
+        },
+        "api_endpoint": { "type": "string", "format": "uri" },
+        "webhook_url": { "type": "string", "format": "uri" }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "last_updated": { "type": "string", "format": "date-time" },
+        "valid_until": { "type": "string", "format": "date-time" },
+        "signature": { "type": "string", "description": "WAB cryptographic signature of this document" },
+        "signed_by": { "type": "string", "description": "WAB Notary public key fingerprint" }
+      }
+    }
+  },
+  "examples": [
+    {
+      "wab_version": "1.0",
+      "platform": {
+        "name": "Example Marketplace Inc.",
+        "domain": "example-marketplace.com",
+        "type": "marketplace",
+        "jurisdiction": ["EU", "US"],
+        "founded": "2015-03-01"
+      },
+      "compliance": {
+        "eu_dsa": { "status": "compliant", "last_audit": "2026-01-15" },
+        "gdpr": { "status": "compliant", "dpo_email": "dpo@example-marketplace.com" },
+        "dark_patterns": {
+          "confirmshaming": false,
+          "hidden_costs": false,
+          "fake_urgency": false,
+          "roach_motel": false,
+          "last_audit_date": "2026-01-15"
+        }
+      },
+      "pricing": {
+        "dynamic_pricing": false,
+        "price_history_available": true,
+        "price_history_days": 90,
+        "hidden_fees": false
+      },
+      "fairness": {
+        "ranking_algorithm_disclosed": true,
+        "paid_ranking": true,
+        "paid_ranking_labeled": true,
+        "review_verification": true,
+        "wab_fairness_score": 87
+      },
+      "contact": {
+        "legal_email": "legal@example-marketplace.com",
+        "wab_integration_email": "wab@example-marketplace.com"
+      },
+      "meta": {
+        "last_updated": "2026-04-20T00:00:00Z",
+        "valid_until": "2026-07-20T00:00:00Z"
+      }
+    }
+  ]
+}
