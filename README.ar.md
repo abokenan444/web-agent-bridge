@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/)
+[![Discord](https://img.shields.io/badge/Discord-%D8%A7%D9%86%D8%B6%D9%85%20%D9%84%D9%84%D9%85%D8%AC%D8%AA%D9%85%D8%B9-5865F2?logo=discord&logoColor=white)](https://discord.gg/NnbpJYEF)
 
 **برمجية وسيطة مفتوحة المصدر تربط وكلاء الذكاء الاصطناعي بالمواقع الإلكترونية — توفر واجهة أوامر موحدة للأتمتة الذكية.**
 
