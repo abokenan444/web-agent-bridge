@@ -1,0 +1,74 @@
+# =============================================================================
+#  Web Agent Bridge — Docker Compose with Nginx + SSL (Certbot)
+#  Usage: WAB_DOMAIN=yourdomain.com docker compose -f docker-compose.nginx.yml up -d
+#  License: MIT (Open Source)
+# =============================================================================
+
+services:
+  wab:
+    image: ghcr.io/abokenan444/web-agent-bridge:latest
+    # build: .
+    container_name: wab-app
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      PORT: "3000"
+      NODE_ENV: production
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET}"
+      JWT_SECRET_ADMIN: "${JWT_SECRET_ADMIN:?Set JWT_SECRET_ADMIN}"
+      ALLOWED_ORIGINS: "https://${WAB_DOMAIN:-localhost}"
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+    volumes:
+      - wab-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:3000/api/wab/ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - wab-internal
+
+  nginx:
+    image: nginx:alpine
+    container_name: wab-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./integrations/install/nginx.conf:/etc/nginx/conf.d/wab.conf:ro
+      - certbot-www:/var/www/certbot:ro
+      - certbot-certs:/etc/letsencrypt:ro
+    depends_on:
+      wab:
+        condition: service_healthy
+    networks:
+      - wab-internal
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: wab-certbot
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-certs:/etc/letsencrypt
+    # Run manually: docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d yourdomain.com
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+networks:
+  wab-internal:
+    driver: bridge
+
+volumes:
+  wab-data:
+    driver: local
+  certbot-www:
+    driver: local
+  certbot-certs:
+    driver: local

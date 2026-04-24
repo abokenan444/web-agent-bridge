@@ -1,16 +1,44 @@
+# =============================================================================
+#  Web Agent Bridge — Docker Compose (Standard)
+#  Usage: docker compose up -d
+#  License: MIT (Open Source)
+# =============================================================================
+
 services:
   web-agent-bridge:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      - PORT=3000
-      - JWT_SECRET=${JWT_SECRET:-change-this-to-a-strong-random-secret}
-      - JWT_SECRET_ADMIN=${JWT_SECRET_ADMIN:-change-this-admin-secret}
-      - NODE_ENV=production
-    volumes:
-      - wab-data:/app/data
+    image: ghcr.io/abokenan444/web-agent-bridge:latest
+    # Or build locally:
+    # build: .
+    container_name: wab
     restart: unless-stopped
+    ports:
+      - "${WAB_PORT:-3000}:3000"
+    environment:
+      PORT: "3000"
+      NODE_ENV: production
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required — run: openssl rand -base64 48}"
+      JWT_SECRET_ADMIN: "${JWT_SECRET_ADMIN:?JWT_SECRET_ADMIN is required — run: openssl rand -base64 48}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-}"
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+    volumes:
+      - wab-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:3000/api/wab/ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   wab-data:
+    driver: local
