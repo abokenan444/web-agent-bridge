@@ -19,7 +19,9 @@ async function apiFetch(path, opts = {}) {
     headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) }
   };
   if (opts.body !== undefined) fetchOpts.body = opts.body;
-  const res = await fetch(API + path, fetchOpts);
+  // If API prefix present and path already begins with it, don't double-prefix
+  const url = (API && path.indexOf(API + '/') === 0) ? path : (API + path);
+  const res = await fetch(url, fetchOpts);
   return res.json();
 }
 
