@@ -1,0 +1,55 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "name": "web-agent-bridge",
+  "version": 2,
+  "buildCommand": "npm ci --omit=dev",
+  "installCommand": "npm ci",
+  "framework": null,
+  "outputDirectory": ".",
+  "routes": [
+    {
+      "src": "/.well-known/wab.json",
+      "dest": "/api/wab/discovery"
+    },
+    {
+      "src": "/api/wab/(.*)",
+      "dest": "/api/wab/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/server/index.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  },
+  "functions": {
+    "server/index.js": {
+      "maxDuration": 30,
+      "memory": 512
+    }
+  },
+  "headers": [
+    {
+      "source": "/.well-known/wab.json",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Control", "value": "public, max-age=300" },
+        { "key": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "source": "/api/wab/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+      ]
+    }
+  ]
+}

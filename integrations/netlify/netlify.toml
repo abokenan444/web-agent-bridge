@@ -1,0 +1,67 @@
+# =============================================================================
+#  Web Agent Bridge — Netlify Configuration
+#  License: MIT (Open Source)
+# =============================================================================
+
+[build]
+  command = "npm ci --omit=dev"
+  publish = "public"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NODE_ENV = "production"
+
+# ── Netlify Functions (serverless) ────────────────────────────────────────────
+[functions]
+  node_bundler = "esbuild"
+  directory = "netlify/functions"
+
+# ── Redirects ─────────────────────────────────────────────────────────────────
+
+# WAB Discovery document
+[[redirects]]
+  from = "/.well-known/wab.json"
+  to = "/.netlify/functions/wab-discovery"
+  status = 200
+  force = true
+
+  [redirects.headers]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "public, max-age=300"
+
+# WAB API proxy
+[[redirects]]
+  from = "/api/wab/*"
+  to = "/.netlify/functions/wab-api/:splat"
+  status = 200
+  force = true
+
+# WAB ping
+[[redirects]]
+  from = "/wab/ping"
+  to = "/.netlify/functions/wab-ping"
+  status = 200
+  force = true
+
+# ── Headers ───────────────────────────────────────────────────────────────────
+[[headers]]
+  for = "/.well-known/wab.json"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "public, max-age=300"
+    Content-Type = "application/json"
+    X-WAB-Enabled = "true"
+
+[[headers]]
+  for = "/api/wab/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-WAB-Enabled = "true"
+    X-WAB-Version = "3.2.0"
