@@ -52,7 +52,7 @@ COPY --from=builder --chown=wab:wab /build/node_modules ./node_modules
 COPY --chown=wab:wab . .
 
 # Create data directory with correct permissions
-RUN mkdir -p /data && chown wab:wab /data
+RUN mkdir -p /data /app/data && chown -R wab:wab /data /app/data /app
 
 # Switch to non-root user
 USER wab

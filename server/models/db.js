@@ -9,7 +9,7 @@ const { encryptOptional, decryptOptional } = require('../utils/secureFields');
 const isTest = process.env.NODE_ENV === 'test';
 const DATA_DIR = isTest
   ? path.join(__dirname, '..', '..', 'data-test')
-  : path.join(__dirname, '..', '..', 'data');
+  : (process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data'));
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const dbFile = isTest ? 'wab-test.db' : 'wab.db';

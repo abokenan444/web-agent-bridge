@@ -9,7 +9,7 @@ const fs = require('fs');
 
 const DATA_DIR = process.env.NODE_ENV === 'test'
   ? path.join(__dirname, '..', '..', 'data-test')
-  : path.join(__dirname, '..', '..', 'data');
+  : (process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data'));
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const dbFile = process.env.NODE_ENV === 'test' ? 'wab-test.db' : 'wab.db';
