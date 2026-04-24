@@ -1,0 +1,58 @@
+version: '3.8'
+
+# ═══════════════════════════════════════════════════════════════════════════
+# WAB Platform — Interactive Demo
+# Isolated environment — NO connection to production databases
+# All data is simulated in-memory for demonstration purposes
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ─── Backend API (Node.js + Express) ──────────────────────────────────────
+  wab-demo-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wab-demo-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=demo
+      - PORT=3001
+    networks:
+      - wab-demo-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # No volumes — pure in-memory demo, no data persistence
+    # No external DB connections — fully isolated
+
+  # ─── Frontend (Nginx serving static files) ────────────────────────────────
+  wab-demo-frontend:
+    image: nginx:alpine
+    container_name: wab-demo-frontend
+    restart: unless-stopped
+    ports:
+      - "${DEMO_PORT:-8080}:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - wab-demo-net
+    depends_on:
+      wab-demo-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+# ─── Isolated Network (no access to host or other containers) ──────────────
+networks:
+  wab-demo-net:
+    driver: bridge
+    name: wab-demo-network
+    # Isolated from any production networks
