@@ -219,21 +219,38 @@ curl https://www.webagentbridge.com/api/v1/bounty/stats?api_key=wab_live_fre_YOU
 
 ## Quick Start
 
+### Deploy in One Click
+
+| Platform | Button | Storage | Free Tier |
+|---|---|---|---|
+| **Railway** | [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/web-agent-bridge?referralCode=wab) | Persistent SQLite | $5 credit/mo |
+| **Vercel** | [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fabokenan444%2Fweb-agent-bridge&env=JWT_SECRET,JWT_SECRET_ADMIN&project-name=web-agent-bridge) | Ephemeral | Generous free tier |
+| **Netlify** | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/abokenan444/web-agent-bridge) | Ephemeral | 100GB bandwidth/mo |
+| **Cloudflare** | [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/abokenan444/web-agent-bridge) | Edge KV | 100K req/day |
+
+> **Recommended for production:** Railway (persistent storage) or self-hosted with Docker.
+
 ### 1. Install & Run the Server
 
 ```bash
-# Option A: Clone and run
+# Option A: One-line install on any Linux server (Ubuntu/Debian/CentOS/Alpine)
+curl -fsSL https://raw.githubusercontent.com/abokenan444/web-agent-bridge/master/integrations/install/install.sh | sudo bash
+
+# Option B: Clone and run
 git clone https://github.com/abokenan444/web-agent-bridge.git
 cd web-agent-bridge
 npm install
 cp .env.example .env
 npm start
 
-# Option B: npx (one command)
+# Option C: npx (one command)
 npx web-agent-bridge start
 
-# Option C: Docker
+# Option D: Docker (standard)
 docker compose up -d
+
+# Option E: Docker with Nginx + SSL (production)
+WAB_DOMAIN=yourdomain.com docker compose -f docker-compose.nginx.yml up -d
 ```
 
 ### 2. Create an Account
@@ -714,13 +731,46 @@ Scripts are served at versioned URLs for cache-safe deployments:
 ## Docker
 
 ```bash
-# Quick start
+# Standard quick start
 docker compose up -d
 
-# Or build manually
+# Production with Nginx + automatic SSL (Let's Encrypt)
+WAB_DOMAIN=yourdomain.com docker compose -f docker-compose.nginx.yml up -d
+
+# Build manually
 docker build -t web-agent-bridge .
-docker run -p 3000:3000 -e JWT_SECRET=your-secret -e JWT_SECRET_ADMIN=your-admin-secret web-agent-bridge
+docker run -p 3000:3000 \
+  -e JWT_SECRET=$(openssl rand -base64 48) \
+  -e JWT_SECRET_ADMIN=$(openssl rand -base64 48) \
+  -v wab-data:/app/data \
+  web-agent-bridge
 ```
+
+### Docker Compose Files
+
+| File | Description | Use Case |
+|---|---|---|
+| `docker-compose.yml` | WAB server only | Development, simple deployments |
+| `docker-compose.nginx.yml` | WAB + Nginx + SSL | Production with custom domain |
+
+### Cloudflare Worker (Edge Deployment)
+
+Deploy WAB at the edge — no server required:
+
+```bash
+# Install Wrangler
+npm install -g wrangler
+wrangler login
+
+# Deploy from integrations/cloudflare-worker/
+cd integrations/cloudflare-worker
+wrangler secret put WAB_SERVER_URL
+wrangler secret put WAB_SITE_ID
+wrangler secret put WAB_API_KEY
+wrangler deploy
+```
+
+See [`integrations/cloudflare-worker/README.md`](integrations/cloudflare-worker/README.md) for full guide.
 
 ---
 
@@ -1584,11 +1634,16 @@ Install at: `https://yourserver.com/pwa/`
 
 ## WordPress Plugin
 
-Native WordPress plugin for adding WAB support to any WordPress site:
+Native WordPress plugin for adding WAB support to any WordPress site.
+
+### Standard Plugin (Deactivatable)
 
 ```bash
-# Install
+# Install manually
 cp -r web-agent-bridge-wordpress/ /wp-content/plugins/web-agent-bridge/
+
+# Or install via WP-CLI from WordPress.org
+wp plugin install web-agent-bridge --activate
 ```
 
 | Feature | Description |
@@ -1600,7 +1655,28 @@ cp -r web-agent-bridge-wordpress/ /wp-content/plugins/web-agent-bridge/
 | **Shortcode** | `[wab_bridge]` shortcode for embedding WAB on specific pages |
 | **Hooks API** | `wab_before_action` / `wab_after_action` for custom logic |
 
-See [`web-agent-bridge-wordpress/README.md`](web-agent-bridge-wordpress/README.md) for full documentation.
+### Must-Use Plugin (Always Active, Cannot Be Deactivated)
+
+For hosting providers and managed WordPress environments:
+
+```bash
+# One-command install (requires WP-CLI)
+bash web-agent-bridge-wordpress/mu-plugin/install-wab-mu.sh --wp-path /var/www/html
+
+# Or manually copy to mu-plugins/
+cp web-agent-bridge-wordpress/mu-plugin/web-agent-bridge-mu.php /wp-content/mu-plugins/
+wp rewrite flush
+```
+
+The MU plugin is **always loaded by WordPress core** before any regular plugin — it cannot be deactivated from the admin panel. When the full plugin is absent, it runs a minimal fallback that serves `/.well-known/wab.json` and injects the WAB script.
+
+**wp-config.php overrides:**
+```php
+define( 'WAB_MU_API_BASE', 'https://wab.yourdomain.com' );  // Custom WAB server
+define( 'WAB_MU_DISCOVERY_CACHE_TTL', 600 );                // Cache TTL in seconds
+```
+
+See [`web-agent-bridge-wordpress/README.md`](web-agent-bridge-wordpress/README.md) and [`web-agent-bridge-wordpress/mu-plugin/README.md`](web-agent-bridge-wordpress/mu-plugin/README.md) for full documentation.
 
 ---
 
@@ -1629,8 +1705,24 @@ WAB uses an **Open Core** dual-license model:
 
 | Layer | License | Components |
 |-------|---------|------------|
-| **Open Source** | MIT | SDK, Widget, MCP Server, Trust Protocol Spec, Browser Extension, Protocol module, Public module APIs |
-| **Proprietary** | Closed | Detection Engine, Threat DB, WAB Score Model, Fairness Algorithm, Neural Engine, Dark Pattern Engine, Gov Engine, Notary Engine, Firewall Engine, Price Engine, Bargaining Engine, Bounty Verification, Affiliate DB |
+| **Open Source** | MIT | SDK, Widget, MCP Server, Trust Protocol Spec, Browser Extension, Protocol module, Public module APIs, install.sh, Cloudflare Worker, Netlify Functions, Vercel config, Railway config |
+| **Open Source** | GPL-2.0 | WordPress Plugin (standard + Must-Use), WP-CLI installer |
+| **Proprietary (Free)** | Closed / Free | Detection Engine, Threat DB, WAB Score Model, Fairness Algorithm, Neural Engine, Dark Pattern Engine, Gov Engine, Notary Engine, Firewall Engine, Price Engine, Bargaining Engine, Bounty Verification, Affiliate DB |
 | **Commercial** | Paid API | API Gateway modules (Free/Pro/Business/Enterprise tiers), Data Marketplace, AI Safety Layer, Enterprise SDK |
+
+### Integration Components License Summary
+
+| Integration | File | License | Notes |
+|---|---|---|---|
+| Linux Installer | `integrations/install/install.sh` | MIT | Fully open source |
+| Docker | `Dockerfile`, `docker-compose*.yml` | MIT | Fully open source |
+| Cloudflare Worker | `integrations/cloudflare-worker/worker.js` | MIT | Fully open source |
+| Netlify Functions | `integrations/netlify/functions/` | MIT | Fully open source |
+| Vercel Config | `integrations/vercel/vercel.json` | MIT | Fully open source |
+| Railway Config | `integrations/railway/railway.json` | MIT | Fully open source |
+| WordPress Plugin | `web-agent-bridge-wordpress/` | GPL-2.0 | Fully open source |
+| WordPress MU Plugin | `web-agent-bridge-wordpress/mu-plugin/` | GPL-2.0 | Fully open source |
+| WAB Server Core | `server/` | Open Core | Free tier + paid features |
+| WAB Browser | `wab-browser/` | Proprietary (Free) | Free to use, source private |
 
 See [LICENSE](LICENSE) for full details.
