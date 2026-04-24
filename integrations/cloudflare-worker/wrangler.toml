@@ -1,0 +1,40 @@
+# =============================================================================
+#  Web Agent Bridge — Cloudflare Worker Configuration (wrangler.toml)
+#  License: MIT (Open Source)
+# =============================================================================
+
+name = "web-agent-bridge"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Worker account settings
+# account_id = "your-cloudflare-account-id"  # Set via CLOUDFLARE_ACCOUNT_ID env var
+
+[vars]
+# Override these in Cloudflare Dashboard → Workers → Settings → Variables
+# Or use wrangler secret put WAB_SERVER_URL
+WAB_VERSION = "3.2.0"
+RATE_LIMIT_RPM = "60"
+
+# Uncomment to bind a KV namespace for rate limiting
+# [[kv_namespaces]]
+# binding = "WAB_RATE_LIMIT_KV"
+# id = "your-kv-namespace-id"
+
+[env.production]
+name = "web-agent-bridge"
+routes = [
+  # Uncomment and set your domain:
+  # { pattern = "yourdomain.com/*", zone_name = "yourdomain.com" },
+  # { pattern = "*.yourdomain.com/api/wab/*", zone_name = "yourdomain.com" },
+]
+
+[env.staging]
+name = "web-agent-bridge-staging"
+
+# Secrets (set via: wrangler secret put SECRET_NAME)
+# WAB_SERVER_URL    — Your WAB server URL
+# WAB_API_KEY       — Your WAB site API key
+# WAB_SITE_ID       — Your WAB site ID
+# ORIGIN_URL        — Your origin website URL
