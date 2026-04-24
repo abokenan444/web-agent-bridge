@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB Integrations — Deploy Web Agent Bridge Anywhere</title>
+  <meta name="description" content="Deploy Web Agent Bridge in one click to Vercel, Netlify, Railway, Cloudflare Workers, WordPress, Docker, or any Linux server. Make your site AI-ready instantly.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>body{background:#0a0e1a;color:#f0f4ff;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;min-height:100vh}</style>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="/css/styles.css?v=3.2.0">
+  <style>
+    .int-hero{padding:120px 0 40px;text-align:center}
+    .int-hero h1{font-size:3rem;margin:0 0 16px;background:linear-gradient(135deg,#6366f1,#8b5cf6,#ec4899);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+    .int-hero .subtitle{font-size:1.2rem;color:#94a3b8;max-width:760px;margin:0 auto 32px;line-height:1.6}
+    .lang-switch{display:flex;justify-content:center;gap:8px;margin-bottom:24px}
+    .lang-switch button{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#f0f4ff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:.9rem;transition:.2s;font-family:inherit}
+    .lang-switch button.active{background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:transparent}
+    .section-title{text-align:center;font-size:2.2rem;margin:60px 0 12px;color:#f0f4ff}
+    .section-sub{text-align:center;color:#94a3b8;max-width:700px;margin:0 auto 40px;padding:0 20px;line-height:1.6}
+    .int-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:24px;padding:0 24px;max-width:1280px;margin:0 auto 60px}
+    .int-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:28px;transition:.3s;display:flex;flex-direction:column}
+    .int-card:hover{border-color:rgba(99,102,241,.4);transform:translateY(-3px);box-shadow:0 10px 40px rgba(99,102,241,.15)}
+    .int-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+    .int-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0}
+    .int-icon-vercel{background:#000;border:1px solid #333}
+    .int-icon-netlify{background:rgba(0,173,175,.15);color:#00adaf}
+    .int-icon-railway{background:rgba(139,92,246,.15);color:#a78bfa}
+    .int-icon-cloudflare{background:rgba(243,128,32,.15);color:#f38020}
+    .int-icon-docker{background:rgba(36,150,237,.15);color:#2496ed}
+    .int-icon-wordpress{background:rgba(33,117,155,.15);color:#21759b}
+    .int-icon-linux{background:rgba(252,186,3,.12);color:#fcba03}
+    .int-icon-dns{background:rgba(34,197,94,.15);color:#4ade80}
+    .int-card h3{margin:0;font-size:1.25rem;color:#f0f4ff}
+    .int-card .tag{display:inline-block;padding:3px 10px;border-radius:6px;font-size:.7rem;font-weight:600;margin-left:6px;vertical-align:middle}
+    .tag-free{background:rgba(34,197,94,.15);color:#4ade80}
+    .tag-edge{background:rgba(243,128,32,.15);color:#f38020}
+    .tag-cms{background:rgba(99,102,241,.15);color:#818cf8}
+    .tag-coming{background:rgba(245,158,11,.15);color:#fbbf24}
+    .int-card .desc{color:#94a3b8;font-size:.95rem;line-height:1.6;margin:0 0 16px;flex:1}
+    .int-features{list-style:none;padding:0;margin:0 0 16px;display:grid;gap:6px}
+    .int-features li{color:#cbd5e1;font-size:.85rem;padding-left:22px;position:relative;line-height:1.5}
+    .int-features li::before{content:'✓';color:#4ade80;position:absolute;left:0;font-weight:700}
+    [dir="rtl"] .int-features li{padding-left:0;padding-right:22px}
+    [dir="rtl"] .int-features li::before{left:auto;right:0}
+    .int-steps{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px 18px;margin:0 0 16px}
+    .int-steps h5{margin:0 0 10px;font-size:.82rem;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px}
+    .int-steps ol{margin:0;padding-left:18px;color:#94a3b8;font-size:.85rem;line-height:1.7}
+    [dir="rtl"] .int-steps ol{padding-left:0;padding-right:18px}
+    .int-steps code{background:rgba(99,102,241,.1);color:#a5b4fc;padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.78rem}
+    [dir="rtl"] .int-steps code{direction:ltr;display:inline-block}
+    .deploy-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:auto}
+    .deploy-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;font-weight:600;font-size:.88rem;text-decoration:none;transition:.2s;border:1px solid transparent}
+    .deploy-btn:hover{transform:translateY(-1px)}
+    .btn-vercel{background:#000;color:#fff;border-color:#333}
+    .btn-vercel:hover{background:#111}
+    .btn-netlify{background:#00adaf;color:#fff}
+    .btn-railway{background:#8b5cf6;color:#fff}
+    .btn-cloudflare{background:#f38020;color:#fff}
+    .btn-docker{background:#2496ed;color:#fff}
+    .btn-wordpress{background:#21759b;color:#fff}
+    .btn-linux{background:linear-gradient(135deg,#fcba03,#f59e0b);color:#000}
+    .btn-dns{background:#4ade80;color:#064e3b}
+    .btn-outline{background:transparent;color:#cbd5e1;border-color:rgba(255,255,255,.12)}
+    .btn-outline:hover{background:rgba(255,255,255,.05);color:#fff}
+    .long-desc{max-width:820px;margin:0 auto 60px;padding:0 24px;color:#cbd5e1;font-size:.95rem;line-height:1.75}
+    .long-desc .box{background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.18);border-radius:14px;padding:22px 26px;margin:18px 0}
+    .long-desc h4{margin:0 0 8px;color:#a5b4fc;font-size:1.05rem}
+    .long-desc code{background:rgba(0,0,0,.35);color:#a5b4fc;padding:2px 7px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.85rem}
+    .long-desc pre{background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:16px 18px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:#a5b4fc;line-height:1.7}
+    [dir="rtl"] .long-desc pre,[dir="rtl"] .long-desc code{direction:ltr;text-align:left}
+    .matrix-section{max-width:1100px;margin:0 auto 60px;padding:0 24px}
+    .matrix-table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden}
+    .matrix-table th,.matrix-table td{padding:14px 16px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06);font-size:.88rem}
+    [dir="rtl"] .matrix-table th,[dir="rtl"] .matrix-table td{text-align:right}
+    .matrix-table th{background:rgba(99,102,241,.1);color:#a5b4fc;font-weight:600;font-size:.82rem;text-transform:uppercase;letter-spacing:.5px}
+    .matrix-table td{color:#cbd5e1}
+    .matrix-table tr:last-child td{border-bottom:none}
+    .matrix-table .yes{color:#4ade80}
+    .matrix-table .no{color:#ef4444}
+    .matrix-table .partial{color:#fbbf24}
+    .cta-section{text-align:center;padding:60px 24px 80px;max-width:900px;margin:0 auto}
+    .cta-section h2{font-size:2rem;margin-bottom:12px}
+    .cta-section p{color:#94a3b8;margin-bottom:24px;font-size:1.05rem}
+    .cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+    [hidden]{display:none!important}
+    @media(max-width:640px){
+      .int-hero h1{font-size:2rem}
+      .int-hero .subtitle{font-size:1rem;padding:0 20px}
+      .section-title{font-size:1.6rem}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════ NAVBAR ═══════════ -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <div class="brand-icon">⚡</div>
+        <span>WAB</span>
+      </a>
+      <ul class="navbar-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/api">API</a></li>
+        <li><a href="/integrations" class="active">Integrations</a></li>
+        <li><a href="/demo">Demo</a></li>
+        <li><a href="/workspace">Workspace</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <a href="/login" class="btn btn-ghost" data-wab-auth="guest">Sign In</a>
+        <a href="/dashboard" class="btn btn-ghost" data-wab-auth="signed-in" style="display:none">Dashboard</a>
+        <a href="/register" class="btn btn-primary btn-sm" data-wab-auth="guest">Get Started</a>
+      </div>
+      <button class="mobile-menu-btn" onclick="document.querySelector('.navbar-links').classList.toggle('active')">☰</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════ HERO ═══════════ -->
+  <section class="int-hero">
+    <div class="container">
+      <div class="lang-switch">
+        <button id="btn-en" class="active" onclick="switchLang('en')">English</button>
+        <button id="btn-ar" onclick="switchLang('ar')">العربية</button>
+      </div>
+      <h1 data-en="Deploy WAB Anywhere" data-ar="انشر WAB في أي مكان">Deploy WAB Anywhere</h1>
+      <p class="subtitle" data-en="One-click deploys to Vercel, Netlify, Railway, Cloudflare Workers, WordPress, Docker, and any Linux server. Make your website AI-ready in under two minutes — no developer required." data-ar="نشر بنقرة واحدة إلى Vercel و Netlify و Railway و Cloudflare Workers و WordPress و Docker وأي خادم لينكس. اجعل موقعك جاهزاً للذكاء الاصطناعي في أقل من دقيقتين — بدون مطوّر.">One-click deploys to Vercel, Netlify, Railway, Cloudflare Workers, WordPress, Docker, and any Linux server. Make your website AI-ready in under two minutes — no developer required.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <a href="#platforms" class="btn btn-primary" data-en="Browse Platforms" data-ar="استعرض المنصات">Browse Platforms</a>
+        <a href="#infrastructure" class="btn btn-ghost" data-en="Infrastructure Integrations" data-ar="تكاملات البنية التحتية">Infrastructure Integrations</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ STRATEGY / PHILOSOPHY ═══════════ -->
+  <div class="long-desc">
+    <div class="box">
+      <h4 data-en="From Optional Library → Default Web Infrastructure" data-ar="من مكتبة اختيارية → إلى بنية تحتية افتراضية للويب">From Optional Library → Default Web Infrastructure</h4>
+      <p data-en="Most websites will never install an AI-compatibility library by choice. To reach every site on the web, WAB must integrate at the same layers that already power the internet: hosting control panels, web servers, CMSs, CDNs, and DNS. Every integration on this page targets one of those layers — shifting the cost of adoption from individual developers to the infrastructure itself." data-ar="معظم المواقع لن تثبّت مكتبة توافق مع الذكاء الاصطناعي باختيارها. للوصول إلى كل موقع على الويب، يجب أن يندمج WAB في نفس الطبقات التي تشغّل الإنترنت بالفعل: لوحات تحكم الاستضافة، وخوادم الويب، وأنظمة إدارة المحتوى، وشبكات توصيل المحتوى، ونظام DNS. كل تكامل في هذه الصفحة يستهدف إحدى تلك الطبقات — فينقل عبء التبني من المطوّر الفردي إلى البنية التحتية نفسها.">Most websites will never install an AI-compatibility library by choice. To reach every site on the web, WAB must integrate at the same layers that already power the internet: hosting control panels, web servers, CMSs, CDNs, and DNS. Every integration on this page targets one of those layers — shifting the cost of adoption from individual developers to the infrastructure itself.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════ PLATFORMS / ONE-CLICK DEPLOY ═══════════ -->
+  <h2 class="section-title" id="platforms" data-en="One-Click Cloud Deployments" data-ar="نشر سحابي بنقرة واحدة">One-Click Cloud Deployments</h2>
+  <p class="section-sub" data-en="Fork, configure, and run WAB on your preferred platform. All templates are open-source (MIT) and include production-ready defaults." data-ar="انسخ وكوّن وشغّل WAB على منصتك المفضلة. كل القوالب مفتوحة المصدر (MIT) وتتضمن إعدادات جاهزة للإنتاج.">Fork, configure, and run WAB on your preferred platform. All templates are open-source (MIT) and include production-ready defaults.</p>
+
+  <div class="int-grid">
+
+    <!-- ─── Vercel ───────────────────────────────────────────────────── -->
+    <div class="int-card">
+      <div class="int-head">
+        <div class="int-icon int-icon-vercel">▲</div>
+        <h3>Vercel <span class="tag tag-free" data-en="Free tier" data-ar="طبقة مجانية">Free tier</span></h3>
+      </div>
+      <p class="desc" data-en="Deploy WAB as a serverless Next.js-style project. Zero config, global edge network, instant HTTPS. Ideal for starter sites and landing pages that need AI-agent compatibility without running a server." data-ar="انشر WAB كمشروع بدون خادم بنمط Next.js. بدون إعدادات، شبكة حافة عالمية، HTTPS فوري. مثالي للمواقع الأولى وصفحات الهبوط التي تحتاج توافقاً مع وكلاء الذكاء الاصطناعي دون تشغيل خادم.">Deploy WAB as a serverless Next.js-style project. Zero config, global edge network, instant HTTPS. Ideal for starter sites and landing pages that need AI-agent compatibility without running a server.</p>
+      <ul class="int-features">
+        <li data-en="Serverless functions with auto-scaling" data-ar="دوال بدون خادم مع توسع تلقائي">Serverless functions with auto-scaling</li>
+        <li data-en="Global edge delivery on 20+ regions" data-ar="توصيل عالمي على أكثر من 20 منطقة">Global edge delivery on 20+ regions</li>
+        <li data-en="Automatic JWT secret prompting" data-ar="طلب تلقائي لمفاتيح JWT">Automatic JWT secret prompting</li>
+        <li data-en="Free SSL + custom domain" data-ar="SSL مجاني + نطاق مخصص">Free SSL + custom domain</li>
+      </ul>
+      <div class="int-steps">
+        <h5 data-en="Steps" data-ar="الخطوات">Steps</h5>
+        <ol>
+          <li data-en="Click the Deploy button below" data-ar="اضغط زر النشر بالأسفل">Click the Deploy button below</li>
+          <li data-en="Sign in to Vercel (or create a free account)" data-ar="سجّل الدخول إلى Vercel (أو أنشئ حساباً مجانياً)">Sign in to Vercel (or create a free account)</li>
+          <li data-en="Enter <code>JWT_SECRET</code> and <code>JWT_SECRET_ADMIN</code> when prompted" data-ar="أدخل <code>JWT_SECRET</code> و <code>JWT_SECRET_ADMIN</code> عند الطلب">Enter <code>JWT_SECRET</code> and <code>JWT_SECRET_ADMIN</code> when prompted</li>
+          <li data-en="Your WAB instance is live in under 60 seconds" data-ar="مثيل WAB الخاص بك يعمل في أقل من 60 ثانية">Your WAB instance is live in under 60 seconds</li>
+        </ol>
+      </div>
+      <div class="deploy-row">
+        <a class="deploy-btn btn-vercel" href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fabokenan444%2Fweb-agent-bridge&env=JWT_SECRET,JWT_SECRET_ADMIN&envDescription=Required%20security%20secrets%20for%20WAB&project-name=web-agent-bridge&repository-name=web-agent-bridge" target="_blank" rel="noopener">▲ <span data-en="Deploy to Vercel" data-ar="نشر إلى Vercel">Deploy to Vercel</span></a>
+        <a class="deploy-btn btn-outline" href="https://github.com/abokenan444/web-agent-bridge/tree/master/integrations/vercel" target="_blank" rel="noopener" data-en="Docs" data-ar="التوثيق">Docs</a>
+      </div>
+    </div>
+
+    <!-- ─── Netlify ──────────────────────────────────────────────────── -->
+    <div class="int-card">
+      <div class="int-head">
+        <div class="int-icon int-icon-netlify">◇</div>
+        <h3>Netlify <span class="tag tag-free" data-en="Free tier" data-ar="طبقة مجانية">Free tier</span></h3>
+      </div>
+      <p class="desc" data-en="Deploy WAB using Netlify Edge Functions. Includes pre-built <code>wab-discovery</code> and <code>wab-ping</code> functions that serve your well-known document at the edge — globally cached, always fast." data-ar="انشر WAB عبر Netlify Edge Functions. يشمل دوال <code>wab-discovery</code> و <code>wab-ping</code> جاهزة تخدم مستند well-known على الحافة — مخزّن مؤقتاً عالمياً، سريع دائماً.">Deploy WAB using Netlify Edge Functions. Includes pre-built <code>wab-discovery</code> and <code>wab-ping</code> functions that serve your well-known document at the edge — globally cached, always fast.</p>
+      <ul class="int-features">
+        <li data-en="Edge functions with zero cold starts" data-ar="دوال على الحافة بدون بدء بارد">Edge functions with zero cold starts</li>
+        <li data-en="Built-in <code>/.well-known/wab.json</code>" data-ar="مسار <code>/.well-known/wab.json</code> مدمج">Built-in <code>/.well-known/wab.json</code></li>
+        <li data-en="Automatic HTTPS + CDN" data-ar="HTTPS + CDN تلقائي">Automatic HTTPS + CDN</li>
+        <li data-en="Git-connected continuous deploy" data-ar="نشر مستمر متصل بـ Git">Git-connected continuous deploy</li>
+      </ul>
+      <div class="int-steps">
+        <h5 data-en="Steps" data-ar="الخطوات">Steps</h5>
+        <ol>
+          <li data-en="Click Deploy to Netlify" data-ar="اضغط نشر إلى Netlify">Click Deploy to Netlify</li>
+          <li data-en="Authorize GitHub + pick repo name" data-ar="صرّح لـ GitHub + اختر اسم المستودع">Authorize GitHub + pick repo name</li>
+          <li data-en="Set env vars in Site Settings → Environment" data-ar="ضع متغيرات البيئة في إعدادات الموقع ← Environment">Set env vars in Site Settings → Environment</li>
+          <li data-en="Visit <code>/.well-known/wab.json</code> to verify" data-ar="زر <code>/.well-known/wab.json</code> للتحقق">Visit <code>/.well-known/wab.json</code> to verify</li>
+        </ol>
+      </div>
+      <div class="deploy-row">
+        <a class="deploy-btn btn-netlify" href="https://app.netlify.com/start/deploy?repository=https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener">◇ <span data-en="Deploy to Netlify" data-ar="نشر إلى Netlify">Deploy to Netlify</span></a>
+        <a class="deploy-btn btn-outline" href="https://github.com/abokenan444/web-agent-bridge/tree/master/integrations/netlify" target="_blank" rel="noopener" data-en="Docs" data-ar="التوثيق">Docs</a>
+      </div>
+    </div>
+
+    <!-- ─── Railway ──────────────────────────────────────────────────── -->
+    <div class="int-card">
+      <div class="int-head">
+        <div class="int-icon int-icon-railway">🚂</div>
+        <h3>Railway <span class="tag tag-free" data-en="$5 credit/mo" data-ar="رصيد 5$ شهرياً">$5 credit/mo</span></h3>
+      </div>
+      <p class="desc" data-en="The best option for production self-hosting. Persistent SQLite storage, always-on containers, no cold starts, and free $5/mo credits — enough to power a small-to-medium WAB instance indefinitely." data-ar="الخيار الأفضل للاستضافة الذاتية في الإنتاج. تخزين SQLite دائم، حاويات دائمة التشغيل، بدون بدء بارد، ورصيد 5$ شهرياً مجاني — يكفي لتشغيل مثيل WAB صغير إلى متوسط بشكل دائم.">The best option for production self-hosting. Persistent SQLite storage, always-on containers, no cold starts, and free $5/mo credits — enough to power a small-to-medium WAB instance indefinitely.</p>
+      <ul class="int-features">
+        <li data-en="Persistent volume for SQLite" data-ar="حجم تخزين دائم لـ SQLite">Persistent volume for SQLite</li>
+        <li data-en="Always-on, no cold starts" data-ar="دائم التشغيل، بدون بدء بارد">Always-on, no cold starts</li>
+        <li data-en="Custom domains + free SSL" data-ar="نطاقات مخصصة + SSL مجاني">Custom domains + free SSL</li>
+        <li data-en="Push-to-deploy from GitHub" data-ar="نشر فوري عبر Git Push">Push-to-deploy from GitHub</li>
+      </ul>
+      <div class="int-steps">
+        <h5 data-en="Steps" data-ar="الخطوات">Steps</h5>
+        <ol>
+          <li data-en="Click Deploy on Railway" data-ar="اضغط نشر على Railway">Click Deploy on Railway</li>
+          <li data-en="Add volume mount at <code>/data</code>" data-ar="أضف نقطة تحميل حجم عند <code>/data</code>">Add volume mount at <code>/data</code></li>
+          <li data-en="Set <code>JWT_SECRET</code> + <code>JWT_SECRET_ADMIN</code>" data-ar="اضبط <code>JWT_SECRET</code> + <code>JWT_SECRET_ADMIN</code>">Set <code>JWT_SECRET</code> + <code>JWT_SECRET_ADMIN</code></li>
+          <li data-en="Your instance stays online 24/7" data-ar="مثيلك يبقى متصلاً 24/7">Your instance stays online 24/7</li>
+        </ol>
+      </div>
+      <div class="deploy-row">
+        <a class="deploy-btn btn-railway" href="https://railway.app/template/web-agent-bridge?referralCode=wab" target="_blank" rel="noopener">🚂 <span data-en="Deploy on Railway" data-ar="نشر على Railway">Deploy on Railway</span></a>
+        <a class="deploy-btn btn-outline" href="https://github.com/abokenan444/web-agent-bridge/tree/master/integrations/railway" target="_blank" rel="noopener" data-en="Docs" data-ar="التوثيق">Docs</a>
+      </div>
+    </div>
+
+    <!-- ─── Cloudflare Workers (Edge) ────────────────────────────────── -->
+    <div class="int-card">
+      <div class="int-head">
+        <div class="int-icon int-icon-cloudflare">⛅</div>
+        <h3>Cloudflare Workers <span class="tag tag-edge" data-en="Edge" data-ar="حافة">Edge</span></h3>
+      </div>
+      <p class="desc" data-en="Run WAB at the edge on 300+ global data centers. Your well-known document and WAB headers are injected on every response without touching your origin server. Works with <strong>any</strong> website behind Cloudflare — even if your origin doesn't support WAB." data-ar="شغّل WAB على الحافة عبر أكثر من 300 مركز بيانات حول العالم. مستند well-known وترويسات WAB تُحقن في كل استجابة دون لمس الخادم الأصلي. يعمل مع <strong>أي</strong> موقع خلف Cloudflare — حتى لو كان خادمك الأصلي لا يدعم WAB.">Run WAB at the edge on 300+ global data centers. Your well-known document and WAB headers are injected on every response without touching your origin server. Works with <strong>any</strong> website behind Cloudflare — even if your origin doesn't support WAB.</p>
+      <ul class="int-features">
+        <li data-en="300+ edge POPs worldwide" data-ar="أكثر من 300 نقطة حافة حول العالم">300+ edge POPs worldwide</li>
+        <li data-en="Zero cold starts (V8 isolates)" data-ar="بدون بدء بارد (عزلات V8)">Zero cold starts (V8 isolates)</li>
+        <li data-en="Injects <code>X-WAB-*</code> headers on every response" data-ar="يحقن ترويسات <code>X-WAB-*</code> في كل استجابة">Injects <code>X-WAB-*</code> headers on every response</li>
+        <li data-en="Per-IP rate limiting + CORS" data-ar="تحديد معدل لكل IP + CORS">Per-IP rate limiting + CORS</li>
+        <li data-en="100K requests/day free" data-ar="100 ألف طلب يومياً مجاناً">100K requests/day free</li>
+      </ul>
+      <div class="int-steps">
+        <h5 data-en="Steps" data-ar="الخطوات">Steps</h5>
+        <ol>
+          <li data-en="Install Wrangler: <code>npm i -g wrangler</code>" data-ar="ثبّت Wrangler: <code>npm i -g wrangler</code>">Install Wrangler: <code>npm i -g wrangler</code></li>
+          <li data-en="<code>wrangler login</code> then clone the repo" data-ar="<code>wrangler login</code> ثم انسخ المستودع">Wrangler login, then clone the repo</li>
+          <li data-en="Set 4 secrets: <code>WAB_SERVER_URL</code>, <code>WAB_SITE_ID</code>, <code>WAB_API_KEY</code>, <code>ORIGIN_URL</code>" data-ar="اضبط 4 أسرار: <code>WAB_SERVER_URL</code> و <code>WAB_SITE_ID</code> و <code>WAB_API_KEY</code> و <code>ORIGIN_URL</code>">Set 4 secrets: <code>WAB_SERVER_URL</code>, <code>WAB_SITE_ID</code>, <code>WAB_API_KEY</code>, <code>ORIGIN_URL</code></li>
+          <li data-en="<code>wrangler deploy</code> → live globally" data-ar="<code>wrangler deploy</code> ← متاح عالمياً">Wrangler deploy — live globally</li>
+        </ol>
+      </div>
+      <div class="deploy-row">
+        <a class="deploy-btn btn-cloudflare" href="https://deploy.workers.cloudflare.com/?url=https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener">⛅ <span data-en="Deploy to Workers" data-ar="نشر إلى Workers">Deploy to Workers</span></a>
+        <a class="deploy-btn btn-outline" href="https://github.com/abokenan444/web-agent-bridge/tree/master/integrations/cloudflare-worker" target="_blank" rel="noopener" data-en="Docs" data-ar="التوثيق">Docs</a>
+      </div>
+    </div>
+
+    <!-- ─── Docker ───────────────────────────────────────────────────── -->
+    <div class="int-card">
+      <div class="int-head">
+        <div class="int-icon int-icon-docker">🐳</div>
+        <h3>Docker Compose <span class="tag tag-free" data-en="Self-hosted" data-ar="استضافة ذاتية">Self-hosted</span></h3>
+      </div>
+      <p class="desc" data-en="Production-grade multi-stage Dockerfile + Nginx compose stack with optional Let's Encrypt SSL. Run WAB on any VPS, bare-metal server, or local machine with one command." data-ar="ملف Dockerfile متعدد المراحل جاهز للإنتاج + حزمة compose مع Nginx و SSL عبر Let's Encrypt اختياري. شغّل WAB على أي VPS أو خادم مخصص أو جهازك المحلي بأمر واحد.">Production-grade multi-stage Dockerfile + Nginx compose stack with optional Let's Encrypt SSL. Run WAB on any VPS, bare-metal server, or local machine with one command.</p>
+      <ul class="int-features">
+        <li data-en="Multi-stage build (~80MB final image)" data-ar="بناء متعدد المراحل (~80MB)">Multi-stage build (~80MB final image)</li>
+        <li data-en="Included Nginx reverse proxy" data-ar="وكيل عكسي Nginx مضمّن">Included Nginx reverse proxy</li>
+        <li data-en="Optional Let's Encrypt via Certbot" data-ar="Let's Encrypt اختياري عبر Certbot">Optional Let's Encrypt via Certbot</li>
+        <li data-en="Health checks + auto-restart" data-ar="فحوصات صحة + إعادة تشغيل تلقائية">Health checks + auto-restart</li>
+      </ul>
+      <div class="int-steps">
+        <h5 data-en="Steps" data-ar="الخطوات">Steps</h5>
+        <ol>
+          <li data-en="<code>git clone</code> the repo" data-ar="<code>git clone</code> المستودع">Clone the repo</li>
+          <li data-en="<code>cp .env.example .env</code> and fill secrets" data-ar="<code>cp .env.example .env</code> واملأ الأسرار">Copy .env.example to .env and fill secrets</li>
+          <li data-en="<code>docker compose -f docker-compose.nginx.yml up -d</code>" data-ar="<code>docker compose -f docker-compose.nginx.yml up -d</code>">Run docker compose up</li>
+          <li data-en="Point your DNS A record to the server" data-ar="وجّه سجل DNS A إلى الخادم">Point your DNS A record to the server</li>
+        </ol>
+      </div>
+      <div class="deploy-row">
+        <a class="deploy-btn btn-docker" href="https://github.com/abokenan444/web-agent-bridge/blob/master/docker-compose.nginx.yml" target="_blank" rel="noopener">🐳 <span data-en="View compose.yml" data-ar="اعرض compose.yml">View compose.yml</span></a>
+        <a class="deploy-btn btn-outline" href="https://github.com/abokenan444/web-agent-bridge/blob/master/Dockerfile" target="_blank" rel="noopener" data-en="Dockerfile" data-ar="Dockerfile">Dockerfile</a>
+      </div>
+    </div>
+
+    <!-- ─── Linux Installer ──────────────────────────────────────────── -->
+    <div class="int-card">
+      <div class="int-head">
+        <div class="int-icon int-icon-linux">🐧</div>
+        <h3>Linux One-Liner <span class="tag tag-free" data-en="Any server" data-ar="أي خادم">Any server</span></h3>
+      </div>
+      <p class="desc" data-en="A single <code>curl | sudo bash</code> command installs WAB on Ubuntu, Debian, CentOS, RHEL, or Alpine. Detects your distro, installs Node.js if missing, creates a system user, writes a systemd service, opens your firewall, and runs a health check." data-ar="أمر <code>curl | sudo bash</code> واحد يثبّت WAB على Ubuntu و Debian و CentOS و RHEL أو Alpine. يكتشف توزيعتك، يثبّت Node.js إن لم يكن موجوداً، ينشئ مستخدم نظام، يكتب خدمة systemd، يفتح الجدار الناري، ويجري فحص صحة.">A single <code>curl | sudo bash</code> command installs WAB on Ubuntu, Debian, CentOS, RHEL, or Alpine. Detects your distro, installs Node.js if missing, creates a system user, writes a systemd service, opens your firewall, and runs a health check.</p>
+      <ul class="int-features">
+        <li data-en="Works on Ubuntu / Debian / CentOS / RHEL / Alpine" data-ar="يعمل على Ubuntu / Debian / CentOS / RHEL / Alpine">Works on Ubuntu / Debian / CentOS / RHEL / Alpine</li>
+        <li data-en="Auto-generates JWT secrets" data-ar="يولّد مفاتيح JWT تلقائياً">Auto-generates JWT secrets</li>
+        <li data-en="Installs <code>systemd</code> service + enables on boot" data-ar="يثبّت خدمة <code>systemd</code> + يفعّلها عند الإقلاع">Installs <code>systemd</code> service + enables on boot</li>
+        <li data-en="Opens port in UFW / firewalld automatically" data-ar="يفتح المنفذ في UFW / firewalld تلقائياً">Opens port in UFW / firewalld automatically</li>
+      </ul>
+      <div class="int-steps">
+        <h5 data-en="Steps" data-ar="الخطوات">Steps</h5>
+        <ol>
+          <li data-en="SSH into your server" data-ar="اتصل بخادمك عبر SSH">SSH into your server</li>
+          <li data-en="Run the one-liner (see button)" data-ar="شغّل الأمر المختصر (انظر الزر)">Run the one-liner (see button)</li>
+          <li data-en="Wait ~2 minutes" data-ar="انتظر دقيقتين">Wait ~2 minutes</li>
+          <li data-en="<code>systemctl status wab</code> → active" data-ar="<code>systemctl status wab</code> ← نشط">Check systemctl status wab → active</li>
+        </ol>
+      </div>
+      <div class="deploy-row">
+        <a class="deploy-btn btn-linux" href="#linux-oneliner">🐧 <span data-en="Copy Command" data-ar="انسخ الأمر">Copy Command</span></a>
+        <a class="deploy-btn btn-outline" href="https://github.com/abokenan444/web-agent-bridge/tree/master/integrations/install" target="_blank" rel="noopener" data-en="Installer Docs" data-ar="توثيق المثبّت">Installer Docs</a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── Linux One-Liner Command ───────────────────────────────────── -->
+  <div class="long-desc" id="linux-oneliner">
+    <div class="box">
+      <h4 data-en="Linux One-Line Install" data-ar="تثبيت لينكس بسطر واحد">Linux One-Line Install</h4>
+      <p data-en="Copy and paste on any modern Linux server (requires sudo):" data-ar="انسخ والصق على أي خادم لينكس حديث (يتطلب sudo):">Copy and paste on any modern Linux server (requires sudo):</p>
+      <pre id="oneliner">curl -fsSL https://raw.githubusercontent.com/abokenan444/web-agent-bridge/master/integrations/install/install.sh | sudo bash</pre>
+      <p><button class="btn btn-primary btn-sm" onclick="copyOneliner()" data-en="📋 Copy" data-ar="📋 نسخ">📋 Copy</button> <span id="copied" style="color:#4ade80;margin-left:10px;display:none" data-en="✓ Copied" data-ar="✓ تم النسخ">✓ Copied</span></p>
+    </div>
+  </div>
+
+  <!-- ═══════════ INFRASTRUCTURE LAYER ═══════════ -->
+  <h2 class="section-title" id="infrastructure" data-en="Infrastructure Integrations" data-ar="تكاملات البنية التحتية">Infrastructure Integrations</h2>
+  <p class="section-sub" data-en="These integrations make WAB part of the default web stack — activating automatically for millions of sites without individual developer action." data-ar="هذه التكاملات تجعل WAB جزءاً من الطبقة الافتراضية للويب — تُفعَّل تلقائياً لملايين المواقع دون تدخل مطوّر فردي.">These integrations make WAB part of the default web stack — activating automatically for millions of sites without individual developer action.</p>
+
+  <div class="int-grid">
+
+    <!-- ─── WordPress Must-Use ──────────────────────────────────────── -->
+    <div class="int-card">
+      <div class="int-head">
+        <div class="int-icon int-icon-wordpress">W</div>
+        <h3>WordPress <span class="tag tag-cms" data-en="Must-Use" data-ar="Must-Use">Must-Use Plugin</span></h3>
+      </div>
+      <p class="desc" data-en="A Must-Use plugin that lives in <code>mu-plugins/</code> and <strong>cannot be deactivated</strong> by site admins. Loaded on every request before regular plugins — exactly how Apache modules work. Perfect for hosting providers to install once across all customer sites." data-ar="إضافة Must-Use توضع في <code>mu-plugins/</code> و<strong>لا يمكن تعطيلها</strong> من قبل مسؤولي الموقع. تُحمّل في كل طلب قبل الإضافات العادية — تماماً كعمل وحدات Apache. مثالية لمزودي الاستضافة للتثبيت مرة واحدة عبر جميع مواقع العملاء.">A Must-Use plugin that lives in <code>mu-plugins/</code> and <strong>cannot be deactivated</strong> by site admins. Loaded on every request before regular plugins — exactly how Apache modules work. Perfect for hosting providers to install once across all customer sites.</p>
+      <ul class="int-features">
+        <li data-en="Auto-loaded — no activation needed" data-ar="تُحمّل تلقائياً — لا حاجة للتفعيل">Auto-loaded — no activation needed</li>
+        <li data-en="Injects <code>X-WAB-*</code> headers on every page" data-ar="تحقن ترويسات <code>X-WAB-*</code> في كل صفحة">Injects <code>X-WAB-*</code> headers on every page</li>
+        <li data-en="Serves <code>/.well-known/wab.json</code>" data-ar="تخدم <code>/.well-known/wab.json</code>">Serves <code>/.well-known/wab.json</code></li>
+        <li data-en="Configurable via <code>wp-config.php</code>" data-ar="قابلة للضبط عبر <code>wp-config.php</code>">Configurable via <code>wp-config.php</code></li>
+        <li data-en="WP-CLI auto-installer included" data-ar="مثبّت WP-CLI تلقائي مضمّن">WP-CLI auto-installer included</li>
+      </ul>
+      <div class="int-steps">
+        <h5 data-en="Steps (hosting provider)" data-ar="الخطوات (مزود استضافة)">Steps (hosting provider)</h5>
+        <ol>
+          <li data-en="Run <code>install-wab-mu.sh --wp-path /var/www/html</code>" data-ar="شغّل <code>install-wab-mu.sh --wp-path /var/www/html</code>">Run install-wab-mu.sh --wp-path /var/www/html</li>
+          <li data-en="Include in your WordPress auto-installer template" data-ar="أدرجها في قالب مثبّت WordPress الخاص بك">Include in your WordPress auto-installer template</li>
+          <li data-en="Every new site boots WAB-ready" data-ar="كل موقع جديد يُقلع جاهزاً مع WAB">Every new site boots WAB-ready</li>
+        </ol>
+      </div>
+      <div class="deploy-row">
+        <a class="deploy-btn btn-wordpress" href="https://github.com/abokenan444/web-agent-bridge/blob/master/web-agent-bridge-wordpress/mu-plugin/web-agent-bridge-mu.php" target="_blank" rel="noopener">W <span data-en="Download MU Plugin" data-ar="تنزيل إضافة MU">Download MU Plugin</span></a>
+        <a class="deploy-btn btn-outline" href="https://github.com/abokenan444/web-agent-bridge/tree/master/web-agent-bridge-wordpress/mu-plugin" target="_blank" rel="noopener" data-en="Docs" data-ar="التوثيق">Docs</a>
+      </div>
+    </div>
+
+    <!-- ─── cPanel / Plesk / DirectAdmin (Coming Soon) ─────────────── -->
+    <div class="int-card">
+      <div class="int-head">
+        <div class="int-icon int-icon-linux">🎛️</div>
+        <h3>cPanel / Plesk / DirectAdmin <span class="tag tag-coming" data-en="Coming Q3 2026" data-ar="قريباً Q3 2026">Coming Q3 2026</span></h3>
+      </div>
+      <p class="desc" data-en="Native control-panel extensions that install WAB automatically on every new hosting account — no action required from the end user. Targeting millions of shared-hosting sites with a single partner integration." data-ar="إضافات أصلية للوحات التحكم تثبّت WAB تلقائياً على كل حساب استضافة جديد — دون أي تدخل من المستخدم النهائي. تستهدف ملايين مواقع الاستضافة المشتركة بتكامل واحد مع الشريك.">Native control-panel extensions that install WAB automatically on every new hosting account — no action required from the end user. Targeting millions of shared-hosting sites with a single partner integration.</p>
+      <ul class="int-features">
+        <li data-en="cPanel AutoInstaller hook" data-ar="خطاف AutoInstaller لـ cPanel">cPanel AutoInstaller hook</li>
+        <li data-en="Plesk Extensions Catalog entry" data-ar="إدراج في كاتالوج إضافات Plesk">Plesk Extensions Catalog entry</li>
+        <li data-en="DirectAdmin Plugin System" data-ar="نظام إضافات DirectAdmin">DirectAdmin Plugin System</li>
+        <li data-en="Per-site on/off toggle in UI" data-ar="مفتاح تشغيل/إيقاف لكل موقع في الواجهة">Per-site on/off toggle in UI</li>
+      </ul>
+      <div class="int-steps">
+        <h5 data-en="Partner with us" data-ar="شارك معنا">Partner with us</h5>
+        <ol>
+          <li data-en="Hosting providers: email <code>partners@webagentbridge.com</code>" data-ar="مزودو الاستضافة: راسلوا <code>partners@webagentbridge.com</code>">Hosting providers: email partners@webagentbridge.com</li>
+          <li data-en="Join the early-access pilot program" data-ar="انضم لبرنامج الوصول المبكر">Join the early-access pilot program</li>
+          <li data-en="Get a free commercial licence" data-ar="احصل على ترخيص تجاري مجاني">Get a free commercial licence</li>
+        </ol>
+      </div>
+      <div class="deploy-row">
+        <a class="deploy-btn btn-outline" href="mailto:partners@webagentbridge.com" data-en="Contact Partnerships" data-ar="تواصل مع الشراكات">Contact Partnerships</a>
+      </div>
+    </div>
+
+    <!-- ─── Apache / Nginx Modules (Coming Soon) ───────────────────── -->
+    <div class="int-card">
+      <div class="int-head">
+        <div class="int-icon int-icon-linux">⚙️</div>
+        <h3>Apache / Nginx Modules <span class="tag tag-coming" data-en="Coming Q4 2026" data-ar="قريباً Q4 2026">Coming Q4 2026</span></h3>
+      </div>
+      <p class="desc" data-en="Native <code>mod_wab</code> (Apache) and <code>ngx_wab</code> (Nginx) modules that inject WAB headers and serve discovery documents at the web-server layer — zero application-layer install required. The fastest possible integration — headers set before PHP/Node even run." data-ar="وحدات أصلية <code>mod_wab</code> (Apache) و <code>ngx_wab</code> (Nginx) تحقن ترويسات WAB وتخدم مستندات الاكتشاف على طبقة خادم الويب — بدون تثبيت على طبقة التطبيق. أسرع تكامل ممكن — تُضبط الترويسات قبل تشغيل PHP/Node حتى.">Native <code>mod_wab</code> (Apache) and <code>ngx_wab</code> (Nginx) modules that inject WAB headers and serve discovery documents at the web-server layer — zero application-layer install required. The fastest possible integration — headers set before PHP/Node even run.</p>
+      <ul class="int-features">
+        <li data-en="Runs at the web server (not the app)" data-ar="يعمل على خادم الويب (وليس التطبيق)">Runs at the web server (not the app)</li>
+        <li data-en="<code>WABEnabled On</code> directive" data-ar="توجيه <code>WABEnabled On</code>">WABEnabled On directive</li>
+        <li data-en="Dynamic module (no rebuild required)" data-ar="وحدة ديناميكية (بدون إعادة بناء)">Dynamic module (no rebuild required)</li>
+        <li data-en="Available via apt / yum / dnf" data-ar="متاحة عبر apt / yum / dnf">Available via apt / yum / dnf</li>
+      </ul>
+      <div class="int-steps">
+        <h5 data-en="Preview" data-ar="معاينة">Preview</h5>
+        <ol>
+          <li data-en="<code>apt install libapache2-mod-wab</code>" data-ar="<code>apt install libapache2-mod-wab</code>">apt install libapache2-mod-wab</li>
+          <li data-en="Add <code>WABEnabled On</code> to vhost" data-ar="أضف <code>WABEnabled On</code> إلى vhost">Add WABEnabled On to vhost</li>
+          <li data-en="<code>systemctl reload apache2</code>" data-ar="<code>systemctl reload apache2</code>">systemctl reload apache2</li>
+        </ol>
+      </div>
+      <div class="deploy-row">
+        <a class="deploy-btn btn-outline" href="https://github.com/abokenan444/web-agent-bridge/discussions" target="_blank" rel="noopener" data-en="Join Discussion" data-ar="انضم للنقاش">Join Discussion</a>
+      </div>
+    </div>
+
+    <!-- ─── DNS Discovery (Proposed Standard) ──────────────────────── -->
+    <div class="int-card">
+      <div class="int-head">
+        <div class="int-icon int-icon-dns">🌐</div>
+        <h3>DNS Discovery <span class="tag tag-coming" data-en="RFC Draft" data-ar="مسودة RFC">RFC Draft</span></h3>
+      </div>
+      <p class="desc" data-en="Adding a single <code>TXT</code> record to your DNS makes your site discoverable by every WAB-compliant AI agent — no code, no plugin, no server changes. Works exactly like SPF / DKIM / DMARC for email: a native protocol-level signal." data-ar="إضافة سجل <code>TXT</code> واحد إلى DNS يجعل موقعك قابلاً للاكتشاف من قبل كل وكيل ذكاء اصطناعي يدعم WAB — بدون كود، بدون إضافة، بدون تغيير في الخادم. يعمل تماماً مثل SPF / DKIM / DMARC للبريد: إشارة أصيلة على طبقة البروتوكول.">Adding a single <code>TXT</code> record to your DNS makes your site discoverable by every WAB-compliant AI agent — no code, no plugin, no server changes. Works exactly like SPF / DKIM / DMARC for email: a native protocol-level signal.</p>
+      <ul class="int-features">
+        <li data-en="No server code required" data-ar="بدون كود خادم">No server code required</li>
+        <li data-en="Works on any domain, any registrar" data-ar="يعمل على أي نطاق، أي مسجّل">Works on any domain, any registrar</li>
+        <li data-en="Agents discover your endpoint via DNS" data-ar="الوكلاء يكتشفون نقطة النهاية عبر DNS">Agents discover your endpoint via DNS</li>
+        <li data-en="Proposed as IETF RFC draft" data-ar="مقترح كمسودة IETF RFC">Proposed as IETF RFC draft</li>
+      </ul>
+      <div class="int-steps">
+        <h5 data-en="Example record" data-ar="مثال على السجل">Example record</h5>
+        <ol>
+          <li><code style="display:block;margin-top:6px">_wab.example.com. TXT "v=wab; endpoint=https://example.com/.well-known/wab.json"</code></li>
+        </ol>
+      </div>
+      <div class="deploy-row">
+        <a class="deploy-btn btn-dns" href="https://github.com/abokenan444/web-agent-bridge/tree/master/docs" target="_blank" rel="noopener">🌐 <span data-en="Read Spec" data-ar="اقرأ المواصفة">Read Spec</span></a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════ COMPARISON MATRIX ═══════════ -->
+  <h2 class="section-title" data-en="Platform Comparison" data-ar="مقارنة المنصات">Platform Comparison</h2>
+  <div class="matrix-section">
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th data-en="Platform" data-ar="المنصة">Platform</th>
+          <th data-en="Free Tier" data-ar="طبقة مجانية">Free Tier</th>
+          <th data-en="Persistent DB" data-ar="قاعدة بيانات دائمة">Persistent DB</th>
+          <th data-en="Always-On" data-ar="دائم التشغيل">Always-On</th>
+          <th data-en="Best For" data-ar="الأفضل لـ">Best For</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Vercel</td><td class="yes">✓</td><td class="no">✗</td><td class="partial" data-en="Cold starts" data-ar="بدء بارد">Cold starts</td><td data-en="Landing pages, demos" data-ar="صفحات هبوط، عروض">Landing pages, demos</td></tr>
+        <tr><td>Netlify</td><td class="yes">✓</td><td class="no">✗</td><td class="partial" data-en="Cold starts" data-ar="بدء بارد">Cold starts</td><td data-en="JAMstack, edge functions" data-ar="JAMstack، دوال حافة">JAMstack, edge functions</td></tr>
+        <tr><td>Railway</td><td class="partial">$5/mo credit</td><td class="yes">✓</td><td class="yes">✓</td><td data-en="Production self-hosting" data-ar="استضافة ذاتية للإنتاج">Production self-hosting</td></tr>
+        <tr><td>Cloudflare Workers</td><td class="yes">✓ 100K/day</td><td class="no" data-en="Needs KV/D1" data-ar="يحتاج KV/D1">Needs KV/D1</td><td class="yes">✓</td><td data-en="Global edge, high traffic" data-ar="حافة عالمية، حركة مرور عالية">Global edge, high traffic</td></tr>
+        <tr><td>Docker VPS</td><td class="partial" data-en="Your cost" data-ar="على حسابك">Your cost</td><td class="yes">✓</td><td class="yes">✓</td><td data-en="Full control, custom stacks" data-ar="تحكم كامل، حزم مخصصة">Full control, custom stacks</td></tr>
+        <tr><td data-en="Linux bare-metal" data-ar="لينكس مخصص">Linux bare-metal</td><td class="partial" data-en="Your cost" data-ar="على حسابك">Your cost</td><td class="yes">✓</td><td class="yes">✓</td><td data-en="Enterprise, compliance" data-ar="مؤسسات، امتثال">Enterprise, compliance</td></tr>
+        <tr><td>WordPress (MU)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td data-en="Existing WP sites" data-ar="مواقع WP الحالية">Existing WP sites</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════ CTA ═══════════ -->
+  <section class="cta-section">
+    <h2 data-en="Not sure which to pick?" data-ar="غير متأكد ماذا تختار؟">Not sure which to pick?</h2>
+    <p data-en="For most sites, start with Railway (persistent + always-on). For edge performance, use Cloudflare Workers. For instant serverless, use Vercel or Netlify." data-ar="لمعظم المواقع، ابدأ بـ Railway (دائم + متصل دائماً). لأداء الحافة، استخدم Cloudflare Workers. للبدون خادم الفوري، استخدم Vercel أو Netlify.">For most sites, start with Railway (persistent + always-on). For edge performance, use Cloudflare Workers. For instant serverless, use Vercel or Netlify.</p>
+    <div class="cta-row">
+      <a href="/demo" class="btn btn-primary" data-en="Try the Live Demo" data-ar="جرّب العرض الحي">Try the Live Demo</a>
+      <a href="/api" class="btn btn-ghost" data-en="API Docs" data-ar="توثيق API">API Docs</a>
+      <a href="/docs" class="btn btn-ghost" data-en="Full Docs" data-ar="التوثيق الكامل">Full Docs</a>
+    </div>
+  </section>
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="navbar-brand">
+            <div class="brand-icon">⚡</div>
+            <span>Web Agent Bridge</span>
+          </a>
+          <p data-en="Open-source middleware for AI agent and website interaction." data-ar="وسيط مفتوح المصدر للتفاعل بين وكلاء الذكاء الاصطناعي والمواقع.">Open-source middleware for AI agent and website interaction.</p>
+        </div>
+        <div class="footer-col">
+          <h4 data-en="Product" data-ar="المنتج">Product</h4>
+          <ul>
+            <li><a href="/docs" data-en="Documentation" data-ar="التوثيق">Documentation</a></li>
+            <li><a href="/api" data-en="API Gateway" data-ar="بوابة API">API Gateway</a></li>
+            <li><a href="/integrations" data-en="Integrations" data-ar="التكاملات">Integrations</a></li>
+            <li><a href="/demo">Demo</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 data-en="Deploy" data-ar="نشر">Deploy</h4>
+          <ul>
+            <li><a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fabokenan444%2Fweb-agent-bridge" target="_blank" rel="noopener">Vercel</a></li>
+            <li><a href="https://app.netlify.com/start/deploy?repository=https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener">Netlify</a></li>
+            <li><a href="https://railway.app/template/web-agent-bridge" target="_blank" rel="noopener">Railway</a></li>
+            <li><a href="https://deploy.workers.cloudflare.com/?url=https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener">Cloudflare</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 data-en="Legal" data-ar="قانوني">Legal</h4>
+          <ul>
+            <li><a href="/privacy" data-en="Privacy" data-ar="الخصوصية">Privacy</a></li>
+            <li><a href="/terms" data-en="Terms" data-ar="الشروط">Terms</a></li>
+            <li><a href="/cookies" data-en="Cookies" data-ar="ملفات الارتباط">Cookies</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 Web Agent Bridge. MIT License.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function switchLang(lang){
+      var isAr = lang === 'ar';
+      document.documentElement.lang = lang;
+      document.documentElement.dir = isAr ? 'rtl' : 'ltr';
+      document.getElementById('btn-en').classList.toggle('active', !isAr);
+      document.getElementById('btn-ar').classList.toggle('active', isAr);
+      document.querySelectorAll('[data-en]').forEach(function(el){
+        el.innerHTML = el.getAttribute(isAr ? 'data-ar' : 'data-en');
+      });
+      try { localStorage.setItem('wab-lang', lang); } catch(e){}
+    }
+    (function(){
+      try {
+        var saved = localStorage.getItem('wab-lang');
+        if (saved === 'ar') switchLang('ar');
+      } catch(e){}
+    })();
+    function copyOneliner(){
+      var text = document.getElementById('oneliner').textContent.trim();
+      navigator.clipboard.writeText(text).then(function(){
+        var c = document.getElementById('copied');
+        c.style.display = 'inline';
+        setTimeout(function(){ c.style.display = 'none'; }, 2000);
+      });
+    }
+  </script>
+
+</body>
+</html>

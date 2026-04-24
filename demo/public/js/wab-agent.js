@@ -3,7 +3,12 @@
  * Handles: product loading, live agent demo, terminal output
  */
 
-const API = '';  // same origin
+// When served under /demo prefix on main WAB site, use /demo. When standalone, use ''.
+const API = (function(){
+  const p = window.location.pathname;
+  if (p.startsWith('/demo')) return '/demo';
+  return '';
+})();
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }

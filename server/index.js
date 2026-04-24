@@ -35,6 +35,7 @@ const workspaceRoutes = require('./routes/agent-workspace');
 const universalRoutes = require('./routes/universal');
 const runtimeRoutes = require('./routes/runtime');
 const demoShowcaseRoutes = require('./routes/demo-showcase');
+const demoStoreRoutes = require('./routes/demo-store');
 const gatewayRoutes = require('./routes/gateway');
 let growthRoutes;
 try { growthRoutes = require('./routes/growth'); } catch { growthRoutes = require('express').Router(); }
@@ -267,6 +268,14 @@ app.get('/score', noCache, (req, res) => {
 app.get('/api', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'api.html'));
 });
+
+// /integrations — bilingual deploy landing page
+app.get('/integrations', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'integrations.html'));
+});
+
+// /demo — interactive WAB Demo Store (new)
+app.use('/demo', demoStoreRoutes);
 
 // Browser downloads
 app.use('/downloads', express.static(path.join(__dirname, '..', 'downloads'), {

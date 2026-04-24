@@ -6,7 +6,7 @@
   <title>WAB Demo Store — AI-Ready E-Commerce</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
 
@@ -22,7 +22,7 @@
       <a href="#store" class="nav-link">Store</a>
       <a href="#how-it-works" class="nav-link">How It Works</a>
       <a href="#agent-panel" class="nav-link">Live Agent</a>
-      <a href="/.well-known/wab.json" target="_blank" class="nav-link nav-link--code">wab.json ↗</a>
+      <a href=".well-known/wab.json" target="_blank" class="nav-link nav-link--code">wab.json ↗</a>
     </nav>
   </div>
 </header>
@@ -41,7 +41,7 @@
     </p>
     <div class="hero-actions">
       <a href="#agent-panel" class="btn btn--primary">▶ Run Live Agent Demo</a>
-      <a href="/.well-known/wab.json" target="_blank" class="btn btn--ghost">View wab.json</a>
+      <a href=".well-known/wab.json" target="_blank" class="btn btn--ghost">View wab.json</a>
     </div>
     <div class="hero-code">
       <span class="code-comment">// AI agent discovers capabilities in one request</span><br/>
@@ -221,7 +221,7 @@
     <div class="wab-preview">
       <div class="wab-preview__header">
         <span class="wab-preview__url">GET /.well-known/wab.json</span>
-        <a href="/.well-known/wab.json" target="_blank" class="btn btn--ghost btn--sm">Open ↗</a>
+        <a href=".well-known/wab.json" target="_blank" class="btn btn--ghost btn--sm">Open ↗</a>
       </div>
       <pre id="wab-json-preview" class="wab-preview__code">Loading...</pre>
     </div>
@@ -238,8 +238,8 @@
     <div class="footer-links">
       <a href="https://github.com/abokenan444/web-agent-bridge" target="_blank">GitHub</a>
       <a href="https://discord.gg/NnbpJYEF" target="_blank">Discord</a>
-      <a href="/.well-known/wab.json" target="_blank">wab.json</a>
-      <a href="/api/products" target="_blank">API</a>
+      <a href=".well-known/wab.json" target="_blank">wab.json</a>
+      <a href="api/products" target="_blank">API</a>
     </div>
   </div>
 </footer>
@@ -250,7 +250,10 @@
  * Handles: product loading, live agent demo, terminal output
  */
 
-const API = '';  // same origin
+const API = (function(){
+  var p = window.location.pathname;
+  return p.startsWith('/demo') ? '/demo' : '';
+})();
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
