@@ -1690,6 +1690,18 @@ The full normative specification is available at [`docs/SPEC.md`](docs/SPEC.md):
 | **Runtime Layer** | `window.AICommands` interface, auto-discovery engine, security sandbox |
 | **Transport Layer** | JavaScript global, WebSocket, HTTP, WebDriver BiDi, MCP |
 
+### DNS Discovery
+
+WAB supports DNS-level discovery, allowing AI agents to find your capabilities document without any HTTP request. Add a single TXT record to your domain:
+
+```
+_wab.yourdomain.com  TXT  "v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json"
+```
+
+Full setup guides for Cloudflare, cPanel, GoDaddy, and Namecheap are available in:
+- [DNS-DISCOVERY.md](DNS-DISCOVERY.md) — English
+- [DNS-DISCOVERY.ar.md](DNS-DISCOVERY.ar.md) — العربية
+
 ### 5-Phase Lifecycle
 1. **Discover** — Agent finds WAB discovery document (`.well-known/wab.json` or script tag)
 2. **Authenticate** — Agent exchanges `siteId` for session token
@@ -1724,5 +1736,6 @@ WAB uses an **Open Core** dual-license model:
 | WordPress MU Plugin | `web-agent-bridge-wordpress/mu-plugin/` | GPL-2.0 | Fully open source |
 | WAB Server Core | `server/` | Open Core | Free tier + paid features |
 | WAB Browser | `wab-browser/` | Proprietary (Free) | Free to use, source private |
+| DNS Discovery Docs | `DNS-DISCOVERY.md` | MIT | Fully open source |
 
 See [LICENSE](LICENSE) for full details.
