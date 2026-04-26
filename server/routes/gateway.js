@@ -37,8 +37,15 @@ function extractKey(req) {
   return req.query.api_key || null;
 }
 
-// ─── Auth Middleware ──────────────────────────────────────────────────────────
-function gatewayAuth(moduleName) {
+// ─── Auth Middleware (with HTTP-method → scope mapping) ──────────────────────
+function methodToScope(method) {
+  const m = (method || 'GET').toUpperCase();
+  if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') return 'read';
+  if (m === 'DELETE') return 'admin';
+  return 'write'; // POST/PUT/PATCH
+}
+
+function gatewayAuth(moduleName, requiredScope = null) {
   return (req, res, next) => {
     const apiKey = extractKey(req);
     if (!apiKey) {
@@ -48,10 +55,19 @@ function gatewayAuth(moduleName) {
         get_key: 'https://www.webagentbridge.com/workspace',
       });
     }
-    const validation = engine.validate(apiKey, moduleName);
+    const scope = requiredScope || methodToScope(req.method);
+    const validation = engine.validate(apiKey, moduleName, scope);
     if (!validation.valid) {
-      const status = validation.code === 'INSUFFICIENT_PLAN' ? 403 : 401;
+      const status = validation.code === 'INSUFFICIENT_PLAN' ? 403
+                   : validation.code === 'INSUFFICIENT_SCOPE' ? 403
+                   : validation.code === 'RATE_LIMIT_EXCEEDED' ? 429
+                   : validation.code === 'QUOTA_EXCEEDED' ? 429
+                   : 401;
       return res.status(status).json(validation);
+    }
+    if (validation.rotation && validation.rotation.warning) {
+      res.setHeader('X-WAB-Key-Rotation-Due', validation.rotation.rotation_due_at);
+      res.setHeader('X-WAB-Key-Rotation-Days', String(validation.rotation.days_until_due));
     }
     req.wabAuth = validation;
     next();

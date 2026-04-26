@@ -142,7 +142,7 @@ class WABKeyEngine {
     };
   }
 
-  validate(apiKey, module = null) {
+  validate(apiKey, module = null, requiredScope = null) {
     if (!apiKey) return { valid: false, error: 'API key is required', code: 'MISSING_KEY' };
     const record = keyStore.get(apiKey);
     if (!record) return { valid: false, error: 'Invalid API key', code: 'INVALID_KEY' };
@@ -160,6 +160,18 @@ class WABKeyEngine {
       }
     }
 
+    // ── Scope enforcement (read/write/admin) ──
+    if (requiredScope) {
+      const scopes = Array.isArray(record.scopes) ? record.scopes : [];
+      const ok = scopes.includes('*') || scopes.includes(requiredScope) ||
+                 (requiredScope === 'read' && (scopes.includes('write') || scopes.includes('admin'))) ||
+                 (requiredScope === 'write' && scopes.includes('admin'));
+      if (!ok) {
+        return { valid: false, error: `Scope '${requiredScope}' required`, code: 'INSUFFICIENT_SCOPE',
+          current_scopes: scopes, required_scope: requiredScope };
+      }
+    }
+
     const rateCheck = this._checkRateLimit(apiKey, record.plan);
     if (!rateCheck.allowed) {
       return { valid: false, error: 'Rate limit exceeded', code: 'RATE_LIMIT_EXCEEDED', retry_after_seconds: rateCheck.retry_after, limit: rateCheck.limit };
@@ -173,8 +185,27 @@ class WABKeyEngine {
     }
 
     this._recordUsage(apiKey, module);
+    const rotation = this._rotationStatus(record);
     return { valid: true, key_id: record.key_id, plan: record.plan, plan_name: plan.name, owner: record.owner, environment: record.environment, features: plan.features,
+      scopes: record.scopes, rotation,
       usage: { today: usage.today + 1, limit_today: plan.requests_per_day, remaining_today: plan.requests_per_day - usage.today - 1 } };
+  }
+
+  _rotationStatus(record) {
+    const ROTATE_DAYS = parseInt(process.env.WAB_KEY_ROTATE_DAYS || '90', 10);
+    const WARN_DAYS = 7;
+    const created = new Date(record.created_at).getTime();
+    if (!created) return null;
+    const due = created + ROTATE_DAYS * 86400000;
+    const ageDays = Math.floor((Date.now() - created) / 86400000);
+    const daysUntilDue = Math.ceil((due - Date.now()) / 86400000);
+    return {
+      age_days: ageDays,
+      rotation_due_at: new Date(due).toISOString(),
+      days_until_due: daysUntilDue,
+      warning: daysUntilDue <= WARN_DAYS,
+      overdue: daysUntilDue < 0,
+    };
   }
 
   revoke(apiKey, reason = 'user_request') {

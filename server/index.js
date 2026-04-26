@@ -74,6 +74,12 @@ const styleSrc = process.env.CSP_ALLOW_UNSAFE_INLINE === 'false'
   ? ["'self'"]
   : ["'self'", "'unsafe-inline'"];
 
+// Per-request CSP nonce — exposed as res.locals.cspNonce for new pages opting into strict CSP.
+app.use((req, res, next) => {
+  res.locals.cspNonce = require('crypto').randomBytes(16).toString('base64');
+  next();
+});
+
 // CSP — tightened: HTTPS-only iframes, upgrade-insecure-requests, report endpoint.
 const cspReportUri = '/api/security/csp-report';
 app.use(
@@ -81,7 +87,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc,
+        scriptSrc: [...scriptSrc, (req, res) => `'nonce-${res.locals.cspNonce}'`],
         scriptSrcAttr: scriptSrc,
         styleSrc: [...styleSrc, 'https://fonts.googleapis.com'],
         imgSrc: ["'self'", 'data:', 'https:'],
@@ -101,6 +107,29 @@ app.use(
   })
 );
 
+// Companion strict Report-Only CSP — surfaces every inline-script violation
+// without breaking existing pages, so we can migrate page-by-page to nonces.
+app.use((req, res, next) => {
+  const nonce = res.locals.cspNonce;
+  const strict = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: https:",
+    "connect-src 'self' https: wss:",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "frame-src 'self' https:",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "upgrade-insecure-requests",
+    `report-uri ${cspReportUri}`
+  ].join('; ');
+  res.setHeader('Content-Security-Policy-Report-Only', strict);
+  next();
+});
+
 // CSP violation report sink (capped, in-memory ring buffer + console).
 const _cspReports = [];
 app.post('/api/security/csp-report', express.json({ type: ['application/csp-report', 'application/json'], limit: '32kb' }), (req, res) => {
@@ -116,6 +145,27 @@ app.post('/api/security/csp-report', express.json({ type: ['application/csp-repo
 });
 app.get('/api/security/csp-report/recent', (req, res) => {
   res.json({ count: _cspReports.length, reports: _cspReports.slice(-50) });
+});
+
+// ── Reward-guard + cross-site redactor admin views (token-gated) ──
+function _adminAuth(req, res, next) {
+  const want = process.env.WAB_ADMIN_TOKEN;
+  if (!want) return res.status(503).json({ error: 'WAB_ADMIN_TOKEN not configured' });
+  const got = req.headers['x-wab-admin-token'] || req.query.token;
+  if (got !== want) return res.status(401).json({ error: 'admin token required' });
+  next();
+}
+app.get('/api/security/reward-audit/recent', _adminAuth, (req, res) => {
+  try {
+    const guard = require('./security/reward-guard');
+    res.json({ stats: guard.getStats(), recent: guard.getRecentAudits(50, req.query.decision || null) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.get('/api/security/cross-site-transfers/recent', _adminAuth, (req, res) => {
+  try {
+    const r = require('./security/cross-site-redactor');
+    res.json({ recent: r.getRecentTransfers(50, req.query.from || null) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), async (req, res) => {

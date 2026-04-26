@@ -18,6 +18,8 @@
 
 const crypto = require('crypto');
 const { db } = require('../models/db');
+let rewardGuard;
+try { rewardGuard = require('../security/reward-guard'); } catch { rewardGuard = null; }
 
 // ─── Schema ──────────────────────────────────────────────────────────
 
@@ -172,20 +174,42 @@ function recordDecision(siteId, agentId, domain, action, context = {}, features 
  * Provide feedback on a decision — the outcome and actual reward.
  * This is the core learning signal.
  */
-function feedback(decisionId, outcome, reward) {
+function feedback(decisionId, outcome, reward, opts = {}) {
   const decision = stmts.getDecision.get(decisionId);
   if (!decision) throw new Error('Decision not found');
 
-  stmts.updateOutcome.run(outcome, reward, decisionId);
+  // ── Reward guard: clamp / block / flag malicious or anomalous rewards ──
+  let safeReward = reward;
+  let guardDecision = 'accepted';
+  if (rewardGuard) {
+    const sanitized = rewardGuard.sanitizeReward({
+      siteId: decision.site_id,
+      agentId: decision.agent_id,
+      domain: decision.domain,
+      action: decision.action,
+      reward,
+      actorId: opts.actorId,
+      approvedBy: opts.approvedBy,
+    });
+    safeReward = sanitized.reward;
+    guardDecision = sanitized.decision;
+    if (guardDecision === 'blocked') {
+      // Don't propagate to policy / bandit.
+      stmts.updateOutcome.run(outcome, safeReward, decisionId);
+      return { decisionId, blocked: true, reason: sanitized.reason, guardDecision };
+    }
+  }
+
+  stmts.updateOutcome.run(outcome, safeReward, decisionId);
 
   const features = JSON.parse(decision.features || '{}');
-  const predError = reward - (decision.predicted_reward || 0);
+  const predError = safeReward - (decision.predicted_reward || 0);
 
   // Update policy weights via gradient descent with temporal discount
   _updatePolicies(decision.site_id, decision.agent_id, decision.domain, features, predError);
 
   // Update bandit arm with actual reward
-  _updateBanditArm(decision.site_id, decision.agent_id, decision.domain, decision.action, reward);
+  _updateBanditArm(decision.site_id, decision.agent_id, decision.domain, decision.action, safeReward);
 
   // Mine patterns from recent decisions
   _minePatterns(decision.site_id, decision.agent_id, decision.domain);
@@ -195,6 +219,8 @@ function feedback(decisionId, outcome, reward) {
     predictionError: Math.round(predError * 1000) / 1000,
     updatedConfidence: _getConfidence(decision.site_id, decision.agent_id, decision.domain),
     accuracy: Math.round((1 - Math.abs(predError)) * 1000) / 1000,
+    guardDecision,
+    appliedReward: safeReward,
   };
 }
 

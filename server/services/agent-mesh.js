@@ -16,6 +16,8 @@
 
 const crypto = require('crypto');
 const { db } = require('../models/db');
+let redactor;
+try { redactor = require('../security/cross-site-redactor'); } catch { redactor = null; }
 
 // ─── Schema ──────────────────────────────────────────────────────────
 
@@ -304,7 +306,21 @@ function shareKnowledge(agentId, knowledgeType, domain, key, value, confidence =
   const agent = stmts.getAgent.get(agentId);
   const source = agent ? agent.display_name : agentId;
 
-  stmts.insertKnowledge.run(id, agentId, knowledgeType, domain, key, JSON.stringify(value), confidence, source);
+  // ── Redact PII / payment / credentials before mesh-broadcasting ──
+  let safeValue = value;
+  if (redactor) {
+    safeValue = redactor.auditAndRedact({
+      fromSite: agent?.site_id || agentId,
+      toSite: '*mesh*',
+      agentId,
+      purpose: `share_knowledge:${knowledgeType}:${domain}:${key}`,
+      payload: value,
+      blockOnSensitive: false,
+    });
+    if (safeValue == null) safeValue = { redacted: true };
+  }
+
+  stmts.insertKnowledge.run(id, agentId, knowledgeType, domain, key, JSON.stringify(safeValue), confidence, source);
   stmts.updateKnowledgeCount.run(agentId, agentId);
 
   publish(agentId, 'discoveries', 'discovery', `New ${knowledgeType}: ${key}`, {
