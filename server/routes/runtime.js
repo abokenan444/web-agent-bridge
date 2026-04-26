@@ -29,6 +29,7 @@ const { certificationEngine } = require('../registry/certification');
 const { adapterManager, mcpAdapter, restAdapter, browserAdapter } = require('../adapters');
 const { replayEngine } = require('../runtime/replay');
 const { featureGate, usageLimit } = require('../middleware/featureGate');
+const { sensitiveActionGate } = require('../middleware/sensitiveAction');
 const { listPlans, getPlan, USAGE_PRICING, MARKETPLACE } = require('../config/plans');
 const metering = require('../services/metering');
 const { marketplace } = require('../services/marketplace');
@@ -256,7 +257,7 @@ router.delete('/agents/:agentId', (req, res) => {
 /**
  * Submit a task
  */
-router.post('/tasks', usageLimit('tasksPerDay'), (req, res) => {
+router.post('/tasks', usageLimit('tasksPerDay'), sensitiveActionGate, (req, res) => {
   try {
     const result = runtime.submitTask(req.body);
     metrics.increment('tasks.submitted', 1, { type: req.body.type });
@@ -314,7 +315,7 @@ router.post('/tasks/:taskId/resume', (req, res) => {
 /**
  * Execute a semantic action
  */
-router.post('/execute', usageLimit('executionsPerDay'), async (req, res) => {
+router.post('/execute', usageLimit('executionsPerDay'), sensitiveActionGate, async (req, res) => {
   try {
     const result = await executor.execute(req.body);
     res.json(result);
@@ -326,7 +327,7 @@ router.post('/execute', usageLimit('executionsPerDay'), async (req, res) => {
 /**
  * Execute semantic action (domain.action style)
  */
-router.post('/execute/semantic', async (req, res) => {
+router.post('/execute/semantic', sensitiveActionGate, async (req, res) => {
   try {
     const { domain, action, params, siteId, agentId, siteDomain } = req.body;
     if (!domain || !action) return res.status(400).json({ error: 'domain and action required' });
@@ -349,7 +350,7 @@ router.post('/execute/semantic', async (req, res) => {
 /**
  * Execute a pipeline
  */
-router.post('/execute/pipeline', async (req, res) => {
+router.post('/execute/pipeline', sensitiveActionGate, async (req, res) => {
   try {
     const result = await executor.execute({ ...req.body, type: 'pipeline' });
     res.json(result);

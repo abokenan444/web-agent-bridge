@@ -74,6 +74,8 @@ const styleSrc = process.env.CSP_ALLOW_UNSAFE_INLINE === 'false'
   ? ["'self'"]
   : ["'self'", "'unsafe-inline'"];
 
+// CSP — tightened: HTTPS-only iframes, upgrade-insecure-requests, report endpoint.
+const cspReportUri = '/api/security/csp-report';
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -83,18 +85,38 @@ app.use(
         scriptSrcAttr: scriptSrc,
         styleSrc: [...styleSrc, 'https://fonts.googleapis.com'],
         imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'ws:', 'wss:'],
+        connectSrc: ["'self'", 'https:', 'ws:', 'wss:'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https:', 'data:'],
-        frameSrc: ["'self'", 'https:', 'http:'],
+        frameSrc: ["'self'", 'https:'],
         frameAncestors: ["'none'"],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
-        formAction: ["'self'"]
+        formAction: ["'self'"],
+        upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+        reportUri: [cspReportUri]
       }
     },
-    crossOriginEmbedderPolicy: false
+    crossOriginEmbedderPolicy: false,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
   })
 );
+
+// CSP violation report sink (capped, in-memory ring buffer + console).
+const _cspReports = [];
+app.post('/api/security/csp-report', express.json({ type: ['application/csp-report', 'application/json'], limit: '32kb' }), (req, res) => {
+  const report = req.body && (req.body['csp-report'] || req.body);
+  if (report) {
+    _cspReports.push({ at: new Date().toISOString(), ip: req.ip, report });
+    if (_cspReports.length > 500) _cspReports.shift();
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[CSP]', report['violated-directive'] || report.violatedDirective, '→', report['blocked-uri'] || report.blockedURI);
+    }
+  }
+  res.status(204).end();
+});
+app.get('/api/security/csp-report/recent', (req, res) => {
+  res.json({ count: _cspReports.length, reports: _cspReports.slice(-50) });
+});
 
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {

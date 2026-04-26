@@ -15,6 +15,7 @@
 
 const crypto = require('crypto');
 const { db } = require('../models/db');
+const { safeFetch } = require('../utils/safe-fetch');
 
 // ─── Schema ──────────────────────────────────────────────────────────
 
@@ -338,11 +339,9 @@ async function fetchAndExtract(url, options = {}) {
   }
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), options.timeout || 10000);
     const ua = UA_LIST[Math.floor(Math.random() * UA_LIST.length)];
 
-    const resp = await fetch(url, {
+    const resp = await safeFetch(url, {
       headers: {
         'User-Agent': ua,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -352,10 +351,12 @@ async function fetchAndExtract(url, options = {}) {
         'Sec-Fetch-Mode': 'navigate',
         'Sec-Fetch-Site': 'none',
       },
-      signal: controller.signal,
-      redirect: 'follow',
+    }, {
+      timeoutMs: options.timeout || 10000,
+      maxBytes: options.maxBytes || 5 * 1024 * 1024,
+      maxRedirects: 3,
+      allowedContentTypes: ['text/html', 'application/xhtml', 'application/xml'],
     });
-    clearTimeout(timeout);
 
     if (!resp.ok) return { error: `HTTP ${resp.status}`, products: [] };
 
