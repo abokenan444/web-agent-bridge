@@ -276,6 +276,10 @@ app.get('/phone-shield', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'phone-shield.html'));
 });
 
+app.get('/dns', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'dns.html'));
+});
+
 // /integrations — bilingual deploy landing page
 app.get('/integrations', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'integrations.html'));

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB DNS Discovery — Setup & Live Verifier</title>
+  <meta name="description" content="Complete guide to WAB DNS Discovery: TXT record format, step-by-step setup for Cloudflare, cPanel, GoDaddy, Namecheap, Route 53, and a live DoH-based verifier.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="/css/styles.css?v=3.2.0">
+  <style>
+    body{background:#070d19;color:#e5edff}
+    .hero{padding:110px 24px 32px;text-align:center}
+    .hero h1{font-size:clamp(2rem,4vw,3rem);margin-bottom:10px}
+    .hero p{max-width:880px;margin:0 auto;color:#99a8c7;line-height:1.7}
+    .lang{display:flex;gap:10px;justify-content:center;margin:0 0 22px}
+    .lang button{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.04);color:#e5edff;padding:8px 14px;border-radius:10px;cursor:pointer}
+    .lang button.active{background:linear-gradient(135deg,#f59e0b,#b45309);border-color:transparent}
+    .wrap{max-width:1100px;margin:0 auto;padding:0 22px 60px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin:18px 0}
+    .card{background:linear-gradient(180deg,rgba(17,24,39,.92),rgba(12,18,31,.96));border:1px solid rgba(148,163,184,.18);border-radius:16px;padding:18px}
+    .card h3{margin:0 0 8px;font-size:1.07rem;color:#fcd34d}
+    .card h4{margin:14px 0 6px;color:#fde68a;font-size:.98rem}
+    .card p,.card li{color:#bcc7e0;line-height:1.7;font-size:.94rem}
+    .card ol,.card ul{margin:6px 0 8px 22px}
+    .badge{display:inline-block;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.4);color:#fbbf24;padding:4px 9px;border-radius:999px;font-size:.73rem;font-weight:700;margin:6px 0}
+    code,pre{font-family:'JetBrains Mono',monospace}
+    code{background:rgba(2,6,23,.7);border:1px solid rgba(148,163,184,.2);padding:2px 6px;border-radius:6px;font-size:.85rem;color:#fcd34d}
+    pre{background:#020617;border:1px solid rgba(148,163,184,.25);padding:12px;border-radius:10px;font-size:.82rem;color:#a5b4fc;overflow:auto;line-height:1.55}
+    table{width:100%;border-collapse:collapse;margin:8px 0}
+    th,td{border:1px solid rgba(148,163,184,.18);padding:8px 10px;text-align:left;font-size:.9rem;color:#dbe4f5}
+    th{background:rgba(245,158,11,.1);color:#fcd34d}
+    .verifier{background:rgba(2,6,23,.7);border:1px solid rgba(245,158,11,.3);border-radius:14px;padding:16px;margin-top:12px}
+    .verifier label{display:block;font-size:.78rem;color:#9fb0ce;margin-bottom:4px}
+    .verifier input,.verifier select{width:100%;background:#0a1324;border:1px solid rgba(148,163,184,.27);border-radius:10px;color:#e2e8f0;padding:10px;font-family:Inter,sans-serif}
+    .row{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+    @media (max-width:640px){.row{grid-template-columns:1fr}}
+    .btn{margin-top:10px;background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700}
+    .btn.secondary{background:linear-gradient(135deg,#334155,#1e293b)}
+    .ok{color:#4ade80}.warn{color:#facc15}.danger{color:#f87171}
+    .toc{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 14px}
+    .toc a{background:rgba(255,255,255,.04);border:1px solid rgba(148,163,184,.22);color:#e5edff;padding:6px 12px;border-radius:999px;font-size:.85rem;text-decoration:none}
+    .toc a:hover{border-color:#fbbf24;color:#fcd34d}
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand"><div class="brand-icon">⚡</div><span>WAB</span></a>
+      <ul class="navbar-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/integrations">Integrations</a></li>
+        <li><a href="/dns" class="active">DNS Discovery</a></li>
+        <li><a href="/phone-shield">Phone Shield</a></li>
+        <li><a href="/sovereign">Sovereign</a></li>
+        <li><a href="/docs">Docs</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="lang">
+      <button id="enBtn" class="active" onclick="setLang('en')">English</button>
+      <button id="arBtn" onclick="setLang('ar')">العربية</button>
+    </div>
+    <h1 data-en="WAB DNS Discovery" data-ar="اكتشاف WAB عبر DNS">WAB DNS Discovery</h1>
+    <p data-en="Announce your AI-readiness at the infrastructure level. Add a single DNS TXT record at _wab.yourdomain.com and any compatible AI agent will instantly find your wab.json capabilities — no HTTP probe required." data-ar="أعلن عن جاهزية موقعك للذكاء الاصطناعي على مستوى البنية التحتية. أضف سجل TXT واحد في _wab.yourdomain.com وسيجد أي وكيل ذكاء اصطناعي متوافق ملف القدرات wab.json فوراً — دون الحاجة لأي طلب HTTP أولي.">Announce your AI-readiness at the infrastructure level. Add a single DNS TXT record at <code>_wab.yourdomain.com</code> and any compatible AI agent will instantly find your <code>wab.json</code> capabilities — no HTTP probe required.</p>
+    <div class="toc">
+      <a href="#what-is">What & Why</a>
+      <a href="#format">Record Format</a>
+      <a href="#verifier">Live Verifier</a>
+      <a href="#setup">Setup Guides</a>
+      <a href="#troubleshoot">Troubleshooting</a>
+      <a href="#repo-links">Repo & Docs</a>
+    </div>
+  </section>
+
+  <div class="wrap">
+
+    <!-- ═══════════════ WHAT & WHY ═══════════════ -->
+    <div class="card" id="what-is">
+      <h3 data-en="What is WAB DNS Discovery?" data-ar="ما هو اكتشاف WAB عبر DNS؟">What is WAB DNS Discovery?</h3>
+      <p data-en="WAB DNS Discovery is a lightweight protocol that lets AI agents instantly know whether a domain supports WAB and where to fetch its capabilities document. It works exactly like SPF, DKIM, or DMARC for email — a single TXT record at a well-known subdomain advertises your protocol support." data-ar="اكتشاف WAB عبر DNS هو بروتوكول خفيف يسمح لوكلاء الذكاء الاصطناعي بمعرفة فورية ما إذا كان النطاق يدعم WAB وأين يجد ملف القدرات الخاص به. يعمل تماماً مثل SPF و DKIM و DMARC للبريد الإلكتروني — سجل TXT واحد في نطاق فرعي معروف يعلن دعم البروتوكول.">WAB DNS Discovery is a lightweight protocol that lets AI agents instantly know whether a domain supports WAB and where to fetch its capabilities document. It works exactly like SPF, DKIM, or DMARC for email — a single TXT record at a well-known subdomain advertises your protocol support.</p>
+      <h4 data-en="Why use it?" data-ar="لماذا تستخدمها؟">Why use it?</h4>
+      <ul>
+        <li data-en="Zero HTTP probing — agents resolve DNS once and skip the trial-and-error of fetching /.well-known/wab.json blindly." data-ar="بدون أي طلب HTTP استكشافي — يقوم الوكيل بحل DNS مرة واحدة بدلاً من محاولة جلب /.well-known/wab.json بشكل أعمى.">Zero HTTP probing — agents resolve DNS once and skip the trial-and-error of fetching <code>/.well-known/wab.json</code> blindly.</li>
+        <li data-en="Infrastructure-first onboarding — works even before your site has any code change. Pure DNS." data-ar="إعداد عبر البنية التحتية — يعمل قبل أي تعديل برمجي على موقعك. DNS فقط.">Infrastructure-first onboarding — works even before your site has any code change. Pure DNS.</li>
+        <li data-en="Cacheable, fast, and globally propagated by every recursive resolver in the world." data-ar="قابل للتخزين المؤقت، سريع، ومنتشر عالمياً عبر كل خوادم DNS التكرارية.">Cacheable, fast, and globally propagated by every recursive resolver in the world.</li>
+        <li data-en="Versionable — the v=wab1 prefix lets the protocol evolve without breaking older agents." data-ar="قابل للترقية — البادئة v=wab1 تسمح بتطوير البروتوكول دون كسر الوكلاء القدامى.">Versionable — the <code>v=wab1</code> prefix lets the protocol evolve without breaking older agents.</li>
+      </ul>
+      <span class="badge" data-en="MIT-licensed open protocol" data-ar="بروتوكول مفتوح برخصة MIT">MIT-licensed open protocol</span>
+    </div>
+
+    <!-- ═══════════════ HOW IT WORKS ═══════════════ -->
+    <div class="card">
+      <h3 data-en="How it works (under the hood)" data-ar="كيف يعمل (الآلية الداخلية)">How it works (under the hood)</h3>
+      <ol>
+        <li data-en="The AI agent resolves a TXT query on _wab.example.com." data-ar="يقوم الوكيل بحل استعلام TXT على _wab.example.com.">The AI agent resolves a TXT query on <code>_wab.example.com</code>.</li>
+        <li data-en="Your authoritative DNS returns: v=wab1; endpoint=https://example.com/.well-known/wab.json" data-ar="يعيد DNS الموثوق: v=wab1; endpoint=https://example.com/.well-known/wab.json">Your authoritative DNS returns: <code>v=wab1; endpoint=https://example.com/.well-known/wab.json</code></li>
+        <li data-en="The agent parses the v= and endpoint= parameters, validates the version, then fetches the capabilities document directly." data-ar="يحلل الوكيل المعاملات v= و endpoint=، يتحقق من الإصدار، ثم يجلب ملف القدرات مباشرة.">The agent parses the <code>v=</code> and <code>endpoint=</code> parameters, validates the version, then fetches the capabilities document directly.</li>
+        <li data-en="Optional fields can be added later: feat=, sig=, ttl=, etc." data-ar="حقول اختيارية يمكن إضافتها لاحقاً: feat=, sig=, ttl=, إلخ.">Optional fields can be added later: <code>feat=</code>, <code>sig=</code>, <code>ttl=</code>, etc.</li>
+      </ol>
+    </div>
+
+    <!-- ═══════════════ FORMAT ═══════════════ -->
+    <div class="card" id="format">
+      <h3 data-en="The TXT Record Format" data-ar="صيغة سجل TXT">The TXT Record Format</h3>
+      <table>
+        <tr><th data-en="Field" data-ar="الحقل">Field</th><th data-en="Value" data-ar="القيمة">Value</th><th data-en="Description" data-ar="الوصف">Description</th></tr>
+        <tr><td>Type</td><td><code>TXT</code></td><td data-en="Plain text record" data-ar="سجل نصي">Plain text record</td></tr>
+        <tr><td>Name / Host</td><td><code>_wab</code></td><td data-en="Subdomain prefix → _wab.yourdomain.com" data-ar="بادئة نطاق فرعي → _wab.yourdomain.com">Subdomain prefix → <code>_wab.yourdomain.com</code></td></tr>
+        <tr><td>Value</td><td><code>v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json</code></td><td data-en="Protocol version + capabilities URL" data-ar="إصدار البروتوكول + رابط ملف القدرات">Protocol version + capabilities URL</td></tr>
+        <tr><td>TTL</td><td><code>3600</code> / Auto</td><td data-en="Standard cache lifetime" data-ar="مدة التخزين الافتراضية">Standard cache lifetime</td></tr>
+      </table>
+      <pre>_wab.yourdomain.com.   3600   IN   TXT   "v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json"</pre>
+    </div>
+
+    <!-- ═══════════════ LIVE VERIFIER ═══════════════ -->
+    <div class="card" id="verifier">
+      <h3 data-en="Live Verifier (DNS over HTTPS)" data-ar="مدقق مباشر (DNS عبر HTTPS)">Live Verifier (DNS over HTTPS)</h3>
+      <p data-en="Enter any domain to query its _wab TXT record live from a public DoH resolver. This runs entirely in your browser — no data is sent to our servers." data-ar="أدخل أي نطاق لاستعلام سجل _wab TXT الخاص به مباشرة من خادم DoH عام. يعمل كاملاً في متصفحك — لا تُرسل أي بيانات إلى خوادمنا.">Enter any domain to query its <code>_wab</code> TXT record live from a public DoH resolver. This runs entirely in your browser — no data is sent to our servers.</p>
+      <div class="verifier">
+        <div class="row">
+          <div>
+            <label data-en="Domain" data-ar="النطاق">Domain</label>
+            <input id="dnsDomain" placeholder="example.com" value="webagentbridge.com">
+          </div>
+          <div>
+            <label data-en="Resolver" data-ar="المحلل">Resolver</label>
+            <select id="dnsResolver">
+              <option value="https://cloudflare-dns.com/dns-query">Cloudflare (1.1.1.1)</option>
+              <option value="https://dns.google/resolve">Google (8.8.8.8)</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn" onclick="verifyDns()" data-en="Verify _wab Record" data-ar="تحقق من سجل _wab">Verify _wab Record</button>
+        <button class="btn secondary" onclick="copyExample()" data-en="Copy Example Record" data-ar="انسخ سجلاً نموذجياً">Copy Example Record</button>
+        <div id="dnsStatus" style="margin-top:10px;font-size:.92rem"></div>
+        <pre id="dnsOut">{}</pre>
+      </div>
+    </div>
+
+    <!-- ═══════════════ SETUP GUIDES ═══════════════ -->
+    <div class="grid" id="setup">
+      <div class="card">
+        <h3>1. Cloudflare</h3>
+        <ol>
+          <li data-en="Open Cloudflare dashboard and select your domain." data-ar="افتح لوحة Cloudflare واختر نطاقك.">Open Cloudflare dashboard and select your domain.</li>
+          <li data-en="Go to DNS → Records → Add record." data-ar="انتقل إلى DNS → Records → Add record.">Go to <b>DNS → Records → Add record</b>.</li>
+          <li data-en="Type: TXT, Name: _wab" data-ar="النوع: TXT، الاسم: _wab">Type: <code>TXT</code>, Name: <code>_wab</code></li>
+          <li data-en="Content: v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json" data-ar="المحتوى: v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json">Content: <code>v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json</code></li>
+          <li data-en="Leave TTL on Auto and Save." data-ar="اترك TTL على Auto واحفظ.">Leave TTL on <b>Auto</b> and Save.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>2. cPanel (Shared Hosting)</h3>
+        <ol>
+          <li data-en="cPanel → Domains → Zone Editor → Manage." data-ar="cPanel → Domains → Zone Editor → Manage.">cPanel → <b>Domains → Zone Editor → Manage</b>.</li>
+          <li data-en="Add Record → Add 'TXT' Record." data-ar="Add Record → Add 'TXT' Record."><b>Add Record → Add "TXT" Record</b>.</li>
+          <li data-en="Name: _wab (cPanel appends your domain automatically)." data-ar="Name: _wab (سيلحق cPanel نطاقك تلقائياً).">Name: <code>_wab</code> (cPanel appends your domain automatically).</li>
+          <li data-en="Record: v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json" data-ar="Record: v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json">Record: <code>v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json</code></li>
+          <li data-en="Click Save Record." data-ar="انقر Save Record.">Click <b>Save Record</b>.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>3. GoDaddy</h3>
+        <ol>
+          <li data-en="Domain Portfolio → click your domain." data-ar="Domain Portfolio → اضغط نطاقك.">Domain Portfolio → click your domain.</li>
+          <li data-en="DNS tab → DNS Records → Add New Record." data-ar="تبويب DNS → DNS Records → Add New Record.">DNS tab → <b>DNS Records → Add New Record</b>.</li>
+          <li>Type: <code>TXT</code>, Name: <code>_wab</code></li>
+          <li data-en="Value: v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json" data-ar="Value: v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json">Value: <code>v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json</code></li>
+          <li data-en="Save (TTL default = 1 Hour is fine)." data-ar="احفظ (الإعداد الافتراضي 1 Hour مناسب).">Save (TTL default = 1 Hour is fine).</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>4. Namecheap</h3>
+        <ol>
+          <li data-en="Domain List → Manage → Advanced DNS." data-ar="Domain List → Manage → Advanced DNS.">Domain List → <b>Manage → Advanced DNS</b>.</li>
+          <li data-en="Host Records → Add New Record → TXT Record." data-ar="Host Records → Add New Record → TXT Record.">Host Records → <b>Add New Record → TXT Record</b>.</li>
+          <li>Host: <code>_wab</code></li>
+          <li>Value: <code>v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json</code></li>
+          <li data-en="Save with the green checkmark." data-ar="احفظ بأيقونة الصح الخضراء.">Save with the green checkmark.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>5. AWS Route 53</h3>
+        <ol>
+          <li data-en="Route 53 → Hosted zones → your domain → Create record." data-ar="Route 53 → Hosted zones → نطاقك → Create record.">Route 53 → <b>Hosted zones → your domain → Create record</b>.</li>
+          <li data-en="Record name: _wab — Record type: TXT" data-ar="Record name: _wab — Record type: TXT">Record name: <code>_wab</code> — Record type: <code>TXT</code></li>
+          <li data-en='Value (with quotes): "v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json"' data-ar='Value (مع علامات الاقتباس): "v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json"'>Value (with quotes): <code>"v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json"</code></li>
+          <li>TTL: <code>300</code>–<code>3600</code></li>
+          <li data-en="Click Create records." data-ar="انقر Create records.">Click <b>Create records</b>.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>6. Google Domains / Squarespace, OVH, etc.</h3>
+        <p data-en="The pattern is identical across all providers: create a TXT record with host _wab and the v=wab1; endpoint=… value. If your provider asks for the FQDN, use _wab.yourdomain.com. Some panels strip the trailing dot — that is OK." data-ar="النمط متطابق لدى جميع المزودين: أنشئ سجل TXT بالمضيف _wab والقيمة v=wab1; endpoint=… . إذا طلب المزود الاسم الكامل FQDN، اكتب _wab.yourdomain.com. بعض اللوحات تحذف النقطة الأخيرة وهذا أمر طبيعي.">The pattern is identical across all providers: create a TXT record with host <code>_wab</code> and the <code>v=wab1; endpoint=…</code> value. If your provider asks for the FQDN, use <code>_wab.yourdomain.com</code>. Some panels strip the trailing dot — that is OK.</p>
+      </div>
+    </div>
+
+    <!-- ═══════════════ VERIFY CLI ═══════════════ -->
+    <div class="card">
+      <h3 data-en="Verify from the command line" data-ar="التحقق من سطر الأوامر">Verify from the command line</h3>
+      <p data-en="DNS propagation can take a few minutes up to 48 hours. Verify with:" data-ar="قد يستغرق انتشار DNS من بضع دقائق إلى 48 ساعة. تحقق بما يلي:">DNS propagation can take a few minutes up to 48 hours. Verify with:</p>
+<pre># macOS / Linux
+dig TXT _wab.yourdomain.com +short
+
+# Windows
+nslookup -type=TXT _wab.yourdomain.com
+
+# Anywhere (DoH via curl)
+curl -s -H 'accept: application/dns-json' \
+  'https://cloudflare-dns.com/dns-query?name=_wab.yourdomain.com&type=TXT'</pre>
+      <p data-en="Expected output:" data-ar="الناتج المتوقع:">Expected output:</p>
+      <pre>"v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json"</pre>
+    </div>
+
+    <!-- ═══════════════ TROUBLESHOOTING ═══════════════ -->
+    <div class="card" id="troubleshoot">
+      <h3 data-en="Troubleshooting" data-ar="حل المشاكل">Troubleshooting</h3>
+      <ul>
+        <li data-en="Got an empty answer? Wait 5–30 minutes for propagation, or flush your local DNS cache." data-ar="إجابة فارغة؟ انتظر 5 إلى 30 دقيقة للانتشار، أو امسح ذاكرة DNS المحلية.">Got an empty answer? Wait 5–30 minutes for propagation, or flush your local DNS cache.</li>
+        <li data-en="Some panels wrap the value in extra quotes — that is fine. Resolvers strip them." data-ar="بعض اللوحات تضيف علامات اقتباس إضافية — لا مشكلة. المحللات تزيلها.">Some panels wrap the value in extra quotes — that is fine. Resolvers strip them.</li>
+        <li data-en="Make sure the endpoint URL is HTTPS and returns a valid wab.json (Content-Type: application/json)." data-ar="تأكد أن endpoint يبدأ بـ HTTPS ويعيد ملف wab.json صالح بنوع application/json.">Make sure the <code>endpoint</code> URL is HTTPS and returns a valid <code>wab.json</code> (Content-Type: <code>application/json</code>).</li>
+        <li data-en="Do not put the full domain in the Name field unless your panel explicitly requires FQDN — that creates _wab.yourdomain.com.yourdomain.com." data-ar="لا تكتب النطاق الكامل في حقل Name إلا إذا طلب المزود ذلك صراحة — وإلا ستحصل على _wab.yourdomain.com.yourdomain.com.">Do not put the full domain in the Name field unless your panel explicitly requires FQDN — that creates <code>_wab.yourdomain.com.yourdomain.com</code>.</li>
+        <li data-en="If using DNSSEC, no extra step is required — TXT records are protected automatically." data-ar="إذا كنت تستخدم DNSSEC، لا حاجة لخطوة إضافية — سجلات TXT محمية تلقائياً.">If using DNSSEC, no extra step is required — TXT records are protected automatically.</li>
+      </ul>
+    </div>
+
+    <!-- ═══════════════ REPO LINKS ═══════════════ -->
+    <div class="card" id="repo-links">
+      <h3 data-en="Full documentation in the repo" data-ar="التوثيق الكامل في الريبو">Full documentation in the repo</h3>
+      <p data-en="The most extensive guides, including provider-specific edge cases and the full discovery protocol spec, live in the GitHub repository:" data-ar="أكثر الأدلة تفصيلاً، بما في ذلك حالات خاصة لكل مزود والمواصفات الكاملة للبروتوكول، موجودة في مستودع GitHub:">The most extensive guides, including provider-specific edge cases and the full discovery protocol spec, live in the GitHub repository:</p>
+      <ul>
+        <li><a href="https://github.com/abokenan444/web-agent-bridge/blob/master/DNS-DISCOVERY.md" target="_blank" rel="noopener">DNS-DISCOVERY.md (English)</a></li>
+        <li><a href="https://github.com/abokenan444/web-agent-bridge/blob/master/DNS-DISCOVERY.ar.md" target="_blank" rel="noopener">DNS-DISCOVERY.ar.md (العربية)</a></li>
+        <li><a href="https://github.com/abokenan444/web-agent-bridge/blob/master/docs/SPEC.md#4-discovery-protocol" target="_blank" rel="noopener">docs/SPEC.md — Discovery Protocol §4</a></li>
+        <li><a href="/.well-known/wab.json" target="_blank">/.well-known/wab.json (this site's capabilities)</a></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <script>
+    // ═══════════ Bilingual toggle ═══════════
+    function setLang(lang){
+      const isAr = lang === 'ar';
+      document.documentElement.lang = isAr ? 'ar' : 'en';
+      document.documentElement.dir = isAr ? 'rtl' : 'ltr';
+      document.getElementById('enBtn').classList.toggle('active', !isAr);
+      document.getElementById('arBtn').classList.toggle('active', isAr);
+      document.querySelectorAll('[data-en]').forEach(el=>{
+        el.textContent = isAr ? (el.getAttribute('data-ar') || el.textContent) : (el.getAttribute('data-en') || el.textContent);
+      });
+    }
+
+    // ═══════════ Live DoH Verifier ═══════════
+    async function verifyDns(){
+      const domain = (document.getElementById('dnsDomain').value || '').trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+      const resolver = document.getElementById('dnsResolver').value;
+      const status = document.getElementById('dnsStatus');
+      const out = document.getElementById('dnsOut');
+      if(!domain){ status.innerHTML = '<span class="danger">Please enter a domain.</span>'; return; }
+      const fqdn = '_wab.' + domain;
+      status.innerHTML = '<span class="warn">Querying ' + fqdn + ' …</span>';
+      out.textContent = '';
+      try {
+        const url = resolver + '?name=' + encodeURIComponent(fqdn) + '&type=TXT';
+        const res = await fetch(url, { headers: { 'accept': 'application/dns-json' } });
+        const data = await res.json();
+        out.textContent = JSON.stringify(data, null, 2);
+        const answers = (data.Answer || []).filter(a => a.type === 16);
+        if (!answers.length) {
+          status.innerHTML = '<span class="danger">No _wab TXT record found for <b>' + domain + '</b>. The domain has not enabled WAB DNS Discovery (yet).</span>';
+          return;
+        }
+        const value = answers.map(a => (a.data || '').replace(/^"|"$/g,'').replace(/" "/g,'')).join(' ');
+        const versionMatch = /v=([^;\s]+)/.exec(value);
+        const endpointMatch = /endpoint=([^;\s]+)/.exec(value);
+        if (versionMatch && endpointMatch && versionMatch[1].startsWith('wab')) {
+          status.innerHTML = '<span class="ok">✓ Valid WAB record found. Version: <b>' + versionMatch[1] + '</b> · Endpoint: <a href="' + endpointMatch[1] + '" target="_blank" style="color:#7dd3fc">' + endpointMatch[1] + '</a></span>';
+        } else {
+          status.innerHTML = '<span class="warn">TXT record found but it does not match the WAB format (v=wab1; endpoint=…).</span>';
+        }
+      } catch (err) {
+        status.innerHTML = '<span class="danger">Lookup failed: ' + (err && err.message || err) + '</span>';
+      }
+    }
+
+    function copyExample(){
+      const txt = 'v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json';
+      navigator.clipboard.writeText(txt).then(()=>{
+        const s = document.getElementById('dnsStatus');
+        s.innerHTML = '<span class="ok">✓ Example record copied to clipboard.</span>';
+      });
+    }
+  </script>
+
+  <script>
+    // navbar scroll background (consistent with other pages)
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      if (!navbar) return;
+      navbar.style.background = window.scrollY > 50
+        ? 'rgba(7, 13, 25, 0.92)'
+        : 'rgba(7, 13, 25, 0.78)';
+    });
+  </script>
+</body>
+</html>
