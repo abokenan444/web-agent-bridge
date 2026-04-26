@@ -14,7 +14,7 @@
 
 **English** | **[العربية](README.ar.md)**
 
-WAB is an open-source middleware layer that bridges AI agents and websites — like **OpenAPI for human-facing pages**. Website owners embed a script that exposes a standardized `window.AICommands` interface. AI agents discover available actions, execute commands, and interact with sites accurately — no DOM parsing, no scraping, no guesswork.
+WAB is **the open AI↔Web protocol and agent platform**. What started as a small middleware script has grown into a full stack: a standardized `window.AICommands` interface (like **OpenAPI for human-facing pages**), a sovereign desktop browser, a phone-shield communication layer, DNS-level discovery, an agent mesh, a multi-module API gateway, and SDKs for React/Vue/Svelte/LangChain. Website owners control what AI can do; agents discover capabilities, execute commands, and interact with sites accurately — no DOM parsing, no scraping, no guesswork.
 
 ### Three Paths to WAB
 

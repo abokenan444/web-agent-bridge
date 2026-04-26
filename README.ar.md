@@ -8,7 +8,7 @@
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/)
 [![Discord](https://img.shields.io/badge/Discord-%D8%A7%D9%86%D8%B6%D9%85%20%D9%84%D9%84%D9%85%D8%AC%D8%AA%D9%85%D8%B9-5865F2?logo=discord&logoColor=white)](https://discord.gg/NnbpJYEF)
 
-**برمجية وسيطة مفتوحة المصدر تربط وكلاء الذكاء الاصطناعي بالمواقع الإلكترونية — توفر واجهة أوامر موحدة للأتمتة الذكية.**
+**البروتوكول والمنصة المفتوحة للتفاعل بين الذكاء الاصطناعي والويب — واجهة أوامر موحّدة، متصفح سيادي، درع هاتف، اكتشاف عبر DNS، شبكة وكلاء، وبوابة API موحّدة لتفاعل آمن بين الذكاء الاصطناعي والمواقع.**
 
 🌐 **الموقع الرسمي:** [https://webagentbridge.com](https://webagentbridge.com) — جرّب مساحة عمل الوكيل الذكي ولوحات التحكم والعديد من الميزات الأخرى مباشرة.
 
