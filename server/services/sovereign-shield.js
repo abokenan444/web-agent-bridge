@@ -22,6 +22,7 @@ const RISKY_APPS = new Set(['whatsapp', 'messenger', 'telegram', 'signal', 'mail
 const state = {
   indicators: new Map(), // host -> { host, level, source, firstSeen, lastSeen, reports, confidence }
   reportsByHost: new Map(), // host -> Map(reporterFingerprint -> timestamp)
+  devices: new Map(), // fingerprint -> { platform, appVersion, osVersion, model, firstSeen, lastSeen, telemetryCount, blocks }
   events: [],
   stats: {
     analyzed: 0,
@@ -29,7 +30,11 @@ const state = {
     warned: 0,
     vaultEncryptOps: 0,
     vaultDecryptOps: 0,
-    communityReports: 0
+    communityReports: 0,
+    mobileDeviceRegistrations: 0,
+    mobileHeartbeats: 0,
+    telemetryBatches: 0,
+    telemetryPackets: 0
   },
   version: 1
 };
@@ -259,6 +264,194 @@ function submitThreatReport(payload) {
   return result;
 }
 
+function normalizeFingerprint(value) {
+  if (!value || typeof value !== 'string') return '';
+  return value.trim().toLowerCase().slice(0, 128);
+}
+
+function registerDevice(payload) {
+  const fingerprint = normalizeFingerprint(payload?.deviceFingerprint || payload?.fingerprint || payload?.deviceId || '');
+  const platform = String(payload?.platform || '').toLowerCase();
+  if (!fingerprint || !platform) return { error: 'deviceFingerprint and platform are required' };
+
+  const now = Date.now();
+  const current = state.devices.get(fingerprint) || {
+    deviceFingerprint: fingerprint,
+    platform,
+    appVersion: '',
+    osVersion: '',
+    model: '',
+    firstSeen: now,
+    lastSeen: now,
+    telemetryCount: 0,
+    blocks: 0,
+    warns: 0
+  };
+
+  current.platform = platform;
+  current.appVersion = String(payload?.appVersion || current.appVersion || '').slice(0, 50);
+  current.osVersion = String(payload?.osVersion || current.osVersion || '').slice(0, 50);
+  current.model = String(payload?.model || current.model || '').slice(0, 80);
+  current.lastSeen = now;
+
+  state.devices.set(fingerprint, current);
+  state.stats.mobileDeviceRegistrations += 1;
+  recordEvent('device_register', {
+    deviceFingerprint: fingerprint,
+    platform,
+    appVersion: current.appVersion,
+    osVersion: current.osVersion
+  });
+
+  return {
+    registered: true,
+    deviceFingerprint: fingerprint,
+    platform,
+    firstSeen: new Date(current.firstSeen).toISOString(),
+    lastSeen: new Date(current.lastSeen).toISOString()
+  };
+}
+
+function heartbeat(payload) {
+  const fingerprint = normalizeFingerprint(payload?.deviceFingerprint || payload?.fingerprint || payload?.deviceId || '');
+  if (!fingerprint) return { error: 'deviceFingerprint is required' };
+
+  const now = Date.now();
+  const current = state.devices.get(fingerprint);
+  if (!current) {
+    const reg = registerDevice({
+      deviceFingerprint: fingerprint,
+      platform: payload?.platform || 'unknown',
+      appVersion: payload?.appVersion,
+      osVersion: payload?.osVersion,
+      model: payload?.model
+    });
+    if (reg.error) return reg;
+  }
+
+  const device = state.devices.get(fingerprint);
+  device.lastSeen = now;
+  state.stats.mobileHeartbeats += 1;
+
+  recordEvent('device_heartbeat', {
+    deviceFingerprint: fingerprint,
+    batteryLevel: Number(payload?.batteryLevel || 0),
+    networkType: String(payload?.networkType || '').slice(0, 20)
+  });
+
+  return {
+    ok: true,
+    deviceFingerprint: fingerprint,
+    lastSeen: new Date(device.lastSeen).toISOString(),
+    intelVersion: state.version,
+    indicators: state.indicators.size
+  };
+}
+
+function ingestTelemetryBatch(payload) {
+  const fingerprint = normalizeFingerprint(payload?.deviceFingerprint || payload?.fingerprint || payload?.deviceId || '');
+  const connections = Array.isArray(payload?.connections) ? payload.connections : [];
+  if (!fingerprint) return { error: 'deviceFingerprint is required' };
+  if (!connections.length) return { error: 'connections array is required' };
+
+  if (!state.devices.has(fingerprint)) {
+    const reg = registerDevice({
+      deviceFingerprint: fingerprint,
+      platform: payload?.platform || 'unknown',
+      appVersion: payload?.appVersion,
+      osVersion: payload?.osVersion,
+      model: payload?.model
+    });
+    if (reg.error) return reg;
+  }
+
+  const device = state.devices.get(fingerprint);
+  device.lastSeen = Date.now();
+
+  let blocked = 0;
+  let warned = 0;
+  const results = [];
+
+  for (const conn of connections.slice(0, 500)) {
+    const analyzed = analyzeConnection(conn || {});
+    if (analyzed.error) continue;
+    if (analyzed.decision === 'block') blocked += 1;
+    if (analyzed.decision === 'warn') warned += 1;
+    results.push({
+      host: analyzed.host,
+      decision: analyzed.decision,
+      riskScore: analyzed.riskScore,
+      reasons: analyzed.reasons
+    });
+  }
+
+  device.telemetryCount += results.length;
+  device.blocks += blocked;
+  device.warns += warned;
+
+  state.stats.telemetryBatches += 1;
+  state.stats.telemetryPackets += results.length;
+
+  recordEvent('telemetry_batch', {
+    deviceFingerprint: fingerprint,
+    packets: results.length,
+    blocked,
+    warned
+  });
+
+  return {
+    accepted: true,
+    deviceFingerprint: fingerprint,
+    packets: results.length,
+    blocked,
+    warned,
+    summary: {
+      telemetryCount: device.telemetryCount,
+      blocks: device.blocks,
+      warns: device.warns
+    },
+    results: results.slice(0, 50)
+  };
+}
+
+function getDevices(limit = 100) {
+  const n = Math.max(1, Math.min(Number(limit) || 100, 500));
+  return Array.from(state.devices.values())
+    .sort((a, b) => b.lastSeen - a.lastSeen)
+    .slice(0, n)
+    .map((d) => ({
+      deviceFingerprint: d.deviceFingerprint,
+      platform: d.platform,
+      appVersion: d.appVersion,
+      osVersion: d.osVersion,
+      model: d.model,
+      firstSeen: new Date(d.firstSeen).toISOString(),
+      lastSeen: new Date(d.lastSeen).toISOString(),
+      telemetryCount: d.telemetryCount,
+      blocks: d.blocks,
+      warns: d.warns
+    }));
+}
+
+function getDevice(deviceFingerprint) {
+  const id = normalizeFingerprint(deviceFingerprint || '');
+  if (!id) return { error: 'deviceFingerprint is required' };
+  const d = state.devices.get(id);
+  if (!d) return { error: 'device not found' };
+  return {
+    deviceFingerprint: d.deviceFingerprint,
+    platform: d.platform,
+    appVersion: d.appVersion,
+    osVersion: d.osVersion,
+    model: d.model,
+    firstSeen: new Date(d.firstSeen).toISOString(),
+    lastSeen: new Date(d.lastSeen).toISOString(),
+    telemetryCount: d.telemetryCount,
+    blocks: d.blocks,
+    warns: d.warns
+  };
+}
+
 function getStats() {
   const topThreats = Array.from(state.indicators.values())
     .sort((a, b) => (b.reports - a.reports) || (b.confidence - a.confidence))
@@ -337,6 +530,11 @@ module.exports = {
   analyzeConnection,
   getIntelFeed,
   submitThreatReport,
+  registerDevice,
+  heartbeat,
+  ingestTelemetryBatch,
+  getDevices,
+  getDevice,
   getStats,
   getRecentEvents,
   encryptVault,

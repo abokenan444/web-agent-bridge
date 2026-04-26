@@ -431,4 +431,35 @@ router.post('/shield/vault/decrypt', (req, res) => {
   res.json(result);
 });
 
+// Device registration + heartbeat for Android/iOS local tunnel clients
+router.post('/shield/devices/register', (req, res) => {
+  const result = sovereignShield.registerDevice(req.body || {});
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
+router.post('/shield/devices/heartbeat', (req, res) => {
+  const result = sovereignShield.heartbeat(req.body || {});
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
+// Batch telemetry ingestion from mobile local VPN / proxy layer
+router.post('/shield/devices/telemetry', (req, res) => {
+  const result = sovereignShield.ingestTelemetryBatch(req.body || {});
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
+router.get('/shield/devices', (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  res.json({ devices: sovereignShield.getDevices(limit) });
+});
+
+router.get('/shield/devices/:deviceFingerprint', (req, res) => {
+  const result = sovereignShield.getDevice(req.params.deviceFingerprint);
+  if (result.error) return res.status(404).json(result);
+  res.json(result);
+});
+
 module.exports = router;

@@ -265,6 +265,9 @@ app.get('/growth', noCache, (req, res) => {
 app.get('/score', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'score.html'));
 });
+app.get('/sovereign', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'sovereign.html'));
+});
 app.get('/api', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'api.html'));
 });

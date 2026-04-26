@@ -123,6 +123,50 @@
       <button class="btn" onclick="submitReport()" data-en="Submit Report" data-ar="إرسال التقرير">Submit Report</button>
       <pre id="reportOut">{}</pre>
     </div>
+
+    <div class="card">
+      <h3 data-en="Android/iOS Local Tunnel Integration" data-ar="دمج النفق المحلي لأندرويد و iOS">Android/iOS Local Tunnel Integration</h3>
+      <p class="muted" data-en="Use these production endpoints from your mobile VPN service / Network Extension: register device, heartbeat, then stream packet metadata in batches." data-ar="استخدم نقاط النهاية الإنتاجية التالية من خدمة VPN في الهاتف / Network Extension: سجّل الجهاز، أرسل heartbeat، ثم أرسل ميتاداتا الاتصالات على دفعات.">Use these production endpoints from your mobile VPN service / Network Extension: register device, heartbeat, then stream packet metadata in batches.</p>
+      <div class="box">
+        <pre>POST /api/sovereign/shield/devices/register
+{
+  "deviceFingerprint": "android-uuid-001",
+  "platform": "android",
+  "appVersion": "1.0.0",
+  "osVersion": "14",
+  "model": "Pixel 8"
+}
+
+POST /api/sovereign/shield/devices/heartbeat
+{
+  "deviceFingerprint": "android-uuid-001",
+  "platform": "android",
+  "batteryLevel": 77,
+  "networkType": "wifi"
+}
+
+POST /api/sovereign/shield/devices/telemetry
+{
+  "deviceFingerprint": "android-uuid-001",
+  "connections": [
+    {
+      "app": "whatsapp",
+      "destination": "example-host.com",
+      "bytesOut": 220000,
+      "bytesIn": 130000,
+      "background": true,
+      "micAccess": false,
+      "cameraAccess": false,
+      "contactsAccess": false
+    }
+  ]
+}</pre>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+        <a class="btn secondary" href="/api/sovereign/shield/devices?limit=20" target="_blank">Devices API</a>
+        <a class="btn secondary" href="/api/sovereign/shield/intel-feed" target="_blank">Intel Feed API</a>
+      </div>
+    </div>
   </section>
 
   <script>
