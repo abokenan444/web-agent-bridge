@@ -220,6 +220,9 @@ app.use('/api/ads', apiLimiter, adsRoutes);
 app.use('/api/wab', wabApiRoutes);
 app.use('/api/noscript', apiLimiter, noscriptRoutes);
 app.use('/api/discovery', apiLimiter, discoveryRoutes);
+// Also expose well-known discovery endpoints at the canonical root paths so
+// agents can find them without the /api/discovery prefix (RFC 8615).
+app.use('/', apiLimiter, discoveryRoutes);
 app.use('/api/premium', apiLimiter, premiumRoutes);
 app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);
 app.use('/api/workspace', apiLimiter, workspaceRoutes);

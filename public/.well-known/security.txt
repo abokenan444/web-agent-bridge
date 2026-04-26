@@ -1,0 +1,8 @@
+Contact: mailto:security@webagentbridge.com
+Expires: 2027-04-26T00:00:00.000Z
+Encryption: https://www.webagentbridge.com/.well-known/pgp-key.txt
+Acknowledgments: https://www.webagentbridge.com/security#hall-of-fame
+Preferred-Languages: en, ar
+Canonical: https://www.webagentbridge.com/.well-known/security.txt
+Policy: https://www.webagentbridge.com/security
+Hiring: https://www.webagentbridge.com/security#bug-bounty

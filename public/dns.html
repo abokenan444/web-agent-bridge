@@ -117,6 +117,58 @@
       <pre>_wab.yourdomain.com.   3600   IN   TXT   "v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json"</pre>
     </div>
 
+    <!-- ═══════════════ RECORDS FOR webagentbridge.com ═══════════════ -->
+    <div class="card" id="records">
+      <h3 data-en="DNS Records for webagentbridge.com (canonical)" data-ar="سجلات DNS لـ webagentbridge.com (المرجعية)">DNS Records for webagentbridge.com (canonical)</h3>
+      <p data-en="The exact records the WAB site itself publishes. Add the equivalents under your own domain to advertise WAB protocol support, agent endpoints, and trust." data-ar="السجلات التي يستخدمها موقع WAB نفسه. أضف ما يعادلها تحت نطاقك للإعلان عن دعم بروتوكول WAB ونقاط النهاية والثقة.">The exact records the WAB site itself publishes. Add the equivalents under your own domain to advertise WAB protocol support, agent endpoints, and trust.</p>
+      <table class="table">
+        <tr><th>Name / Host</th><th>Type</th><th>Value</th><th>TTL</th></tr>
+        <tr>
+          <td><code>_wab</code></td>
+          <td><code>TXT</code></td>
+          <td><code>"v=wab1; endpoint=https://www.webagentbridge.com/.well-known/wab.json"</code></td>
+          <td>3600</td>
+        </tr>
+        <tr>
+          <td><code>_wab-agent</code></td>
+          <td><code>TXT</code></td>
+          <td><code>"v=wab1; mcp=https://www.webagentbridge.com/api/v1/protocol; gateway=https://www.webagentbridge.com/api/v1"</code></td>
+          <td>3600</td>
+        </tr>
+        <tr>
+          <td><code>_wab-trust</code></td>
+          <td><code>TXT</code></td>
+          <td><code>"v=wab1; trust=https://www.webagentbridge.com/.well-known/wab.json; security=https://www.webagentbridge.com/security.txt"</code></td>
+          <td>3600</td>
+        </tr>
+        <tr>
+          <td><code>_dmarc</code></td>
+          <td><code>TXT</code></td>
+          <td><code>"v=DMARC1; p=quarantine; rua=mailto:dmarc@webagentbridge.com; ruf=mailto:dmarc@webagentbridge.com; adkim=s; aspf=s; pct=100"</code></td>
+          <td>3600</td>
+        </tr>
+        <tr>
+          <td><code>@</code> (apex)</td>
+          <td><code>TXT</code></td>
+          <td><code>"v=spf1 -all"</code></td>
+          <td>3600</td>
+        </tr>
+        <tr>
+          <td><code>@</code> (apex)</td>
+          <td><code>CAA</code></td>
+          <td><code>0 issue "letsencrypt.org"</code></td>
+          <td>3600</td>
+        </tr>
+        <tr>
+          <td><code>@</code> (apex)</td>
+          <td><code>CAA</code></td>
+          <td><code>0 iodef "mailto:security@webagentbridge.com"</code></td>
+          <td>3600</td>
+        </tr>
+      </table>
+      <p style="margin-top:12px"><strong data-en="Verify after propagation:" data-ar="للتحقق بعد الانتشار:">Verify after propagation:</strong> <a href="#verifier" data-en="open the live verifier above" data-ar="استخدم المدقق المباشر بالأعلى">open the live verifier above</a> <span data-en="or run" data-ar="أو نفّذ"></span> <code>dig _wab.webagentbridge.com TXT +short</code></p>
+    </div>
+
     <!-- ═══════════════ LIVE VERIFIER ═══════════════ -->
     <div class="card" id="verifier">
       <h3 data-en="Live Verifier (DNS over HTTPS)" data-ar="مدقق مباشر (DNS عبر HTTPS)">Live Verifier (DNS over HTTPS)</h3>
