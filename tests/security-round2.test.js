@@ -351,3 +351,54 @@ describe('server integration: CSP nonce + admin gating', () => {
     expect(recent.body.count).toBeGreaterThan(0);
   });
 });
+
+describe('url-policy', () => {
+  const policy = require('../server/security/url-policy');
+
+  test('blocks invalid URL', () => {
+    const r = policy.check('not a url', { actor: 'urlp-actor-1' });
+    expect(r.ok).toBe(false);
+    expect(r.code).toBe('INVALID_URL');
+  });
+
+  test('blocks unsupported scheme', () => {
+    const r = policy.check('ftp://example.com/file', { actor: 'urlp-actor-2' });
+    expect(r.ok).toBe(false);
+    expect(r.code).toBe('BAD_SCHEME');
+  });
+
+  test('blocks denied login hosts', () => {
+    const r = policy.check('https://accounts.google.com/signin', { actor: 'urlp-actor-3' });
+    expect(r.ok).toBe(false);
+    expect(r.code).toBe('HOST_DENIED');
+  });
+
+  test('blocks abuse path patterns', () => {
+    const r = policy.check('https://example.com/wp-login.php', { actor: 'urlp-actor-4' });
+    expect(r.ok).toBe(false);
+    expect(r.code).toBe('PATH_DENIED');
+  });
+
+  test('allows benign URL', () => {
+    const r = policy.check('https://www.example.com/products/abc', { actor: 'urlp-actor-5' });
+    expect(r.ok).toBe(true);
+    expect(r.parsed).toBeDefined();
+  });
+
+  test('rate-limits per actor', () => {
+    const actor = 'urlp-flood-' + Date.now();
+    let blocked = 0;
+    for (let i = 0; i < 60; i++) {
+      const r = policy.check('https://www.example.com/p/' + i, { actor });
+      if (!r.ok && r.code === 'RATE_LIMITED') blocked++;
+    }
+    expect(blocked).toBeGreaterThan(0);
+  });
+
+  test('audit log records decisions', () => {
+    const recent = policy.getRecentAudits(10);
+    expect(Array.isArray(recent)).toBe(true);
+    expect(recent.length).toBeGreaterThan(0);
+    expect(['allowed','blocked','rate_limited']).toContain(recent[0].decision);
+  });
+});

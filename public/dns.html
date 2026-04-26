@@ -120,51 +120,61 @@
     <!-- ═══════════════ RECORDS FOR webagentbridge.com ═══════════════ -->
     <div class="card" id="records">
       <h3 data-en="DNS Records for webagentbridge.com (canonical)" data-ar="سجلات DNS لـ webagentbridge.com (المرجعية)">DNS Records for webagentbridge.com (canonical)</h3>
-      <p data-en="The exact records the WAB site itself publishes. Add the equivalents under your own domain to advertise WAB protocol support, agent endpoints, and trust." data-ar="السجلات التي يستخدمها موقع WAB نفسه. أضف ما يعادلها تحت نطاقك للإعلان عن دعم بروتوكول WAB ونقاط النهاية والثقة.">The exact records the WAB site itself publishes. Add the equivalents under your own domain to advertise WAB protocol support, agent endpoints, and trust.</p>
-      <table class="table">
-        <tr><th>Name / Host</th><th>Type</th><th>Value</th><th>TTL</th></tr>
-        <tr>
+      <p data-en="The exact records the WAB site itself publishes. Each row is verified live against Cloudflare DoH (1.1.1.1) when this page loads. Add the equivalents under your own domain to advertise WAB protocol support, agent endpoints, and trust." data-ar="السجلات التي يستخدمها موقع WAB نفسه. يتم التحقق من كل سطر مباشرة عبر Cloudflare DoH عند تحميل هذه الصفحة. أضف ما يعادلها تحت نطاقك للإعلان عن دعم بروتوكول WAB ونقاط النهاية والثقة.">The exact records the WAB site itself publishes. Each row is verified live against Cloudflare DoH (1.1.1.1) when this page loads.</p>
+      <div id="recordsLiveStatus" style="margin:8px 0 14px;font-size:.92rem"><span class="warn" data-en="Querying live DNS…" data-ar="جارٍ الاستعلام المباشر عن DNS…">Querying live DNS…</span></div>
+      <table class="table" id="recordsTable">
+        <thead><tr><th data-en="Live" data-ar="مباشر">Live</th><th>Name / Host</th><th>Type</th><th>Value</th><th>TTL</th></tr></thead>
+        <tbody>
+        <tr data-record="_wab.webagentbridge.com" data-rtype="TXT" data-match="v=wab1">
+          <td class="live-cell"><span class="warn">…</span></td>
           <td><code>_wab</code></td>
           <td><code>TXT</code></td>
           <td><code>"v=wab1; endpoint=https://www.webagentbridge.com/.well-known/wab.json"</code></td>
           <td>3600</td>
         </tr>
-        <tr>
+        <tr data-record="_wab-agent.webagentbridge.com" data-rtype="TXT" data-match="v=wab1">
+          <td class="live-cell"><span class="warn">…</span></td>
           <td><code>_wab-agent</code></td>
           <td><code>TXT</code></td>
           <td><code>"v=wab1; mcp=https://www.webagentbridge.com/api/v1/protocol; gateway=https://www.webagentbridge.com/api/v1"</code></td>
           <td>3600</td>
         </tr>
-        <tr>
+        <tr data-record="_wab-trust.webagentbridge.com" data-rtype="TXT" data-match="v=wab1">
+          <td class="live-cell"><span class="warn">…</span></td>
           <td><code>_wab-trust</code></td>
           <td><code>TXT</code></td>
-          <td><code>"v=wab1; trust=https://www.webagentbridge.com/.well-known/wab.json; security=https://www.webagentbridge.com/security.txt"</code></td>
+          <td><code>"v=wab1; trust=https://www.webagentbridge.com/.well-known/wab.json; security=https://www.webagentbridge.com/.well-known/security.txt"</code></td>
           <td>3600</td>
         </tr>
-        <tr>
+        <tr data-record="_dmarc.webagentbridge.com" data-rtype="TXT" data-match="v=DMARC1; p=quarantine">
+          <td class="live-cell"><span class="warn">…</span></td>
           <td><code>_dmarc</code></td>
           <td><code>TXT</code></td>
           <td><code>"v=DMARC1; p=quarantine; rua=mailto:dmarc@webagentbridge.com; ruf=mailto:dmarc@webagentbridge.com; adkim=s; aspf=s; pct=100"</code></td>
           <td>3600</td>
         </tr>
-        <tr>
+        <tr data-record="webagentbridge.com" data-rtype="TXT" data-match="v=spf1">
+          <td class="live-cell"><span class="warn">…</span></td>
           <td><code>@</code> (apex)</td>
           <td><code>TXT</code></td>
           <td><code>"v=spf1 -all"</code></td>
           <td>3600</td>
         </tr>
-        <tr>
+        <tr data-record="webagentbridge.com" data-rtype="CAA" data-match="letsencrypt.org">
+          <td class="live-cell"><span class="warn">…</span></td>
           <td><code>@</code> (apex)</td>
           <td><code>CAA</code></td>
           <td><code>0 issue "letsencrypt.org"</code></td>
           <td>3600</td>
         </tr>
-        <tr>
+        <tr data-record="webagentbridge.com" data-rtype="CAA" data-match="iodef">
+          <td class="live-cell"><span class="warn">…</span></td>
           <td><code>@</code> (apex)</td>
           <td><code>CAA</code></td>
           <td><code>0 iodef "mailto:security@webagentbridge.com"</code></td>
           <td>3600</td>
         </tr>
+        </tbody>
       </table>
       <p style="margin-top:12px"><strong data-en="Verify after propagation:" data-ar="للتحقق بعد الانتشار:">Verify after propagation:</strong> <a href="#verifier" data-en="open the live verifier above" data-ar="استخدم المدقق المباشر بالأعلى">open the live verifier above</a> <span data-en="or run" data-ar="أو نفّذ"></span> <code>dig _wab.webagentbridge.com TXT +short</code></p>
     </div>
@@ -353,6 +363,78 @@ curl -s -H 'accept: application/dns-json' \
         s.innerHTML = '<span class="ok">✓ Example record copied to clipboard.</span>';
       });
     }
+
+    // ═══════════ Canonical records — live status ═══════════
+    const RR_TYPE = { TXT: 16, CAA: 257, A: 1, AAAA: 28, CNAME: 5 };
+
+    function _decodeCAARdata(hex){
+      // RFC 8659: 1 byte flags, 1 byte tag-length, tag, value (rest)
+      try {
+        const bytes = hex.replace(/\\#\s*\d+\s*/, '').replace(/\s+/g, '');
+        const buf = bytes.match(/.{1,2}/g).map(b => parseInt(b, 16));
+        const tagLen = buf[1];
+        let tag = '', val = '';
+        for (let i = 0; i < tagLen; i++) tag += String.fromCharCode(buf[2 + i]);
+        for (let i = 2 + tagLen; i < buf.length; i++) val += String.fromCharCode(buf[i]);
+        return { tag, value: val };
+      } catch { return null; }
+    }
+
+    function _normalizeAnswer(answer, type){
+      const data = answer.data || '';
+      if (type === 'CAA') {
+        const decoded = _decodeCAARdata(data);
+        if (decoded) return decoded.tag + ' ' + decoded.value;
+        // Some resolvers return the parsed form already (e.g. '0 issue "letsencrypt.org"')
+        return data;
+      }
+      return data.replace(/^"|"$/g, '').replace(/"\s*"/g, '');
+    }
+
+    async function _doh(name, type){
+      const url = 'https://cloudflare-dns.com/dns-query?name=' +
+        encodeURIComponent(name) + '&type=' + encodeURIComponent(type);
+      const res = await fetch(url, { headers: { 'accept': 'application/dns-json' } });
+      const data = await res.json();
+      const want = RR_TYPE[type];
+      return (data.Answer || []).filter(a => a.type === want)
+        .map(a => _normalizeAnswer(a, type));
+    }
+
+    async function checkCanonicalRecords(){
+      const rows = document.querySelectorAll('#recordsTable tr[data-record]');
+      const summary = document.getElementById('recordsLiveStatus');
+      let pass = 0, fail = 0;
+      const tasks = Array.from(rows).map(async (row) => {
+        const cell = row.querySelector('.live-cell');
+        const name = row.dataset.record;
+        const type = row.dataset.rtype;
+        const match = row.dataset.match;
+        try {
+          const answers = await _doh(name, type);
+          const hit = answers.some(a => a.toLowerCase().includes(match.toLowerCase()));
+          if (hit) {
+            cell.innerHTML = '<span class="ok" title="Verified live via Cloudflare DoH">✓ live</span>';
+            pass++;
+          } else {
+            cell.innerHTML = '<span class="danger" title="Record not yet propagated or missing">✗ missing</span>';
+            fail++;
+          }
+        } catch (err) {
+          cell.innerHTML = '<span class="warn" title="Lookup failed">… error</span>';
+        }
+      });
+      await Promise.allSettled(tasks);
+      const total = pass + fail;
+      summary.innerHTML = '<span class="' + (fail === 0 ? 'ok' : 'warn') + '">' +
+        (fail === 0 ? '✓ All ' + total + ' canonical records verified live (Cloudflare DoH).'
+                    : '⚠ ' + pass + '/' + total + ' records live — ' + fail + ' missing or propagating.') + '</span>';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Don't block the page; run the live checks in the background.
+      checkCanonicalRecords().catch(()=>{});
+    });
   </script>
 
   <script>

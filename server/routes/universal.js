@@ -11,6 +11,8 @@ const express = require('express');
 const router = express.Router();
 const scraper = require('../services/universal-scraper');
 const priceIntel = require('../services/price-intelligence');
+let urlPolicy;
+try { urlPolicy = require('../security/url-policy'); } catch { urlPolicy = null; }
 let fairness;
 try { fairness = require('../services/fairness-engine'); } catch {
   fairness = {
@@ -26,6 +28,13 @@ try { fairness = require('../services/fairness-engine'); } catch {
 router.post('/extract', async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'URL required' });
+
+  if (urlPolicy) {
+    const v = urlPolicy.check(url, { actor: urlPolicy.actorFromReq(req) });
+    if (!v.ok) {
+      return res.status(v.code === 'RATE_LIMITED' ? 429 : 400).json({ error: v.reason, code: v.code });
+    }
+  }
 
   try {
     const result = await scraper.fetchAndExtract(url);
@@ -55,6 +64,12 @@ router.post('/analyze', async (req, res) => {
       }
     } else if (url) {
       // Server-side fetch and analyze
+      if (urlPolicy) {
+        const v = urlPolicy.check(url, { actor: urlPolicy.actorFromReq(req) });
+        if (!v.ok) {
+          return res.status(v.code === 'RATE_LIMITED' ? 429 : 400).json({ error: v.reason, code: v.code });
+        }
+      }
       result = await priceIntel.analyzePrice(url);
     } else {
       return res.status(400).json({ error: 'URL or extraction data required' });

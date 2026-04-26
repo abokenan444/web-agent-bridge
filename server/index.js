@@ -167,6 +167,12 @@ app.get('/api/security/cross-site-transfers/recent', _adminAuth, (req, res) => {
     res.json({ recent: r.getRecentTransfers(50, req.query.from || null) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+app.get('/api/security/url-policy/recent', _adminAuth, (req, res) => {
+  try {
+    const p = require('./security/url-policy');
+    res.json({ recent: p.getRecentAudits(50, req.query.decision || null) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
