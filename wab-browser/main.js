@@ -701,9 +701,82 @@ let wabIndex = null;
 let ghostMode = false;
 let currentUA = USER_AGENTS[0];
 const WAB_API_BASE = 'http://localhost:3003'; // Local dev, switch to https://webagentbridge.com for production
+let sovereignShieldEnabled = true;
+let sovereignShieldIntelVersion = 0;
+const sovereignIntelHosts = new Set();
+let sovereignShieldLastSync = 0;
+const sovereignShieldStats = { analyzedConnections: 0, blockedConnections: 0, warnedConnections: 0 };
+const sovereignShieldEvents = [];
 
 function rotateUA() {
   currentUA = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+function pushSovereignEvent(type, payload) {
+  sovereignShieldEvents.unshift({ id: crypto.randomUUID(), type, timestamp: new Date().toISOString(), payload });
+  if (sovereignShieldEvents.length > 200) sovereignShieldEvents.pop();
+}
+
+function hostFromUrl(url) {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+async function syncSovereignIntel(force = false) {
+  if (!force && Date.now() - sovereignShieldLastSync < 5 * 60 * 1000) return;
+  const feed = await fetchJSON(`${WAB_API_BASE}/api/sovereign/shield/intel-feed`);
+  if (!feed || !Array.isArray(feed.indicators)) return;
+  sovereignIntelHosts.clear();
+  for (const i of feed.indicators) {
+    if (i && i.host) sovereignIntelHosts.add(String(i.host).toLowerCase());
+  }
+  sovereignShieldIntelVersion = Number(feed.version || 0);
+  sovereignShieldLastSync = Date.now();
+}
+
+function matchSovereignIndicator(host) {
+  if (!host) return null;
+  if (sovereignIntelHosts.has(host)) return host;
+  const parts = host.split('.');
+  const root = parts.length >= 2 ? parts.slice(-2).join('.') : host;
+  if (sovereignIntelHosts.has(root)) return root;
+  for (const i of sovereignIntelHosts) {
+    if (host.endsWith('.' + i)) return i;
+  }
+  return null;
+}
+
+function evaluateSovereignRequest(url, resourceType) {
+  const host = hostFromUrl(url);
+  if (!host) return { allow: true, riskScore: 0, reasons: [] };
+
+  const reasons = [];
+  let riskScore = 0;
+
+  const indicator = matchSovereignIndicator(host);
+  if (indicator) {
+    riskScore = Math.max(riskScore, 95);
+    reasons.push('known_indicator_match');
+  }
+
+  const domainRisk = analyzeDomain(host);
+  if (domainRisk && !domainRisk.safe) {
+    riskScore = Math.max(riskScore, Math.floor(domainRisk.riskScore || 0));
+    if (domainRisk.flags && domainRisk.flags.length) reasons.push(...domainRisk.flags.slice(0, 3));
+  }
+
+  if (resourceType === 'script' || resourceType === 'xhr' || resourceType === 'ping') {
+    riskScore += 5;
+  }
+
+  riskScore = Math.min(riskScore, 100);
+  const block = riskScore >= 85;
+  const warn = !block && riskScore >= 45;
+
+  return { allow: !block, block, warn, host, riskScore, reasons };
 }
 
 // Fallback extraction script (when server unreachable)
@@ -925,6 +998,9 @@ function createWindow() {
 
   // Ad Blocker – block ad/tracker requests
   const ses = session.defaultSession;
+  syncSovereignIntel(true).catch(() => {});
+  setInterval(() => { syncSovereignIntel(false).catch(() => {}); }, 5 * 60 * 1000);
+
   ses.webRequest.onBeforeRequest((details, callback) => {
     if (adBlockEnabled && details.url.startsWith('http') && isAdUrl(details.url)) {
       adBlockStats.blocked++;
@@ -932,6 +1008,49 @@ function createWindow() {
       callback({ cancel: true });
       return;
     }
+
+    if (sovereignShieldEnabled && details.url.startsWith('http')) {
+      const result = evaluateSovereignRequest(details.url, details.resourceType);
+      sovereignShieldStats.analyzedConnections += 1;
+
+      if (result.block) {
+        sovereignShieldStats.blockedConnections += 1;
+        pushSovereignEvent('blocked_connection', {
+          host: result.host,
+          riskScore: result.riskScore,
+          reasons: result.reasons,
+          resourceType: details.resourceType,
+        });
+
+        // Fire-and-forget telemetry to server-side sovereign shield.
+        postJSON(`${WAB_API_BASE}/api/sovereign/shield/analyze-connection`, {
+          app: 'wab-browser',
+          destination: result.host,
+          background: true,
+          bytesOut: 0,
+          bytesIn: 0,
+          micAccess: false,
+          cameraAccess: false,
+          contactsAccess: false,
+          localRiskScore: result.riskScore,
+          localReasons: result.reasons
+        }).catch(() => {});
+
+        callback({ cancel: true });
+        return;
+      }
+
+      if (result.warn) {
+        sovereignShieldStats.warnedConnections += 1;
+        pushSovereignEvent('warn_connection', {
+          host: result.host,
+          riskScore: result.riskScore,
+          reasons: result.reasons,
+          resourceType: details.resourceType,
+        });
+      }
+    }
+
     callback({});
   });
 
@@ -985,6 +1104,29 @@ function setupIPC() {
   // ── Scam Shield ──
   ipcMain.handle('shield:check-domain', (_, domain) => analyzeDomain(domain));
   ipcMain.handle('shield:analyze-content', (_, content) => analyzePageContent(content));
+  ipcMain.handle('shield:sovereign-toggle', (_, enabled) => {
+    sovereignShieldEnabled = !!enabled;
+    return sovereignShieldEnabled;
+  });
+  ipcMain.handle('shield:sovereign-status', () => ({
+    enabled: sovereignShieldEnabled,
+    intelVersion: sovereignShieldIntelVersion,
+    indicatorsLoaded: sovereignIntelHosts.size,
+    lastSync: sovereignShieldLastSync || null,
+  }));
+  ipcMain.handle('shield:sovereign-stats', () => ({ ...sovereignShieldStats }));
+  ipcMain.handle('shield:sovereign-events', (_, limit = 20) => {
+    const n = Math.max(1, Math.min(Number(limit) || 20, 100));
+    return sovereignShieldEvents.slice(0, n);
+  });
+  ipcMain.handle('shield:sovereign-sync', async () => {
+    await syncSovereignIntel(true);
+    return {
+      intelVersion: sovereignShieldIntelVersion,
+      indicatorsLoaded: sovereignIntelHosts.size,
+      lastSync: sovereignShieldLastSync || null,
+    };
+  });
 
   // ── Search ──
   ipcMain.handle('search:url', (_, query) => {

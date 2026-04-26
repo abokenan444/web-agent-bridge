@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB Sovereign Phone Shield</title>
+  <meta name="description" content="Communication protection layer for WAB: threat-intel feed, behavioral IDS, community reporting, and personal vault encryption.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="/css/styles.css?v=3.2.0">
+  <style>
+    body{background:#070d19;color:#e5edff}
+    .hero{padding:110px 24px 42px;text-align:center}
+    .hero h1{font-size:clamp(2rem,4vw,3rem);margin-bottom:10px}
+    .hero p{max-width:860px;margin:0 auto;color:#99a8c7;line-height:1.7}
+    .lang{display:flex;gap:10px;justify-content:center;margin:0 0 22px}
+    .lang button{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.04);color:#e5edff;padding:8px 14px;border-radius:10px;cursor:pointer}
+    .lang button.active{background:linear-gradient(135deg,#0ea5e9,#2563eb);border-color:transparent}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;max-width:1300px;margin:0 auto;padding:0 20px 32px}
+    .card{background:linear-gradient(180deg,rgba(17,24,39,.9),rgba(12,18,31,.95));border:1px solid rgba(148,163,184,.18);border-radius:16px;padding:18px}
+    .card h3{margin:0 0 8px;font-size:1.07rem}
+    .muted{color:#96a7c7;font-size:.92rem;line-height:1.65}
+    .badge{display:inline-block;background:rgba(16,185,129,.14);border:1px solid rgba(16,185,129,.36);color:#6ee7b7;padding:4px 9px;border-radius:999px;font-size:.73rem;font-weight:700;margin-top:8px}
+    .box{background:rgba(2,6,23,.72);border:1px solid rgba(148,163,184,.2);border-radius:13px;padding:14px;margin-top:12px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:780px){.row{grid-template-columns:1fr}}
+    label{display:block;font-size:.78rem;color:#9fb0ce;margin-bottom:4px}
+    input,textarea,select{width:100%;background:#0a1324;border:1px solid rgba(148,163,184,.27);border-radius:10px;color:#e2e8f0;padding:10px;font-family:Inter,sans-serif}
+    textarea{min-height:98px;resize:vertical}
+    .btn{margin-top:10px;background:linear-gradient(135deg,#0284c7,#1d4ed8);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700}
+    .btn.secondary{background:linear-gradient(135deg,#334155,#1e293b)}
+    pre{background:#020617;border:1px solid rgba(148,163,184,.25);padding:10px;border-radius:10px;font-size:.78rem;color:#a5b4fc;overflow:auto;font-family:'JetBrains Mono',monospace;line-height:1.55;max-height:260px}
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+    .stat{background:rgba(2,6,23,.66);border:1px solid rgba(148,163,184,.19);border-radius:12px;padding:12px}
+    .stat .k{color:#93a6c7;font-size:.75rem}
+    .stat .v{font-size:1.45rem;font-weight:800;color:#7dd3fc}
+    .status{font-size:.84rem;margin-top:10px}
+    .ok{color:#4ade80}.warn{color:#facc15}.danger{color:#f87171}
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand"><div class="brand-icon">⚡</div><span>WAB</span></a>
+      <ul class="navbar-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/integrations">Integrations</a></li>
+        <li><a href="/phone-shield" class="active">Phone Shield</a></li>
+        <li><a href="/sovereign">Sovereign</a></li>
+        <li><a href="/docs">Docs</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="lang">
+      <button id="enBtn" class="active" onclick="setLang('en')">English</button>
+      <button id="arBtn" onclick="setLang('ar')">العربية</button>
+    </div>
+    <h1 data-en="Sovereign Phone Shield" data-ar="درع الهاتف السيادي">Sovereign Phone Shield</h1>
+    <p data-en="WAB now extends from browser protection into communication protection: behavioral IDS, local connection risk analysis, community threat intelligence, and personal vault cryptography. This page is fully connected to live endpoints under /api/sovereign/shield." data-ar="يمتد WAB الآن من حماية التصفح إلى حماية الاتصال: كشف سلوكي، تحليل مخاطر الاتصالات محلياً، استخبارات تهديدات مجتمعية، وتشفير الحصن الشخصي. هذه الصفحة متصلة فعلياً بنقاط النهاية الحية تحت /api/sovereign/shield.">WAB now extends from browser protection into communication protection: behavioral IDS, local connection risk analysis, community threat intelligence, and personal vault cryptography. This page is fully connected to live endpoints under /api/sovereign/shield.</p>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h3 data-en="Live Shield Telemetry" data-ar="قياسات الدرع الحية">Live Shield Telemetry</h3>
+      <p class="muted" data-en="Real-time global stats from the sovereign shield service." data-ar="إحصاءات عالمية لحظية من خدمة الدرع السيادي.">Real-time global stats from the sovereign shield service.</p>
+      <div class="stats" id="stats"></div>
+      <div class="box">
+        <button class="btn secondary" onclick="loadStats()" data-en="Refresh Stats" data-ar="تحديث الإحصاءات">Refresh Stats</button>
+        <button class="btn secondary" onclick="loadEvents()" data-en="Load Events" data-ar="تحميل الأحداث">Load Events</button>
+        <pre id="eventsOut">[]</pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 data-en="Connection Risk Analyzer" data-ar="محلل مخاطر الاتصال">Connection Risk Analyzer</h3>
+      <p class="muted" data-en="Simulate app traffic and run behavioral analysis to decide: allow, warn, or block." data-ar="حاكي حركة تطبيق وشغّل التحليل السلوكي لتحديد: السماح أو التحذير أو الحجب.">Simulate app traffic and run behavioral analysis to decide: allow, warn, or block.</p>
+      <div class="row">
+        <div><label>App</label><input id="aApp" value="whatsapp"></div>
+        <div><label>Destination</label><input id="aDst" value="cdn-whatsapp-secure.com"></div>
+      </div>
+      <div class="row">
+        <div><label>bytesOut</label><input id="aOut" value="6200000" type="number"></div>
+        <div><label>bytesIn</label><input id="aIn" value="120000" type="number"></div>
+      </div>
+      <div class="row">
+        <div><label>Background</label><select id="aBg"><option value="true">true</option><option value="false">false</option></select></div>
+        <div><label>Mic Access</label><select id="aMic"><option value="true">true</option><option value="false" selected>false</option></select></div>
+      </div>
+      <button class="btn" onclick="analyzeConnection()" data-en="Analyze Connection" data-ar="تحليل الاتصال">Analyze Connection</button>
+      <div id="analysisStatus" class="status"></div>
+      <pre id="analysisOut">{}</pre>
+    </div>
+
+    <div class="card">
+      <h3 data-en="Personal Cloud Vault (AES-256-GCM)" data-ar="الحصن السحابي الشخصي (AES-256-GCM)">Personal Cloud Vault (AES-256-GCM)</h3>
+      <p class="muted" data-en="Encrypt sensitive text locally via API cryptography endpoint, then decrypt with passphrase." data-ar="شفّر النصوص الحساسة محلياً عبر نقطة تشفير API ثم فكها بكلمة المرور.">Encrypt sensitive text locally via API cryptography endpoint, then decrypt with passphrase.</p>
+      <label data-en="Sensitive Data" data-ar="بيانات حساسة">Sensitive Data</label>
+      <textarea id="vaultPlain">Private notes, credentials, recovery phrase...</textarea>
+      <label data-en="Passphrase" data-ar="عبارة المرور">Passphrase</label>
+      <input id="vaultPass" value="StrongPassphrase-2026">
+      <div class="row">
+        <button class="btn" onclick="encryptVault()" data-en="Encrypt to Vault" data-ar="تشفير إلى الحصن">Encrypt to Vault</button>
+        <button class="btn secondary" onclick="decryptVault()" data-en="Decrypt" data-ar="فك التشفير">Decrypt</button>
+      </div>
+      <pre id="vaultOut">{}</pre>
+    </div>
+
+    <div class="card">
+      <h3 data-en="Community Threat Intelligence" data-ar="استخبارات التهديدات المجتمعية">Community Threat Intelligence</h3>
+      <p class="muted" data-en="Submit suspicious host fingerprints. After multiple independent reports, indicators are promoted automatically." data-ar="أرسل بصمات مضيفات مشبوهة. بعد تقارير مستقلة متعددة، تتم الترقية تلقائياً كمؤشر تهديد.">Submit suspicious host fingerprints. After multiple independent reports, indicators are promoted automatically.</p>
+      <div class="row">
+        <div><label>Host</label><input id="rHost" value="suspicious-c2-node.xyz"></div>
+        <div><label>Reporter Fingerprint</label><input id="rFinger" value="device-AR-001"></div>
+      </div>
+      <div class="row">
+        <div><label>Severity</label><select id="rSeverity"><option>critical</option><option selected>medium</option><option>low</option></select></div>
+        <div><label>Notes</label><input id="rNotes" value="background exfiltration pattern"></div>
+      </div>
+      <button class="btn" onclick="submitReport()" data-en="Submit Report" data-ar="إرسال التقرير">Submit Report</button>
+      <pre id="reportOut">{}</pre>
+    </div>
+  </section>
+
+  <script>
+    const API = '/api/sovereign/shield';
+    let lastVaultPayload = null;
+
+    function setLang(lang){
+      const ar = lang === 'ar';
+      document.documentElement.lang = lang;
+      document.documentElement.dir = ar ? 'rtl' : 'ltr';
+      document.getElementById('enBtn').classList.toggle('active', !ar);
+      document.getElementById('arBtn').classList.toggle('active', ar);
+      document.querySelectorAll('[data-en]').forEach(el => el.innerHTML = el.getAttribute(ar ? 'data-ar' : 'data-en'));
+      localStorage.setItem('wab-phone-shield-lang', lang);
+    }
+
+    async function j(url, opts){
+      const r = await fetch(url, opts);
+      const t = await r.text();
+      try { return JSON.parse(t); } catch { return { raw: t, status: r.status }; }
+    }
+
+    async function loadStats(){
+      const s = await j(API + '/stats');
+      const statsEl = document.getElementById('stats');
+      const rows = [
+        ['Analyzed', s.analyzed || 0],
+        ['Blocked', s.blocked || 0],
+        ['Warned', s.warned || 0],
+        ['Indicators', s.indicators || 0],
+        ['Reports', s.communityReports || 0],
+        ['Intel Ver', s.intelVersion || 0]
+      ];
+      statsEl.innerHTML = rows.map(([k,v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+    }
+
+    async function loadEvents(){
+      const e = await j(API + '/events?limit=20');
+      document.getElementById('eventsOut').textContent = JSON.stringify(e, null, 2);
+    }
+
+    async function analyzeConnection(){
+      const body = {
+        app: document.getElementById('aApp').value,
+        destination: document.getElementById('aDst').value,
+        bytesOut: Number(document.getElementById('aOut').value || 0),
+        bytesIn: Number(document.getElementById('aIn').value || 0),
+        background: document.getElementById('aBg').value === 'true',
+        micAccess: document.getElementById('aMic').value === 'true'
+      };
+      const out = await j(API + '/analyze-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      document.getElementById('analysisOut').textContent = JSON.stringify(out, null, 2);
+      const st = document.getElementById('analysisStatus');
+      st.className = 'status ' + (out.decision === 'block' ? 'danger' : out.decision === 'warn' ? 'warn' : 'ok');
+      st.textContent = out.decision ? ('Decision: ' + out.decision.toUpperCase() + ' | Risk: ' + out.riskScore) : 'No decision';
+      await loadStats();
+    }
+
+    async function encryptVault(){
+      const out = await j(API + '/vault/encrypt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plaintext: document.getElementById('vaultPlain').value,
+          passphrase: document.getElementById('vaultPass').value
+        })
+      });
+      if (out && out.payload) lastVaultPayload = out.payload;
+      document.getElementById('vaultOut').textContent = JSON.stringify(out, null, 2);
+      await loadStats();
+    }
+
+    async function decryptVault(){
+      if (!lastVaultPayload) return;
+      const out = await j(API + '/vault/decrypt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payload: lastVaultPayload, passphrase: document.getElementById('vaultPass').value })
+      });
+      document.getElementById('vaultOut').textContent = JSON.stringify(out, null, 2);
+      await loadStats();
+    }
+
+    async function submitReport(){
+      const out = await j(API + '/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: document.getElementById('rHost').value,
+          reporterFingerprint: document.getElementById('rFinger').value,
+          severity: document.getElementById('rSeverity').value,
+          notes: document.getElementById('rNotes').value
+        })
+      });
+      document.getElementById('reportOut').textContent = JSON.stringify(out, null, 2);
+      await loadStats();
+    }
+
+    (function boot(){
+      const lang = localStorage.getItem('wab-phone-shield-lang');
+      if (lang === 'ar') setLang('ar');
+      loadStats();
+      loadEvents();
+      setInterval(loadStats, 10000);
+    })();
+  </script>
+</body>
+</html>

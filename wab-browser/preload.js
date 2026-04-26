@@ -19,6 +19,11 @@ contextBridge.exposeInMainWorld('wab', {
   shield: {
     checkDomain: (domain) => ipcRenderer.invoke('shield:check-domain', domain),
     analyzeContent: (content) => ipcRenderer.invoke('shield:analyze-content', content),
+    sovereignToggle: (enabled) => ipcRenderer.invoke('shield:sovereign-toggle', enabled),
+    sovereignStatus: () => ipcRenderer.invoke('shield:sovereign-status'),
+    sovereignStats: () => ipcRenderer.invoke('shield:sovereign-stats'),
+    sovereignEvents: (limit) => ipcRenderer.invoke('shield:sovereign-events', limit),
+    sovereignSync: () => ipcRenderer.invoke('shield:sovereign-sync'),
   },
 
   // Search

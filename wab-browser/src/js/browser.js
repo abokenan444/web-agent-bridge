@@ -13,6 +13,7 @@
     suggestionIndex: -1,
     menuOpen: false,
     sidebarPanel: null,
+    sovereignShield: { enabled: true, blockedConnections: 0, warnedConnections: 0, intelVersion: 0 },
   };
 
   let tabIdCounter = 0;
@@ -534,7 +535,8 @@
     if (!result) {
       dom.shieldBtn.className = 'shield-safe';
       dom.shieldBadge.classList.add('hidden');
-      dom.statusShield.textContent = '';
+      var blocked = state.sovereignShield.blockedConnections || 0;
+      dom.statusShield.textContent = blocked > 0 ? `🛡️ Shield blocked ${blocked}` : '';
       dom.statusShield.className = '';
       return;
     }
@@ -555,6 +557,30 @@
       dom.statusShield.textContent = `🚨 Danger (${result.riskScore}%)`;
       dom.statusShield.className = 'danger';
     }
+  }
+
+  async function refreshSovereignShieldTelemetry() {
+    try {
+      const status = await wab.shield.sovereignStatus();
+      const stats = await wab.shield.sovereignStats();
+      if (!status || !stats) return;
+
+      state.sovereignShield.enabled = !!status.enabled;
+      state.sovereignShield.intelVersion = status.intelVersion || 0;
+      state.sovereignShield.blockedConnections = stats.blockedConnections || 0;
+      state.sovereignShield.warnedConnections = stats.warnedConnections || 0;
+
+      if (state.sovereignShield.blockedConnections > 0) {
+        dom.shieldBadge.classList.remove('hidden');
+        dom.shieldBadge.textContent = String(Math.min(state.sovereignShield.blockedConnections, 99));
+      }
+
+      const activeTab = state.tabs.find(t => t.id === state.activeTabId);
+      if (!activeTab || !activeTab.shieldResult) {
+        const blocked = state.sovereignShield.blockedConnections || 0;
+        dom.statusShield.textContent = blocked > 0 ? `🛡️ Shield blocked ${blocked}` : '';
+      }
+    } catch (e) {}
   }
 
   // ──────────────────────── Ghost Mode ────────────────────────
@@ -1500,13 +1526,28 @@
   // Tools
   dom.shieldBtn.addEventListener('click', () => {
     const tab = state.tabs.find(t => t.id === state.activeTabId);
-    if (tab?.shieldResult) {
-      const r = tab.shieldResult;
-      const msg = r.safe
-        ? `✅ ${r.domain}\nThis site is recognized as safe.`
-        : `⚠️ ${r.domain}\nRisk Score: ${r.riskScore}%\nFlags: ${r.flags.join(', ') || 'None'}`;
+    const r = tab?.shieldResult;
+    Promise.all([
+      wab.shield.sovereignStatus(),
+      wab.shield.sovereignStats(),
+      wab.shield.sovereignEvents(5)
+    ]).then(([status, stats, events]) => {
+      const pageLine = !r
+        ? 'Page risk: unknown'
+        : (r.safe
+          ? `✅ ${r.domain} safe`
+          : `⚠️ ${r.domain} risk ${r.riskScore}% (${(r.flags || []).join(', ') || 'no flags'})`);
+
+      const recent = (events || []).slice(0, 3).map(e => `• ${e.type} @ ${(e.payload && e.payload.host) || 'unknown'}`).join('\n');
+      const msg =
+        `Sovereign Shield\n` +
+        `Mode: ${(status && status.enabled) ? 'active' : 'disabled'}\n` +
+        `Intel v: ${(status && status.intelVersion) || 0} (${(status && status.indicatorsLoaded) || 0} indicators)\n` +
+        `Blocked: ${(stats && stats.blockedConnections) || 0} | Warned: ${(stats && stats.warnedConnections) || 0}\n\n` +
+        `${pageLine}\n\n` +
+        `${recent ? ('Recent events:\n' + recent) : 'No recent security events.'}`;
       alert(msg);
-    }
+    }).catch(() => {});
   });
 
   dom.ghostBtn.addEventListener('click', toggleGhostMode);
@@ -1624,6 +1665,10 @@
     // Load ad blocker state
     await initAdblock();
 
+    // Load sovereign shield telemetry and sync intel feed
+    await wab.shield.sovereignSync();
+    await refreshSovereignShieldTelemetry();
+
     // Load unread notifications count
     const notifs = await wab.notifications.get();
     unreadCount = (notifs || []).filter(n => !n.read).length;
@@ -1641,6 +1686,11 @@
         dom.statusText.textContent = `RAM: ${mem.rss}MB`;
       } catch(e) {}
     }, 30000);
+
+    // Shield telemetry heartbeat
+    setInterval(async () => {
+      await refreshSovereignShieldTelemetry();
+    }, 5000);
   }
 
   init();

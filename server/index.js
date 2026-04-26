@@ -269,6 +269,10 @@ app.get('/api', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'api.html'));
 });
 
+app.get('/phone-shield', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'phone-shield.html'));
+});
+
 // /integrations — bilingual deploy landing page
 app.get('/integrations', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'integrations.html'));

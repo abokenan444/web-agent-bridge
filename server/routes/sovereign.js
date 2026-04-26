@@ -13,6 +13,7 @@ const reputation = require('../services/reputation');
 const negotiation = require('../services/negotiation');
 const verification = require('../services/verification');
 const priceShield = require('../services/price-shield');
+const sovereignShield = require('../services/sovereign-shield');
 
 // ═══════════════════════════════════════════════════════════════════════
 // REPUTATION API
@@ -380,6 +381,54 @@ router.get('/price-shield/manipulations/:siteId', (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 20, 100);
   const result = priceShield.getGlobalStats();
   res.json(result.topManipulators.find(m => m.siteId === req.params.siteId) || { siteId: req.params.siteId, incidents: 0 });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// SOVEREIGN PHONE SHIELD API
+// ═══════════════════════════════════════════════════════════════════════
+
+// Threat intelligence feed for browser/clients
+router.get('/shield/intel-feed', (req, res) => {
+  res.json(sovereignShield.getIntelFeed());
+});
+
+// Analyze a live connection/event from client telemetry
+router.post('/shield/analyze-connection', (req, res) => {
+  const result = sovereignShield.analyzeConnection(req.body || {});
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
+// Community threat report (Bounty-Network style)
+router.post('/shield/report', (req, res) => {
+  const result = sovereignShield.submitThreatReport(req.body || {});
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
+// Stats + recent events for dashboard
+router.get('/shield/stats', (req, res) => {
+  res.json(sovereignShield.getStats());
+});
+
+router.get('/shield/events', (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  res.json({ events: sovereignShield.getRecentEvents(limit) });
+});
+
+// Personal Cloud Vault crypto endpoints
+router.post('/shield/vault/encrypt', (req, res) => {
+  const { plaintext, passphrase } = req.body || {};
+  const result = sovereignShield.encryptVault(plaintext, passphrase);
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
+router.post('/shield/vault/decrypt', (req, res) => {
+  const { payload, passphrase } = req.body || {};
+  const result = sovereignShield.decryptVault(payload, passphrase);
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
 });
 
 module.exports = router;
