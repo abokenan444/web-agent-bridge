@@ -13,12 +13,15 @@ const DOMAIN = 'webagentbridge.com';
 const RR_TYPE = { TXT: 16, CAA: 257 };
 
 async function dohQuery(name, type) {
-  const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`;
+  // do=1 asks the resolver to set AD when the answer is DNSSEC-validated.
+  const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}&do=1`;
   const res = await fetch(url, { headers: { accept: 'application/dns-json' } });
   if (!res.ok) throw new Error(`DoH ${res.status}`);
   const data = await res.json();
   const want = RR_TYPE[type];
-  return (data.Answer || []).filter(a => a.type === want).map(a => a.data || '');
+  const answers = (data.Answer || []).filter(a => a.type === want).map(a => a.data || '');
+  answers.ad = !!data.AD;
+  return answers;
 }
 
 function decodeCAA(hex) {
@@ -96,5 +99,13 @@ describeOrSkip('Live DNS — canonical records for webagentbridge.com', () => {
     expect(r.ok).toBe(true);
     const decoded = r.answers.map(decodeCAA).join(' | ');
     assertOrWarn('CAA iodef', /iodef/i.test(decoded) && /mailto:/i.test(decoded), `got: ${decoded}`);
+  });
+
+  test('DNSSEC AD flag on _wab (warn only — roadmap)', async () => {
+    if (!online) return;
+    const r = await safeQuery(`_wab.${DOMAIN}`, 'TXT');
+    expect(r.ok).toBe(true);
+    // We do not require AD=1 yet; this test surfaces zone DNSSEC status in CI logs.
+    assertOrWarn('DNSSEC AD on _wab', r.answers.ad === true, `AD=${r.answers.ad} — enable DS at registrar to validate`);
   });
 });

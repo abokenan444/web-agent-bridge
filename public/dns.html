@@ -204,6 +204,37 @@
       </div>
     </div>
 
+    <!-- ═══════════════ PRIVACY MODEL ═══════════════ -->
+    <div class="card" id="privacy">
+      <h3 data-en="DNS Privacy Model — what DoH does and does not protect" data-ar="نموذج خصوصية DNS — ما الذي يحميه DoH وما لا يحميه">DNS Privacy Model — what DoH does and does not protect</h3>
+      <p data-en="WAB Discovery never uses plain UDP DNS. Every lookup of _wab.example.com uses DNS over HTTPS (DoH), so the query is encrypted between the agent and the resolver. This is a real privacy upgrade — but it is not perfect, and we want you to understand the exact threat model." data-ar="لا يستخدم اكتشاف WAB أبداً DNS التقليدي عبر UDP. كل استعلام لـ _wab.example.com يتم عبر DNS over HTTPS (DoH)، فيكون مشفراً بين الوكيل والمحلل. هذه تحسين خصوصية حقيقي — لكنه ليس مثالياً، ونريد أن تفهم نموذج التهديد بدقة.">WAB Discovery never uses plain UDP DNS. Every lookup of <code>_wab.example.com</code> uses DNS over HTTPS (DoH), so the query is encrypted between the agent and the resolver.</p>
+      <table class="table">
+        <thead><tr><th data-en="Threat" data-ar="التهديد">Threat</th><th data-en="Plain DNS (UDP/53)" data-ar="DNS عادي (UDP/53)">Plain DNS</th><th>WAB DoH</th></tr></thead>
+        <tbody>
+          <tr><td data-en="ISP / network observer sees lookup" data-ar="مزود الإنترنت يرى الاستعلام">ISP / network observer sees lookup</td><td><span class="danger">✗ visible cleartext</span></td><td><span class="ok">✓ encrypted (TLS 1.3)</span></td></tr>
+          <tr><td data-en="DoH provider sees lookup" data-ar="مزود DoH يرى الاستعلام">DoH provider sees lookup</td><td><span class="warn">— (not used)</span></td><td><span class="warn">⚠ visible to chosen resolver</span></td></tr>
+          <tr><td data-en="Reply tampered in transit (cache poisoning)" data-ar="تلاعب بالرد أثناء النقل">Reply tampered in transit</td><td><span class="danger">✗ trivial on-path</span></td><td><span class="ok">✓ TLS prevents on-path tamper</span></td></tr>
+          <tr><td data-en="Authoritative record forged at zone level" data-ar="تزوير السجل عند الخادم الرسمي">Authoritative record forged at zone</td><td><span class="danger">✗ no signature</span></td><td><span class="warn" id="dnssecRowState">⚠ DNSSEC recommended</span></td></tr>
+          <tr><td data-en="Provider link leaks via certificate" data-ar="تسرب الهوية عبر الشهادة">Provider link leaks via certificate</td><td>—</td><td><span class="ok">✓ certificate pinning roadmap</span></td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:12px"><strong data-en="Bottom line:" data-ar="الخلاصة:">Bottom line:</strong> <span data-en="DoH moves the trust point from your ISP to your DoH resolver. That is a strict improvement for most users, but you still pick whom to trust. Combine DoH with DNSSEC and certificate pinning for the strongest privacy posture." data-ar="ينقل DoH نقطة الثقة من مزود الإنترنت إلى مزود DoH. هذا تحسين صارم لمعظم المستخدمين، لكنك ما زلت تختار من تثق به. اجمع DoH مع DNSSEC وتثبيت الشهادات للحصول على أقوى وضعية خصوصية.">DoH moves the trust point from your ISP to your DoH resolver — a strict improvement, but you still pick whom to trust. Combine DoH with DNSSEC and certificate pinning for the strongest posture.</span></p>
+      <p><strong data-en="DNSSEC live status for webagentbridge.com:" data-ar="حالة DNSSEC المباشرة لـ webagentbridge.com:">DNSSEC live status for webagentbridge.com:</strong> <span id="dnssecLiveStatus" class="warn">…</span></p>
+    </div>
+
+    <!-- ═══════════════ SILENT HANDSHAKE ═══════════════ -->
+    <div class="card" id="silent-handshake">
+      <h3 data-en="Silent Handshake — agent-aware sites, zero cookie banners" data-ar="المصافحة الصامتة — مواقع تفهم الوكلاء بدون نوافذ كوكيز">Silent Handshake — agent-aware sites, zero cookie banners</h3>
+      <p data-en="When a WAB-aware site advertises _wab and _wab-trust over DNS, the visiting agent and the site can negotiate intent in the background — no privacy popup, no cookie banner, no consent click-fest. The site declares 'I respect your agent, here is the contract' once, in DNS, signed and cacheable." data-ar="عندما يعلن موقع متوافق مع WAB عن _wab و _wab-trust في DNS، يمكن للوكيل الزائر والموقع أن يتفاوضا في الخلفية — بدون نوافذ خصوصية ولا بانر كوكيز ولا نقرات موافقة. يعلن الموقع مرة واحدة في DNS: «أنا أحترم وكيلك، هذا هو العقد».">When a WAB-aware site advertises <code>_wab</code> and <code>_wab-trust</code> over DNS, the agent and site negotiate intent in the background — no privacy popup, no cookie banner, no consent click-fest.</p>
+      <ol>
+        <li data-en="Agent resolves _wab.{site} over DoH → discovers wab.json endpoint." data-ar="يستعلم الوكيل عن _wab.{site} عبر DoH → يكتشف نقطة wab.json.">Agent resolves <code>_wab.{site}</code> over DoH → discovers <code>wab.json</code> endpoint.</li>
+        <li data-en="Agent resolves _wab-trust.{site} → reads contract: data scope, rate limits, complaint channel." data-ar="يستعلم عن _wab-trust.{site} → يقرأ العقد: نطاق البيانات، الحدود، قناة الشكوى.">Agent resolves <code>_wab-trust.{site}</code> → reads contract: data scope, rate limits, complaint channel.</li>
+        <li data-en="Agent fetches wab.json, signs request with its key, site responds with structured commands." data-ar="يجلب الوكيل wab.json ويوقّع الطلب بمفتاحه، فيرد الموقع بأوامر بنيوية.">Agent fetches <code>wab.json</code>, signs request with its key, site responds with structured commands.</li>
+        <li data-en="Both sides record outcome to their audit ledger. No human pixels harmed." data-ar="يسجّل الطرفان النتيجة في سجل التدقيق. بدون أي نوافذ مزعجة للمستخدم.">Both sides record outcome to their audit ledger. No human pixels harmed.</li>
+      </ol>
+      <p style="margin-top:10px"><strong data-en="SEO upside:" data-ar="مكسب السيو:">SEO upside:</strong> <span data-en="WAB-discoverable sites get prioritized by agent traffic, return data faster (less scraping overhead), and reduce server load. Sites that opt in are surfaced first in agent search results — the opposite of the cookie-wall tax." data-ar="المواقع المُكتشَفة عبر WAB تحصل على أولوية في زيارات الوكلاء، وترد بالبيانات أسرع (دون عبء الكشط)، وتخفف حمل السيرفر. المواقع التي تنضم تظهر أولاً في نتائج الوكلاء — عكس ضريبة جدار الكوكيز.">WAB-discoverable sites get prioritized by agent traffic, return data faster (less scraping overhead), and reduce server load. Opt-in sites surface first in agent search results — the opposite of the cookie-wall tax.</span></p>
+    </div>
+
     <!-- ═══════════════ SETUP GUIDES ═══════════════ -->
     <div class="grid" id="setup">
       <div class="card">
@@ -392,13 +423,37 @@ curl -s -H 'accept: application/dns-json' \
     }
 
     async function _doh(name, type){
+      // do=1 asks Cloudflare to set the AD flag when the answer is DNSSEC-validated.
       const url = 'https://cloudflare-dns.com/dns-query?name=' +
-        encodeURIComponent(name) + '&type=' + encodeURIComponent(type);
+        encodeURIComponent(name) + '&type=' + encodeURIComponent(type) + '&do=1';
       const res = await fetch(url, { headers: { 'accept': 'application/dns-json' } });
       const data = await res.json();
       const want = RR_TYPE[type];
-      return (data.Answer || []).filter(a => a.type === want)
+      const answers = (data.Answer || []).filter(a => a.type === want)
         .map(a => _normalizeAnswer(a, type));
+      // Attach AD flag (DNSSEC validated) as a non-enumerable property
+      Object.defineProperty(answers, '_ad', { value: !!data.AD, enumerable: false });
+      return answers;
+    }
+
+    async function checkDnssecForWab(){
+      const el = document.getElementById('dnssecLiveStatus');
+      const rowState = document.getElementById('dnssecRowState');
+      if (!el) return;
+      try {
+        const ans = await _doh('_wab.webagentbridge.com', 'TXT');
+        if (ans._ad) {
+          el.className = 'ok';
+          el.textContent = '✓ DNSSEC validated (AD=1) at resolver';
+          if (rowState) { rowState.className = 'ok'; rowState.textContent = '✓ DNSSEC validated'; }
+        } else {
+          el.className = 'warn';
+          el.textContent = '⚠ DNSSEC not yet enabled on this zone (AD=0). Roadmap: enable DS at registrar.';
+        }
+      } catch {
+        el.className = 'warn';
+        el.textContent = '… could not verify (DoH unreachable)';
+      }
     }
 
     async function checkCanonicalRecords(){
@@ -434,6 +489,7 @@ curl -s -H 'accept: application/dns-json' \
     document.addEventListener('DOMContentLoaded', () => {
       // Don't block the page; run the live checks in the background.
       checkCanonicalRecords().catch(()=>{});
+      checkDnssecForWab().catch(()=>{});
     });
   </script>
 

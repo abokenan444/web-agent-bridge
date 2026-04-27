@@ -34,6 +34,7 @@ require_once WAB_PLUGIN_DIR . 'includes/class-wab-metabox.php';
 require_once WAB_PLUGIN_DIR . 'includes/class-wab-loader.php';
 require_once WAB_PLUGIN_DIR . 'includes/class-wab-dashboard-widget.php';
 require_once WAB_PLUGIN_DIR . 'includes/class-wab-discovery.php';
+require_once WAB_PLUGIN_DIR . 'includes/class-wab-sovereign.php';
 
 /**
  * Initialize plugin.
@@ -46,6 +47,7 @@ function wab_init() {
 	WAB_Loader::instance();
 	WAB_Dashboard_Widget::instance();
 	WAB_Discovery::instance();
+	WAB_Sovereign::instance();
 }
 add_action( 'plugins_loaded', 'wab_init' );
 
