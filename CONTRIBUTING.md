@@ -1,47 +1,66 @@
-# Contributing to Web Agent Bridge
+# Contributing to Web Agent Bridge (WAB)
 
-Thank you for your interest in contributing to Web Agent Bridge! This project aims to create a standardized interface for AI agents to interact with websites safely and efficiently.
+First off, thank you for considering contributing to Web Agent Bridge! It's people like you that make WAB such a great tool for the community. This project aims to create a standardized interface for AI agents to interact with websites safely and efficiently.
 
-## How to Contribute
+## Code of Conduct
+
+By participating in this project, you are expected to uphold our Code of Conduct. Please treat everyone with respect and kindness. Focus on constructive feedback and help newcomers feel welcome.
+
+## How Can I Contribute?
 
 ### Reporting Bugs
 
-- Open an [issue](../../issues) with a clear title and description
-- Include steps to reproduce the bug
-- Add browser/OS/Node.js version details
-- Include error messages or screenshots if applicable
+This section guides you through submitting a bug report for WAB. Following these guidelines helps maintainers and the community understand your report, reproduce the behavior, and find related reports.
 
-### Suggesting Features
+- **Check existing issues:** Before creating a new issue, please check if it has already been reported.
+- **Use the Bug Report template:** When you create an issue, please use the provided template in `.github/ISSUE_TEMPLATE/` and fill out all the required information.
+- **Provide context:** Include details about your environment (OS, Node.js version, browser) and steps to reproduce the bug.
+- **Include error messages:** Add logs or screenshots if applicable.
 
-- Open an issue with the `enhancement` label
-- Describe the feature and its use case
-- Explain how it would benefit AI agent interactions
+### Suggesting Enhancements
+
+This section guides you through submitting an enhancement suggestion for WAB, including completely new features and minor improvements to existing functionality.
+
+- **Check existing issues and discussions:** Your idea might already be planned or under discussion in our [GitHub Discussions](https://github.com/abokenan444/web-agent-bridge/discussions).
+- **Use the Feature Request template:** Clearly describe the feature, the problem it solves, and how it should work.
 
 ### Pull Requests
 
-1. **Fork** the repository
-2. **Create a branch** for your feature: `git checkout -b feature/my-feature`
-3. **Make your changes** and test them
-4. **Commit** with clear messages: `git commit -m "Add: description of change"`
-5. **Push** to your fork: `git push origin feature/my-feature`
-6. **Open a Pull Request** against the `main` branch
+The process described here has several goals:
+- Maintain WAB's quality
+- Fix problems that are important to users
+- Engage the community in working toward the best possible WAB
 
-### Development Setup
+Please follow these steps to have your contribution considered by the maintainers:
 
-```bash
-# Clone the repo
-git clone https://github.com/abokenan444/web-agent-bridge.git
-cd web-agent-bridge
+1. **Fork the repository** and create your branch from `master` (e.g., `git checkout -b feature/my-feature`).
+2. **Make your changes:** Write clean, documented code.
+3. **Test your changes:** Ensure your changes do not break existing functionality. Run `npm test`.
+4. **Update documentation:** If you change the API or add a new feature, update the relevant `README.md` and documentation files.
+5. **Commit your changes:** Use clear and descriptive commit messages (see format below).
+6. **Submit a Pull Request:** Fill out the PR template and link any relevant issues.
 
-# Install dependencies
-npm install
+## Development Environment Setup
 
-# Create .env file
-cp .env.example .env
-
-# Start development server
-npm start
-```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/abokenan444/web-agent-bridge.git
+   cd web-agent-bridge
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create `.env` file:
+   ```bash
+   cp .env.example .env
+   ```
+4. Start the development server:
+   ```bash
+   npm run dev
+   # or
+   npm start
+   ```
 
 The server runs on `http://localhost:3000`.
 
@@ -50,36 +69,9 @@ The server runs on `http://localhost:3000`.
 ```bash
 npm test
 ```
-
 Tests run with `NODE_ENV=test` and use a separate SQLite database (`data-test/`) to avoid touching production data.
 
-### Running with PostgreSQL (Docker)
-
-```bash
-# Start PostgreSQL
-docker run -d --name wab-postgres -p 5432:5432 \
-  -e POSTGRES_DB=wab -e POSTGRES_USER=wab -e POSTGRES_PASSWORD=wab123 \
-  postgres:16-alpine
-
-# Install driver & run
-npm install pg
-DB_ADAPTER=postgresql DATABASE_URL=postgres://wab:wab123@localhost:5432/wab npm start
-```
-
-### Running with MySQL (Docker)
-
-```bash
-# Start MySQL
-docker run -d --name wab-mysql -p 3306:3306 \
-  -e MYSQL_DATABASE=wab -e MYSQL_ROOT_PASSWORD=wab123 \
-  mysql:8
-
-# Install driver & run
-npm install mysql2
-DB_ADAPTER=mysql DATABASE_URL=mysql://root:wab123@localhost:3306/wab npm start
-```
-
-### Project Structure
+## Project Structure
 
 ```
 server/          → Express.js backend (API, auth, licensing)
@@ -92,16 +84,15 @@ sdk/             → Agent SDK for building AI agents
 examples/        → Ready-to-run agent examples
 bin/             → CLI entry point (npx web-agent-bridge)
 tests/           → Jest test suite
-scripts/         → Build tools
+integrations/    → Hosting and deployment integrations
 ```
 
-### Code Guidelines
+## Coding Standards
 
-- Follow existing code style and patterns
-- Keep functions small and focused
-- Add comments for complex logic only
-- Test your changes before submitting
-- Ensure no security vulnerabilities are introduced
+- Follow existing code style and patterns.
+- Keep functions small and focused.
+- Add comments for complex logic only.
+- Ensure no security vulnerabilities are introduced.
 
 ### Commit Message Format
 
@@ -113,16 +104,16 @@ Remove: what was removed
 Docs: documentation changes
 ```
 
-## Code of Conduct
+## Open Core Model
 
-- Be respectful and inclusive
-- Focus on constructive feedback
-- Help newcomers feel welcome
+Please note that WAB operates on an **Open Core** model. While the core protocol and many features are open-source (MIT), some advanced features and integrations may be proprietary or require a commercial license. 
 
-## Questions?
-
-Open an issue or start a discussion. We're happy to help!
+When contributing, ensure your changes apply to the open-source components unless you are explicitly working on a premium feature in coordination with the maintainers.
 
 ## License
 
 By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+
+---
+
+Thank you for contributing! 🚀

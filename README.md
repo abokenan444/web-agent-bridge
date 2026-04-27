@@ -1,6 +1,7 @@
 # Web Agent Bridge (WAB)
 
 [![npm](https://img.shields.io/npm/v/web-agent-bridge)](https://www.npmjs.com/package/web-agent-bridge)
+[![npm downloads](https://img.shields.io/npm/dm/web-agent-bridge?label=npm%20downloads&color=red)](https://www.npmjs.com/package/web-agent-bridge)
 [![CI](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml)
 [![License: Open Core](https://img.shields.io/badge/License-Open_Core-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
