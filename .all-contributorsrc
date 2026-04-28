@@ -1,0 +1,30 @@
+{
+  "projectName": "web-agent-bridge",
+  "projectOwner": "abokenan444",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitConvention": "none",
+  "contributors": [
+    {
+      "login": "abokenan444",
+      "name": "WAB Founder",
+      "avatar_url": "https://avatars.githubusercontent.com/u/abokenan444",
+      "profile": "https://github.com/abokenan444",
+      "contributions": [
+        "code",
+        "ideas",
+        "doc",
+        "design",
+        "maintenance",
+        "projectManagement"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "skipCi": true
+}

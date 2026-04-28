@@ -2,6 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/web-agent-bridge)](https://www.npmjs.com/package/web-agent-bridge)
 [![npm downloads](https://img.shields.io/npm/dm/web-agent-bridge?label=npm%20downloads&color=red)](https://www.npmjs.com/package/web-agent-bridge)
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
 [![CI](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml)
 [![License: Open Core](https://img.shields.io/badge/License-Open_Core-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
@@ -1740,3 +1741,22 @@ WAB uses an **Open Core** dual-license model:
 | DNS Discovery Docs | `DNS-DISCOVERY.md` | MIT | Fully open source |
 
 See [LICENSE](LICENSE) for full details.
+
+## Contributors ✨
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/abokenan444"><img src="https://avatars.githubusercontent.com/u/abokenan444?s=100" width="100px;" alt="WAB Founder"/><br /><sub><b>WAB Founder</b></sub></a><br /><a href="https://github.com/abokenan444/web-agent-bridge/commits?author=abokenan444" title="Code">💻</a> <a href="#ideas-abokenan444" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/abokenan444/web-agent-bridge/commits?author=abokenan444" title="Documentation">📖</a> <a href="#design-abokenan444" title="Design">🎨</a> <a href="#maintenance-abokenan444" title="Maintenance">🚧</a> <a href="#projectManagement-abokenan444" title="Project Management">📆</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
