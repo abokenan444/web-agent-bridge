@@ -1,6 +1,6 @@
 {
   "name": "web-agent-bridge",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Open AI↔Web protocol & agent platform: standardized command interface, sovereign browser, phone shield, DNS discovery, agent mesh, and unified API gateway for safe AI–website interaction",
   "author": "Web Agent Bridge <dev@webagentbridge.com>",
   "main": "server/index.js",
