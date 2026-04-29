@@ -1130,6 +1130,141 @@ For high-security environments, the Bridge MAY require command signing:
 
 The `signature` field is an HMAC-SHA256 of the canonical JSON representation of `method` + `params`, keyed with a shared secret established during authentication.
 
+### 8.9 Scoped Session Tokens (Safety Shield)
+
+> **Status:** REQUIRED for new clients. Tokens issued without an explicit
+> `scope` field MUST be treated as legacy unscoped tokens (`admin:*:*`) and
+> SHOULD trigger a deprecation warning in the issuer's audit log.
+
+#### 8.9.1 Motivation
+
+A session token granted for one environment (e.g. `staging`) or one access
+level (e.g. read-only analytics) MUST NOT be usable to perform a destructive
+operation in production. This is the primary defence against the
+"compromised-or-confused agent" failure mode in which a single broad token
+straddles environments and lets a runaway agent execute irreversible
+commands (database drops, volume deletions, mass account purges).
+
+#### 8.9.2 Scope Tuple
+
+A scope is a triplet `(access, env, resources)`:
+
+| Field        | Values                                                  | Default     |
+|--------------|---------------------------------------------------------|-------------|
+| `access`     | `read` &lt; `write` &lt; `admin` (strict hierarchy)     | `read`      |
+| `env`        | `sandbox` \| `staging` \| `production` \| `*`           | `*`         |
+| `resources`  | array of glob patterns (`"*"`, `"orders.*"`, `"a/b/*"`) | `["*"]`     |
+
+Compact string form: `access:env[,env]:resource[,resource]`.
+Object form: `{ "access": "read", "env": ["staging"], "resources": ["*"] }`.
+
+Aliases accepted by the parser: `readonly`/`ro` → `read`; `rw` → `write`;
+`full` → `admin`; `prod`/`live` → `production`; `dev`/`development` → `sandbox`.
+
+#### 8.9.3 Default Destructive Verb List
+
+The Bridge MUST treat the following verbs (case-insensitive, token-split on
+`. - _ / : whitespace`) as **destructive** by default:
+
+```
+delete, destroy, drop, truncate, purge, wipe, erase,
+remove, unlink, rm, rmdir,
+reset, reinit, reformat, format,
+shutdown, terminate, kill,
+revoke, disable, deactivate,
+volume-delete, db-drop, database-drop
+```
+
+Sites MAY extend or override this list via two `wab.json` fields:
+
+```jsonc
+{
+  "destructiveActions":   ["finalize-invoice", "refund-all"],
+  "nonDestructiveActions": ["delete-draft"]   // suppress a default verb
+}
+```
+
+A read-scope token MUST be denied with `DESTRUCTIVE_REQUIRES_WRITE` if the
+target action matches the destructive list. `admin` access subsumes `write`
+for destructive operations; `read` never does.
+
+#### 8.9.4 Authorisation Algorithm
+
+For every command (`name`, `env`, `resource`, optional `action_kind`) the
+Bridge MUST evaluate, in order:
+
+1. **Environment match.** If `scope.env` ≠ `*` and the command's `env` is
+   not in `scope.env`, deny with `ENV_MISMATCH`.
+2. **Destructive gate.** If the action is destructive (per §8.9.3) and
+   `scope.access == read`, deny with `DESTRUCTIVE_REQUIRES_WRITE`.
+3. **Access level.** Compute the required access level:
+   - explicit `action_kind` if present, else
+   - `read` if name matches `^(read|get|list|search|find|view|page-info|ping|discover|actions)`, else
+   - `write`.
+
+   If `rank(scope.access) < rank(required)`, deny with
+   `READONLY_VIOLATION` (when the gap is read→write) or `INSUFFICIENT_SCOPE`.
+4. **Resource glob.** If a `resource` is supplied and no pattern in
+   `scope.resources` covers it, deny with `RESOURCE_OUT_OF_SCOPE`.
+
+#### 8.9.5 Delegation (Intersection Rule)
+
+Tokens MAY delegate by issuing narrower sub-tokens. The Bridge MUST compute
+the **intersection** of parent and child scopes and MUST NOT permit the
+child to widen any axis:
+
+| Axis        | Rule                                                                |
+|-------------|---------------------------------------------------------------------|
+| `access`    | child rank ≤ parent rank                                            |
+| `env`       | child env set ⊆ parent env set (`*` inherits parent)               |
+| `resources` | every child glob covered by ≥ 1 parent glob (`*` inherits parent)  |
+
+Any violation MUST be rejected at issuance with `INSUFFICIENT_SCOPE` or
+`ENV_MISMATCH` — never silently downgraded.
+
+#### 8.9.6 Error Codes
+
+| Code                          | HTTP | Meaning                                                  |
+|-------------------------------|------|----------------------------------------------------------|
+| `INVALID_SCOPE`               | 400  | Scope string/object did not parse.                       |
+| `INSUFFICIENT_SCOPE`          | 403  | Token lacks the required access level.                   |
+| `READONLY_VIOLATION`          | 403  | Read-scope token attempted a write.                      |
+| `DESTRUCTIVE_REQUIRES_WRITE`  | 403  | Destructive verb used by a read-scope token.             |
+| `ENV_MISMATCH`                | 403  | Token environment does not include the requested env.    |
+| `RESOURCE_OUT_OF_SCOPE`       | 403  | Resource glob does not cover the target.                 |
+
+#### 8.9.7 Wire Format
+
+`POST /api/wab/authenticate` and `POST /api/license/token` accept an
+optional `scope` field (string or object form). The response MUST echo
+the canonical scope back:
+
+```http
+POST /api/wab/authenticate
+{
+  "siteId": "site_abc",
+  "scope": "read:staging"
+}
+
+200 OK
+{
+  "type": "success",
+  "result": {
+    "authenticated": true,
+    "token": "…",
+    "scope": "read:staging:*"
+  }
+}
+```
+
+#### 8.9.8 Reference Implementation
+
+`server/security/token-scope.js` (this repository, MIT) — pure functional
+authoriser tested across &gt;40 cases including environment isolation,
+destructive-verb edge cases, and delegation intersection. Verifiers in
+other languages MUST produce the same allow/deny verdict for every test
+vector in `tests/scoped-tokens.test.js`.
+
 ---
 
 ## 9. Fairness Protocol

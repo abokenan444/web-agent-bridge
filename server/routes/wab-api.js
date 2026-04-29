@@ -14,6 +14,7 @@ const { findSiteById, findSiteByLicense, recordAnalytic, db } = require('../mode
 const { broadcastAnalytic } = require('../ws');
 const { wabAuthenticateLimiter, wabActionLimiter, searchLimiter } = require('../middleware/rateLimits');
 const { auditLog } = require('../services/security');
+const tokenScope = require('../security/token-scope');
 
 // Fairness module is proprietary — provide stubs when not available
 let calculateNeutralityScore, fairnessWeightedSearch, getDirectoryListings, generateFairnessReport;
@@ -97,9 +98,17 @@ function buildErrorResponse(id, code, message) {
 
 router.post('/authenticate', wabAuthenticateLimiter, (req, res) => {
   try {
-    const { siteId, apiKey, meta } = req.body;
+    const { siteId, apiKey, meta, scope: requestedScope } = req.body;
     if (!siteId && !apiKey) {
       return res.status(400).json(buildErrorResponse(null, 'invalid_argument', 'siteId or apiKey required'));
+    }
+
+    // SPEC §8.7 — parse caller-requested scope. Absent = legacy unscoped (admin/*).
+    let scope;
+    try {
+      scope = tokenScope.parseScope(requestedScope);
+    } catch (e) {
+      return res.status(400).json(buildErrorResponse(null, 'invalid_scope', e.message));
     }
 
     let site;
@@ -142,6 +151,7 @@ router.post('/authenticate', wabAuthenticateLimiter, (req, res) => {
       tier: site.tier,
       domain: site.domain,
       agentMeta: meta || {},
+      scope,
       createdAt: Date.now(),
       expiresAt: Date.now() + SESSION_TTL
     });
@@ -152,7 +162,8 @@ router.post('/authenticate', wabAuthenticateLimiter, (req, res) => {
       siteId: site.id,
       tier: site.tier,
       expiresIn: SESSION_TTL / 1000,
-      permissions: parseSiteConfig(site).agentPermissions || {}
+      permissions: parseSiteConfig(site).agentPermissions || {},
+      scope: tokenScope.formatScope(scope)
     }));
   } catch (err) {
     res.status(500).json(buildErrorResponse(null, 'internal', 'Authentication failed'));
@@ -226,6 +237,34 @@ router.post('/actions/:name', requireSession, wabActionLimiter, (req, res) => {
 
     const config = parseSiteConfig(site);
     const perms = config.agentPermissions || {};
+
+    // SPEC §8.7 — token scope gate. Site config may declare
+    // `environment` ("production" by default), `destructiveActions[]`,
+    // and `nonDestructiveActions[]` to extend the default policy.
+    const sessionScope = req.wabSession.scope;
+    if (sessionScope) {
+      const decision = tokenScope.authorize(sessionScope, {
+        name: actionName,
+        env: config.environment || 'production',
+        resource: req.body?.resource,
+        action_kind: req.body?.action_kind,
+      }, config);
+      if (!decision.allowed) {
+        auditLog({
+          actorType: 'agent',
+          action: 'scope_denied',
+          details: { actionName, code: decision.code, reason: decision.reason, siteId: site.id },
+          ip: req.ip,
+          outcome: 'denied',
+          severity: 'warning',
+        });
+        return res.status(403).json(buildErrorResponse(
+          req.body?.id,
+          decision.code,
+          decision.reason
+        ));
+      }
+    }
 
     const permMap = {
       click: 'click', fill_and_submit: 'fillForms', scroll: 'scroll',

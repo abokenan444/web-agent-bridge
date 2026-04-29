@@ -11,6 +11,7 @@ const {
 const { broadcastAnalytic } = require('../ws');
 const { cache, AnalyticsQueue } = require('../utils/cache');
 const { licenseTokenLimiter, licenseTrackLimiter } = require('../middleware/rateLimits');
+const tokenScope = require('../security/token-scope');
 
 const analyticsQueue = new AnalyticsQueue(db, { maxSize: 50, maxBufferTotal: 5000 });
 
@@ -88,9 +89,17 @@ router.post('/verify', (req, res) => {
 
 // ─── Token exchange: siteId (preferred) or licenseKey (legacy) ─────
 router.post('/token', licenseTokenLimiter, (req, res) => {
-  const { licenseKey, siteId } = req.body;
+  const { licenseKey, siteId, scope: requestedScope } = req.body;
   const domain = getRequestHostname(req);
   const normReq = normalizeHost(domain);
+
+  // SPEC §8.7 — parse caller-requested scope. Absent = legacy unscoped.
+  let scope;
+  try {
+    scope = tokenScope.parseScope(requestedScope);
+  } catch (e) {
+    return res.status(400).json({ error: 'invalid_scope', message: e.message });
+  }
 
   const finishSession = (site, result) => {
     const sessionToken = crypto.randomBytes(32).toString('hex');
@@ -100,6 +109,7 @@ router.post('/token', licenseTokenLimiter, (req, res) => {
       domain: site.domain,
       tier: result.tier,
       permissions: result.allowedPermissions,
+      scope,
       expiresAt
     });
     res.json({
@@ -107,6 +117,7 @@ router.post('/token', licenseTokenLimiter, (req, res) => {
       siteId: site.id,
       tier: result.tier,
       permissions: result.allowedPermissions,
+      scope: tokenScope.formatScope(scope),
       expiresIn: SESSION_TTL / 1000
     });
   };
