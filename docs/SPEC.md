@@ -1267,6 +1267,344 @@ vector in `tests/scoped-tokens.test.js`.
 
 ---
 
+### 8.10 Mandatory Dry-Run (Safety Shield Module 3)
+
+#### 8.10.1 Motivation
+
+The 2024 PocketOS incident — a single agent deletes a production database
+*and* its backups in nine seconds — established the need for an
+*irreversibility brake* below the scope-token layer. Even an admin-scope
+token MUST NOT be enough to one-shot a destructive action; the agent
+MUST first issue a `dry_run: true` request, receive a server-issued
+plan that summarises what *would* happen, and only then retry with
+`dry_run: false` carrying the plan id.
+
+#### 8.10.2 Wire Format
+
+```http
+POST /api/wab/actions/{name}                             # phase 1
+Authorization: Bearer <token>
+Content-Type: application/json
+{ "dry_run": true, "params": { ... } }
+```
+
+200 response:
+
+```json
+{ "type": "success", "result": {
+    "dry_run": true,
+    "plan_id": "wabp_<32 hex>",
+    "expires_at": "2025-01-01T12:05:00Z",
+    "simulated": {
+      "would_affect": ["site:s1", "action:deleteVolume"],
+      "side_effects": ["deleteVolume"],
+      "reversible": false,
+      "summary": "Would execute …"
+    }
+}}
+```
+
+```http
+POST /api/wab/actions/{name}                             # phase 2
+{ "dry_run": false, "plan_id": "wabp_…", "params": { … same as phase 1 } }
+```
+
+#### 8.10.3 Plan Bindings
+
+A plan is bound to four axes; any drift invalidates it:
+
+1. session token (fingerprinted via `sha256` truncated to 16 hex)
+2. site id
+3. action name
+4. canonical hash of `params` (sorted keys, recursive)
+
+Plans are single-use and consumed on success.
+
+#### 8.10.4 Lifetimes & Limits
+
+| knob              | default | max     |
+|-------------------|---------|---------|
+| TTL               | 5 min   | 60 min  |
+| Plan store size   | —       | 5 000 entries (LRU eviction at 90 % cap) |
+
+A multi-instance Bridge MUST back the plan store with a shared store
+(Redis recommended); the in-memory implementation in this repo is
+correct for single-process deployments and tests.
+
+#### 8.10.5 Site Policy Knobs
+
+```json
+"dryRunPolicy":  "auto" | "off" | "always",   // default "auto"
+"destructiveActions":   ["finalize-invoice"], // extends default verbs
+"nonDestructiveActions":["delete-draft"]      // suppresses
+```
+
+`auto` defers to the default destructive-verb list (see §8.9.4); `always`
+gates every action; `off` disables the gate entirely (only for fully
+isolated sandboxes).
+
+#### 8.10.6 Error Codes (HTTP 412)
+
+| code                       | meaning |
+|----------------------------|---------|
+| `DRY_RUN_REQUIRED`         | destructive call without prior plan |
+| `DRY_RUN_PLAN_NOT_FOUND`   | unknown / already-consumed `plan_id` |
+| `DRY_RUN_PLAN_MISMATCH`    | session, site, action, or params drifted |
+| `DRY_RUN_PLAN_EXPIRED`     | plan past TTL |
+
+#### 8.10.7 Reference Implementation
+
+`server/security/dry-run.js` (this repository, MIT) — pure functional
+plan store + classifier. 30 jest cases in `tests/dry-run.test.js`.
+
+---
+
+### 8.11 Out-of-Band Human Gate (Safety Shield Module 1)
+
+#### 8.11.1 Motivation
+
+Even with scoped tokens *and* a dry-run plan, a fully-prompt-injected
+agent can self-confirm by sending a `dry_run: false` retry. The fix is
+an approval channel the agent **cannot see** — Telegram, WhatsApp, email,
+Slack, or any operator-supplied transport. The Bridge generates a
+6-digit numeric code, sends it via the configured transport, and
+withholds execution until a human approves OOB.
+
+#### 8.11.2 Wire Format
+
+Phase 1 — agent attempts a gated action:
+
+```http
+POST /api/wab/actions/{name}        →  202 Accepted
+{
+  "type": "error",
+  "error": {
+    "code": "HUMAN_GATE_REQUIRED",
+    "challenge_id": "wabh_<32 hex>",
+    "expires_at": "…",
+    "dispatched_to": "telegram:…|whatsapp:…|email:…"
+  }
+}
+```
+
+Phase 2 — human approves OOB:
+
+```http
+POST /api/wab/human-gate/approve
+{ "challenge_id": "wabh_…", "code": "473820" }
+```
+
+Phase 3 — agent retries, supplying the (now approved) `confirmation_id`:
+
+```http
+POST /api/wab/actions/{name}
+{ "params": {…}, "confirmation_id": "wabh_…" }
+```
+
+#### 8.11.3 Bindings, States & Single-Use
+
+Approvals are bound to (sessionFingerprint, siteId, actionName,
+paramsHash) — same axes as dry-run. State machine:
+
+```
+pending ─approve→ approved ─consume→ consumed
+   │                               
+   └─reject→ rejected                
+```
+
+5 wrong code attempts on a single challenge transitions it directly to
+`rejected` with reason `too_many_attempts`. Approved challenges are
+single-use; consumption is atomic.
+
+#### 8.11.4 Tier Gating & Activation
+
+The gate is enabled by `siteConfig.humanGate.enabled === true` AND one
+of:
+
+- site tier ∈ {`pro`, `premium`, `enterprise`}, OR
+- `siteConfig.humanGate.force === true` (free-tier opt-in for safety).
+
+#### 8.11.5 Transports
+
+Pluggable: `humanGate.setTransport(name, fn)`. Default `null` is a
+no-op (operator must use admin peek). Implementations SHOULD support
+at minimum: telegram, whatsapp-cloud-api, generic-webhook, smtp.
+
+#### 8.11.6 Error Codes
+
+| code                      | HTTP | meaning                                  |
+|---------------------------|------|------------------------------------------|
+| `HUMAN_GATE_REQUIRED`     | 202  | first attempt — challenge issued         |
+| `HUMAN_GATE_PENDING`      | 425  | retry while approval is still pending    |
+| `HUMAN_GATE_REJECTED`     | 403  | human rejected the action                |
+| `HUMAN_GATE_MISMATCH`     | 403  | bindings drifted since approval          |
+| `HUMAN_GATE_EXPIRED`      | 403  | challenge past TTL                       |
+| `HUMAN_GATE_CONSUMED`     | 403  | approval already used                    |
+| `HUMAN_GATE_BAD_CODE`     | 401  | wrong code                               |
+| `HUMAN_GATE_LOCKED`       | 429  | 5+ wrong attempts                        |
+| `HUMAN_GATE_NOT_FOUND`    | 404  | unknown challenge_id                     |
+
+#### 8.11.7 Reference Implementation
+
+`server/security/human-gate.js` (this repository, MIT). 27 jest cases
+in `tests/human-gate.test.js`.
+
+---
+
+### 8.12 Intent Analysis Engine (Safety Shield Module 4)
+
+#### 8.12.1 Motivation
+
+A scope-allowed, dry-run-confirmed, human-approved request can still be
+catastrophic if it carries panic-pattern signals (`force=true`,
+`all=*`, large bulk arrays, burst velocity after a failure). The Intent
+Engine adds a **risk score 0..100** computed from the COMPOSITION of the
+request and ESCALATES the gate stack when the score crosses thresholds.
+
+#### 8.12.2 Scoring Model
+
+| signal                                | weight |
+|---------------------------------------|--------|
+| destructive verb                      | +50    |
+| write verb                            | +10    |
+| production environment (write/destructive only) | +30 |
+| staging environment                   | +10    |
+| danger token in params (`force`, `permanent`, `cascade`, …) | +15 each, cap +30 |
+| wildcard target (`*`, `all`)          | +15    |
+| large array (≥20 elements)            | +10    |
+| burst (≥3 destructive ops in 60 s)    | +15    |
+| high velocity (<1 s since last)       | +10    |
+
+Score is capped 0..100. Levels:
+
+| score   | level     | required gate      |
+|---------|-----------|--------------------|
+| 0–29    | low       | none               |
+| 30–69   | medium    | `dry_run`          |
+| 70–89   | high      | `human_gate`       |
+| 90–100  | critical  | `block`            |
+
+#### 8.12.3 Activation
+
+Auto-on for tiers `premium` and `enterprise`; opt-in via
+`config.intentEngine.enabled = true`. Sites may override thresholds and
+add custom rewrites (e.g. `delete-account → archive-account`).
+
+#### 8.12.4 Wire Format
+
+The engine runs *between* permission check and the dry-run gate. On
+`block` the response is HTTP 403:
+
+```json
+{ "type": "error",
+  "error": {
+    "code": "INTENT_BLOCKED",
+    "message": "Request blocked by intent analysis (score=95, level=critical). Reasons: …",
+    "intent": { "score": 95, "level": "critical", "reasons": [...], "verb_class": "destructive", "rewrites": [...] }
+}}
+```
+
+For non-block escalations the engine MUTATES the gate stack: a
+`dry_run` verdict triggers the §8.10 path even on non-default-destructive
+verbs; a `human_gate` verdict triggers §8.11.
+
+#### 8.12.5 Reference Implementation
+
+`server/security/intent-engine.js` (this repository, MIT). 31 jest
+cases in `tests/intent-engine.test.js`.
+
+---
+
+### 8.13 Snapshot & Rollback (Safety Shield Module 5)
+
+#### 8.13.1 Motivation
+
+Defense-in-depth presumes failures. When all upstream gates allow a
+destructive action and that action turns out to be a mistake, an
+**operator break-glass** MUST exist to undo it. Module 5 records a
+before-image of every executed destructive action and exposes admin
+endpoints to restore it.
+
+#### 8.13.2 Schema
+
+```sql
+CREATE TABLE wab_snapshots (
+  id              TEXT PRIMARY KEY,            -- "wabs_<32 hex>"
+  site_id         TEXT NOT NULL,
+  action_name     TEXT NOT NULL,
+  actor_id        TEXT,
+  actor_type      TEXT NOT NULL DEFAULT 'agent',
+  session_fingerprint TEXT,
+  params_hash     TEXT,
+  snapshot        TEXT NOT NULL,               -- opaque JSON
+  meta            TEXT,
+  reversible      INTEGER NOT NULL DEFAULT 1,
+  status          TEXT NOT NULL DEFAULT 'recorded'
+                    CHECK(status IN ('recorded','restored','expired','failed')),
+  created_at      TEXT NOT NULL,
+  restored_at     TEXT,
+  expires_at      TEXT
+);
+```
+
+#### 8.13.3 Lifecycle
+
+`recorded → restored` (success) or `recorded → failed` (restorer
+rejects/throws) or `recorded → expired` (TTL passed). Restoration is
+single-use: a `restored` row cannot be replayed.
+
+#### 8.13.4 Restorer Contract
+
+Each site registers a per-site `restorer` callable via
+`rollback.setRestorer(siteId, fn)`. The function receives:
+
+```ts
+{ snapshot_id: string,
+  site_id: string,
+  action_name: string,
+  params_hash: string,
+  snapshot: any,
+  meta: object }
+```
+
+and returns `{ ok: true }` or `{ ok: false, error: string }`. Throws
+mark the snapshot `failed` with code `RESTORER_THREW`.
+
+#### 8.13.5 Admin Endpoints
+
+Authenticated with the site's `apiKey` via headers `X-WAB-Site-Id` +
+`X-WAB-Api-Key`:
+
+```
+GET  /api/wab/admin/snapshots[?status=recorded&limit=50]
+GET  /api/wab/admin/snapshots/:id
+POST /api/wab/admin/rollback/:id
+```
+
+#### 8.13.6 Auto-Snapshot on Destructive Execution
+
+Activated when:
+
+- site tier = `enterprise`, OR
+- `config.snapshots.enabled === true`.
+
+The Bridge records a snapshot just before executing any action whose
+verb is destructive (per §8.9.4) **or** which the Intent Engine
+classified as `verb_class: 'destructive'`. The returned action result
+includes `snapshot_id` so operators can find it instantly in audit.
+
+#### 8.13.7 TTL & Eviction
+
+Default 30 days. Past-TTL rows are batch-marked `expired` by
+`rollback.expireOld()` (run via cron or on demand).
+
+#### 8.13.8 Reference Implementation
+
+`server/security/rollback-store.js` (this repository, MIT). 20 jest
+cases in `tests/rollback.test.js`.
+
+---
+
 ## 9. Fairness Protocol
 
 ### 9.1 The Neutrality Layer

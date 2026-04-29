@@ -15,6 +15,10 @@ const { broadcastAnalytic } = require('../ws');
 const { wabAuthenticateLimiter, wabActionLimiter, searchLimiter } = require('../middleware/rateLimits');
 const { auditLog } = require('../services/security');
 const tokenScope = require('../security/token-scope');
+const dryRun = require('../security/dry-run');
+const humanGate = require('../security/human-gate');
+const intentEngine = require('../security/intent-engine');
+const rollback = require('../security/rollback-store');
 
 // Fairness module is proprietary — provide stubs when not available
 let calculateNeutralityScore, fairnessWeightedSearch, getDirectoryListings, generateFairnessReport;
@@ -88,8 +92,10 @@ function buildCommandResponse(id, result) {
   return { id: id || null, type: 'success', protocol: PROTOCOL_VERSION, result };
 }
 
-function buildErrorResponse(id, code, message) {
-  return { id: id || null, type: 'error', protocol: PROTOCOL_VERSION, error: { code, message } };
+function buildErrorResponse(id, code, message, extra) {
+  const error = { code, message };
+  if (extra && typeof extra === 'object') Object.assign(error, extra);
+  return { id: id || null, type: 'error', protocol: PROTOCOL_VERSION, error };
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -229,7 +235,7 @@ router.get('/actions', (req, res) => {
 // POST /api/wab/actions/:name — execute action (with tracking)
 // ═════════════════════════════════════════════════════════════════════
 
-router.post('/actions/:name', requireSession, wabActionLimiter, (req, res) => {
+router.post('/actions/:name', requireSession, wabActionLimiter, async (req, res) => {
   try {
     const actionName = req.params.name;
     const site = findSiteById.get(req.wabSession.siteId);
@@ -277,6 +283,155 @@ router.post('/actions/:name', requireSession, wabActionLimiter, (req, res) => {
         `Action "${actionName}" is not permitted by site configuration`));
     }
 
+    // SPEC §8.12 — Intent Analysis Engine (Premium+ or opt-in).
+    const intentCfg = config.intentEngine || {};
+    const intentEnabled = intentCfg.enabled === false
+      ? false
+      : (intentCfg.enabled === true || ['premium', 'enterprise'].includes(String(site.tier || '').toLowerCase()));
+    let intentVerdict = null;
+    if (intentEnabled) {
+      intentVerdict = intentEngine.score({
+        actorId: req.wabSession?.agentMeta?.name || null,
+        sessionToken: req.get('Authorization')?.slice(7),
+        siteId: site.id,
+        actionName,
+        params: req.body?.params || {},
+        env: config.environment || 'production',
+        tier: site.tier,
+      }, config);
+      if (intentVerdict.required_gate === 'block') {
+        auditLog({
+          actorType: 'agent', action: 'intent_blocked',
+          details: { actionName, score: intentVerdict.score, reasons: intentVerdict.reasons, siteId: site.id },
+          ip: req.ip, outcome: 'blocked', severity: 'critical',
+        });
+        return res.status(403).json(buildErrorResponse(req.body?.id, 'INTENT_BLOCKED',
+          `Request blocked by intent analysis (score=${intentVerdict.score}, level=${intentVerdict.level}). Reasons: ${intentVerdict.reasons.join('; ')}`,
+          { intent: intentVerdict }));
+      }
+    }
+
+    // SPEC §8.10 — Mandatory Dry-Run for destructive actions.
+    const intentForcesDryRun = intentVerdict && intentVerdict.required_gate === 'dry_run';
+    if (dryRun.requiresDryRun(actionName, config) || intentForcesDryRun) {
+      const dryFlag = req.body?.dry_run;
+      const planId = req.body?.plan_id;
+      const ctx = {
+        sessionToken: req.get('Authorization')?.slice(7),
+        siteId: site.id,
+        actionName,
+        params: req.body?.params || {},
+      };
+
+      if (dryFlag === true) {
+        // Generate a plan. The default simulator is conservative — it
+        // surfaces what we know (action, params, target site) and marks
+        // reversible=false. Sites integrating with their own backend MAY
+        // override this via a server-side adapter.
+        const sim = {
+          would_affect: [`site:${site.id}`, `action:${actionName}`],
+          side_effects: [actionName],
+          reversible: false,
+          summary: `Would execute "${actionName}" on site ${site.domain} with the given params. ` +
+                   'No actual changes have been made. Confirm with dry_run:false + plan_id to proceed.',
+        };
+        const envelope = dryRun.createPlan(ctx, sim);
+        auditLog({
+          actorType: 'agent', action: 'dry_run_plan_created',
+          details: { actionName, planId: envelope.plan_id, siteId: site.id },
+          ip: req.ip, outcome: 'success', severity: 'info',
+        });
+        return res.json(buildCommandResponse(req.body?.id, envelope));
+      }
+
+      // dryFlag === false (or undefined) — must consume a valid plan.
+      const consume = dryRun.consumePlan(planId, ctx);
+      if (!consume.ok) {
+        auditLog({
+          actorType: 'agent', action: 'dry_run_violation',
+          details: { actionName, code: consume.code, siteId: site.id },
+          ip: req.ip, outcome: 'denied', severity: 'warning',
+        });
+        return res.status(412).json(buildErrorResponse(req.body?.id, consume.code, consume.message));
+      }
+    }
+
+    // SPEC §8.11 — Out-of-Band Human Gate (Pro+).
+    const intentForcesHumanGate = intentVerdict && intentVerdict.required_gate === 'human_gate';
+    if (humanGate.requiresHumanGate(actionName, config, site.tier) || intentForcesHumanGate) {
+      const hgCtx = {
+        sessionToken: req.get('Authorization')?.slice(7),
+        siteId: site.id,
+        actorId: req.wabSession?.agentMeta?.name || null,
+        actionName,
+        params: req.body?.params || {},
+      };
+      const confirmationId = req.body?.confirmation_id;
+      if (!confirmationId) {
+        const challenge = await humanGate.issueChallenge(hgCtx, { siteConfig: config });
+        auditLog({
+          actorType: 'agent', action: 'human_gate_issued',
+          details: { actionName, challenge_id: challenge.challenge_id, siteId: site.id, dispatched_to: challenge.dispatched_to },
+          ip: req.ip, outcome: 'success', severity: 'info',
+        });
+        return res.status(202).json(buildErrorResponse(req.body?.id, 'HUMAN_GATE_REQUIRED',
+          'Out-of-band human approval required. Retry with confirmation_id once approved.', {
+            challenge_id: challenge.challenge_id,
+            expires_at: challenge.expires_at,
+            dispatched_to: challenge.dispatched_to,
+          }));
+      }
+      const hg = humanGate.consumeApproved(confirmationId, hgCtx);
+      if (!hg.ok) {
+        auditLog({
+          actorType: 'agent', action: 'human_gate_violation',
+          details: { actionName, code: hg.code, challenge_id: confirmationId, siteId: site.id },
+          ip: req.ip, outcome: 'denied', severity: 'warning',
+        });
+        const status = hg.code === 'HUMAN_GATE_PENDING' ? 425 : 403;
+        return res.status(status).json(buildErrorResponse(req.body?.id, hg.code, hg.message || hg.code));
+      }
+    }
+
+    // SPEC §8.13 — Snapshot before execution (Enterprise or opt-in).
+    let snapshotId = null;
+    const snapshotsEnabled = (config.snapshots && config.snapshots.enabled === true) ||
+      String(site.tier || '').toLowerCase() === 'enterprise';
+    const isDestructiveExec = tokenScope.isDestructiveAction(actionName, config) ||
+      (intentVerdict && intentVerdict.verb_class === 'destructive');
+    if (snapshotsEnabled && isDestructiveExec) {
+      try {
+        const snap = rollback.recordSnapshot({
+          siteId: site.id,
+          actionName,
+          actorId: req.wabSession?.agentMeta?.name || null,
+          sessionToken: req.get('Authorization')?.slice(7),
+          params: req.body?.params || {},
+        }, {
+          // The default snapshot payload is metadata-only; site adapters
+          // override via their own pre-execution hook.
+          snapshot: { actionName, params: req.body?.params || {}, captured_at: new Date().toISOString() },
+          meta: { intent_score: intentVerdict?.score || null },
+          reversible: true,
+        });
+        snapshotId = snap.snapshot_id;
+        auditLog({
+          actorType: 'agent', action: 'snapshot_recorded',
+          details: { actionName, snapshot_id: snapshotId, siteId: site.id },
+          ip: req.ip, outcome: 'success', severity: 'info',
+        });
+      } catch (e) {
+        // Snapshot failure must NOT silently allow destructive actions.
+        auditLog({
+          actorType: 'agent', action: 'snapshot_failed',
+          details: { actionName, error: e.message, siteId: site.id },
+          ip: req.ip, outcome: 'error', severity: 'critical',
+        });
+        return res.status(500).json(buildErrorResponse(req.body?.id, 'SNAPSHOT_FAILED',
+          'Could not record pre-action snapshot — destructive action aborted for safety.'));
+      }
+    }
+
     recordAnalytic({
       siteId: site.id,
       actionName,
@@ -298,9 +453,11 @@ router.post('/actions/:name', requireSession, wabActionLimiter, (req, res) => {
       action: actionName,
       siteId: site.id,
       executed_at: new Date().toISOString(),
+      snapshot_id: snapshotId,
       note: 'Server-side action recorded. For DOM interactions, use the bridge script in-browser.'
     }));
   } catch (err) {
+
     res.status(500).json(buildErrorResponse(req.body?.id, 'internal', 'Action execution failed'));
   }
 });
@@ -536,5 +693,136 @@ function buildDiscovery(site) {
     }
   };
 }
+
+// ═════════════════════════════════════════════════════════════════════
+// SPEC §8.11 — Out-of-Band Human Gate endpoints
+// ═════════════════════════════════════════════════════════════════════
+
+// Public-ish: anyone holding a valid challenge_id + 6-digit code can
+// approve/reject. Rate-limit applies to brute-force the code (5 attempts
+// per challenge enforced by the module).
+router.post('/human-gate/approve', wabActionLimiter, (req, res) => {
+  try {
+    const { challenge_id, code } = req.body || {};
+    if (!challenge_id || !code) {
+      return res.status(400).json(buildErrorResponse(null, 'invalid_argument', 'challenge_id and code required'));
+    }
+    const result = humanGate.approveChallenge(challenge_id, code);
+    try {
+      auditLog({
+        actorType: 'user', action: 'human_gate_approve_attempt',
+        details: { challenge_id, ok: result.ok, code: result.code },
+        ip: req.ip, outcome: result.ok ? 'success' : 'denied',
+        severity: result.ok ? 'info' : 'warning',
+      });
+    } catch (e) { /* audit failures must not block the security gate */ }
+    if (!result.ok) {
+      const status = result.code === 'HUMAN_GATE_NOT_FOUND' ? 404
+                   : result.code === 'HUMAN_GATE_LOCKED' ? 429
+                   : result.code === 'HUMAN_GATE_BAD_CODE' ? 401
+                   : 400;
+      return res.status(status).json(buildErrorResponse(null, result.code, result.message || result.code));
+    }
+    return res.json({ type: 'success', protocol: PROTOCOL_VERSION, result: { status: result.status } });
+  } catch (err) {
+    return res.status(500).json(buildErrorResponse(null, 'internal', err.message));
+  }
+});
+
+router.post('/human-gate/reject', wabActionLimiter, (req, res) => {
+  const { challenge_id, reason } = req.body || {};
+  if (!challenge_id) {
+    return res.status(400).json(buildErrorResponse(null, 'invalid_argument', 'challenge_id required'));
+  }
+  const result = humanGate.rejectChallenge(challenge_id, reason);
+  auditLog({
+    actorType: 'user', action: 'human_gate_reject',
+    details: { challenge_id, ok: result.ok, code: result.code },
+    ip: req.ip, outcome: result.ok ? 'success' : 'denied', severity: 'info',
+  });
+  if (!result.ok) {
+    return res.status(result.code === 'HUMAN_GATE_NOT_FOUND' ? 404 : 400)
+      .json(buildErrorResponse(null, result.code, result.code));
+  }
+  return res.json({ type: 'success', protocol: PROTOCOL_VERSION, result: { status: result.status } });
+});
+
+router.get('/human-gate/:id/status', (req, res) => {
+  const status = humanGate.getStatus(req.params.id);
+  if (!status) {
+    return res.status(404).json(buildErrorResponse(null, 'HUMAN_GATE_NOT_FOUND', 'challenge not found'));
+  }
+  return res.json({ type: 'success', protocol: PROTOCOL_VERSION, result: status });
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// SPEC §8.13 — Snapshot & Rollback admin endpoints
+// ═════════════════════════════════════════════════════════════════════
+//
+// Auth: site owner authenticates with the site's apiKey via
+//   X-WAB-Site-Id + X-WAB-Api-Key headers (same secret used to issue
+//   bridge tokens). This is the operator's break-glass.
+function _adminAuth(req, res) {
+  const siteId = req.get('X-WAB-Site-Id');
+  const apiKey = req.get('X-WAB-Api-Key');
+  if (!siteId || !apiKey) {
+    res.status(401).json(buildErrorResponse(null, 'auth_required', 'X-WAB-Site-Id and X-WAB-Api-Key required'));
+    return null;
+  }
+  const site = findSiteById.get(siteId);
+  if (!site || site.api_key !== apiKey) {
+    res.status(403).json(buildErrorResponse(null, 'forbidden', 'invalid site or api key'));
+    return null;
+  }
+  return site;
+}
+
+router.get('/admin/snapshots', (req, res) => {
+  const site = _adminAuth(req, res); if (!site) return;
+  try {
+    const list = rollback.listSnapshots(site.id, {
+      limit: parseInt(req.query.limit, 10) || 50,
+      status: req.query.status || undefined,
+    });
+    res.json({ type: 'success', protocol: PROTOCOL_VERSION, result: { snapshots: list } });
+  } catch (err) {
+    res.status(500).json(buildErrorResponse(null, 'internal', err.message));
+  }
+});
+
+router.get('/admin/snapshots/:id', (req, res) => {
+  const site = _adminAuth(req, res); if (!site) return;
+  const snap = rollback.getSnapshot(req.params.id);
+  if (!snap || snap.site_id !== site.id) {
+    return res.status(404).json(buildErrorResponse(null, 'SNAPSHOT_NOT_FOUND', 'snapshot not found'));
+  }
+  res.json({ type: 'success', protocol: PROTOCOL_VERSION, result: snap });
+});
+
+router.post('/admin/rollback/:id', async (req, res) => {
+  const site = _adminAuth(req, res); if (!site) return;
+  const snap = rollback.getSnapshot(req.params.id);
+  if (!snap || snap.site_id !== site.id) {
+    return res.status(404).json(buildErrorResponse(null, 'SNAPSHOT_NOT_FOUND', 'snapshot not found'));
+  }
+  try {
+    const result = await rollback.restoreSnapshot(req.params.id);
+    auditLog({
+      actorType: 'admin', action: 'snapshot_rollback_attempt',
+      details: { snapshot_id: req.params.id, site_id: site.id, ok: result.ok, code: result.code },
+      ip: req.ip, outcome: result.ok ? 'success' : 'denied',
+      severity: result.ok ? 'warning' : 'critical',
+    });
+    if (!result.ok) {
+      const status = result.code === 'SNAPSHOT_NOT_FOUND' ? 404
+                   : result.code === 'NO_RESTORER' ? 503
+                   : 409;
+      return res.status(status).json(buildErrorResponse(null, result.code, result.message || result.code));
+    }
+    res.json({ type: 'success', protocol: PROTOCOL_VERSION, result: { restored: true, snapshot_id: req.params.id } });
+  } catch (err) {
+    res.status(500).json(buildErrorResponse(null, 'internal', err.message));
+  }
+});
 
 module.exports = router;

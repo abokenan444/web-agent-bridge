@@ -504,10 +504,17 @@ describe('Scoped tokens over HTTP — /api/wab/authenticate + /api/wab/actions',
   test('write-scope token in production CAN perform destructive action (admin perm enabled)', async () => {
     const auth = await authenticate('write:production');
     const token = auth.body.result.token;
+    // SPEC §8.10 — destructive actions now require a 2-step dry-run.
+    const dr = await request(app)
+      .post('/api/wab/actions/deleteVolume')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ dry_run: true });
+    expect(dr.status).toBe(200);
+    expect(dr.body.result.dry_run).toBe(true);
     const res = await request(app)
       .post('/api/wab/actions/deleteVolume')
       .set('Authorization', `Bearer ${token}`)
-      .send({});
+      .send({ dry_run: false, plan_id: dr.body.result.plan_id });
     expect(res.status).toBe(200);
     expect(res.body.result.success).toBe(true);
   });
