@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snapshots & Rollback — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .snap-page { max-width: 1180px; margin: 32px auto; padding: 0 20px; font-family: Inter, system-ui, sans-serif; color: #e5e7eb; }
+    .snap-page h1 { font-size: 1.8rem; font-weight: 800; margin: 0 0 4px; }
+    .snap-page p.lede { color: #94a3b8; margin: 0 0 24px; }
+    .snap-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .snap-card h2 { font-size: 1.1rem; margin: 0 0 14px; color: #f8fafc; }
+    .snap-form { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: end; }
+    .snap-form label { display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .snap-form input, .snap-form select {
+      width: 100%; background: #020617; border: 1px solid #334155; color: #e5e7eb;
+      border-radius: 8px; padding: 9px 12px; font-family: inherit; font-size: 0.95rem;
+    }
+    .snap-form input:focus, .snap-form select:focus { outline: none; border-color: #f59e0b; }
+    .btn-primary { background: linear-gradient(135deg,#ef4444,#f59e0b); border: none; color: #fff; font-weight: 600;
+      padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-rb { background: #ef4444; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+    .btn-rb:hover { background: #dc2626; }
+    .btn-rb:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-view { background: transparent; border: 1px solid #334155; color: #cbd5e1; padding: 6px 14px;
+      border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin-right: 6px; }
+    .btn-view:hover { border-color: #f59e0b; color: #f59e0b; }
+    table.snap-tbl { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    table.snap-tbl th, table.snap-tbl td { padding: 10px 8px; border-bottom: 1px solid #1e293b; text-align: left; }
+    table.snap-tbl th { color: #94a3b8; font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    table.snap-tbl td { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; }
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .pill-recorded { background: rgba(59,130,246,0.18); color: #93c5fd; }
+    .pill-restored { background: rgba(34,197,94,0.18); color: #86efac; }
+    .pill-failed   { background: rgba(239,68,68,0.18); color: #fca5a5; }
+    .pill-expired  { background: rgba(148,163,184,0.18); color: #cbd5e1; }
+    .empty { text-align: center; color: #64748b; padding: 40px 0; font-style: italic; }
+    .toast { position: fixed; bottom: 30px; right: 30px; background: #0f172a; border: 1px solid #334155;
+      padding: 14px 20px; border-radius: 8px; max-width: 380px; font-size: 0.9rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+    .toast.ok { border-color: #22c55e; }
+    .toast.err { border-color: #ef4444; }
+    pre.snap-detail { background: #020617; border: 1px solid #1e293b; border-radius: 8px;
+      padding: 14px; font-size: 0.82rem; max-height: 320px; overflow: auto; color: #cbd5e1; }
+  </style>
+</head>
+<body style="background:#020617;min-height:100vh;">
+  <div class="snap-page">
+    <h1>🛡️ Snapshots & Rollback</h1>
+    <p class="lede">SPEC §8.13 — Browse and restore pre-action snapshots for a site. Authenticate with your site's <code>X-WAB-Api-Key</code>.</p>
+
+    <!-- Auth + filter -->
+    <section class="snap-card">
+      <h2>Site credentials</h2>
+      <div class="snap-form">
+        <div>
+          <label for="siteId">Site ID</label>
+          <input id="siteId" type="text" placeholder="site_…" autocomplete="off" />
+        </div>
+        <div>
+          <label for="apiKey">API Key</label>
+          <input id="apiKey" type="password" placeholder="wab_…" autocomplete="off" />
+        </div>
+        <div>
+          <label for="statusFilter">Status filter</label>
+          <select id="statusFilter">
+            <option value="">All</option>
+            <option value="recorded">Recorded</option>
+            <option value="restored">Restored</option>
+            <option value="failed">Failed</option>
+            <option value="expired">Expired</option>
+          </select>
+        </div>
+        <div>
+          <button id="loadBtn" class="btn-primary">Load snapshots</button>
+        </div>
+      </div>
+      <p style="margin:14px 0 0;font-size:0.82rem;color:#64748b;">
+        Credentials are stored in this browser's <code>localStorage</code> only — never sent to any third party.
+      </p>
+    </section>
+
+    <!-- Listing -->
+    <section class="snap-card">
+      <h2>Recent snapshots <span id="count" style="color:#64748b;font-weight:400;font-size:0.85rem;"></span></h2>
+      <div id="listWrap"><div class="empty">Enter credentials and click <strong>Load</strong>.</div></div>
+    </section>
+
+    <!-- Detail view -->
+    <section class="snap-card" id="detailCard" style="display:none;">
+      <h2>Snapshot detail <span id="detailId" style="color:#64748b;font-weight:400;font-size:0.85rem;"></span></h2>
+      <pre class="snap-detail" id="detailBody"></pre>
+    </section>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    (function () {
+      'use strict';
+      const $ = (id) => document.getElementById(id);
+
+      // Restore creds
+      try {
+        $('siteId').value = localStorage.getItem('wab_snap_site') || '';
+        $('apiKey').value = localStorage.getItem('wab_snap_key') || '';
+      } catch {}
+
+      function toast(msg, kind) {
+        const t = $('toast');
+        t.innerHTML = '<div class="toast ' + (kind || '') + '">' + escapeHtml(msg) + '</div>';
+        setTimeout(() => { t.innerHTML = ''; }, 4500);
+      }
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, (c) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+      }
+      function getCreds() {
+        const siteId = $('siteId').value.trim();
+        const apiKey = $('apiKey').value.trim();
+        if (!siteId || !apiKey) {
+          toast('Site ID and API Key are required.', 'err');
+          return null;
+        }
+        try {
+          localStorage.setItem('wab_snap_site', siteId);
+          localStorage.setItem('wab_snap_key', apiKey);
+        } catch {}
+        return { siteId, apiKey };
+      }
+      function headers(c) {
+        return { 'X-WAB-Site-Id': c.siteId, 'X-WAB-Api-Key': c.apiKey };
+      }
+
+      async function loadList() {
+        const c = getCreds();
+        if (!c) return;
+        $('loadBtn').disabled = true;
+        $('listWrap').innerHTML = '<div class="empty">Loading…</div>';
+        try {
+          const params = new URLSearchParams({ limit: '100' });
+          const status = $('statusFilter').value;
+          if (status) params.set('status', status);
+          const res = await fetch('/api/wab/admin/snapshots?' + params.toString(), { headers: headers(c) });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.error?.message || ('HTTP ' + res.status));
+          renderList(data.result?.snapshots || []);
+        } catch (err) {
+          $('listWrap').innerHTML = '<div class="empty">Error: ' + escapeHtml(err.message) + '</div>';
+          toast(err.message, 'err');
+        } finally {
+          $('loadBtn').disabled = false;
+        }
+      }
+
+      function renderList(list) {
+        $('count').textContent = '(' + list.length + ')';
+        if (list.length === 0) {
+          $('listWrap').innerHTML = '<div class="empty">No snapshots recorded yet.</div>';
+          return;
+        }
+        const rows = list.map((s) => {
+          const created = s.created_at ? new Date(s.created_at).toLocaleString() : '';
+          const expires = s.expires_at ? new Date(s.expires_at).toLocaleString() : '';
+          const canRollback = s.status === 'recorded';
+          return (
+            '<tr>' +
+            '<td>' + escapeHtml(s.id) + '</td>' +
+            '<td>' + escapeHtml(s.action_name || '') + '</td>' +
+            '<td>' + escapeHtml(s.actor_id || '—') + '</td>' +
+            '<td><span class="pill pill-' + escapeHtml(s.status) + '">' + escapeHtml(s.status) + '</span></td>' +
+            '<td>' + escapeHtml(created) + '</td>' +
+            '<td>' + escapeHtml(expires) + '</td>' +
+            '<td>' +
+              '<button class="btn-view" data-id="' + escapeHtml(s.id) + '">View</button>' +
+              '<button class="btn-rb" data-rb="' + escapeHtml(s.id) + '" ' + (canRollback ? '' : 'disabled') + '>Rollback</button>' +
+            '</td>' +
+            '</tr>'
+          );
+        }).join('');
+        $('listWrap').innerHTML =
+          '<table class="snap-tbl">' +
+          '<thead><tr>' +
+            '<th>ID</th><th>Action</th><th>Actor</th><th>Status</th>' +
+            '<th>Created</th><th>Expires</th><th></th>' +
+          '</tr></thead>' +
+          '<tbody>' + rows + '</tbody></table>';
+        $('listWrap').querySelectorAll('button[data-id]').forEach((b) => {
+          b.addEventListener('click', () => loadDetail(b.dataset.id));
+        });
+        $('listWrap').querySelectorAll('button[data-rb]').forEach((b) => {
+          b.addEventListener('click', () => doRollback(b.dataset.rb));
+        });
+      }
+
+      async function loadDetail(id) {
+        const c = getCreds(); if (!c) return;
+        try {
+          const res = await fetch('/api/wab/admin/snapshots/' + encodeURIComponent(id), { headers: headers(c) });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.error?.message || ('HTTP ' + res.status));
+          $('detailCard').style.display = '';
+          $('detailId').textContent = '— ' + id;
+          $('detailBody').textContent = JSON.stringify(data.result, null, 2);
+          $('detailCard').scrollIntoView({ behavior: 'smooth' });
+        } catch (err) { toast(err.message, 'err'); }
+      }
+
+      async function doRollback(id) {
+        const c = getCreds(); if (!c) return;
+        const ok = confirm(
+          'Rollback snapshot ' + id + '?\n\n' +
+          'This will invoke the site-side restorer to undo the action. ' +
+          'Restoration is best-effort and depends on the site implementation.'
+        );
+        if (!ok) return;
+        try {
+          const res = await fetch('/api/wab/admin/rollback/' + encodeURIComponent(id), {
+            method: 'POST',
+            headers: headers(c),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.error?.message || ('HTTP ' + res.status));
+          toast('Rolled back successfully (' + id + ')', 'ok');
+          await loadList();
+        } catch (err) { toast(err.message, 'err'); }
+      }
+
+      $('loadBtn').addEventListener('click', loadList);
+      $('statusFilter').addEventListener('change', loadList);
+      // Auto-load if creds present
+      if ($('siteId').value && $('apiKey').value) loadList();
+    })();
+  </script>
+</body>
+</html>

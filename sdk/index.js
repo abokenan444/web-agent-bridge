@@ -622,4 +622,15 @@ try { WABToolkit = require('../packages/langchain').WABToolkit; } catch {
   try { WABToolkit = require('web-agent-bridge-langchain').WABToolkit; } catch {}
 }
 
-module.exports = { WABAgent, WABUniversalAgent, WABMultiAgent, WABAgentMesh, WABAgentOS, WABToolkit };
+// SPEC §8.10–§8.13 client helper
+const { SafetyShieldClient } = require('./safety-shield');
+
+module.exports = {
+  WABAgent,
+  WABUniversalAgent,
+  WABMultiAgent,
+  WABAgentMesh,
+  WABAgentOS,
+  WABToolkit,
+  SafetyShieldClient,
+};

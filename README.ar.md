@@ -1121,7 +1121,140 @@ npm run build:win
 
 ---
 
-## 📋 مواصفة بروتوكول WAB
+## �️ درع الأمان — حماية متعددة الطبقات (SPEC §8.10–§8.13)
+
+مستوحى من حادثة PocketOS الشهيرة حيث حذف وكيل ذكاء اصطناعي ٢٠ ألف مستخدم بأمر واحد، يضيف WAB خمس طبقات حماية متراكمة لا تستبدل بعضها بل تتكامل معاً. كل طبقة فعّالة من خطة معينة فما فوق.
+
+### §8.9 — رموز الجلسة المُحدَّدة النطاق (Scoped Session Tokens) — كل الخطط
+
+كل توكن جلسة يحمل **نطاقًا** صريحًا: `read` أو `write` أو `delete` أو `admin`. الإجراءات المُصنّفة "هدّامة" (تحتوي على فعل مثل `delete` أو `drop` أو `purge` أو `wipe` أو `truncate`) تتطلب نطاق `delete` أو أعلى. الموقع يستطيع توسيع التصنيف عبر `siteConfig.destructiveActions[]`.
+
+```js
+// الموقع يحدد البيئة والإجراءات الهدّامة
+{
+  "environment": "production",
+  "destructiveActions": ["bulkUnsubscribe"],
+  "nonDestructiveActions": ["softArchive"]
+}
+```
+
+عند الرفض → `403 SCOPE_DENIED` مع تفاصيل السبب في سجل التدقيق.
+
+### §8.10 — التشغيل التجريبي الإلزامي (Mandatory Dry-Run) — كل الخطط (MIT)
+
+للإجراءات الهدّامة، **لا يمكن** للوكيل التنفيذ في خطوة واحدة. يجب أن يمرّ بمرحلتين:
+
+**المرحلة ١ — طلب خطة:**
+```http
+POST /api/wab/actions/deleteUser
+{ "params": {"id": 42}, "dry_run": true }
+```
+الاستجابة:
+```json
+{ "result": { "plan_id": "wabp_…", "simulation": {
+  "would_affect": ["site:abc", "action:deleteUser"],
+  "side_effects": ["deleteUser"], "reversible": false,
+  "summary": "سيقوم بحذف المستخدم #42 — لم يتم تنفيذ أي تغيير فعلي."
+}, "expires_at": "…" }}
+```
+
+**المرحلة ٢ — التأكيد:**
+```http
+POST /api/wab/actions/deleteUser
+{ "params": {"id": 42}, "dry_run": false, "plan_id": "wabp_…" }
+```
+
+التحقق رباعي الأبعاد: `(sessionFingerprint, siteId, actionName, paramsHash)`. أي انحراف ولو حرف واحد في المعاملات → `412 DRY_RUN_PLAN_MISMATCH`. مهلة افتراضية ٥ دقائق (حد أقصى ٦٠).
+
+### §8.11 — البوابة البشرية خارج النطاق (Out-of-Band Human Gate) — Pro فما فوق
+
+للمواقع الحساسة، الإجراءات الهدّامة تُجمَّد ويُرسَل **رمز من ٦ أرقام** عبر قناة لا يراها الوكيل (Webhook موقَّع، بريد إلكتروني، Telegram، Slack...). فقط بعد موافقة بشرية حقيقية يُسمح بالتنفيذ بحمل `confirmation_id`.
+
+**القنوات الجاهزة:**
+- `webhook` — `POST` JSON موقَّع بـ HMAC-SHA256 (header: `X-WAB-Signature: sha256=…`)
+- `email` — SMTP عبر `nodemailer` (يدعم متغيرات البيئة `SMTP_HOST/PORT/USER/PASS`)
+- `console` — للتطوير فقط (يكتب على stderr)
+- `null` — لا شيء (للاختبارات والوضع المعزول)
+
+**الحماية من الهجوم العنيف:**
+- قفل ٥ محاولات لكل تحدي (داخل الموديول).
+- **حد معدل بحسب IP**: ٣٠ محاولة / ١٠ دقائق + ٥ موافقات ناجحة / ١٠ دقائق. عند التجاوز → `429 RATE_LIMIT_TOO_MANY_ATTEMPTS` مع `Retry-After`.
+
+### §8.12 — محرك تحليل النية (Intent Analysis Engine) — Premium فما فوق
+
+نقاط مخاطرة حتمية (٠–١٠٠) تُحسب من إشارات يمكن تفسيرها — لا توجد عشوائية ولا نموذج لغوي. الإشارات:
+
+| الإشارة | الوزن |
+|---|---|
+| فعل هدّام (delete, drop, purge…) | +50 |
+| فعل كتابة عادي | +10 |
+| البيئة `production` | +30 |
+| كلمات خطر (`*`, `all`, `cascade`, `force`) | +15 لكل واحدة (سقف +30) |
+| محددات شاملة في المعاملات | +15 |
+| مصفوفة كبيرة (>50 عنصرًا) | +10 |
+| نوبة طلبات (>10/دقيقة) | +15 |
+| سرعة تنفيذ مرتفعة | +10 |
+
+العتبات الافتراضية: `low:30, medium:70, high:90`. النتيجة العالية يمكن أن:
+1. تُجبر التشغيل التجريبي (`required_gate: "dry_run"`)
+2. تُجبر البوابة البشرية (`required_gate: "human_gate"`)
+3. تحجب نهائيًا بـ `403 INTENT_BLOCKED`
+
+### §8.13 — اللقطات والتراجع (Snapshot & Rollback) — Enterprise
+
+قبل تنفيذ أي إجراء هدّام، WAB يأخذ لقطة قابلة للاسترجاع تلقائيًا (إذا سجّل الموقع `restorer`). البيانات تُحفَظ في جدول `wab_snapshots` (sqlite) لمدة ٣٠ يومًا.
+
+**نقاط الإدارة (X-WAB-Site-Id + X-WAB-Api-Key):**
+```http
+GET  /api/wab/admin/snapshots         # قائمة آخر اللقطات
+GET  /api/wab/admin/snapshots/:id     # تفاصيل لقطة
+POST /api/wab/admin/rollback/:id      # تنفيذ التراجع
+```
+
+**واجهة إدارة جاهزة:** انتقل إلى [`/admin/snapshots`](https://webagentbridge.com/admin/snapshots) وأدخل `Site ID` + `API Key` للتصفح والاسترجاع بزر واحد.
+
+**حالات اللقطة:** `recorded → restored | failed | expired`.
+
+### كيف تستخدمها من SDK
+
+```js
+const { SafetyShieldClient } = require('@webagentbridge/sdk');
+
+const shield = new SafetyShieldClient({
+  baseUrl: 'https://webagentbridge.com',
+  sessionToken: 'Bearer-token-from-/sessions',
+});
+
+// الطريقة الموصى بها: تشغيل تجريبي ثم تأكيد
+const plan = await shield.dryRun('deleteUser', { id: 42 });
+console.log(plan.simulation.summary); // اعرضها للمستخدم البشري
+const result = await shield.confirmAction(plan, { code: '123456' });
+// أو في خطوة واحدة (ترجع envelope من نوع pending_human_gate إذا لزم):
+const out = await shield.safeExecute('deleteUser', { id: 42 });
+```
+
+### جدول الأخطاء الموحَّدة
+
+| الكود | HTTP | المعنى |
+|---|---|---|
+| `SCOPE_DENIED` | 403 | نطاق التوكن غير كافٍ |
+| `DRY_RUN_REQUIRED` | 412 | يجب تشغيل تجريبي أولاً |
+| `DRY_RUN_PLAN_MISMATCH` | 412 | المعاملات تغيّرت بين المرحلتين |
+| `DRY_RUN_PLAN_EXPIRED` | 412 | انقضت مهلة الخطة |
+| `HUMAN_GATE_REQUIRED` | 202 | تم إصدار تحدٍّ — انتظر الموافقة البشرية |
+| `HUMAN_GATE_PENDING` | 425 | الموافقة لم تحدث بعد |
+| `HUMAN_GATE_BAD_CODE` | 401 | رمز خاطئ |
+| `HUMAN_GATE_LOCKED` | 429 | استُنفدت ٥ محاولات لهذا التحدي |
+| `RATE_LIMIT_TOO_MANY_ATTEMPTS` | 429 | تجاوز حد الـ IP |
+| `INTENT_BLOCKED` | 403 | نتيجة محرك النية ≥90 |
+| `SNAPSHOT_NOT_FOUND` | 404 | لقطة غير موجودة |
+| `NO_RESTORER` | 503 | الموقع لم يسجّل `restorer` |
+
+التفاصيل الكاملة (جداول الإشارات، صيغ التواصل، مرجع التطبيق) في [`docs/SPEC.md`](docs/SPEC.md) §8.9–§8.13.
+
+---
+
+## �📋 مواصفة بروتوكول WAB
 
 المواصفة المعيارية الكاملة متاحة في [`docs/SPEC.md`](docs/SPEC.md):
 

@@ -325,6 +325,9 @@ app.get('/admin/login', noCache, (req, res) => {
 app.get('/admin', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'dashboard.html'));
 });
+app.get('/admin/snapshots', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'snapshots.html'));
+});
 app.get('/privacy', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'privacy.html'));
 });

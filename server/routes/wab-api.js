@@ -17,8 +17,14 @@ const { auditLog } = require('../services/security');
 const tokenScope = require('../security/token-scope');
 const dryRun = require('../security/dry-run');
 const humanGate = require('../security/human-gate');
+const humanGateTransports = require('../security/human-gate-transports');
+const humanGateRateLimit = require('../security/human-gate-rate-limit');
 const intentEngine = require('../security/intent-engine');
 const rollback = require('../security/rollback-store');
+
+// Register built-in transports (webhook/email/console). Sites pick one
+// via siteConfig.humanGate.transport ∈ {null, webhook, email, console}.
+humanGateTransports.registerAll(humanGate);
 
 // Fairness module is proprietary — provide stubs when not available
 let calculateNeutralityScore, fairnessWeightedSearch, getDirectoryListings, generateFairnessReport;
@@ -707,7 +713,23 @@ router.post('/human-gate/approve', wabActionLimiter, (req, res) => {
     if (!challenge_id || !code) {
       return res.status(400).json(buildErrorResponse(null, 'invalid_argument', 'challenge_id and code required'));
     }
+    // SPEC §8.11 — IP-level brute-force limiter (sliding window).
+    // Per-challenge 5-attempt lockout still applies inside humanGate.
+    const ipCheck = humanGateRateLimit.checkBeforeAttempt(req.ip);
+    if (!ipCheck.allowed) {
+      try {
+        auditLog({
+          actorType: 'user', action: 'human_gate_rate_limited',
+          details: { challenge_id, code: ipCheck.code, retry_after_ms: ipCheck.retry_after_ms },
+          ip: req.ip, outcome: 'denied', severity: 'warning',
+        });
+      } catch { /* audit failures must not block */ }
+      res.set('Retry-After', String(Math.ceil((ipCheck.retry_after_ms || 0) / 1000)));
+      return res.status(429).json(buildErrorResponse(null, ipCheck.code,
+        'too many approval attempts from this IP; slow down', { retry_after_ms: ipCheck.retry_after_ms }));
+    }
     const result = humanGate.approveChallenge(challenge_id, code);
+    humanGateRateLimit.recordAttempt(req.ip, !!result.ok);
     try {
       auditLog({
         actorType: 'user', action: 'human_gate_approve_attempt',
