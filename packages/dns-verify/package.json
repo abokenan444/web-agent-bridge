@@ -1,0 +1,42 @@
+{
+  "name": "@wab/dns-verify",
+  "version": "1.0.0",
+  "description": "WAB DNS Discovery Protocol verifier — DoH-based CLI that validates _wab / _wab-trust / _wab-policy records against the WAB protocol spec.",
+  "main": "src/index.js",
+  "bin": {
+    "wab-dns": "./bin/wab-dns.js"
+  },
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "author": "Web Agent Bridge <dev@webagentbridge.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abokenan444/web-agent-bridge.git",
+    "directory": "packages/dns-verify"
+  },
+  "homepage": "https://www.webagentbridge.com/dns",
+  "bugs": {
+    "url": "https://github.com/abokenan444/web-agent-bridge/issues"
+  },
+  "keywords": [
+    "wab",
+    "dns",
+    "discovery",
+    "doh",
+    "dnssec",
+    "verifier",
+    "cli",
+    "ai-agent",
+    "web-agent-bridge"
+  ]
+}

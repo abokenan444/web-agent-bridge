@@ -349,6 +349,136 @@ The `permissions` object uses the following standard keys:
 
 A Bridge MUST enforce these permissions at runtime. If an Agent attempts an action that requires a permission set to `false`, the Bridge MUST reject the command with error code `PERMISSION_DENIED`.
 
+### 4.6 DNS Discovery Protocol (DDP)
+
+The DNS Discovery Protocol (DDP) is an OPTIONAL infrastructure-layer mechanism that lets agents discover a site's WAB endpoint *before* issuing any HTTP request. A site advertises its capabilities via DNS TXT records resolved over **DNS over HTTPS (DoH)**, eliminating HTTP probing, cookie-banner consent flows, and ISP-level lookup leaks.
+
+#### 4.6.1 Record Layout
+
+Three sibling labels under the apex domain. All three are TXT records.
+
+| Label                      | Required | Purpose                                                                       |
+|----------------------------|----------|-------------------------------------------------------------------------------|
+| `_wab.{apex}`              | REQUIRED | Discovery — points at the `wab.json` contract.                                |
+| `_wab-trust.{apex}`        | OPTIONAL | Trust contract — declares data scope, security contact, complaint channel.    |
+| `_wab-policy.{apex}`       | OPTIONAL | Policy contract — declares rate limits, capability TTL, fairness metrics.     |
+
+A WAB-aware Agent MUST query `_wab.{apex}` first. If `NXDOMAIN`, the site is treated as non-WAB-enabled. If a record is found, the Agent MAY query `_wab-trust` and `_wab-policy` in parallel as enrichment — neither is required to proceed.
+
+#### 4.6.2 ABNF Grammar (records `_wab` and `_wab-policy`)
+
+```abnf
+wab-record   = version-tag *( ws? ";" ws? field ) [ ws? ";" ]
+version-tag  = "v=" version-id
+version-id   = "wab" 1*DIGIT
+field        = field-name ws? "=" ws? field-value
+field-name   = ALPHA *( ALPHA / DIGIT / "-" / "_" )
+field-value  = 1*( ALPHA / DIGIT / "-" / "." / "_" / "/" / ":" / "+" / "%" / "?" / "&" / "=" )
+ws           = 1*( SP / HTAB )
+ALPHA        = %x41-5A / %x61-7A
+DIGIT        = %x30-39
+SP           = %x20
+HTAB         = %x09
+```
+
+Reserved field names for `_wab`:
+
+| Field             | Type         | Required  | Description                                                              |
+|-------------------|--------------|-----------|--------------------------------------------------------------------------|
+| `v`               | version-id   | REQUIRED  | Protocol version. Current: `wab1`.                                       |
+| `endpoint`        | URL          | REQUIRED  | HTTPS URL of the discovery JSON document.                                |
+| `path`            | URL path     | OPTIONAL  | Alternative to `endpoint` for relative discovery (`path=/agent.json`).   |
+| `fingerprint`     | hash         | OPTIONAL  | `sha256:<hex64>` of the discovery JSON for tamper detection.             |
+| `capability_ttl`  | seconds      | OPTIONAL  | How long agents MAY cache the discovery JSON. Default 3600.              |
+| `status`          | enum         | OPTIONAL  | `active` / `paused` / `deprecated`. Default `active`.                    |
+
+Reserved field names for `_wab-policy`:
+
+| Field           | Type      | Description                                                       |
+|-----------------|-----------|-------------------------------------------------------------------|
+| `rate`          | integer   | Maximum requests per minute per agent.                            |
+| `concurrency`   | integer   | Maximum concurrent connections per agent.                         |
+| `commission`    | percent   | Commission rate the platform takes (e.g. `0%`). Fairness signal.  |
+
+#### 4.6.3 ABNF Grammar (record `_wab-trust`)
+
+```abnf
+trust-record = field *( ws? ";" ws? field ) [ ws? ";" ]
+field        = field-name ws? "=" ws? field-value
+field-name   = "trust" / "security" / "complaint" / "iodef"
+field-value  = "https:" 1*( ALPHA / DIGIT / "-" / "." / "_" / "/" / ":" / "+" / "%" / "?" / "&" / "=" )
+                / "mailto:" 1*VCHAR
+ws           = 1*( SP / HTAB )
+VCHAR        = %x21-7E
+```
+
+> **Forward-compatibility:** Verifiers MUST accept and surface — but not fail
+> on — additional `field-name=field-value` pairs they do not recognise (e.g.
+> a future `v=wab2` version tag). Unknown fields SHOULD be reported as
+> warnings so the deployment remains visible to operators.
+
+#### 4.6.4 Optional JSON-Pointer Form
+
+For sites with capabilities too large for a single TXT record (DNS allows ~255 octets per string), a `_wab` record MAY use the JSON-Pointer form:
+
+```
+v=wab1; endpoint=https://example.com/.well-known/wab.json
+```
+
+The agent then fetches the URL and parses a JSON document conforming to the schema in [Appendix A](#appendix-a-json-schema-for-agent-bridgejson). The MIME type MUST be `application/json` and the document SHOULD be cacheable per `capability_ttl`.
+
+Recommended JSON envelope for `_wab`-pointed documents (extends [§4.2](#42-discovery-document-format)):
+
+```json
+{
+  "version": "wab1",
+  "endpoint": "https://example.com",
+  "capability_ttl": 3600,
+  "fingerprint": "sha256:abc…",
+  "capabilities": ["search", "purchase", "auth"],
+  "security": { "dnssec_required": true, "doh_only": true }
+}
+```
+
+#### 4.6.5 Resolver Requirements
+
+| Requirement                              | Level    |
+|------------------------------------------|----------|
+| Use DoH (RFC 8484), not plain UDP/53     | MUST     |
+| Set the DO bit / request `AD` flag       | MUST     |
+| Validate DNSSEC chain when AD=1 trusted  | SHOULD   |
+| Honour the record's `capability_ttl`     | SHOULD   |
+| Cap effective TTL at 86400 seconds       | MUST     |
+
+#### 4.6.6 Error Handling Matrix
+
+| Condition                                       | Agent Action                                       | Rationale                                       |
+|--------------------------------------------------|----------------------------------------------------|-------------------------------------------------|
+| `NXDOMAIN` on `_wab`                            | Stop. Treat site as non-WAB.                       | Site has not opted in.                          |
+| `NXDOMAIN` on `_wab-trust` or `_wab-policy`     | Continue with defaults.                            | Optional records.                               |
+| DNS `SERVFAIL`                                   | Retry with exponential backoff (max 3 attempts).   | Resolver-side fault, not authoritative.         |
+| DoH HTTP 5xx                                     | Retry with backoff or fall back to alternate DoH.  | Resolver outage.                                |
+| DoH HTTP 4xx (other than 404)                   | Stop with `DOH_REQUEST_REJECTED`.                  | Bad query, no point retrying.                   |
+| DoH timeout (>5s)                                | Retry once, then fall back to alternate DoH.       | Network issue.                                  |
+| `AD=false` on the answer                        | Continue with `dnssec_unverified` warning.         | DNSSEC not deployed yet.                        |
+| `AD=false` AND record's `dnssec_required=true`  | Stop with `DNSSEC_REQUIRED`.                       | Site demands authenticated answers.             |
+| DNSSEC `Bogus`                                   | Stop with `DNSSEC_BOGUS` security alert.           | Possible MITM.                                  |
+| Record exists but fails ABNF                    | Stop with `INVALID_FORMAT`.                        | Cannot trust malformed contract.                |
+| Multiple `_wab` records returned                 | Pick the one whose `v=wab1` matches the highest    | Allows zero-downtime version migration.         |
+|                                                  | version the agent supports; ignore others.         |                                                 |
+| `endpoint` URL is non-HTTPS                     | Stop with `INSECURE_ENDPOINT`.                     | DoH gain is undone if endpoint is plaintext.    |
+| `fingerprint` mismatch with fetched JSON        | Stop with `FINGERPRINT_MISMATCH`.                  | Tampered or stale record.                       |
+
+#### 4.6.7 Privacy Model
+
+DoH moves the trust point from the user's ISP to the chosen DoH resolver. The query is **not** invisible — the resolver sees it. Agents SHOULD let users select their resolver, MUST NOT hardcode a single provider in production builds, and SHOULD support resolver rotation. See [`/dns#privacy`](https://www.webagentbridge.com/dns#privacy) for the threat-model table.
+
+#### 4.6.8 Reference Verifier
+
+A reference implementation of the resolver and validator ships as the npm package
+`@wab/dns-verify` ([`packages/dns-verify`](../packages/dns-verify/)). It implements §4.6.1
+through §4.6.6 and is suitable for use in CI pipelines.
+
 ---
 
 ## 5. Command Protocol

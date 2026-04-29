@@ -221,6 +221,8 @@ curl https://www.webagentbridge.com/api/v1/bounty/stats?api_key=wab_live_fre_YOU
 
 ## Quick Start
 
+> **Looking for a 5-minute install?** See **[INSTALL.md](INSTALL.md)** — a dedicated bilingual (English / العربية) quick-install guide that gets you a sovereign WAB-enabled site with DNS Discovery in one command.
+
 ### Deploy in One Click
 
 | Platform | Button | Storage | Free Tier |
