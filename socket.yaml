@@ -1,0 +1,67 @@
+# WAB WebSocket Protocol Specification (v1.0.0)
+# Endpoints:
+# - Agent: wss://webagentbridge.com/ws/agent
+# - Analytics: wss://webagentbridge.com/ws/analytics
+
+version: "1.0.0"
+protocol: "wab-ws-protocol"
+
+connection:
+  handshake:
+    required_headers:
+      - "Authorization: Bearer <token>"
+      - "X-WAB-Client-Version: <version>"
+  heartbeat:
+    interval_ms: 30000
+    timeout_ms: 5000
+    behavior: "Server pings every 30s, client must pong within 5s"
+
+events:
+  client_to_server:
+    - name: "auth_init"
+      description: "Sent after connection if token not in headers"
+      payload:
+        token: { type: "string", required: true }
+        siteId: { type: "string", required: true }
+    - name: "action_request"
+      description: "Agent requests action on page"
+      payload:
+        actionId: { type: "string", required: true }
+        params: { type: "object", required: false }
+    - name: "page_subscribe"
+      description: "Subscribe to DOM changes"
+      payload:
+        url: { type: "string", required: true }
+  server_to_client:
+    - name: "auth_success"
+      payload:
+        sessionId: { type: "string" }
+        capabilities: { type: "array" }
+    - name: "action_result"
+      payload:
+        actionId: { type: "string" }
+        status: { type: "string", enum: ["success","failed","blocked"] }
+        data: { type: "object" }
+    - name: "dom_mutation"
+      payload:
+        url: { type: "string" }
+        mutations: { type: "array" }
+    - name: "security_alert"
+      payload:
+        level: { type: "string", enum: ["warning","critical"] }
+        reason: { type: "string" }
+        actionId: { type: "string" }
+
+error_handling:
+  codes:
+    4000: "Invalid JSON payload"
+    4001: "Unauthorized / Invalid Token"
+    4002: "Rate limit exceeded"
+    4003: "Action blocked by security policy"
+    4004: "Site ID not found or inactive"
+  behavior: "On 4001/4004, server closes connection with code 1008"
+
+rate_limits:
+  messages_per_second: 50
+  payload_size_limit_kb: 128
+  behavior: "Exceeding limits triggers 4002. Repeated violations lead to IP ban."
