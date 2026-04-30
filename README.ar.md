@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/)
+[![One-Click DNS Discovery](https://img.shields.io/badge/DNS%20Discovery-One--Click-6366f1?style=flat-square&logo=dns&logoColor=white)](https://webagentbridge.com/activate)
 [![Discord](https://img.shields.io/badge/Discord-%D8%A7%D9%86%D8%B6%D9%85%20%D9%84%D9%84%D9%85%D8%AC%D8%AA%D9%85%D8%B9-5865F2?logo=discord&logoColor=white)](https://discord.gg/NnbpJYEF)
 
 **البروتوكول والمنصة المفتوحة للتفاعل بين الذكاء الاصطناعي والويب — واجهة أوامر موحّدة، متصفح سيادي، درع هاتف، اكتشاف عبر DNS، شبكة وكلاء، وبوابة API موحّدة لتفاعل آمن بين الذكاء الاصطناعي والمواقع.**
@@ -17,6 +18,22 @@
 **[English Documentation](README.md)** | **العربية**
 
 ---
+
+## 🌍 اكتشاف DNS بنقرة واحدة
+
+اجعل موقعك قابلاً للاكتشاف فوراً من قِبَل وكلاء الذكاء الاصطناعي دون لمس سطر واحد من الكود. يستخدم WAB DNS Discovery سجل DNS TXT قياسياً لبث قدرات موقعك بشكل آمن عبر DNS over HTTPS (DoH).
+
+**[فعّل اكتشاف WAB بنقرة واحدة](https://webagentbridge.com/activate)**
+
+### كيف يعمل:
+1. **أضف سجل TXT** إلى نطاقك (`_wab.yourdomain.com`)
+2. **وجهه** إلى ملف قدراتك (`v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json`)
+3. **وكلاء الذكاء الاصطناعي** يستعلمون عن نطاقك عبر DoH ويعرفون فوراً ما يمكن لموقعك القيام به.
+
+شاهد [فيديو الإعداد في 40 ثانية](https://webagentbridge.com/activate) أو استخدم [المدقق المباشر](https://webagentbridge.com/dns) لفحص نطاقك.
+
+---
+
 
 ## ✨ المميزات
 
@@ -1284,3 +1301,4 @@ const out = await shield.safeExecute('deleteUser', { id: 42 });
 MIT — مجاني للاستخدام والتعديل والتوزيع.
 
 </div>
+
