@@ -93,9 +93,9 @@ WAB uses an **Open Core** dual-license model to ensure the protocol remains free
 
 ---
 
-## 🏢 Trusted By
+## 🔌 Live Integrations
 
-The following businesses have integrated WAB DNS Discovery into their platforms and are fully discoverable by AI agents:
+The following platforms have active WAB DNS records and are live on the AI-agent discovery network:
 
 | Company | Industry | WAB Feature Used |
 |---------|----------|-----------------|
@@ -110,7 +110,7 @@ The following businesses have integrated WAB DNS Discovery into their platforms 
 | **Farmers Unity** | Agriculture & Community | DNS Discovery |
 | **Shield Messenger** | Secure Communications | DNS Discovery |
 
-> All partners have active `_wab` DNS TXT records and are fully discoverable by AI agents via the WAB protocol.
+> All platforms have active `_wab` DNS TXT records and are live on the WAB discovery network right now.
 
 ---
 ## 🤝 Contributing
