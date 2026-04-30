@@ -1,7 +1,13 @@
+# ==============================================================================
 # WAB WebSocket Protocol Specification (v1.0.0)
+# ==============================================================================
+# This document defines the expected behavior, events, and message structures
+# for the Web Agent Bridge (WAB) WebSocket connections.
+#
 # Endpoints:
-# - Agent: wss://webagentbridge.com/ws/agent
-# - Analytics: wss://webagentbridge.com/ws/analytics
+# - Agent Connection: wss://webagentbridge.com/ws/agent
+# - Analytics Connection: wss://webagentbridge.com/ws/analytics
+# ==============================================================================
 
 version: "1.0.0"
 protocol: "wab-ws-protocol"
@@ -11,46 +17,77 @@ connection:
     required_headers:
       - "Authorization: Bearer <token>"
       - "X-WAB-Client-Version: <version>"
+    query_params:
+      - "siteId: <string>" (Optional for analytics, required for agent)
+  
   heartbeat:
     interval_ms: 30000
     timeout_ms: 5000
-    behavior: "Server pings every 30s, client must pong within 5s"
+    ping_message: { "type": "ping" }
+    pong_message: { "type": "pong" }
+    behavior: "Server sends ping every 30s. Client must respond with pong within 5s or connection drops."
 
 events:
   client_to_server:
     - name: "auth_init"
-      description: "Sent after connection if token not in headers"
+      description: "Sent immediately after connection if token wasn't in headers"
       payload:
-        token: { type: "string", required: true }
-        siteId: { type: "string", required: true }
+        type: "object"
+        properties:
+          token: { type: "string", required: true }
+          siteId: { type: "string", required: true }
+
     - name: "action_request"
-      description: "Agent requests action on page"
+      description: "Agent requests to perform an action on the page"
       payload:
-        actionId: { type: "string", required: true }
-        params: { type: "object", required: false }
+        type: "object"
+        properties:
+          actionId: { type: "string", required: true }
+          params: { type: "object", required: false }
+          context: { type: "object", required: false }
+
     - name: "page_subscribe"
-      description: "Subscribe to DOM changes"
+      description: "Subscribe to DOM changes for a specific URL"
       payload:
-        url: { type: "string", required: true }
+        type: "object"
+        properties:
+          url: { type: "string", required: true }
+
   server_to_client:
     - name: "auth_success"
+      description: "Authentication successful, connection ready"
       payload:
-        sessionId: { type: "string" }
-        capabilities: { type: "array" }
+        type: "object"
+        properties:
+          sessionId: { type: "string" }
+          capabilities: { type: "array", items: { type: "string" } }
+
     - name: "action_result"
+      description: "Result of an executed action"
       payload:
-        actionId: { type: "string" }
-        status: { type: "string", enum: ["success","failed","blocked"] }
-        data: { type: "object" }
+        type: "object"
+        properties:
+          actionId: { type: "string" }
+          status: { type: "string", enum: ["success", "failed", "blocked"] }
+          data: { type: "object" }
+          error: { type: "string", required: false }
+
     - name: "dom_mutation"
+      description: "Pushed when subscribed page changes"
       payload:
-        url: { type: "string" }
-        mutations: { type: "array" }
+        type: "object"
+        properties:
+          url: { type: "string" }
+          mutations: { type: "array", items: { type: "object" } }
+
     - name: "security_alert"
+      description: "Pushed when Anti-Hallucination or Threat engine blocks an action"
       payload:
-        level: { type: "string", enum: ["warning","critical"] }
-        reason: { type: "string" }
-        actionId: { type: "string" }
+        type: "object"
+        properties:
+          level: { type: "string", enum: ["warning", "critical"] }
+          reason: { type: "string" }
+          actionId: { type: "string" }
 
 error_handling:
   codes:
@@ -59,9 +96,10 @@ error_handling:
     4002: "Rate limit exceeded"
     4003: "Action blocked by security policy"
     4004: "Site ID not found or inactive"
-  behavior: "On 4001/4004, server closes connection with code 1008"
+  
+  behavior: "On critical errors (4001, 4004), server sends error frame and closes connection with code 1008."
 
 rate_limits:
   messages_per_second: 50
   payload_size_limit_kb: 128
-  behavior: "Exceeding limits triggers 4002. Repeated violations lead to IP ban."
+  behavior: "Exceeding limits triggers a 4002 error frame. Repeated violations lead to IP ban."
