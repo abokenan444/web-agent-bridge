@@ -88,7 +88,7 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: [...scriptSrc, (req, res) => `'nonce-${res.locals.cspNonce}'`],
-        scriptSrcAttr: scriptSrc,
+        scriptSrcAttr: [...scriptSrc, "'unsafe-hashes'"],
         styleSrc: [...styleSrc, 'https://fonts.googleapis.com'],
         imgSrc: ["'self'", 'data:', 'https:'],
         connectSrc: ["'self'", 'https:', 'ws:', 'wss:'],
@@ -186,6 +186,27 @@ app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), asyn
 
 app.use(express.json());
 
+// Global JSON parse error handler (catches malformed JSON from bots/scanners)
+app.use((err, req, res, next) => {
+  if (err.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+    return res.status(400).json({ error: 'Invalid JSON', details: err.message });
+  }
+  next(err);
+});
+
+// Global error handler — catches all unhandled route errors
+// global-error-handler
+app.use((err, req, res, next) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
+  if (status >= 500) {
+    console.error('[server] Unhandled error:', err.message, err.stack?.split('\n')[1] || '');
+  }
+  if (!res.headersSent) {
+    res.status(status).json({ error: message });
+  }
+});
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -228,6 +249,14 @@ app.use('/api/noscript', apiLimiter, noscriptRoutes);
 app.use('/api/discovery', apiLimiter, discoveryRoutes);
 // Also expose well-known discovery endpoints at the canonical root paths so
 // agents can find them without the /api/discovery prefix (RFC 8615).
+
+// /activate — WAB DNS Discovery activation guide (bilingual)
+app.get('/activate', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'activate.html'));
+});
+app.get('/activate-dns', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'activate.html'));
+});
 app.use('/', apiLimiter, discoveryRoutes);
 app.use('/api/premium', apiLimiter, premiumRoutes);
 app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);
@@ -376,9 +405,20 @@ app.use('/demo', demoStoreRoutes);
 app.use('/downloads', express.static(path.join(__dirname, '..', 'downloads'), {
   maxAge: '1d',
   setHeaders: (res, filePath) => {
-    res.set('Content-Disposition', 'attachment');
+    // Shell scripts served as plain text for curl | bash usage
+    if (filePath.endsWith('.sh')) {
+      res.set('Content-Type', 'text/plain; charset=utf-8');
+    } else {
+      res.set('Content-Disposition', 'attachment');
+    }
   }
 }));
+
+// WAB Discovery install shortcut: curl -fsSL https://webagentbridge.com/install | bash
+app.get('/install', (req, res) => {
+  res.set('Content-Type', 'text/plain; charset=utf-8');
+  res.sendFile(path.join(__dirname, '..', 'downloads', 'quick-wab.sh'));
+});
 
 // Agent chat endpoint for WAB Browser — Real AI Agent
 const chatLimiter = rateLimit({
@@ -499,6 +539,15 @@ app.get('*', (req, res) => {
   } else {
     res.status(404).json({ error: 'Not found' });
   }
+});
+
+
+// Prevent PM2 restarts from uncaught errors — log and continue
+process.on('uncaughtException', (err) => {
+  console.error('[process] uncaughtException:', err.message);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[process] unhandledRejection:', reason?.message || reason);
 });
 
 if (process.env.NODE_ENV !== 'test') {

@@ -1233,3 +1233,31 @@ tr:hover td { background: rgba(59,130,246,0.03); }
 ::-webkit-scrollbar-track { background: var(--bg-primary); }
 ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+/* ─── Mobile menu active state ─── */
+@media (max-width: 768px) {
+  .navbar-links.active {
+    display: flex !important;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(10, 12, 28, 0.98);
+    backdrop-filter: blur(20px);
+    padding: 16px 24px 24px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    z-index: 999;
+    gap: 4px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .navbar-links.active li {
+    width: 100%;
+  }
+  .navbar-links.active li a {
+    display: block;
+    padding: 12px 0;
+    font-size: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+}

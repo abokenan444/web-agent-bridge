@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activate WAB Discovery in One Click — Web Agent Bridge</title>
+  <meta name="description" content="Add one DNS TXT record and make your website instantly discoverable by AI agents. Step-by-step guide for Cloudflare, cPanel, GoDaddy, Namecheap and more.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>body{background:#0a0e1a;color:#f0f4ff;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;min-height:100vh}</style>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="/css/styles.css?v=3.2.0">
+  <style>
+    /* ─── Page-specific styles ─── */
+    .activate-hero {
+      padding: 120px 24px 60px;
+      text-align: center;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99,102,241,0.18) 0%, transparent 70%);
+    }
+    .activate-hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 1.2rem;
+    }
+    .activate-hero .subtitle {
+      font-size: 1.2rem;
+      color: #94a3b8;
+      max-width: 640px;
+      margin: 0 auto 2rem;
+    }
+    .lang-toggle {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 2.5rem;
+    }
+    .lang-toggle button {
+      padding: 8px 20px;
+      border-radius: 20px;
+      border: 1.5px solid #334155;
+      background: transparent;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .lang-toggle button.active {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-color: transparent;
+      color: #fff;
+      font-weight: 600;
+    }
+    /* Steps */
+    .steps-section {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+    .steps-section h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      color: #e2e8f0;
+    }
+    .step-card {
+      background: rgba(30,41,59,0.7);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .step-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 4px; height: 100%;
+      background: linear-gradient(180deg, #6366f1, #8b5cf6);
+      border-radius: 4px 0 0 4px;
+    }
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+    }
+    .step-card h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 0 0 10px;
+      color: #e2e8f0;
+    }
+    .step-card p {
+      color: #94a3b8;
+      margin: 0 0 16px;
+      line-height: 1.7;
+    }
+    .step-card .code-block {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #a5f3fc;
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+    .step-card .code-block .label {
+      color: #64748b;
+      font-size: 0.78rem;
+      display: block;
+      margin-bottom: 6px;
+    }
+    .step-card .code-block .key { color: #f472b6; }
+    .step-card .code-block .val { color: #34d399; }
+    /* Screenshot */
+    .step-screenshot {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(99,102,241,0.25);
+      margin-top: 16px;
+    }
+    /* Provider tabs */
+    .provider-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .provider-tab {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: transparent;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .provider-tab.active {
+      background: rgba(99,102,241,0.2);
+      border-color: #6366f1;
+      color: #a5b4fc;
+    }
+    .provider-content { display: none; }
+    .provider-content.active { display: block; }
+    /* Video section */
+    .video-section {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+    .video-section h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: #e2e8f0;
+    }
+    .video-wrapper {
+      background: #0f172a;
+      border: 1px solid rgba(99,102,241,0.25);
+      border-radius: 16px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .video-wrapper video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    /* Verifier CTA */
+    .verifier-cta {
+      background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15));
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 20px;
+      padding: 48px 32px;
+      text-align: center;
+      max-width: 640px;
+      margin: 0 auto 80px;
+    }
+    .verifier-cta h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .verifier-cta p {
+      color: #94a3b8;
+      margin-bottom: 24px;
+    }
+    /* Badge */
+    .badge-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+    .badge-img {
+      height: 28px;
+    }
+    /* RTL support */
+    html[dir="rtl"] .step-card::before {
+      left: auto; right: 0;
+      border-radius: 0 4px 4px 0;
+    }
+    html[dir="rtl"] .step-card {
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <!-- ═══════════ NAVBAR ═══════════ -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <div class="brand-icon">⚡</div>
+        <span>WAB</span>
+      </a>
+      <ul class="navbar-links">
+        <li><a href="/" data-i18n="nav_home">Home</a></li>
+        <li><a href="/integrations" data-i18n="nav_integrations">Integrations</a></li>
+        <li><a href="/dns" data-i18n="nav_dns">DNS Discovery</a></li>
+        <li><a href="/phone-shield" data-i18n="nav_phone">Phone Shield</a></li>
+        <li><a href="/sovereign" data-i18n="nav_sovereign">Sovereign</a></li>
+        <li><a href="/docs" data-i18n="nav_docs">Docs</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <a href="/login" class="btn btn-ghost" data-wab-auth="guest">Sign In</a>
+        <a href="/dashboard" class="btn btn-ghost" data-wab-auth="signed-in" style="display:none">Dashboard</a>
+        <a href="/register" class="btn btn-primary btn-sm" data-wab-auth="guest">Get Started</a>
+      </div>
+      <button class="mobile-menu-btn">☰</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════ HERO ═══════════ -->
+  <section class="activate-hero">
+    <div class="badge-row">
+      <img src="https://img.shields.io/badge/DNS%20Discovery-One--Click-6366f1?style=flat-square&logo=dns&logoColor=white" alt="One-Click DNS Discovery" class="badge-img">
+      <img src="https://img.shields.io/badge/Protocol-WAB%20v1-8b5cf6?style=flat-square" alt="WAB v1" class="badge-img">
+      <img src="https://img.shields.io/badge/Verified-Live%20on%20webagentbridge.com-10b981?style=flat-square" alt="Live Verified" class="badge-img">
+    </div>
+    <div class="lang-toggle">
+      <button id="btnEn" class="active" onclick="setActivateLang('en')">English</button>
+      <button id="btnAr" onclick="setActivateLang('ar')">العربية</button>
+    </div>
+    <h1 data-i18n="hero_title">Activate WAB Discovery<br><span class="gradient-text">in One Click</span></h1>
+    <p class="subtitle" data-i18n="hero_sub">Add a single DNS TXT record and make your website instantly discoverable by AI agents — no code changes required.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a href="#steps" class="btn btn-primary btn-lg" data-i18n="cta_guide">View Setup Guide</a>
+      <a href="/dns" class="btn btn-secondary btn-lg" data-i18n="cta_verify">Live Verifier</a>
+    </div>
+  </section>
+
+  <!-- ═══════════ VIDEO ═══════════ -->
+  <section class="video-section">
+    <h2 data-i18n="video_title">Watch: Full Setup in 40 Seconds</h2>
+    <div class="video-wrapper">
+      <video controls poster="/img/dns-video-poster.jpg">
+        <source src="/videos/dns_discovery_demo.mp4" type="video/mp4">
+        <p data-i18n="video_fallback">Your browser does not support the video tag. <a href="/videos/dns_discovery_demo.mp4">Download the video</a>.</p>
+      </video>
+    </div>
+  </section>
+
+  <!-- ═══════════ STEPS ═══════════ -->
+  <section class="steps-section" id="steps">
+    <h2 data-i18n="steps_title">Step-by-Step Setup Guide</h2>
+
+    <!-- Step 1 -->
+    <div class="step-card">
+      <div class="step-number">1</div>
+      <h3 data-i18n="step1_title">Log In to Your DNS Provider</h3>
+      <p data-i18n="step1_desc">Sign in to your domain registrar or DNS hosting dashboard. Common providers include Cloudflare, cPanel, GoDaddy, and Namecheap. Navigate to the DNS Management or DNS Records section.</p>
+      <div class="provider-tabs">
+        <button class="provider-tab active" onclick="showProvider('cloudflare', this)">Cloudflare</button>
+        <button class="provider-tab" onclick="showProvider('cpanel', this)">cPanel</button>
+        <button class="provider-tab" onclick="showProvider('godaddy', this)">GoDaddy</button>
+        <button class="provider-tab" onclick="showProvider('namecheap', this)">Namecheap</button>
+      </div>
+      <div id="prov-cloudflare" class="provider-content active">
+        <p style="color:#94a3b8;font-size:0.9rem;" data-i18n="prov_cloudflare">Go to <strong>dash.cloudflare.com</strong> → Select your domain → Click <strong>DNS</strong> in the top navigation → Click <strong>+ Add record</strong>.</p>
+      </div>
+      <div id="prov-cpanel" class="provider-content">
+        <p style="color:#94a3b8;font-size:0.9rem;" data-i18n="prov_cpanel">Log in to cPanel → Scroll to <strong>Domains</strong> section → Click <strong>Zone Editor</strong> → Click <strong>Manage</strong> next to your domain → Click <strong>+ Add Record</strong>.</p>
+      </div>
+      <div id="prov-godaddy" class="provider-content">
+        <p style="color:#94a3b8;font-size:0.9rem;" data-i18n="prov_godaddy">Log in to <strong>godaddy.com</strong> → My Products → Click <strong>DNS</strong> next to your domain → Click <strong>Add New Record</strong>.</p>
+      </div>
+      <div id="prov-namecheap" class="provider-content">
+        <p style="color:#94a3b8;font-size:0.9rem;" data-i18n="prov_namecheap">Log in to <strong>namecheap.com</strong> → Domain List → Click <strong>Manage</strong> → Click <strong>Advanced DNS</strong> tab → Click <strong>Add New Record</strong>.</p>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step-card">
+      <div class="step-number">2</div>
+      <h3 data-i18n="step2_title">Add the TXT Record</h3>
+      <p data-i18n="step2_desc">Create a new DNS TXT record with exactly these values. Replace <code style="color:#a5f3fc">yourdomain.com</code> with your actual domain.</p>
+      <div class="code-block">
+        <span class="label">DNS TXT Record</span>
+        <span class="key">Type:</span>  <span class="val">TXT</span><br>
+        <span class="key">Name:</span>  <span class="val">_wab</span><br>
+        <span class="key">Value:</span> <span class="val">v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json</span><br>
+        <span class="key">TTL:</span>   <span class="val">Auto (3600)</span>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step-card">
+      <div class="step-number">3</div>
+      <h3 data-i18n="step3_title">Create the wab.json Capabilities File</h3>
+      <p data-i18n="step3_desc">Create the file <code style="color:#a5f3fc">/.well-known/wab.json</code> on your web server. This file describes your site's capabilities to AI agents.</p>
+      <div class="code-block">
+        <span class="label">/.well-known/wab.json</span>
+        {<br>
+        &nbsp;&nbsp;<span class="key">"version"</span>: <span class="val">"wab1"</span>,<br>
+        &nbsp;&nbsp;<span class="key">"name"</span>: <span class="val">"Your Site Name"</span>,<br>
+        &nbsp;&nbsp;<span class="key">"description"</span>: <span class="val">"What your site does"</span>,<br>
+        &nbsp;&nbsp;<span class="key">"endpoint"</span>: <span class="val">"https://yourdomain.com/.well-known/wab.json"</span>,<br>
+        &nbsp;&nbsp;<span class="key">"capabilities"</span>: [<span class="val">"browse"</span>, <span class="val">"api"</span>]<br>
+        }
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step-card">
+      <div class="step-number">4</div>
+      <h3 data-i18n="step4_title">Verify Your Setup</h3>
+      <p data-i18n="step4_desc">DNS propagation takes a few minutes. Use the Live Verifier to confirm your record is active. The verifier queries DNS over HTTPS (DoH) — no data is sent to our servers.</p>
+      <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:20px;margin-top:12px;">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <input id="activateDomain" type="text" placeholder="yourdomain.com" style="flex:1;min-width:200px;padding:10px 16px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#f0f4ff;font-size:0.9rem;outline:none;">
+          <button id="activateVerifyBtn" style="padding:10px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;font-size:0.9rem;" data-i18n="verify_btn">Verify Now</button>
+        </div>
+        <div id="activateResult" style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:0.82rem;display:none;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ CTA ═══════════ -->
+  <div style="padding:0 24px;">
+    <div class="verifier-cta">
+      <h2 data-i18n="cta_title">Your Domain is Now AI-Ready</h2>
+      <p data-i18n="cta_desc">Once verified, AI agents using the WAB protocol can discover your site's capabilities automatically — no manual configuration needed on their end.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <a href="/dns" class="btn btn-primary" data-i18n="cta_full_guide">Full DNS Guide</a>
+        <a href="/docs" class="btn btn-secondary" data-i18n="cta_docs">Read the Docs</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth-nav.js"></script>
+  <script src="/js/activate.js"></script>
+</body>
+</html>

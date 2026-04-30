@@ -29,3 +29,37 @@
     apply();
   }
 })();
+
+// ─── Mobile hamburger menu (CSP-safe, no onclick attributes) ───
+(function () {
+  function initMobileMenu() {
+    var btn = document.querySelector('.mobile-menu-btn');
+    var links = document.querySelector('.navbar-links');
+    if (!btn || !links) return;
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      links.classList.toggle('active');
+      // Toggle icon ☰ ↔ ✕
+      btn.textContent = links.classList.contains('active') ? '✕' : '☰';
+    });
+    // Close menu when clicking outside
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('nav') && links.classList.contains('active')) {
+        links.classList.remove('active');
+        btn.textContent = '☰';
+      }
+    });
+    // Close menu when a nav link is clicked
+    links.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () {
+        links.classList.remove('active');
+        btn.textContent = '☰';
+      });
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMobileMenu);
+  } else {
+    initMobileMenu();
+  }
+})();
