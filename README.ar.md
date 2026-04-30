@@ -1290,29 +1290,6 @@ const out = await shield.safeExecute('deleteUser', { id: 42 });
 
 ---
 
-
----
-
-## 🔌 تكاملات حية
-
-المنصات التالية لديها سجلات WAB DNS نشطة وهي الآن مباشرة على شبكة اكتشاف وكلاء الذكاء الاصطناعي:
-
-| الشركة | القطاع | ميزة WAB المستخدمة |
-|--------|--------|-------------------|
-| **Build Repair Pro** | البناء والإصلاح | DNS Discovery |
-| **Take Your Appointment** | الحجز والمواعيد | DNS Discovery |
-| **Cultural Translate** | خدمات الترجمة | DNS Discovery |
-| **Stars Group** | خدمات الأعمال | DNS Discovery |
-| **Bookings Here** | السفر والضيافة | DNS Discovery |
-| **Candles Fashion** | الأزياء والتجزئة | DNS Discovery |
-| **Sandex** | التجارة الإلكترونية | DNS Discovery |
-| **Beauty Services** | الجمال والعناية | DNS Discovery |
-| **Farmers Unity** | الزراعة والمجتمع | DNS Discovery |
-| **Shield Messenger** | الاتصالات الآمنة | DNS Discovery |
-
-> جميع المنصات لديها سجلات `_wab` DNS TXT نشطة وهي مباشرة على شبكة اكتشاف WAB الآن.
-
----
 ## 🤝 المساهمة
 
 نرحب بالمساهمات! اقرأ [دليل المساهمة](CONTRIBUTING.md) للبدء.

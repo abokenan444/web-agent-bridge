@@ -90,29 +90,6 @@ WAB uses an **Open Core** dual-license model to ensure the protocol remains free
 
 ---
 
-
----
-
-## 🔌 Live Integrations
-
-The following platforms have active WAB DNS records and are live on the AI-agent discovery network:
-
-| Company | Industry | WAB Feature Used |
-|---------|----------|-----------------|
-| **Build Repair Pro** | Construction & Repair | DNS Discovery |
-| **Take Your Appointment** | Booking & Scheduling | DNS Discovery |
-| **Cultural Translate** | Translation Services | DNS Discovery |
-| **Stars Group** | Business Services | DNS Discovery |
-| **Bookings Here** | Travel & Hospitality | DNS Discovery |
-| **Candles Fashion** | Lifestyle & Retail | DNS Discovery |
-| **Sandex** | E-Commerce | DNS Discovery |
-| **Beauty Services** | Beauty & Wellness | DNS Discovery |
-| **Farmers Unity** | Agriculture & Community | DNS Discovery |
-| **Shield Messenger** | Secure Communications | DNS Discovery |
-
-> All platforms have active `_wab` DNS TXT records and are live on the WAB discovery network right now.
-
----
 ## 🤝 Contributing
 
 We welcome contributions from the community! Whether it's fixing a bug, improving documentation, or proposing a new feature.
