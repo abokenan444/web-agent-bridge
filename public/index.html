@@ -7,7 +7,40 @@
   <meta name="description" content="The open AI↔Web protocol & agent platform: standardized command interface, sovereign browser, phone shield, DNS discovery, agent mesh, and unified API gateway.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <style>body{background:#0a0e1a;color:#f0f4ff;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;min-height:100vh}</style>
+  <style>body{background:#0a0e1a;color:#f0f4ff;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;min-height:100vh}
+  /* ── Trusted By / Clients ── */
+  .client-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 20px;
+    text-align: center;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .client-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary);
+  }
+  .client-icon {
+    font-size: 2.4rem;
+    margin-bottom: 12px;
+  }
+  .client-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .client-tag {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background: rgba(99,102,241,0.1);
+    border-radius: 20px;
+    padding: 3px 10px;
+    display: inline-block;
+  }
+
+  </style>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
   <link rel="stylesheet" href="/css/styles.css?v=3.0.1">
@@ -985,6 +1018,73 @@ console.<span class="fn">log</span>(actions);
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ TRUSTED BY ═══════════ -->
+  <section class="section" id="trusted-by" style="background: var(--bg-secondary);">
+    <div class="container">
+      <div class="section-header">
+        <span class="badge">Trusted By</span>
+        <h2>Businesses Already Using <span class="gradient-text">WAB DNS Discovery</span></h2>
+        <p>These companies have integrated WAB into their platforms and are discoverable by AI agents.</p>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:24px; margin-top:40px;">
+        <div class="client-card">
+          <div class="client-icon">🔧</div>
+          <div class="client-name">Build Repair Pro</div>
+          <div class="client-tag">Construction &amp; Repair</div>
+        </div>
+        <div class="client-card">
+          <div class="client-icon">📅</div>
+          <div class="client-name">Take Your Appointment</div>
+          <div class="client-tag">Booking &amp; Scheduling</div>
+        </div>
+        <div class="client-card">
+          <div class="client-icon">🌐</div>
+          <div class="client-name">Cultural Translate</div>
+          <div class="client-tag">Translation Services</div>
+        </div>
+        <div class="client-card">
+          <div class="client-icon">⭐</div>
+          <div class="client-name">Stars Group</div>
+          <div class="client-tag">Business Services</div>
+        </div>
+        <div class="client-card">
+          <div class="client-icon">🏨</div>
+          <div class="client-name">Bookings Here</div>
+          <div class="client-tag">Travel &amp; Hospitality</div>
+        </div>
+        <div class="client-card">
+          <div class="client-icon">🕯️</div>
+          <div class="client-name">Candles Fashion</div>
+          <div class="client-tag">Lifestyle &amp; Retail</div>
+        </div>
+        <div class="client-card">
+          <div class="client-icon">🛒</div>
+          <div class="client-name">Sandex</div>
+          <div class="client-tag">E-Commerce</div>
+        </div>
+        <div class="client-card">
+          <div class="client-icon">💄</div>
+          <div class="client-name">Beauty Services</div>
+          <div class="client-tag">Beauty &amp; Wellness</div>
+        </div>
+        <div class="client-card">
+          <div class="client-icon">🌾</div>
+          <div class="client-name">Farmers Unity</div>
+          <div class="client-tag">Agriculture &amp; Community</div>
+        </div>
+        <div class="client-card">
+          <div class="client-icon">🛡️</div>
+          <div class="client-name">Shield Messenger</div>
+          <div class="client-tag">Secure Communications</div>
+        </div>
+      </div>
+      <p style="text-align:center; margin-top:32px; color:var(--text-secondary); font-size:0.95rem;">
+        All partners have active <code>_wab</code> DNS TXT records and are fully discoverable by AI agents via the WAB protocol.
+      </p>
     </div>
   </section>
 
