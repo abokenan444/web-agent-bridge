@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB vs Other Agent Protocols — Honest Side-by-Side</title>
+  <meta name="description" content="WAB DNS Discovery v1.3 compared with ANS, MCP, sitemap.xml, llms.txt, ai.txt, robots.txt, and ai-plugin.json. Cryptographic trust, latency, adoption, and operational simplicity benchmarked side-by-side.">
+  <link rel="stylesheet" href="/css/styles.css?v=3.3.0">
+  <style>
+    body { background:#081123; color:#e8efff; }
+    .hero { padding:96px 20px 24px; text-align:center; }
+    .hero .badge { display:inline-block; background:linear-gradient(135deg,#10b981,#059669); padding:4px 12px; border-radius:999px; font-size:.78rem; font-weight:700; letter-spacing:.5px; margin-bottom:12px; }
+    .hero h1 { font-size:clamp(1.9rem,4vw,2.8rem); margin:6px 0 8px; }
+    .hero p  { color:#9eb1d8; max-width:880px; margin:0 auto; font-size:1rem; }
+    .wrap { max-width:1280px; margin:0 auto; padding:0 18px 70px; }
+    .panel { background:linear-gradient(180deg,rgba(17,24,39,.92),rgba(10,16,30,.96)); border:1px solid rgba(148,163,184,.2); border-radius:14px; padding:18px; margin-bottom:16px; overflow:auto; }
+    .panel h3 { margin:0 0 10px; color:#fcd34d; }
+    table { width:100%; border-collapse:collapse; font-size:.85rem; min-width:980px; }
+    th, td { padding:10px 12px; text-align:left; border-bottom:1px solid rgba(148,163,184,.16); vertical-align:top; }
+    th { color:#a8b7d7; font-weight:700; font-size:.74rem; text-transform:uppercase; letter-spacing:.6px; background:rgba(15,23,42,.7); position:sticky; top:0; }
+    th.wab, td.wab { background:rgba(16,185,129,.08); border-left:2px solid #10b981; border-right:2px solid #10b981; }
+    th.wab { color:#a7f3d0; }
+    .yes { color:#a7f3d0; font-weight:700; }
+    .no  { color:#fecaca; font-weight:700; }
+    .meh { color:#fcd34d; font-weight:700; }
+    .row-label { font-weight:700; color:#e8efff; }
+    .row-sub { font-size:.74rem; color:#94a3b8; font-weight:400; margin-top:2px; }
+    .quote { background:#0b162a; border-left:3px solid #10b981; padding:14px 18px; border-radius:8px; font-size:.95rem; color:#e8efff; margin:18px 0; }
+    .legend { font-size:.78rem; color:#9eb1d8; margin-top:8px; }
+    a { color:#fcd34d; }
+    .cta { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:20px; }
+    .cta a { display:inline-block; padding:10px 16px; border-radius:10px; background:linear-gradient(135deg,#10b981,#047857); color:#fff; text-decoration:none; font-weight:700; }
+    .cta a.alt { background:linear-gradient(135deg,#334155,#1f2937); }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <span class="badge">WAB v1.3 · Comparative Analysis</span>
+    <h1>WAB vs every other agent-discovery protocol</h1>
+    <p>An honest side-by-side. WAB DNS Discovery v1.3 against ANS, MCP, sitemap.xml, llms.txt, ai.txt, robots.txt, and OpenAI ai-plugin.json — across cryptography, latency, adoption cost, and operational simplicity.</p>
+  </section>
+
+  <div class="wrap">
+
+    <div class="panel">
+      <h3>Where each protocol sits</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th class="wab">WAB v1.3 (DNS)</th>
+            <th>ANS (PKI)</th>
+            <th>MCP</th>
+            <th>sitemap.xml</th>
+            <th>llms.txt</th>
+            <th>ai.txt / robots.txt</th>
+            <th>ai-plugin.json</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="row-label">Trust root<div class="row-sub">Where does identity come from?</div></td>
+            <td class="wab"><span class="yes">DNS owner + DNSSEC + TLS</span><div class="row-sub">3 independent attestations, zero new infra</div></td>
+            <td><span class="meh">External PKI / CA</span><div class="row-sub">New CA hierarchy required</div></td>
+            <td><span class="no">Out-of-band trust</span><div class="row-sub">Manual config per client</div></td>
+            <td><span class="no">None</span></td>
+            <td><span class="no">None</span></td>
+            <td><span class="no">None</span></td>
+            <td><span class="meh">HTTPS only</span></td>
+          </tr>
+          <tr>
+            <td class="row-label">Cryptographic signature<div class="row-sub">Tamper-evident manifests</div></td>
+            <td class="wab"><span class="yes">Ed25519 (signed wab.json)</span></td>
+            <td><span class="yes">RSA / ECDSA via PKI</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="no">No</span></td>
+          </tr>
+          <tr>
+            <td class="row-label">DNSSEC verification<div class="row-sub">Resolver-level integrity</div></td>
+            <td class="wab"><span class="yes">Native — AD flag checked</span></td>
+            <td><span class="meh">Optional</span></td>
+            <td><span class="no">N/A</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="no">No</span></td>
+          </tr>
+          <tr>
+            <td class="row-label">Discovery latency<div class="row-sub">Time to first byte</div></td>
+            <td class="wab"><span class="yes">~30–80 ms (1 DNS query)</span></td>
+            <td><span class="meh">200–600 ms (CRL + cert chain)</span></td>
+            <td><span class="meh">Connection setup + handshake</span></td>
+            <td><span class="meh">HTTP fetch + XML parse</span></td>
+            <td><span class="meh">HTTP fetch</span></td>
+            <td><span class="meh">HTTP fetch</span></td>
+            <td><span class="meh">HTTP fetch</span></td>
+          </tr>
+          <tr>
+            <td class="row-label">Site-owner setup time<div class="row-sub">Install → live</div></td>
+            <td class="wab"><span class="yes">≈ 60 seconds (1 TXT record)</span></td>
+            <td><span class="no">Hours (cert request, CSR, PKI)</span></td>
+            <td><span class="meh">Per-server config</span></td>
+            <td><span class="yes">Few minutes</span></td>
+            <td><span class="yes">Few minutes</span></td>
+            <td><span class="yes">Seconds</span></td>
+            <td><span class="meh">15–30 minutes</span></td>
+          </tr>
+          <tr>
+            <td class="row-label">One-click DNS providers<div class="row-sub">Native integrations shipped</div></td>
+            <td class="wab"><span class="yes">7 — Cloudflare · Route 53 · Azure · GCP · cPanel · Plesk · GoDaddy/Namecheap</span></td>
+            <td><span class="no">None</span></td>
+            <td><span class="no">N/A</span></td>
+            <td><span class="no">N/A</span></td>
+            <td><span class="no">N/A</span></td>
+            <td><span class="no">N/A</span></td>
+            <td><span class="no">N/A</span></td>
+          </tr>
+          <tr>
+            <td class="row-label">Agent-readable actions<div class="row-sub">Beyond static URLs</div></td>
+            <td class="wab"><span class="yes">Yes — typed actions, params, auth</span></td>
+            <td><span class="meh">Service descriptors</span></td>
+            <td><span class="yes">Yes — full RPC</span></td>
+            <td><span class="no">URLs only</span></td>
+            <td><span class="meh">Free-text hints</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="yes">OpenAPI spec</span></td>
+          </tr>
+          <tr>
+            <td class="row-label">Cross-vendor compatibility<div class="row-sub">No vendor lock-in</div></td>
+            <td class="wab"><span class="yes">100% — runs over plain DNS</span></td>
+            <td><span class="meh">CA-dependent</span></td>
+            <td><span class="meh">Anthropic ecosystem</span></td>
+            <td><span class="yes">Universal</span></td>
+            <td><span class="meh">Emerging</span></td>
+            <td><span class="yes">Universal</span></td>
+            <td><span class="no">OpenAI-bound</span></td>
+          </tr>
+          <tr>
+            <td class="row-label">Key rotation<div class="row-sub">Without breaking clients</div></td>
+            <td class="wab"><span class="yes">Atomic via DNS TTL</span><div class="row-sub">Add new pk → wait TTL → remove old</div></td>
+            <td><span class="meh">CRL / OCSP refresh</span></td>
+            <td><span class="no">Manual</span></td>
+            <td><span class="no">N/A</span></td>
+            <td><span class="no">N/A</span></td>
+            <td><span class="no">N/A</span></td>
+            <td><span class="meh">Manifest refresh</span></td>
+          </tr>
+          <tr>
+            <td class="row-label">Caching<div class="row-sub">Internet-scale</div></td>
+            <td class="wab"><span class="yes">Native DNS caching everywhere</span></td>
+            <td><span class="meh">CDN / OCSP staple</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="meh">CDN</span></td>
+            <td><span class="meh">CDN</span></td>
+            <td><span class="meh">CDN</span></td>
+            <td><span class="meh">CDN</span></td>
+          </tr>
+          <tr>
+            <td class="row-label">Open spec + reference impl<div class="row-sub">Free to adopt</div></td>
+            <td class="wab"><span class="yes">Open · MIT · published</span></td>
+            <td><span class="meh">Draft</span></td>
+            <td><span class="yes">Open</span></td>
+            <td><span class="yes">Open</span></td>
+            <td><span class="yes">Open</span></td>
+            <td><span class="yes">Open</span></td>
+            <td><span class="yes">Open</span></td>
+          </tr>
+          <tr>
+            <td class="row-label">Live trust API<div class="row-sub">Programmatic verification</div></td>
+            <td class="wab"><span class="yes"><a href="/api/discovery/trust/webagentbridge.com">/api/discovery/trust/:domain</a></span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="no">No</span></td>
+            <td><span class="no">No</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="legend">Legend: <span class="yes">✓ first-class support</span> · <span class="meh">~ partial / optional</span> · <span class="no">✗ not supported</span></p>
+    </div>
+
+    <div class="panel">
+      <h3>Why DNS-rooted trust beats CA-rooted PKI for agent discovery</h3>
+      <ul style="line-height:1.8;color:#cbd5e1;">
+        <li><strong>Universal infrastructure.</strong> Every domain already has DNS. Adding WAB is one TXT record, not a CA enrollment ceremony.</li>
+        <li><strong>Single trust root.</strong> The agent already trusts <code>example.com</code> for TLS. WAB reuses the same identity — no new authorities to vouch for.</li>
+        <li><strong>Tamper resistance.</strong> DNSSEC + TLS + Ed25519 = three independent layers. An attacker must break all three, not just one CA.</li>
+        <li><strong>Fast revocation.</strong> Drop the TXT record → resolvers honour TTL → revoked globally in seconds. No CRL polling, no OCSP staple.</li>
+        <li><strong>Zero new dependencies.</strong> No PKI vendor, no transparency log, no out-of-band registry. Agents that resolve DNS already have everything they need.</li>
+      </ul>
+    </div>
+
+    <div class="quote">
+      <strong>The bottom line:</strong> WAB v1.3 matches PKI-grade protocols on cryptographic guarantees while keeping the operational footprint of a single DNS record — and it's the only protocol that ships with one-click integrations across all 7 major DNS providers and a live public trust API.
+    </div>
+
+    <div class="cta">
+      <a href="/wab-trust">Verify a Domain</a>
+      <a href="/dns" class="alt">Enable WAB DNS</a>
+      <a href="/adoption-metrics" class="alt">Live Adoption Metrics</a>
+      <a href="/docs/SPEC" class="alt">Read the Spec</a>
+    </div>
+
+  </div>
+</body>
+</html>

@@ -287,6 +287,12 @@ app.get('/registrar-integrations', noCache, (req, res) => {
 app.get('/adoption-metrics', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'adoption-metrics.html'));
 });
+app.get('/wab-trust', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'wab-trust.html'));
+});
+app.get('/wab-vs-protocols', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'wab-vs-protocols.html'));
+});
 app.use('/', apiLimiter, discoveryRoutes);
 app.use('/api/premium', apiLimiter, premiumRoutes);
 app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);

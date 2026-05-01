@@ -10,6 +10,7 @@ const { findSiteById, db } = require('../models/db');
 const { authenticateToken } = require('../middleware/auth');
 const { safeFetch } = require('../utils/safe-fetch');
 const { verify } = require('../../packages/dns-verify/src/index');
+const wabCrypto = require('../services/wab-crypto');
 
 // Fairness module is proprietary — provide stubs when not available
 let calculateNeutralityScore, fairnessWeightedSearch, registerInDirectory, getDirectoryListings, generateFairnessReport;
@@ -29,7 +30,7 @@ try {
   generateFairnessReport = () => ({ status: 'unavailable' });
 }
 
-const WAB_VERSION = '1.2.0';
+const WAB_VERSION = '1.3.0';
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS discovery_usage_runs (
@@ -1655,6 +1656,265 @@ router.get('/api/discovery/adoption-metrics', (_req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'adoption_metrics_failed', details: err.message });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════
+//  WAB Trust Layer v1.3 — Ed25519 + DNSSEC + signed manifests
+//  Anchored in DNS ownership: no CA, no central registry.
+// ═════════════════════════════════════════════════════════════════════
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS discovery_trust_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    domain TEXT NOT NULL,
+    score INTEGER NOT NULL,
+    dnssec TEXT,
+    has_pk INTEGER DEFAULT 0,
+    signed_manifest INTEGER DEFAULT 0,
+    sig_valid INTEGER DEFAULT 0,
+    https_ok INTEGER DEFAULT 0,
+    findings TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_discovery_trust_runs_domain_time
+    ON discovery_trust_runs(domain, created_at DESC);
+`);
+
+// POST /api/discovery/keys/generate
+//   Generates a fresh Ed25519 keypair. Stateless — server does not store
+//   the private key. The caller saves it; the public key goes into DNS.
+router.post('/api/discovery/keys/generate', (_req, res) => {
+  try {
+    const kp = wabCrypto.generateKeyPair();
+    res.json({
+      wab_version: WAB_VERSION,
+      ...kp,
+      txt_record_snippet: `v=wab1; endpoint=https://your-domain/.well-known/wab.json; pk=ed25519:${kp.public_key}`,
+      warnings: [
+        'Save private_key offline. The server does not retain it.',
+        'Publish public_key in your _wab TXT record under pk=ed25519:<value>.',
+        'Sign your wab.json manifest with the private key before publishing.',
+      ],
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'key_generation_failed', details: err.message });
+  }
+});
+
+// POST /api/discovery/sign-manifest
+//   Body: { manifest: object, private_key: base64, embed_public_key?: boolean }
+//   Returns the manifest with a `signature` block appended.
+//   Stateless — the private key is used in-memory only.
+router.post('/api/discovery/sign-manifest', (req, res) => {
+  const { manifest, private_key, embed_public_key } = req.body || {};
+  if (!manifest || typeof manifest !== 'object') {
+    return res.status(400).json({ error: 'manifest object required' });
+  }
+  if (!private_key || typeof private_key !== 'string') {
+    return res.status(400).json({ error: 'private_key (base64) required' });
+  }
+  try {
+    const signed = wabCrypto.signManifest(manifest, private_key, { embed_public_key: !!embed_public_key });
+    res.json({ wab_version: WAB_VERSION, signed_manifest: signed });
+  } catch (err) {
+    res.status(400).json({ error: 'signing_failed', details: err.message });
+  }
+});
+
+// POST /api/discovery/verify-manifest
+//   Body: { manifest: object (signed), public_key?: base64 }
+//   If public_key is omitted, the embedded `signature.public_key` is used.
+router.post('/api/discovery/verify-manifest', (req, res) => {
+  const { manifest, public_key, max_age_seconds } = req.body || {};
+  if (!manifest || typeof manifest !== 'object') {
+    return res.status(400).json({ error: 'manifest object required' });
+  }
+  try {
+    const result = wabCrypto.verifyManifest(manifest, public_key || null, {
+      max_age_seconds: max_age_seconds || undefined,
+    });
+    res.json({ wab_version: WAB_VERSION, ...result });
+  } catch (err) {
+    res.status(500).json({ error: 'verification_failed', details: err.message });
+  }
+});
+
+// GET /api/discovery/trust/:domain
+//   Comprehensive trust report combining:
+//     1. DNSSEC AD flag on _wab record
+//     2. pk=ed25519:... presence in TXT
+//     3. HTTPS reachability of the manifest endpoint
+//     4. Signed manifest + Ed25519 verification against DNS-published key
+//   Returns a 0–100 score and persists to discovery_trust_runs.
+router.get('/api/discovery/trust/:domain', async (req, res) => {
+  const domain = sanitizeDomain(req.params.domain || '');
+  if (!domain) return res.status(400).json({ error: 'invalid domain' });
+
+  const findings = [];
+  const checks = {
+    dns_resolved: false,
+    dnssec_verified: false,
+    has_public_key: false,
+    pk_algorithm: null,
+    https_endpoint: false,
+    manifest_fetched: false,
+    manifest_signed: false,
+    signature_valid: false,
+  };
+  let endpoint = null;
+  let pk = null;
+
+  // 1. DNS lookup with DNSSEC
+  let dnsResult;
+  try {
+    dnsResult = await verify(domain, { strict: false });
+    checks.dns_resolved = !!(dnsResult.ok && dnsResult.records[0] && dnsResult.records[0].present);
+    checks.dnssec_verified = dnsResult.dnssec === 'verified';
+    if (!checks.dns_resolved) findings.push('No _wab TXT record found');
+    if (checks.dns_resolved && !checks.dnssec_verified) findings.push('DNSSEC AD flag missing — domain not signed');
+  } catch (err) {
+    findings.push('DNS lookup failed: ' + err.message);
+  }
+
+  if (checks.dns_resolved && dnsResult.records[0].parsed) {
+    const parsed = dnsResult.records[0].parsed;
+    endpoint = parsed.endpoint || null;
+    if (parsed.pk) {
+      const parsedPk = wabCrypto.parsePkField(parsed.pk);
+      if (parsedPk && parsedPk.algorithm === 'ed25519') {
+        checks.has_public_key = true;
+        checks.pk_algorithm = 'ed25519';
+        pk = parsedPk.public_key;
+      } else if (parsedPk) {
+        findings.push(`Unsupported pk algorithm: ${parsedPk.algorithm}`);
+      } else {
+        findings.push('Malformed pk= field');
+      }
+    } else {
+      findings.push('No pk= field in _wab TXT record (cryptographic identity disabled)');
+    }
+  }
+
+  // 2. Fetch signed manifest from endpoint
+  let manifest = null;
+  if (endpoint && /^https:\/\//i.test(endpoint)) {
+    checks.https_endpoint = true;
+    try {
+      const r = await safeFetch(endpoint, {}, { timeoutMs: 6000 });
+      if (r && r.ok) {
+        const text = await r.text();
+        try {
+          manifest = JSON.parse(text);
+          checks.manifest_fetched = true;
+          if (manifest && manifest.signature && manifest.signature.algorithm === 'ed25519') {
+            checks.manifest_signed = true;
+          }
+        } catch {
+          findings.push('Manifest is not valid JSON');
+        }
+      } else {
+        findings.push(`Manifest fetch failed: HTTP ${r ? r.status : 'no response'}`);
+      }
+    } catch (err) {
+      findings.push('Manifest fetch error: ' + err.message);
+    }
+  } else if (endpoint) {
+    findings.push('Endpoint is not HTTPS');
+  } else {
+    findings.push('No endpoint= field to fetch manifest from');
+  }
+
+  // 3. Verify signature
+  let verifyResult = null;
+  if (manifest && checks.manifest_signed && pk) {
+    verifyResult = wabCrypto.verifyManifest(manifest, pk);
+    checks.signature_valid = !!verifyResult.ok;
+    if (!verifyResult.ok) findings.push('Signature verification failed: ' + verifyResult.reason);
+  } else if (manifest && checks.manifest_signed && !pk) {
+    findings.push('Manifest is signed but no DNS pk= to verify against (untrusted)');
+  } else if (manifest && !checks.manifest_signed) {
+    findings.push('Manifest is unsigned (cryptographic protection disabled)');
+  }
+
+  // 4. Score: 5 boolean checks × 20 = 0–100
+  const score = [
+    checks.dns_resolved,
+    checks.dnssec_verified,
+    checks.has_public_key,
+    checks.https_endpoint && checks.manifest_fetched,
+    checks.signature_valid,
+  ].filter(Boolean).length * 20;
+
+  let label;
+  if (score >= 100) label = 'platinum';
+  else if (score >= 80)  label = 'gold';
+  else if (score >= 60)  label = 'silver';
+  else if (score >= 40)  label = 'bronze';
+  else if (score >= 20)  label = 'basic';
+  else                   label = 'unverified';
+
+  // Persist
+  try {
+    db.prepare(`
+      INSERT INTO discovery_trust_runs
+        (domain, score, dnssec, has_pk, signed_manifest, sig_valid, https_ok, findings)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      domain, score,
+      dnsResult ? dnsResult.dnssec : 'error',
+      checks.has_public_key ? 1 : 0,
+      checks.manifest_signed ? 1 : 0,
+      checks.signature_valid ? 1 : 0,
+      checks.https_endpoint ? 1 : 0,
+      JSON.stringify(findings),
+    );
+  } catch { /* analytics best-effort */ }
+
+  res.json({
+    wab_version: WAB_VERSION,
+    domain,
+    trust_score: score,
+    trust_label: label,
+    checks,
+    endpoint,
+    public_key: pk ? { algorithm: 'ed25519', value: pk, fingerprint: wabCrypto.fingerprint(pk) } : null,
+    signature: verifyResult,
+    findings,
+    generated_at: new Date().toISOString(),
+  });
+});
+
+// GET /api/discovery/trust-leaderboard
+//   Top domains by latest trust score — feeds the comparison & metrics pages.
+router.get('/api/discovery/trust-leaderboard', (_req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT t.domain, t.score, t.dnssec, t.has_pk, t.signed_manifest, t.sig_valid, t.created_at
+      FROM discovery_trust_runs t
+      INNER JOIN (
+        SELECT domain, MAX(id) AS max_id
+        FROM discovery_trust_runs
+        GROUP BY domain
+      ) latest ON latest.max_id = t.id
+      ORDER BY t.score DESC, t.created_at DESC
+      LIMIT 50
+    `).all();
+    res.json({
+      wab_version: WAB_VERSION,
+      total: rows.length,
+      domains: rows.map(r => ({
+        domain: r.domain,
+        score: r.score,
+        dnssec: r.dnssec,
+        has_pk: !!r.has_pk,
+        signed_manifest: !!r.signed_manifest,
+        signature_valid: !!r.sig_valid,
+        last_checked: r.created_at,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'leaderboard_failed', details: err.message });
   }
 });
 

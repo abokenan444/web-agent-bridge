@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB Trust — Cryptographic Verification (v1.3)</title>
+  <meta name="description" content="WAB DNS Discovery v1.3 trust layer: DNSSEC + Ed25519 signed manifests anchored in domain ownership. Verify any domain's cryptographic trust score live.">
+  <link rel="stylesheet" href="/css/styles.css?v=3.3.0">
+  <style>
+    body { background:#081123; color:#e8efff; }
+    .hero { padding:100px 20px 26px; text-align:center; }
+    .hero .badge { display:inline-block; background:linear-gradient(135deg,#10b981,#059669); padding:4px 12px; border-radius:999px; font-size:.78rem; font-weight:700; letter-spacing:.5px; margin-bottom:12px; }
+    .hero h1 { font-size:clamp(1.9rem,4vw,2.8rem); margin:6px 0 8px; }
+    .hero p { color:#9eb1d8; max-width:840px; margin:0 auto; font-size:1rem; }
+    .wrap { max-width:1180px; margin:0 auto; padding:0 18px 70px; }
+    .panel { background:linear-gradient(180deg,rgba(17,24,39,.92),rgba(10,16,30,.96)); border:1px solid rgba(148,163,184,.2); border-radius:14px; padding:18px; margin-bottom:16px; }
+    .panel h3 { margin:0 0 10px; color:#fcd34d; font-size:1rem; }
+    .grid2 { display:grid; grid-template-columns:1.2fr 1fr; gap:14px; }
+    @media (max-width:880px) { .grid2 { grid-template-columns:1fr; } }
+    label { display:block; font-size:.78rem; color:#a8b7d7; margin-bottom:5px; }
+    input, textarea, select { width:100%; background:#0b162a; border:1px solid rgba(148,163,184,.28); color:#e8efff; border-radius:10px; padding:10px; font-family:Consolas,monospace; font-size:.85rem; }
+    button { background:linear-gradient(135deg,#10b981,#047857); color:#fff; border:none; border-radius:10px; padding:10px 14px; cursor:pointer; font-weight:700; font-size:.85rem; }
+    button.alt { background:linear-gradient(135deg,#334155,#1f2937); }
+    button.warn { background:linear-gradient(135deg,#f59e0b,#b45309); }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    pre { background:#020617; border:1px solid rgba(148,163,184,.26); border-radius:10px; padding:12px; color:#c4b5fd; overflow:auto; font-size:.78rem; }
+    .score-card { text-align:center; padding:20px; border-radius:14px; }
+    .score-num { font-size:3.4rem; font-weight:800; line-height:1; }
+    .score-label { font-size:.86rem; text-transform:uppercase; letter-spacing:1.4px; margin-top:6px; }
+    .platinum { background:linear-gradient(135deg,#a855f7,#6366f1); color:#fff; }
+    .gold     { background:linear-gradient(135deg,#fbbf24,#d97706); color:#1f2937; }
+    .silver   { background:linear-gradient(135deg,#cbd5e1,#94a3b8); color:#1f2937; }
+    .bronze   { background:linear-gradient(135deg,#f97316,#c2410c); color:#fff; }
+    .basic    { background:linear-gradient(135deg,#475569,#1f2937); color:#fff; }
+    .unverified { background:#1f2937; color:#a8b7d7; border:1px solid rgba(148,163,184,.26); }
+    .check-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(148,163,184,.12); font-size:.9rem; }
+    .check-row:last-child { border-bottom:0; }
+    .check-icon { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.78rem; }
+    .check-icon.ok { background:#064e3b; color:#a7f3d0; }
+    .check-icon.no { background:#7f1d1d; color:#fecaca; }
+    .findings { background:#0b162a; border-left:3px solid #f59e0b; padding:10px 14px; border-radius:6px; font-size:.84rem; color:#fde68a; margin-top:10px; }
+    .findings ul { margin:6px 0 0 18px; padding:0; }
+    table { width:100%; border-collapse:collapse; font-size:.84rem; }
+    th, td { padding:8px 10px; text-align:left; border-bottom:1px solid rgba(148,163,184,.14); }
+    th { color:#a8b7d7; font-weight:600; font-size:.74rem; text-transform:uppercase; letter-spacing:.5px; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:.7rem; font-weight:700; }
+    .pill.ok { background:#064e3b; color:#a7f3d0; }
+    .pill.no { background:#7f1d1d; color:#fecaca; }
+    .keyout { display:none; }
+    a { color:#fcd34d; }
+    .small { font-size:.8rem; color:#9eb1d8; }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <span class="badge">WAB v1.3 · Trust Layer</span>
+    <h1>Cryptographic Trust for Agent Discovery</h1>
+    <p>WAB v1.3 binds every domain's discovery manifest to an <strong>Ed25519 signature</strong>, with the public key published in DNS and protected by <strong>DNSSEC</strong>. No CA. No central registry. Trust is rooted exactly where it should be — in domain ownership.</p>
+  </section>
+
+  <div class="wrap">
+
+    <div class="grid2">
+      <!-- LIVE VERIFIER -->
+      <div class="panel">
+        <h3>Verify any domain</h3>
+        <p class="small">Runs the full 5-check trust report: DNS · DNSSEC · public key · HTTPS manifest · signature.</p>
+        <label>Domain</label>
+        <input id="vDomain" placeholder="example.com" value="webagentbridge.com" />
+        <div class="actions">
+          <button onclick="runVerify()">Run Trust Check</button>
+          <button class="alt" onclick="loadLeaderboard()">View Leaderboard</button>
+        </div>
+        <div id="vResult" style="margin-top:14px;"></div>
+      </div>
+
+      <!-- KEY GENERATOR -->
+      <div class="panel">
+        <h3>Generate Ed25519 keypair</h3>
+        <p class="small">Stateless. The server never stores your private key — save it offline and use it to sign your <code>wab.json</code>.</p>
+        <div class="actions">
+          <button class="warn" onclick="genKeys()">Generate New Keypair</button>
+          <button class="alt" onclick="document.getElementById('keyout').style.display='none'">Hide</button>
+        </div>
+        <div id="keyout" class="keyout" style="margin-top:14px;">
+          <label>TXT record (publish in DNS)</label>
+          <pre id="kTxt"></pre>
+          <label>Public key (base64)</label>
+          <pre id="kPub"></pre>
+          <label>Private key (base64) — save offline NOW</label>
+          <pre id="kPriv" style="border-color:#7f1d1d;color:#fecaca;"></pre>
+          <p class="small" style="color:#fde68a;">⚠ This is the only time the private key is shown. Copy it now.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div class="panel" id="leaderboardPanel" style="display:none;">
+      <h3>Trust Leaderboard</h3>
+      <div id="leaderboard">Loading…</div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="panel">
+      <h3>How WAB v1.3 trust works</h3>
+      <ol style="color:#cbd5e1;font-size:.9rem;line-height:1.7;padding-left:20px;">
+        <li><strong>Generate keypair</strong> (Ed25519, 32 bytes each) — offline or via the button above.</li>
+        <li><strong>Publish public key in DNS</strong>: <code>_wab IN TXT "v=wab1; endpoint=https://example.com/.well-known/wab.json; pk=ed25519:&lt;BASE64&gt;"</code>.</li>
+        <li><strong>Enable DNSSEC</strong> on your zone (most registrars: 1-click). DNSSEC chain protects the key from spoofing.</li>
+        <li><strong>Sign your manifest</strong> with the private key: <code>node wab-sign.js sign wab.json key.priv</code> → <code>wab.signed.json</code>.</li>
+        <li><strong>Upload signed manifest</strong> to <code>https://example.com/.well-known/wab.json</code>.</li>
+        <li>Agents fetch the TXT (verify DNSSEC) → fetch the manifest (verify signature with DNS-published key) → trust established.</li>
+      </ol>
+      <p class="small" style="margin-top:10px;">Compare to ANS, sitemap.xml, llms.txt, ai.txt:
+        <a href="/wab-vs-protocols">WAB vs other protocols →</a></p>
+      <p class="small">Offline tools: <a href="/examples/wab-sign.js" target="_blank">wab-sign.js</a> · <a href="/examples/wab-verify.js" target="_blank">wab-verify.js</a></p>
+    </div>
+
+  </div>
+
+  <script>
+    const tick = (b) => b ? '<div class="check-icon ok">✓</div>' : '<div class="check-icon no">✗</div>';
+
+    async function runVerify() {
+      const d = document.getElementById('vDomain').value.trim();
+      if (!d) return;
+      const out = document.getElementById('vResult');
+      out.innerHTML = '<p class="small">Running trust check…</p>';
+      try {
+        const r = await fetch(`/api/discovery/trust/${encodeURIComponent(d)}`);
+        const data = await r.json();
+        if (!r.ok) { out.innerHTML = `<p style="color:#fecaca;">Error: ${data.error || r.status}</p>`; return; }
+        const c = data.checks || {};
+        const cls = data.trust_label || 'unverified';
+        out.innerHTML = `
+          <div class="score-card ${cls}">
+            <div class="score-num">${data.trust_score}<span style="font-size:1.2rem;opacity:.7">/100</span></div>
+            <div class="score-label">${cls}</div>
+          </div>
+          <div style="margin-top:10px;">
+            <div class="check-row">${tick(c.dns_resolved)}<span>DNS <code>_wab</code> record present</span></div>
+            <div class="check-row">${tick(c.dnssec_verified)}<span>DNSSEC verified (AD flag set)</span></div>
+            <div class="check-row">${tick(c.has_public_key)}<span>Public key in DNS (<code>pk=${c.pk_algorithm || '—'}</code>)</span></div>
+            <div class="check-row">${tick(c.https_endpoint && c.manifest_fetched)}<span>HTTPS manifest reachable</span></div>
+            <div class="check-row">${tick(c.signature_valid)}<span>Manifest signature valid (Ed25519)</span></div>
+          </div>
+          ${data.public_key ? `<p class="small" style="margin-top:10px;">Key fingerprint: <code>${data.public_key.fingerprint}</code></p>` : ''}
+          ${data.findings && data.findings.length ? `<div class="findings"><strong>Findings:</strong><ul>${data.findings.map(f=>`<li>${f}</li>`).join('')}</ul></div>` : ''}
+        `;
+      } catch (err) {
+        out.innerHTML = `<p style="color:#fecaca;">Error: ${err.message}</p>`;
+      }
+    }
+
+    async function genKeys() {
+      try {
+        const r = await fetch('/api/discovery/keys/generate', { method:'POST' });
+        const k = await r.json();
+        document.getElementById('keyout').style.display = 'block';
+        document.getElementById('kTxt').textContent = k.txt_record_snippet;
+        document.getElementById('kPub').textContent = k.public_key;
+        document.getElementById('kPriv').textContent = k.private_key;
+      } catch (err) {
+        alert('Key generation failed: ' + err.message);
+      }
+    }
+
+    async function loadLeaderboard() {
+      const panel = document.getElementById('leaderboardPanel');
+      panel.style.display = 'block';
+      const out = document.getElementById('leaderboard');
+      try {
+        const r = await fetch('/api/discovery/trust-leaderboard');
+        const data = await r.json();
+        if (!data.domains || !data.domains.length) {
+          out.innerHTML = '<p class="small">No trust runs recorded yet. Run a verify to populate.</p>';
+          return;
+        }
+        out.innerHTML = `<table>
+          <thead><tr><th>#</th><th>Domain</th><th>Score</th><th>DNSSEC</th><th>pk</th><th>Signed</th><th>Sig OK</th><th>Last check</th></tr></thead>
+          <tbody>${data.domains.map((d,i)=>`
+            <tr>
+              <td>${i+1}</td>
+              <td>${d.domain}</td>
+              <td><strong>${d.score}</strong></td>
+              <td>${d.dnssec === 'verified' ? '<span class="pill ok">✓</span>' : '<span class="pill no">'+d.dnssec+'</span>'}</td>
+              <td>${d.has_pk ? '<span class="pill ok">✓</span>' : '<span class="pill no">—</span>'}</td>
+              <td>${d.signed_manifest ? '<span class="pill ok">✓</span>' : '<span class="pill no">—</span>'}</td>
+              <td>${d.signature_valid ? '<span class="pill ok">✓</span>' : '<span class="pill no">—</span>'}</td>
+              <td class="small">${(d.last_checked||'').replace('T',' ').slice(0,16)}</td>
+            </tr>
+          `).join('')}</tbody>
+        </table>`;
+      } catch (err) {
+        out.innerHTML = `<p style="color:#fecaca;">Error: ${err.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
