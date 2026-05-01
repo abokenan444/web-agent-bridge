@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WAB DNS — cPanel / WHM Integration</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 0; }
+    .page { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
+    h1 { font-size: 1.7rem; margin-bottom: 6px; }
+    .sub { color: #94a3b8; margin-bottom: 32px; font-size: .97rem; }
+    .card { background: #1e293b; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
+    h2 { font-size: 1.1rem; margin: 0 0 14px; }
+    label { display: block; font-size: .85rem; color: #94a3b8; margin-bottom: 4px; margin-top: 14px; }
+    label:first-child { margin-top: 0; }
+    input[type=text], input[type=password], input[type=number] {
+      width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid #334155;
+      color: #e2e8f0; border-radius: 6px; padding: 9px 12px; font-size: .93rem;
+    }
+    input:focus { outline: 2px solid #6366f1; border-color: transparent; }
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+    .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .btn { padding: 9px 20px; border-radius: 7px; border: none; cursor: pointer; font-size: .92rem; font-weight: 600; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-enable    { background: #22c55e; color: #000; }
+    .btn-disable   { background: #ef4444; color: #fff; }
+    .btn-verify    { background: #6366f1; color: #fff; }
+    .btn-secondary { background: #334155; color: #e2e8f0; }
+    #statusBar { margin-top: 18px; min-height: 36px; padding: 10px 14px; border-radius: 7px; background: #0f172a; font-size: .88rem; color: #94a3b8; display: none; }
+    #statusBar.ok   { display: block; color: #4ade80; border: 1px solid #166534; }
+    #statusBar.err  { display: block; color: #f87171; border: 1px solid #7f1d1d; }
+    #statusBar.info { display: block; color: #93c5fd; border: 1px solid #1e3a5f; }
+    pre { background: #0f172a; border-radius: 7px; padding: 14px 16px; font-size: .82rem; color: #94a3b8; overflow-x: auto; white-space: pre-wrap; word-break: break-word; margin: 14px 0 0; }
+    code { background: #0f172a; padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 14px; }
+    .tab { padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: .84rem; background: #0f172a; color: #94a3b8; border: 1px solid #334155; }
+    .tab.active { background: #6366f1; color: #fff; border-color: transparent; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .step { display: flex; gap: 14px; margin-bottom: 18px; }
+    .step-num { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: #334155; color: #e2e8f0; font-size: .82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .step-body { flex: 1; padding-top: 3px; }
+    .warning-box { background: #431407; border: 1px solid #9a3412; border-radius: 8px; padding: 12px 16px; font-size: .87rem; color: #fdba74; margin-bottom: 18px; }
+    a { color: #818cf8; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1>cPanel / WHM × WAB DNS Discovery</h1>
+  <p class="sub">
+    Enable or disable the WAB DNS Discovery TXT record for any cPanel-hosted domain.
+    Works with cPanel's UAPI and WHM API — compatible with all major shared hosting providers.
+  </p>
+
+  <div class="warning-box">
+    ⚠ <strong>Security note:</strong> Your cPanel username, password or API token, and server hostname are only used
+    client-side to call cPanel's UAPI directly. They are <strong>never sent to WAB servers</strong>.
+    Always use a dedicated cPanel API Token instead of your account password when possible.
+  </div>
+
+  <!-- ── STEP 1: credentials ── -->
+  <div class="card">
+    <h2>1. cPanel Credentials</h2>
+    <div class="row">
+      <div>
+        <label>cPanel Host (FQDN or IP)</label>
+        <input type="text" id="cpHost" placeholder="cpanel.example.com">
+      </div>
+      <div>
+        <label>Port</label>
+        <input type="number" id="cpPort" value="2083" min="1" max="65535" style="max-width:100px">
+      </div>
+    </div>
+    <label>Username</label>
+    <input type="text" id="cpUser" placeholder="myuser" autocomplete="off">
+    <label>API Token <span style="color:#94a3b8;font-weight:400">(preferred)</span> or Password</label>
+    <input type="password" id="cpToken" placeholder="Paste cPanel API token or password" autocomplete="off">
+    <p style="margin:8px 0 0;font-size:.82rem;color:#64748b">
+      Generate an API token: cPanel → <strong>Security → Manage API Tokens → Create</strong>.
+      Make sure <code>Zone Editor</code> feature is enabled for the account.
+    </p>
+  </div>
+
+  <!-- ── STEP 2: domain ── -->
+  <div class="card">
+    <h2>2. Domain</h2>
+    <div class="row">
+      <div>
+        <label>Domain (must be in this cPanel account)</label>
+        <input type="text" id="cpDomain" placeholder="example.com">
+      </div>
+      <div>
+        <label>Endpoint URL <span style="color:#94a3b8;font-weight:400">(leave blank for auto)</span></label>
+        <input type="text" id="cpEndpoint" placeholder="https://example.com/.well-known/wab.json">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: actions ── -->
+  <div class="card">
+    <h2>3. Actions</h2>
+    <div class="actions">
+      <button class="btn btn-enable"    id="btnEnable"  onclick="cpAction('enable')">✓ Enable WAB Discovery</button>
+      <button class="btn btn-disable"   id="btnDisable" onclick="cpAction('disable')">✗ Disable WAB Discovery</button>
+      <button class="btn btn-verify"    id="btnVerify"  onclick="cpVerify()">⟳ Verify Status</button>
+      <button class="btn btn-secondary" onclick="window.open('/provider-sandbox','_blank')">Open Sandbox</button>
+    </div>
+    <div id="statusBar"></div>
+    <pre id="jsonOut" style="display:none"></pre>
+  </div>
+
+  <!-- ── HOW IT WORKS ── -->
+  <div class="card">
+    <h2>How it works</h2>
+    <div>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">Fetch the WAB <strong>record template</strong> for your domain to get the exact TXT value: <code>v=wab1; endpoint=https://…</code></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">Call cPanel UAPI <code>ZoneEdit::fetch_zone_records</code> to list existing TXT records for <code>_wab</code>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body"><strong>Enable:</strong> if no <code>_wab</code> TXT exists → call <code>ZoneEdit::add_zone_record</code>; if it exists → call <code>ZoneEdit::edit_zone_record</code>.<br>
+        <strong>Disable:</strong> call <code>ZoneEdit::remove_zone_record</code> to delete the line.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">Confirm with WAB's <code>/api/discovery/provider/status</code> — DNS propagation may take up to 60 s.</div>
+      </div>
+    </div>
+    <p style="margin:14px 0 0;font-size:.84rem;color:#64748b">
+      The cPanel UAPI calls are made from your browser directly to your server on port 2083 (HTTPS).
+      Make sure your browser can reach the cPanel port (no firewall blocking).
+    </p>
+  </div>
+
+  <!-- ── CODE SNIPPETS ── -->
+  <div class="card">
+    <h2>Code Snippets</h2>
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('nodejs')">Node.js</div>
+      <div class="tab" onclick="switchTab('curl')">cURL</div>
+      <div class="tab" onclick="switchTab('php')">PHP</div>
+    </div>
+
+    <div id="tab-nodejs" class="tab-panel active">
+<pre>// npm install node-fetch@2
+const fetch  = require('node-fetch');
+const https  = require('https');
+const agent  = new https.Agent({ rejectUnauthorized: false }); // for self-signed cert hosts
+
+const HOST   = 'cpanel.example.com';
+const PORT   = 2083;
+const USER   = 'myuser';
+const TOKEN  = process.env.CPANEL_API_TOKEN; // or password
+const DOMAIN = 'example.com';
+const TXT_VAL = `v=wab1; endpoint=https://${DOMAIN}/.well-known/wab.json`;
+
+function cpHeaders() {
+  // API Token auth (preferred)
+  return { Authorization: `cpanel ${USER}:${TOKEN}` };
+  // Password auth: use base64(user:password) with 'Basic '
+}
+
+function cpUrl(func, params = {}) {
+  const qs = new URLSearchParams({ domain: DOMAIN, ...params }).toString();
+  return `https://${HOST}:${PORT}/execute/ZoneEdit/${func}?${qs}`;
+}
+
+async function listWabRecords() {
+  const r = await fetch(cpUrl('fetch_zone_records', { type: 'TXT', name: `_wab.${DOMAIN}.` }), { headers: cpHeaders(), agent });
+  const j = await r.json();
+  return j.data || [];
+}
+
+async function enableWAB() {
+  const records = await listWabRecords();
+  if (records.length) {
+    const line = records[0].line;
+    const r = await fetch(cpUrl('edit_zone_record', { line, type: 'TXT', name: `_wab.${DOMAIN}.`, txtdata: TXT_VAL, ttl: 3600 }), { headers: cpHeaders(), agent });
+    console.log('Updated:', await r.json());
+  } else {
+    const r = await fetch(cpUrl('add_zone_record', { type: 'TXT', name: `_wab.${DOMAIN}.`, txtdata: TXT_VAL, ttl: 3600 }), { headers: cpHeaders(), agent });
+    console.log('Created:', await r.json());
+  }
+}
+
+async function disableWAB() {
+  const records = await listWabRecords();
+  if (!records.length) { console.log('Already disabled.'); return; }
+  const r = await fetch(cpUrl('remove_zone_record', { line: records[0].line }), { headers: cpHeaders(), agent });
+  console.log('Deleted:', await r.json());
+}
+
+enableWAB().catch(console.error);
+</pre>
+    </div>
+
+    <div id="tab-curl" class="tab-panel">
+<pre># cPanel API Token auth
+AUTH="cpanel myuser:MY_API_TOKEN"
+
+# List existing _wab TXT records
+curl -sk -H "Authorization: $AUTH" \
+  "https://cpanel.example.com:2083/execute/ZoneEdit/fetch_zone_records?domain=example.com&type=TXT&name=_wab.example.com."
+
+# Add _wab TXT record (enable)
+curl -sk -H "Authorization: $AUTH" \
+  "https://cpanel.example.com:2083/execute/ZoneEdit/add_zone_record?domain=example.com&type=TXT&name=_wab.example.com.&txtdata=v%3Dwab1%3B%20endpoint%3Dhttps%3A%2F%2Fexample.com%2F.well-known%2Fwab.json&ttl=3600"
+
+# Remove _wab TXT record by line number (disable)
+# Replace LINE_NUMBER with the value returned from fetch_zone_records
+curl -sk -H "Authorization: $AUTH" \
+  "https://cpanel.example.com:2083/execute/ZoneEdit/remove_zone_record?domain=example.com&line=LINE_NUMBER"
+</pre>
+    </div>
+
+    <div id="tab-php" class="tab-panel">
+<pre>&lt;?php
+// cPanel UAPI via PHP — run on your hosting server or via SSH
+// Requires: allow_url_fopen=On or cURL
+
+define('CP_HOST',  'cpanel.example.com');
+define('CP_PORT',  2083);
+define('CP_USER',  'myuser');
+define('CP_TOKEN', getenv('CPANEL_API_TOKEN'));
+define('DOMAIN',   'example.com');
+define('TXT_VAL',  'v=wab1; endpoint=https://' . DOMAIN . '/.well-known/wab.json');
+
+function cp_request(string $func, array $params = []): array {
+    $params['domain'] = DOMAIN;
+    $url = 'https://' . CP_HOST . ':' . CP_PORT . '/execute/ZoneEdit/' . $func . '?' . http_build_query($params);
+    $ctx = stream_context_create(['http' => [
+        'header' => 'Authorization: cpanel ' . CP_USER . ':' . CP_TOKEN,
+    ], 'ssl' => ['verify_peer' => false]]);
+    return json_decode(file_get_contents($url, false, $ctx), true);
+}
+
+function enable_wab(): void {
+    $records = cp_request('fetch_zone_records', ['type' => 'TXT', 'name' => '_wab.' . DOMAIN . '.']);
+    $payload = ['type' => 'TXT', 'name' => '_wab.' . DOMAIN . '.', 'txtdata' => TXT_VAL, 'ttl' => 3600];
+    if (!empty($records['data'])) {
+        $result = cp_request('edit_zone_record', array_merge($payload, ['line' => $records['data'][0]['line']]));
+        echo 'Updated: ' . json_encode($result) . PHP_EOL;
+    } else {
+        $result = cp_request('add_zone_record', $payload);
+        echo 'Created: ' . json_encode($result) . PHP_EOL;
+    }
+}
+
+function disable_wab(): void {
+    $records = cp_request('fetch_zone_records', ['type' => 'TXT', 'name' => '_wab.' . DOMAIN . '.']);
+    if (empty($records['data'])) { echo 'Already disabled.' . PHP_EOL; return; }
+    $result = cp_request('remove_zone_record', ['line' => $records['data'][0]['line']]);
+    echo 'Deleted: ' . json_encode($result) . PHP_EOL;
+}
+
+enable_wab();
+</pre>
+    </div>
+  </div>
+
+  <p style="text-align:center;margin-top:30px;font-size:.85rem;color:#475569">
+    <a href="/provider-onboarding">← Back to Provider Onboarding</a> ·
+    <a href="/cloudflare-integration">Cloudflare Integration</a> ·
+    <a href="/provider-sandbox">Provider Sandbox</a> ·
+    <a href="/dns">DNS Discovery</a>
+  </p>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`#tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function setStatus(msg, type) {
+  const bar = document.getElementById('statusBar');
+  bar.textContent = msg;
+  bar.className = type;
+}
+
+function showJson(obj) {
+  const pre = document.getElementById('jsonOut');
+  pre.textContent = JSON.stringify(obj, null, 2);
+  pre.style.display = 'block';
+}
+
+function getInputs() {
+  const host   = document.getElementById('cpHost').value.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const port   = document.getElementById('cpPort').value.trim() || '2083';
+  const user   = document.getElementById('cpUser').value.trim();
+  const token  = document.getElementById('cpToken').value.trim();
+  const domain = document.getElementById('cpDomain').value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const ep     = document.getElementById('cpEndpoint').value.trim() || `https://${domain}/.well-known/wab.json`;
+  return { host, port, user, token, domain, ep };
+}
+
+function cpBase({ host, port }) {
+  return `https://${host}:${port}`;
+}
+
+function cpHeaders({ user, token }) {
+  // cPanel API Token auth
+  return { 'Authorization': `cpanel ${user}:${token}` };
+}
+
+async function cpUapi(base, headers, func, params) {
+  const qs  = new URLSearchParams(params).toString();
+  const url = `${base}/execute/ZoneEdit/${func}?${qs}`;
+  const r   = await fetch(url, { headers, mode: 'cors' });
+  if (!r.ok) throw new Error(`HTTP ${r.status} from cPanel`);
+  return r.json();
+}
+
+async function cpAction(action) {
+  const inp = getInputs();
+  if (!inp.host)  return setStatus('Please enter the cPanel hostname.', 'err');
+  if (!inp.user)  return setStatus('Please enter your cPanel username.', 'err');
+  if (!inp.token) return setStatus('Please enter your cPanel API Token or password.', 'err');
+  if (!inp.domain) return setStatus('Please enter the domain name.', 'err');
+
+  document.getElementById('btnEnable').disabled  = true;
+  document.getElementById('btnDisable').disabled = true;
+  setStatus('Fetching WAB record template…', 'info');
+
+  try {
+    const tplRes = await fetch(`/api/discovery/provider/record-template?domain=${encodeURIComponent(inp.domain)}&endpoint=${encodeURIComponent(inp.ep)}`);
+    const tpl    = await tplRes.json();
+    const txtVal = tpl.record && tpl.record.value;
+    if (!txtVal) throw new Error('Could not fetch WAB record template.');
+
+    const base    = cpBase(inp);
+    const headers = cpHeaders(inp);
+    const recName = `_wab.${inp.domain}.`;
+
+    setStatus('Fetching existing _wab TXT records from cPanel…', 'info');
+    const listJ = await cpUapi(base, headers, 'fetch_zone_records', { domain: inp.domain, type: 'TXT', name: recName });
+    const existing = listJ.data && listJ.data[0];
+
+    let resultJson;
+    if (action === 'enable') {
+      const payload = { domain: inp.domain, type: 'TXT', name: recName, txtdata: txtVal, ttl: 3600 };
+      if (existing) {
+        setStatus(`Updating existing record (line ${existing.line})…`, 'info');
+        resultJson = await cpUapi(base, headers, 'edit_zone_record', { ...payload, line: existing.line });
+      } else {
+        setStatus('Creating new _wab TXT record…', 'info');
+        resultJson = await cpUapi(base, headers, 'add_zone_record', payload);
+      }
+      if (resultJson.errors && resultJson.errors.length) throw new Error(resultJson.errors.join(', '));
+      setStatus(`✓ _wab TXT record ${existing ? 'updated' : 'created'} for ${inp.domain}. WAB Discovery is ENABLED.`, 'ok');
+    } else {
+      if (!existing) {
+        setStatus(`No _wab TXT record found for ${inp.domain} — already disabled.`, 'ok');
+        showJson({ note: 'no record found', domain: inp.domain });
+        return;
+      }
+      setStatus(`Deleting record (line ${existing.line})…`, 'info');
+      resultJson = await cpUapi(base, headers, 'remove_zone_record', { domain: inp.domain, line: existing.line });
+      if (resultJson.errors && resultJson.errors.length) throw new Error(resultJson.errors.join(', '));
+      setStatus(`✓ _wab TXT record deleted for ${inp.domain}. WAB Discovery is DISABLED.`, 'ok');
+    }
+    showJson(resultJson);
+  } catch (err) {
+    setStatus(`Error: ${err.message}`, 'err');
+  } finally {
+    document.getElementById('btnEnable').disabled  = false;
+    document.getElementById('btnDisable').disabled = false;
+  }
+}
+
+async function cpVerify() {
+  const { domain } = getInputs();
+  if (!domain) return setStatus('Please enter a domain name.', 'err');
+  setStatus('Checking WAB status via DNS…', 'info');
+  try {
+    const r = await fetch(`/api/discovery/provider/status?domain=${encodeURIComponent(domain)}`);
+    const j = await r.json();
+    if (j.status === 'enabled')       setStatus(`✓ ${domain} — WAB Discovery is ENABLED.`, 'ok');
+    else if (j.status === 'partial')  setStatus(`⚠ ${domain} — DNS found but endpoint has issues.`, 'info');
+    else setStatus(`✗ ${domain} — WAB Discovery is DISABLED (no valid TXT record found).`, 'err');
+    showJson(j);
+  } catch (err) {
+    setStatus(`Verify error: ${err.message}`, 'err');
+  }
+}
+</script>
+</body>
+</html>

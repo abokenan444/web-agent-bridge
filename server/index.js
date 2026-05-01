@@ -263,6 +263,12 @@ app.get('/provider-onboarding', noCache, (req, res) => {
 app.get('/provider-sandbox', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'provider-sandbox.html'));
 });
+app.get('/cloudflare-integration', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'cloudflare-integration.html'));
+});
+app.get('/cpanel-integration', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'cpanel-integration.html'));
+});
 app.use('/', apiLimiter, discoveryRoutes);
 app.use('/api/premium', apiLimiter, premiumRoutes);
 app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);
