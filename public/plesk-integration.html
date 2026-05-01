@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WAB DNS — Plesk Integration</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 0; }
+    .page { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
+    h1 { font-size: 1.7rem; margin-bottom: 6px; }
+    .sub { color: #94a3b8; margin-bottom: 32px; font-size: .97rem; }
+    .card { background: #1e293b; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
+    h2 { font-size: 1.1rem; margin: 0 0 14px; }
+    label { display: block; font-size: .85rem; color: #94a3b8; margin-bottom: 4px; margin-top: 14px; }
+    label:first-child { margin-top: 0; }
+    input[type=text], input[type=password], input[type=number] {
+      width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid #334155;
+      color: #e2e8f0; border-radius: 6px; padding: 9px 12px; font-size: .93rem;
+    }
+    input:focus { outline: 2px solid #6366f1; border-color: transparent; }
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+    .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .btn { padding: 9px 20px; border-radius: 7px; border: none; cursor: pointer; font-size: .92rem; font-weight: 600; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-enable    { background: #06b6d4; color: #000; }
+    .btn-disable   { background: #ef4444; color: #fff; }
+    .btn-verify    { background: #6366f1; color: #fff; }
+    .btn-secondary { background: #334155; color: #e2e8f0; }
+    #statusBar { margin-top: 18px; min-height: 36px; padding: 10px 14px; border-radius: 7px; background: #0f172a; font-size: .88rem; color: #94a3b8; display: none; }
+    #statusBar.ok   { display: block; color: #4ade80; border: 1px solid #166534; }
+    #statusBar.err  { display: block; color: #f87171; border: 1px solid #7f1d1d; }
+    #statusBar.info { display: block; color: #93c5fd; border: 1px solid #1e3a5f; }
+    pre { background: #0f172a; border-radius: 7px; padding: 14px 16px; font-size: .82rem; color: #94a3b8; overflow-x: auto; white-space: pre-wrap; word-break: break-word; margin: 14px 0 0; }
+    code { background: #0f172a; padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 14px; }
+    .tab { padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: .84rem; background: #0f172a; color: #94a3b8; border: 1px solid #334155; }
+    .tab.active { background: #6366f1; color: #fff; border-color: transparent; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .step { display: flex; gap: 14px; margin-bottom: 18px; }
+    .step-num { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: #334155; color: #e2e8f0; font-size: .82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .step-body { flex: 1; padding-top: 3px; }
+    .warning-box { background: #431407; border: 1px solid #9a3412; border-radius: 8px; padding: 12px 16px; font-size: .87rem; color: #fdba74; margin-bottom: 18px; }
+    a { color: #818cf8; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1>Plesk × WAB DNS Discovery</h1>
+  <p class="sub">
+    Enable or disable the WAB DNS Discovery TXT record on any Plesk-managed domain via the
+    <a href="https://docs.plesk.com/en-US/obsidian/api-rpc/" target="_blank" rel="noopener">Plesk REST API</a>.
+  </p>
+
+  <div class="warning-box">
+    ⚠ <strong>Security note:</strong> Plesk credentials and host details are used only client-side to call the Plesk REST API directly.
+    Always use a dedicated <strong>API Key</strong> (Server → Tools &amp; Settings → API Keys) instead of admin password.
+  </div>
+
+  <!-- ── STEP 1: credentials ── -->
+  <div class="card">
+    <h2>1. Plesk Server Credentials</h2>
+    <div class="row">
+      <div>
+        <label>Plesk Host (FQDN or IP)</label>
+        <input type="text" id="pkHost" placeholder="plesk.example.com">
+      </div>
+      <div>
+        <label>Port</label>
+        <input type="number" id="pkPort" value="8443" min="1" max="65535" style="max-width:120px">
+      </div>
+    </div>
+    <label>Authentication mode</label>
+    <div style="display:flex;gap:14px;margin-top:6px;font-size:.9rem;color:#cbd5e1">
+      <label style="margin:0"><input type="radio" name="pkAuthMode" value="apikey" checked> API Key (recommended)</label>
+      <label style="margin:0"><input type="radio" name="pkAuthMode" value="basic"> Username + Password</label>
+    </div>
+    <div id="pkApiKeyBlock">
+      <label>Plesk API Key</label>
+      <input type="password" id="pkApiKey" placeholder="Paste API key" autocomplete="off">
+    </div>
+    <div id="pkBasicBlock" style="display:none">
+      <div class="row">
+        <div>
+          <label>Username</label>
+          <input type="text" id="pkUser" placeholder="admin" autocomplete="off">
+        </div>
+        <div>
+          <label>Password</label>
+          <input type="password" id="pkPass" autocomplete="off">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: domain ── -->
+  <div class="card">
+    <h2>2. Domain</h2>
+    <div class="row">
+      <div>
+        <label>Domain</label>
+        <input type="text" id="pkDomain" placeholder="example.com">
+      </div>
+      <div>
+        <label>Endpoint URL <span style="color:#64748b;font-weight:400">(blank = auto)</span></label>
+        <input type="text" id="pkEndpoint" placeholder="https://example.com/.well-known/wab.json">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: actions ── -->
+  <div class="card">
+    <h2>3. Actions</h2>
+    <div class="actions">
+      <button class="btn btn-enable"    id="btnEnable"  onclick="pkAction('enable')">✓ Enable WAB Discovery</button>
+      <button class="btn btn-disable"   id="btnDisable" onclick="pkAction('disable')">✗ Disable WAB Discovery</button>
+      <button class="btn btn-verify"    id="btnVerify"  onclick="pkVerify()">⟳ Verify Status</button>
+      <button class="btn btn-secondary" onclick="window.open('/provider-sandbox','_blank')">Open Sandbox</button>
+    </div>
+    <div id="statusBar"></div>
+    <pre id="jsonOut" style="display:none"></pre>
+  </div>
+
+  <!-- ── HOW IT WORKS ── -->
+  <div class="card">
+    <h2>How it works</h2>
+    <div class="step"><div class="step-num">1</div><div class="step-body">Fetch WAB record template (<code>GET /api/discovery/provider/record-template</code>) for TXT value.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body">Resolve the Plesk site ID via <code>GET /api/v2/domains?name=…</code>.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body">Call <code>GET /api/v2/dns/records?domain=…</code> to look up existing <code>_wab</code> TXT records.</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Enable:</strong> if missing, <code>POST /api/v2/dns/records</code>; if exists with different value, <code>DELETE</code> + <code>POST</code> (Plesk doesn't support TXT update in place).<br>
+    <strong>Disable:</strong> <code>DELETE /api/v2/dns/records/{id}</code>.</div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-body">Confirm via <code>/api/discovery/provider/status</code>. Run <code>dns-on</code> for the domain if updates aren't propagating.</div></div>
+  </div>
+
+  <!-- ── CODE SNIPPETS ── -->
+  <div class="card">
+    <h2>Code Snippets</h2>
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('nodejs')">Node.js</div>
+      <div class="tab" onclick="switchTab('curl')">cURL</div>
+      <div class="tab" onclick="switchTab('python')">Python</div>
+    </div>
+    <div id="tab-nodejs" class="tab-panel active">
+<pre>// npm install node-fetch@2
+const fetch = require('node-fetch');
+
+const HOST   = 'plesk.example.com';
+const PORT   = 8443;
+const APIKEY = process.env.PLESK_API_KEY;
+const DOMAIN = 'example.com';
+const TXT_VAL = `v=wab1; endpoint=https://${DOMAIN}/.well-known/wab.json`;
+
+const headers = { 'X-API-Key': APIKEY, 'Content-Type': 'application/json' };
+const base    = `https://${HOST}:${PORT}/api/v2`;
+
+async function getDomainId() {
+  const r = await fetch(`${base}/domains?name=${DOMAIN}`, { headers });
+  const j = await r.json();
+  return j[0] && j[0].id;
+}
+
+async function listWabRecords() {
+  const r = await fetch(`${base}/dns/records?domain=${DOMAIN}&type=TXT`, { headers });
+  const j = await r.json();
+  return (j || []).filter(rec => rec.host === `_wab.${DOMAIN}.` || rec.host === `_wab.${DOMAIN}`);
+}
+
+async function enableWAB() {
+  const records = await listWabRecords();
+  if (records.length) {
+    // remove old, then add new (Plesk REST API doesn't allow in-place TXT edit)
+    await fetch(`${base}/dns/records/${records[0].id}`, { method: 'DELETE', headers });
+  }
+  await fetch(`${base}/dns/records`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ domain: DOMAIN, type: 'TXT', host: `_wab.${DOMAIN}`, value: TXT_VAL })
+  });
+  console.log('WAB Discovery ENABLED');
+}
+
+async function disableWAB() {
+  const records = await listWabRecords();
+  if (!records.length) return console.log('Already disabled.');
+  await fetch(`${base}/dns/records/${records[0].id}`, { method: 'DELETE', headers });
+  console.log('WAB Discovery DISABLED');
+}
+
+enableWAB().catch(console.error);
+</pre>
+    </div>
+    <div id="tab-curl" class="tab-panel">
+<pre># Plesk API Key auth
+KEY="your-api-key"
+HOST="plesk.example.com:8443"
+DOMAIN="example.com"
+TXT='v=wab1; endpoint=https://example.com/.well-known/wab.json'
+
+# 1. List existing _wab TXT records
+curl -sk -H "X-API-Key: $KEY" "https://$HOST/api/v2/dns/records?domain=$DOMAIN&type=TXT"
+
+# 2. Add (enable)
+curl -sk -X POST -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  "https://$HOST/api/v2/dns/records" \
+  -d "{\"domain\":\"$DOMAIN\",\"type\":\"TXT\",\"host\":\"_wab.$DOMAIN\",\"value\":\"$TXT\"}"
+
+# 3. Delete (disable) — replace REC_ID
+curl -sk -X DELETE -H "X-API-Key: $KEY" "https://$HOST/api/v2/dns/records/REC_ID"
+</pre>
+    </div>
+    <div id="tab-python" class="tab-panel">
+<pre>import os, requests
+
+HOST   = 'plesk.example.com'
+PORT   = 8443
+APIKEY = os.environ['PLESK_API_KEY']
+DOMAIN = 'example.com'
+TXT_VAL = f'v=wab1; endpoint=https://{DOMAIN}/.well-known/wab.json'
+HEADERS = {'X-API-Key': APIKEY, 'Content-Type': 'application/json'}
+BASE    = f'https://{HOST}:{PORT}/api/v2'
+
+def list_wab():
+    r = requests.get(f'{BASE}/dns/records', params={'domain': DOMAIN, 'type': 'TXT'}, headers=HEADERS, verify=False)
+    return [rec for rec in r.json() if rec['host'].rstrip('.') == f'_wab.{DOMAIN}']
+
+def enable_wab():
+    for rec in list_wab():
+        requests.delete(f'{BASE}/dns/records/{rec["id"]}', headers=HEADERS, verify=False)
+    requests.post(f'{BASE}/dns/records',
+        json={'domain': DOMAIN, 'type': 'TXT', 'host': f'_wab.{DOMAIN}', 'value': TXT_VAL},
+        headers=HEADERS, verify=False)
+    print('WAB ENABLED')
+
+def disable_wab():
+    recs = list_wab()
+    if not recs: return print('Already disabled')
+    requests.delete(f'{BASE}/dns/records/{recs[0]["id"]}', headers=HEADERS, verify=False)
+    print('WAB DISABLED')
+
+enable_wab()
+</pre>
+    </div>
+  </div>
+
+  <p style="text-align:center;margin-top:30px;font-size:.85rem;color:#475569">
+    <a href="/provider-onboarding">← Provider Onboarding</a> ·
+    <a href="/cloudflare-integration">Cloudflare</a> ·
+    <a href="/cpanel-integration">cPanel</a> ·
+    <a href="/route53-integration">Route 53</a> ·
+    <a href="/dns">DNS Discovery</a>
+  </p>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`#tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+document.querySelectorAll('input[name=pkAuthMode]').forEach(r =>
+  r.addEventListener('change', e => {
+    document.getElementById('pkApiKeyBlock').style.display = e.target.value === 'apikey' ? '' : 'none';
+    document.getElementById('pkBasicBlock').style.display  = e.target.value === 'basic'  ? '' : 'none';
+  })
+);
+
+function setStatus(msg, type) { const b = document.getElementById('statusBar'); b.textContent = msg; b.className = type; }
+function showJson(o) { const p = document.getElementById('jsonOut'); p.textContent = JSON.stringify(o, null, 2); p.style.display = 'block'; }
+
+function getInputs() {
+  const mode  = document.querySelector('input[name=pkAuthMode]:checked').value;
+  return {
+    host:   document.getElementById('pkHost').value.trim().replace(/^https?:\/\//, '').replace(/\/$/, ''),
+    port:   document.getElementById('pkPort').value.trim() || '8443',
+    mode,
+    apikey: document.getElementById('pkApiKey').value.trim(),
+    user:   document.getElementById('pkUser').value.trim(),
+    pass:   document.getElementById('pkPass').value.trim(),
+    domain: document.getElementById('pkDomain').value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, ''),
+    ep:     document.getElementById('pkEndpoint').value.trim(),
+  };
+}
+
+function pkHeaders(inp) {
+  const h = { 'Content-Type': 'application/json' };
+  if (inp.mode === 'apikey') h['X-API-Key'] = inp.apikey;
+  else h['Authorization'] = 'Basic ' + btoa(`${inp.user}:${inp.pass}`);
+  return h;
+}
+
+async function pkRequest(inp, method, path, body) {
+  const url = `https://${inp.host}:${inp.port}/api/v2${path}`;
+  const opts = { method, headers: pkHeaders(inp), mode: 'cors' };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  const t = await r.text();
+  if (!r.ok) throw new Error(`Plesk ${r.status}: ${t.slice(0, 300)}`);
+  try { return JSON.parse(t); } catch { return t; }
+}
+
+async function pkAction(action) {
+  const inp = getInputs();
+  if (!inp.host)   return setStatus('Please enter Plesk host.', 'err');
+  if (!inp.domain) return setStatus('Please enter the domain.', 'err');
+  if (inp.mode === 'apikey' && !inp.apikey) return setStatus('Please enter Plesk API Key.', 'err');
+  if (inp.mode === 'basic' && (!inp.user || !inp.pass)) return setStatus('Please enter username and password.', 'err');
+
+  document.getElementById('btnEnable').disabled  = true;
+  document.getElementById('btnDisable').disabled = true;
+  try {
+    const ep = inp.ep || `https://${inp.domain}/.well-known/wab.json`;
+    setStatus('Fetching WAB record template…', 'info');
+    const tpl = await (await fetch(`/api/discovery/provider/record-template?domain=${encodeURIComponent(inp.domain)}&endpoint=${encodeURIComponent(ep)}`)).json();
+    const txtVal = tpl.record && tpl.record.value;
+    if (!txtVal) throw new Error('Could not fetch WAB record template.');
+
+    setStatus('Listing existing _wab TXT records…', 'info');
+    const all = await pkRequest(inp, 'GET', `/dns/records?domain=${encodeURIComponent(inp.domain)}&type=TXT`);
+    const existing = (all || []).filter(rec => {
+      const h = (rec.host || '').replace(/\.$/, '');
+      return h === `_wab.${inp.domain}` || h === '_wab';
+    });
+
+    if (action === 'enable') {
+      // Plesk doesn't support in-place TXT edit; delete then create
+      for (const rec of existing) {
+        setStatus(`Deleting old record id=${rec.id}…`, 'info');
+        await pkRequest(inp, 'DELETE', `/dns/records/${rec.id}`);
+      }
+      setStatus('Creating new _wab TXT record…', 'info');
+      const out = await pkRequest(inp, 'POST', '/dns/records', {
+        domain: inp.domain, type: 'TXT', host: `_wab.${inp.domain}`, value: txtVal
+      });
+      setStatus(`✓ _wab TXT record created for ${inp.domain}. WAB Discovery is ENABLED.`, 'ok');
+      showJson(out);
+    } else {
+      if (!existing.length) {
+        setStatus(`No _wab TXT record found for ${inp.domain} — already disabled.`, 'ok');
+        showJson({ note: 'no record found', domain: inp.domain });
+        return;
+      }
+      for (const rec of existing) {
+        setStatus(`Deleting record id=${rec.id}…`, 'info');
+        await pkRequest(inp, 'DELETE', `/dns/records/${rec.id}`);
+      }
+      setStatus(`✓ _wab TXT record deleted for ${inp.domain}. WAB Discovery is DISABLED.`, 'ok');
+      showJson({ deleted: existing.map(r => r.id), domain: inp.domain });
+    }
+  } catch (err) {
+    setStatus(`Error: ${err.message}`, 'err');
+  } finally {
+    document.getElementById('btnEnable').disabled  = false;
+    document.getElementById('btnDisable').disabled = false;
+  }
+}
+
+async function pkVerify() {
+  const { domain } = getInputs();
+  if (!domain) return setStatus('Please enter a domain.', 'err');
+  setStatus('Checking WAB status…', 'info');
+  try {
+    const j = await (await fetch(`/api/discovery/provider/status?domain=${encodeURIComponent(domain)}`)).json();
+    if (j.status === 'enabled')      setStatus(`✓ ${domain} — ENABLED.`, 'ok');
+    else if (j.status === 'partial') setStatus(`⚠ ${domain} — partial (DNS ok, endpoint issue).`, 'info');
+    else setStatus(`✗ ${domain} — DISABLED.`, 'err');
+    showJson(j);
+  } catch (err) { setStatus(`Verify error: ${err.message}`, 'err'); }
+}
+</script>
+</body>
+</html>

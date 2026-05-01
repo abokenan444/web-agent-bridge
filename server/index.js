@@ -272,6 +272,12 @@ app.get('/cpanel-integration', noCache, (req, res) => {
 app.get('/route53-integration', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'route53-integration.html'));
 });
+app.get('/plesk-integration', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'plesk-integration.html'));
+});
+app.get('/gcp-dns-integration', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'gcp-dns-integration.html'));
+});
 app.use('/', apiLimiter, discoveryRoutes);
 app.use('/api/premium', apiLimiter, premiumRoutes);
 app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);

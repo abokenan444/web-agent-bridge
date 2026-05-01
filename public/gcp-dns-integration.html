@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WAB DNS — Google Cloud DNS Integration</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 0; }
+    .page { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
+    h1 { font-size: 1.7rem; margin-bottom: 6px; }
+    .sub { color: #94a3b8; margin-bottom: 32px; font-size: .97rem; }
+    .card { background: #1e293b; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
+    h2 { font-size: 1.1rem; margin: 0 0 14px; }
+    label { display: block; font-size: .85rem; color: #94a3b8; margin-bottom: 4px; margin-top: 14px; }
+    label:first-child { margin-top: 0; }
+    input[type=text], input[type=password], textarea {
+      width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid #334155;
+      color: #e2e8f0; border-radius: 6px; padding: 9px 12px; font-size: .93rem; font-family: inherit;
+    }
+    textarea { font-family: ui-monospace, monospace; min-height: 100px; }
+    input:focus, textarea:focus { outline: 2px solid #6366f1; border-color: transparent; }
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+    .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .btn { padding: 9px 20px; border-radius: 7px; border: none; cursor: pointer; font-size: .92rem; font-weight: 600; }
+    .btn:hover { opacity: .85; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-enable    { background: #4285f4; color: #fff; }
+    .btn-disable   { background: #ef4444; color: #fff; }
+    .btn-verify    { background: #6366f1; color: #fff; }
+    .btn-secondary { background: #334155; color: #e2e8f0; }
+    #statusBar { margin-top: 18px; min-height: 36px; padding: 10px 14px; border-radius: 7px; background: #0f172a; font-size: .88rem; color: #94a3b8; display: none; }
+    #statusBar.ok   { display: block; color: #4ade80; border: 1px solid #166534; }
+    #statusBar.err  { display: block; color: #f87171; border: 1px solid #7f1d1d; }
+    #statusBar.info { display: block; color: #93c5fd; border: 1px solid #1e3a5f; }
+    pre { background: #0f172a; border-radius: 7px; padding: 14px 16px; font-size: .82rem; color: #94a3b8; overflow-x: auto; white-space: pre-wrap; word-break: break-word; margin: 14px 0 0; }
+    code { background: #0f172a; padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 14px; }
+    .tab { padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: .84rem; background: #0f172a; color: #94a3b8; border: 1px solid #334155; }
+    .tab.active { background: #6366f1; color: #fff; border-color: transparent; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .step { display: flex; gap: 14px; margin-bottom: 18px; }
+    .step-num { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: #334155; color: #e2e8f0; font-size: .82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .step-body { flex: 1; padding-top: 3px; }
+    .info-box { background: #0c2340; border: 1px solid #1e3a5f; border-radius: 8px; padding: 12px 16px; font-size: .87rem; color: #93c5fd; margin-bottom: 18px; }
+    a { color: #818cf8; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1>Google Cloud DNS × WAB Discovery</h1>
+  <p class="sub">
+    Enable or disable the WAB DNS Discovery TXT record on any
+    <a href="https://cloud.google.com/dns/docs/reference/rest/v1" target="_blank" rel="noopener">Cloud DNS</a> managed zone.
+  </p>
+
+  <div class="info-box">
+    ℹ <strong>OAuth 2.0 Access Token required.</strong>
+    Browser SigV4-style signing isn't supported by Cloud DNS — paste a short-lived OAuth access token instead.
+    Generate one with: <code>gcloud auth print-access-token</code>
+  </div>
+
+  <!-- ── STEP 1: credentials ── -->
+  <div class="card">
+    <h2>1. Authentication</h2>
+    <label>OAuth 2.0 Access Token <span style="color:#64748b;font-weight:400">(short-lived, browser keeps in memory only)</span></label>
+    <input type="password" id="gcpToken" placeholder="ya29.…" autocomplete="off">
+    <p style="margin:8px 0 0;font-size:.82rem;color:#64748b">
+      Obtain via: <code>gcloud auth print-access-token</code> (with <code>roles/dns.admin</code> on the zone).
+      Token expires in ~60 minutes — re-paste if needed.
+    </p>
+  </div>
+
+  <!-- ── STEP 2: project + zone + domain ── -->
+  <div class="card">
+    <h2>2. Project &amp; Zone</h2>
+    <div class="row">
+      <div>
+        <label>GCP Project ID</label>
+        <input type="text" id="gcpProject" placeholder="my-gcp-project">
+      </div>
+      <div>
+        <label>Managed Zone Name <span style="color:#64748b;font-weight:400">(not the DNS name)</span></label>
+        <input type="text" id="gcpZone" placeholder="example-com">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Domain</label>
+        <input type="text" id="gcpDomain" placeholder="example.com">
+      </div>
+      <div>
+        <label>Endpoint URL <span style="color:#64748b;font-weight:400">(blank = auto)</span></label>
+        <input type="text" id="gcpEndpoint" placeholder="https://example.com/.well-known/wab.json">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: actions ── -->
+  <div class="card">
+    <h2>3. Actions</h2>
+    <div class="actions">
+      <button class="btn btn-enable"    id="btnEnable"  onclick="gcpAction('enable')">✓ Enable WAB Discovery</button>
+      <button class="btn btn-disable"   id="btnDisable" onclick="gcpAction('disable')">✗ Disable WAB Discovery</button>
+      <button class="btn btn-verify"    id="btnVerify"  onclick="gcpVerify()">⟳ Verify Status</button>
+      <button class="btn btn-secondary" onclick="window.open('/provider-sandbox','_blank')">Open Sandbox</button>
+    </div>
+    <div id="statusBar"></div>
+    <pre id="jsonOut" style="display:none"></pre>
+  </div>
+
+  <!-- ── HOW IT WORKS ── -->
+  <div class="card">
+    <h2>How it works</h2>
+    <div class="step"><div class="step-num">1</div><div class="step-body">Fetch WAB record template (<code>GET /api/discovery/provider/record-template</code>) for TXT value.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body">Look up existing <code>_wab</code> TXT in the managed zone (<code>GET …/managedZones/{zone}/rrsets</code>).</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body">Cloud DNS uses atomic <strong>changes</strong>: <code>POST changes</code> with <code>{additions, deletions}</code>. Enable = add (+ delete old if value differs). Disable = delete.</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-body">Confirm via <code>/api/discovery/provider/status</code>. Cloud DNS propagation is typically &lt; 60 s.</div></div>
+  </div>
+
+  <!-- ── CODE SNIPPETS ── -->
+  <div class="card">
+    <h2>Code Snippets</h2>
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('nodejs')">Node.js</div>
+      <div class="tab" onclick="switchTab('gcloud')">gcloud CLI</div>
+      <div class="tab" onclick="switchTab('tf')">Terraform</div>
+    </div>
+    <div id="tab-nodejs" class="tab-panel active">
+<pre>// npm install @google-cloud/dns
+const { DNS } = require('@google-cloud/dns');
+const dns = new DNS({ projectId: 'my-gcp-project' });
+
+const ZONE   = 'example-com';
+const DOMAIN = 'example.com';
+const TXT_VAL = `"v=wab1; endpoint=https://${DOMAIN}/.well-known/wab.json"`;
+
+const zone = dns.zone(ZONE);
+const recordSet = zone.record('txt', { name: `_wab.${DOMAIN}.`, ttl: 3600, data: TXT_VAL });
+
+async function enableWAB() {
+  // delete any existing _wab TXT then add new
+  const [records] = await zone.getRecords({ type: 'TXT', name: `_wab.${DOMAIN}.` });
+  if (records.length) {
+    await zone.deleteRecords(records);
+  }
+  await zone.addRecords([recordSet]);
+  console.log('WAB Discovery ENABLED');
+}
+
+async function disableWAB() {
+  const [records] = await zone.getRecords({ type: 'TXT', name: `_wab.${DOMAIN}.` });
+  if (!records.length) return console.log('Already disabled');
+  await zone.deleteRecords(records);
+  console.log('WAB Discovery DISABLED');
+}
+
+enableWAB().catch(console.error);
+</pre>
+    </div>
+    <div id="tab-gcloud" class="tab-panel">
+<pre># Enable: start a transaction, add record, execute
+gcloud dns record-sets transaction start --zone=example-com
+gcloud dns record-sets transaction add \
+  '"v=wab1; endpoint=https://example.com/.well-known/wab.json"' \
+  --name=_wab.example.com. --ttl=3600 --type=TXT --zone=example-com
+gcloud dns record-sets transaction execute --zone=example-com
+
+# Disable: remove the record
+gcloud dns record-sets transaction start --zone=example-com
+gcloud dns record-sets transaction remove \
+  '"v=wab1; endpoint=https://example.com/.well-known/wab.json"' \
+  --name=_wab.example.com. --ttl=3600 --type=TXT --zone=example-com
+gcloud dns record-sets transaction execute --zone=example-com
+</pre>
+    </div>
+    <div id="tab-tf" class="tab-panel">
+<pre>resource "google_dns_record_set" "wab_discovery" {
+  managed_zone = "example-com"
+  name         = "_wab.example.com."
+  type         = "TXT"
+  ttl          = 3600
+  rrdatas      = ["\"v=wab1; endpoint=https://example.com/.well-known/wab.json\""]
+}
+
+# Toggle: count = var.wab_enabled ? 1 : 0
+</pre>
+    </div>
+  </div>
+
+  <!-- ── IAM ── -->
+  <div class="card">
+    <h2>Minimal IAM Role</h2>
+    <p style="font-size:.85rem;color:#94a3b8;margin:0 0 10px">
+      Use a custom role with these permissions on the managed zone:
+    </p>
+<pre>dns.changes.create
+dns.changes.get
+dns.resourceRecordSets.list
+dns.resourceRecordSets.create
+dns.resourceRecordSets.delete</pre>
+  </div>
+
+  <p style="text-align:center;margin-top:30px;font-size:.85rem;color:#475569">
+    <a href="/provider-onboarding">← Provider Onboarding</a> ·
+    <a href="/cloudflare-integration">Cloudflare</a> ·
+    <a href="/cpanel-integration">cPanel</a> ·
+    <a href="/route53-integration">Route 53</a> ·
+    <a href="/plesk-integration">Plesk</a> ·
+    <a href="/dns">DNS Discovery</a>
+  </p>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`#tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function setStatus(msg, type) { const b = document.getElementById('statusBar'); b.textContent = msg; b.className = type; }
+function showJson(o) { const p = document.getElementById('jsonOut'); p.textContent = JSON.stringify(o, null, 2); p.style.display = 'block'; }
+
+function getInputs() {
+  return {
+    token:   document.getElementById('gcpToken').value.trim(),
+    project: document.getElementById('gcpProject').value.trim(),
+    zone:    document.getElementById('gcpZone').value.trim(),
+    domain:  document.getElementById('gcpDomain').value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, ''),
+    ep:      document.getElementById('gcpEndpoint').value.trim(),
+  };
+}
+
+async function gcpRequest(token, method, path, body) {
+  const r = await fetch(`https://dns.googleapis.com/dns/v1${path}`, {
+    method,
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(`Cloud DNS ${r.status}: ${j.error && j.error.message || JSON.stringify(j).slice(0, 300)}`);
+  return j;
+}
+
+async function gcpAction(action) {
+  const inp = getInputs();
+  if (!inp.token)   return setStatus('Please paste an OAuth access token.', 'err');
+  if (!inp.project) return setStatus('Please enter the GCP Project ID.', 'err');
+  if (!inp.zone)    return setStatus('Please enter the managed zone name.', 'err');
+  if (!inp.domain)  return setStatus('Please enter the domain.', 'err');
+
+  document.getElementById('btnEnable').disabled  = true;
+  document.getElementById('btnDisable').disabled = true;
+  try {
+    const ep = inp.ep || `https://${inp.domain}/.well-known/wab.json`;
+    setStatus('Fetching WAB record template…', 'info');
+    const tpl = await (await fetch(`/api/discovery/provider/record-template?domain=${encodeURIComponent(inp.domain)}&endpoint=${encodeURIComponent(ep)}`)).json();
+    const rawTxt = tpl.record && tpl.record.value;
+    if (!rawTxt) throw new Error('Could not fetch WAB record template.');
+    // Cloud DNS requires double-quoted TXT value
+    const txtVal = rawTxt.startsWith('"') ? rawTxt : `"${rawTxt}"`;
+    const fqdn   = `_wab.${inp.domain}.`;
+    const base   = `/projects/${inp.project}/managedZones/${inp.zone}`;
+
+    setStatus('Looking up existing _wab TXT records…', 'info');
+    const list = await gcpRequest(inp.token, 'GET', `${base}/rrsets?name=${encodeURIComponent(fqdn)}&type=TXT`);
+    const existing = (list.rrsets || [])[0] || null;
+
+    if (action === 'enable') {
+      const additions = [{ name: fqdn, type: 'TXT', ttl: 3600, rrdatas: [txtVal] }];
+      const change = { additions };
+      if (existing && existing.rrdatas && existing.rrdatas[0] === txtVal) {
+        setStatus(`Record already up-to-date for ${inp.domain}. WAB Discovery is ENABLED.`, 'ok');
+        showJson({ note: 'no change needed', existing });
+        return;
+      }
+      if (existing) change.deletions = [existing];
+      setStatus(`Submitting change to Cloud DNS (${existing ? 'replace' : 'create'})…`, 'info');
+      const out = await gcpRequest(inp.token, 'POST', `${base}/changes`, change);
+      setStatus(`✓ _wab TXT ${existing ? 'updated' : 'created'} for ${inp.domain}. Change id=${out.id}, status=${out.status}.`, 'ok');
+      showJson(out);
+    } else {
+      if (!existing) {
+        setStatus(`No _wab TXT record found for ${inp.domain} — already disabled.`, 'ok');
+        showJson({ note: 'no record found' });
+        return;
+      }
+      setStatus('Submitting delete change to Cloud DNS…', 'info');
+      const out = await gcpRequest(inp.token, 'POST', `${base}/changes`, { deletions: [existing] });
+      setStatus(`✓ _wab TXT deleted for ${inp.domain}. WAB Discovery is DISABLED.`, 'ok');
+      showJson(out);
+    }
+  } catch (err) {
+    setStatus(`Error: ${err.message}`, 'err');
+  } finally {
+    document.getElementById('btnEnable').disabled  = false;
+    document.getElementById('btnDisable').disabled = false;
+  }
+}
+
+async function gcpVerify() {
+  const { domain } = getInputs();
+  if (!domain) return setStatus('Please enter a domain.', 'err');
+  setStatus('Checking WAB status…', 'info');
+  try {
+    const j = await (await fetch(`/api/discovery/provider/status?domain=${encodeURIComponent(domain)}`)).json();
+    if (j.status === 'enabled')      setStatus(`✓ ${domain} — ENABLED.`, 'ok');
+    else if (j.status === 'partial') setStatus(`⚠ ${domain} — partial.`, 'info');
+    else setStatus(`✗ ${domain} — DISABLED.`, 'err');
+    showJson(j);
+  } catch (err) { setStatus(`Verify error: ${err.message}`, 'err'); }
+}
+</script>
+</body>
+</html>
