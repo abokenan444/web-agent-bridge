@@ -5,6 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { findSiteById, db } = require('../models/db');
 const { authenticateToken } = require('../middleware/auth');
 const { safeFetch } = require('../utils/safe-fetch');
@@ -119,6 +120,59 @@ function hostAllowList(domain, endpointHost) {
 
 function toBooleanState(v) {
   return v ? 'yes' : 'no';
+}
+
+function buildProviderRecordTemplate(domain, endpointOverride) {
+  const hostFqdn = `_wab.${domain}`;
+  let endpoint = endpointOverride;
+  if (!endpoint) {
+    endpoint = `https://${domain}/.well-known/wab.json`;
+  }
+  return {
+    domain,
+    record: {
+      host: '_wab',
+      host_fqdn: hostFqdn,
+      type: 'TXT',
+      ttl_recommended: 3600,
+      value: `v=wab1; endpoint=${endpoint}`,
+    },
+    endpoint,
+  };
+}
+
+function buildCallbackSignature(payloadText, secret) {
+  if (!secret) return null;
+  const sig = crypto.createHmac('sha256', secret).update(payloadText).digest('hex');
+  return `sha256=${sig}`;
+}
+
+async function deliverBatchCallback(callbackUrl, callbackSecret, payload) {
+  const body = JSON.stringify(payload);
+  const signature = buildCallbackSignature(body, callbackSecret);
+  const headers = {
+    'content-type': 'application/json',
+    accept: 'application/json',
+    'x-wab-event': 'provider.verify-batch.completed',
+    'x-wab-request-id': payload.request_id,
+  };
+  if (signature) headers['x-wab-signature'] = signature;
+
+  const res = await safeFetch(callbackUrl, {
+    method: 'POST',
+    headers,
+    body,
+  }, {
+    requireHttps: true,
+    timeoutMs: 10000,
+    maxBytes: 1024 * 1024,
+    allowedContentTypes: ['application/json', 'text/plain', 'text/html'],
+  });
+
+  return {
+    ok: !!res.ok,
+    http_status: res.status,
+  };
 }
 
 function resolveAbsoluteUrl(origin, pathOrUrl) {
@@ -1119,15 +1173,59 @@ router.get('/api/discovery/provider/manifest', (_req, res) => {
       verify_live: '/api/discovery/verify-live?domain=<domain>',
       test_agent: '/api/discovery/test-agent?domain=<domain>',
       provider_status: '/api/discovery/provider/status?domain=<domain>',
-      provider_verify_batch: '/api/discovery/provider/verify-batch'
+      provider_verify_batch: '/api/discovery/provider/verify-batch',
+      provider_record_template: '/api/discovery/provider/record-template?domain=<domain>'
+    },
+    callback_contract: {
+      event: 'provider.verify-batch.completed',
+      header_request_id: 'x-wab-request-id',
+      header_signature: 'x-wab-signature (optional, sha256 HMAC when callback_secret is provided)',
     },
     examples: {
       txt_value: 'v=wab1; endpoint=https://example.com/.well-known/wab.json',
       status_call: '/api/discovery/provider/status?domain=example.com',
+      template_call: '/api/discovery/provider/record-template?domain=example.com',
       batch_body: {
         domains: ['example.com', 'shop.example.com'],
-        include_agent_run: false
+        include_agent_run: false,
+        callback_url: 'https://provider.example/webhooks/wab-discovery',
+        callback_secret: 'optional-shared-secret'
       }
+    }
+  });
+});
+
+router.get('/api/discovery/provider/record-template', (req, res) => {
+  const domain = sanitizeDomain(req.query.domain || '');
+  const endpointOverride = String(req.query.endpoint || '').trim();
+  if (!domain) {
+    return res.status(400).json({
+      error: 'domain is required',
+      hint: 'Use /api/discovery/provider/record-template?domain=example.com',
+    });
+  }
+
+  if (endpointOverride) {
+    let parsed;
+    try {
+      parsed = new URL(endpointOverride);
+    } catch {
+      return res.status(400).json({ error: 'invalid endpoint URL' });
+    }
+    if (parsed.protocol !== 'https:') {
+      return res.status(400).json({ error: 'endpoint must use https' });
+    }
+  }
+
+  const template = buildProviderRecordTemplate(domain, endpointOverride || null);
+  return res.json({
+    wab_version: WAB_VERSION,
+    protocol: 'wab-dns-discovery-v1',
+    ...template,
+    verify_urls: {
+      provider_status: `/api/discovery/provider/status?domain=${encodeURIComponent(domain)}`,
+      verify_live: `/api/discovery/verify-live?domain=${encodeURIComponent(domain)}`,
+      test_agent: `/api/discovery/test-agent?domain=${encodeURIComponent(domain)}`,
     }
   });
 });
@@ -1180,7 +1278,10 @@ router.get('/api/discovery/provider/status', async (req, res) => {
 router.post('/api/discovery/provider/verify-batch', async (req, res) => {
   const domainsRaw = Array.isArray(req.body && req.body.domains) ? req.body.domains : [];
   const includeAgentRun = !!(req.body && req.body.include_agent_run);
+  const callbackUrl = String((req.body && req.body.callback_url) || '').trim();
+  const callbackSecret = String((req.body && req.body.callback_secret) || '').trim();
   const domains = domainsRaw.map((d) => sanitizeDomain(d)).filter(Boolean);
+  const requestId = `pvb_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
   if (!domains.length) {
     return res.status(400).json({
@@ -1230,11 +1331,37 @@ router.post('/api/discovery/provider/verify-batch', async (req, res) => {
       error: results.filter((r) => r.status === 'error').length,
     };
 
-    return res.json({
+    const payload = {
       wab_version: WAB_VERSION,
+      request_id: requestId,
       include_agent_run: includeAgentRun,
       summary,
       results,
+    };
+
+    let callback = null;
+    if (callbackUrl) {
+      try {
+        const delivered = await deliverBatchCallback(callbackUrl, callbackSecret || null, payload);
+        callback = {
+          attempted: true,
+          delivered: delivered.ok,
+          http_status: delivered.http_status,
+          url: callbackUrl,
+        };
+      } catch (err) {
+        callback = {
+          attempted: true,
+          delivered: false,
+          error: err && err.message ? err.message : 'callback_failed',
+          url: callbackUrl,
+        };
+      }
+    }
+
+    return res.json({
+      ...payload,
+      callback,
     });
   } catch (err) {
     return res.status(500).json({ error: 'provider_verify_batch_failed', details: err.message });

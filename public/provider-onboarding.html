@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB DNS Discovery Provider Onboarding</title>
+  <meta name="description" content="Integrate WAB DNS Discovery into DNS providers and registrars with one-click enable/disable flow.">
+  <link rel="stylesheet" href="/css/styles.css?v=3.3.0">
+  <style>
+    body { background:#0a1222; color:#e6edf8; }
+    .hero { padding:110px 24px 40px; text-align:center; }
+    .hero h1 { font-size:clamp(1.9rem,4vw,3rem); margin-bottom:10px; }
+    .hero p { color:#9fb1d3; max-width:820px; margin:0 auto; line-height:1.7; }
+    .wrap { max-width:1100px; margin:0 auto; padding:0 20px 70px; }
+    .grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+    .card { background:linear-gradient(180deg,rgba(17,24,39,.9),rgba(12,18,31,.96)); border:1px solid rgba(148,163,184,.2); border-radius:14px; padding:16px; }
+    .card h3 { margin:0 0 8px; color:#fcd34d; }
+    .card p, .card li { color:#c7d2ea; line-height:1.65; font-size:.93rem; }
+    .card ul { margin:6px 0 0 20px; }
+    .badge { display:inline-block; margin:6px 0; padding:4px 9px; border-radius:999px; font-size:.73rem; font-weight:700; color:#fde68a; border:1px solid rgba(250,204,21,.45); background:rgba(250,204,21,.12); }
+    pre, code { font-family:Consolas, Menlo, Monaco, monospace; }
+    pre { background:#020617; border:1px solid rgba(148,163,184,.25); border-radius:10px; padding:11px; color:#c4b5fd; overflow:auto; font-size:.82rem; line-height:1.5; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+    .actions a { text-decoration:none; }
+    .btn-mini { display:inline-block; padding:8px 12px; border-radius:9px; font-size:.83rem; font-weight:700; }
+    .btn-primary { background:linear-gradient(135deg,#f59e0b,#b45309); color:#fff; }
+    .btn-secondary { background:rgba(148,163,184,.16); border:1px solid rgba(148,163,184,.35); color:#e6edf8; }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <h1>Provider Onboarding: One-Click WAB DNS Discovery</h1>
+    <p>
+      Add WAB DNS Discovery to your DNS platform or registrar panel so domain owners can enable or disable AI discoverability
+      with a single toggle, just like SSL activation.
+    </p>
+  </section>
+
+  <div class="wrap">
+    <div class="grid">
+      <div class="card">
+        <h3>1) Fetch Protocol Manifest</h3>
+        <span class="badge">Machine contract</span>
+        <pre>GET /api/discovery/provider/manifest</pre>
+        <p>Use this endpoint to lock integration against a stable protocol definition.</p>
+      </div>
+
+      <div class="card">
+        <h3>2) Build TXT Record Template</h3>
+        <span class="badge">Per-domain payload</span>
+        <pre>GET /api/discovery/provider/record-template?domain=example.com</pre>
+        <p>Returns ready-to-write values for DNS API calls in your enable-toggle flow.</p>
+      </div>
+
+      <div class="card">
+        <h3>3) Verify Status</h3>
+        <span class="badge">UI state source</span>
+        <pre>GET /api/discovery/provider/status?domain=example.com</pre>
+        <p>Map status to your UI toggle badges:</p>
+        <ul>
+          <li>enabled: DNS + endpoint verified</li>
+          <li>partial: DNS found, endpoint issue</li>
+          <li>disabled: no valid TXT record</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>4) Batch Verification + Callback</h3>
+        <span class="badge">Registrar dashboards</span>
+        <pre>POST /api/discovery/provider/verify-batch
+{
+  "domains": ["example.com", "shop.example.com"],
+  "include_agent_run": false,
+  "callback_url": "https://provider.example/webhooks/wab",
+  "callback_secret": "shared-secret"
+}</pre>
+        <p>
+          Optional callback pushes final result to your webhook endpoint with request id and optional HMAC signature.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Enable/Disable Flow</h3>
+        <span class="badge">One-click UX</span>
+        <ul>
+          <li>Enable: write TXT, verify, show enabled</li>
+          <li>Disable: delete TXT, verify, show disabled</li>
+          <li>Retry verification until propagation converges</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Integration Endpoints</h3>
+        <pre>/api/discovery/provider/manifest
+/api/discovery/provider/record-template
+/api/discovery/provider/status
+/api/discovery/provider/verify-batch</pre>
+        <div class="actions">
+          <a class="btn-mini btn-primary" href="/api/discovery/provider/manifest" target="_blank" rel="noopener">Open Manifest</a>
+          <a class="btn-mini btn-secondary" href="/api/discovery/provider/record-template?domain=webagentbridge.com" target="_blank" rel="noopener">Open Template Example</a>
+          <a class="btn-mini btn-secondary" href="/dns">Open DNS Page</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
