@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WAB DNS — Domain Registrar Integrations</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 0; }
+    .page { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
+    h1 { font-size: 1.7rem; margin-bottom: 6px; }
+    .sub { color: #94a3b8; margin-bottom: 32px; font-size: .97rem; }
+    .card { background: #1e293b; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
+    h2 { font-size: 1.25rem; margin: 0 0 14px; display: flex; align-items: center; gap: 10px; }
+    .pill { display: inline-block; font-size: .68rem; font-weight: 700; padding: 3px 9px; border-radius: 12px; background: #334155; color: #cbd5e1; }
+    .pill.cli { background: #1e3a8a; color: #bfdbfe; }
+    .pill.warn { background: #7c2d12; color: #fdba74; }
+    pre { background: #0f172a; border-radius: 7px; padding: 14px 16px; font-size: .82rem; color: #94a3b8; overflow-x: auto; white-space: pre-wrap; word-break: break-word; margin: 14px 0 0; }
+    code { background: #0f172a; padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+    .step { display: flex; gap: 14px; margin-bottom: 18px; }
+    .step-num { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: #334155; color: #e2e8f0; font-size: .82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .step-body { flex: 1; padding-top: 3px; }
+    .info-box { background: #0c2340; border: 1px solid #1e3a5f; border-radius: 8px; padding: 12px 16px; font-size: .87rem; color: #93c5fd; margin-bottom: 18px; }
+    .warning-box { background: #431407; border: 1px solid #9a3412; border-radius: 8px; padding: 12px 16px; font-size: .87rem; color: #fdba74; margin-bottom: 18px; }
+    a { color: #818cf8; }
+    .download-btn { display: inline-block; padding: 7px 14px; background: #6366f1; color: #fff; border-radius: 6px; font-size: .85rem; text-decoration: none; margin-right: 8px; }
+    .download-btn:hover { opacity: .85; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1>Domain Registrar Integrations</h1>
+  <p class="sub">
+    One-line CLI scripts to enable/disable WAB DNS Discovery on the most popular domain registrars.
+  </p>
+
+  <div class="info-box">
+    ℹ <strong>Why CLI not browser?</strong>
+    Most registrar APIs require static IP allow-lists or block CORS, which prevents direct browser-side calls.
+    Run these scripts from a server or your local machine instead.
+  </div>
+
+  <!-- ── GODADDY ── -->
+  <div class="card">
+    <h2>GoDaddy <span class="pill cli">CLI</span></h2>
+    <p style="color:#cbd5e1;font-size:.92rem;margin:0 0 12px">
+      Uses the <a href="https://developer.godaddy.com/doc/endpoint/domains" target="_blank" rel="noopener">GoDaddy Domains API v1</a>.
+      Requires production API key + secret from <a href="https://developer.godaddy.com/keys" target="_blank" rel="noopener">developer.godaddy.com/keys</a>.
+    </p>
+    <div class="warning-box" style="margin-bottom:12px">
+      ⚠ GoDaddy now restricts the public API to accounts with 50+ domains or paid Reseller plans.
+      For smaller accounts, use the GoDaddy DNS web UI to add a TXT record at <code>_wab</code> with the value provided by WAB.
+    </div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">Download the script: <a class="download-btn" href="/downloads/godaddy-wab-dns.js" download>⬇ godaddy-wab-dns.js</a></div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">Install dependencies: <code>npm install node-fetch@2</code></div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">Run:
+<pre>GODADDY_API_KEY=your-key GODADDY_API_SECRET=your-secret \
+  node godaddy-wab-dns.js enable example.com
+
+GODADDY_API_KEY=your-key GODADDY_API_SECRET=your-secret \
+  node godaddy-wab-dns.js disable example.com</pre>
+      </div>
+    </div>
+    <h3 style="font-size:1rem;margin:18px 0 8px;color:#cbd5e1">Inline cURL alternative</h3>
+<pre># 1. Get current TXT records for _wab
+curl -s -H "Authorization: sso-key $KEY:$SECRET" \
+  "https://api.godaddy.com/v1/domains/example.com/records/TXT/_wab"
+
+# 2. Replace TXT records (PUT replaces entire record set)
+curl -s -X PUT -H "Authorization: sso-key $KEY:$SECRET" \
+  -H "Content-Type: application/json" \
+  "https://api.godaddy.com/v1/domains/example.com/records/TXT/_wab" \
+  -d '[{"data":"v=wab1; endpoint=https://example.com/.well-known/wab.json","ttl":3600}]'
+
+# 3. Disable: replace with empty array
+curl -s -X PUT -H "Authorization: sso-key $KEY:$SECRET" \
+  -H "Content-Type: application/json" \
+  "https://api.godaddy.com/v1/domains/example.com/records/TXT/_wab" \
+  -d '[]'</pre>
+  </div>
+
+  <!-- ── NAMECHEAP ── -->
+  <div class="card">
+    <h2>Namecheap <span class="pill cli">CLI</span></h2>
+    <p style="color:#cbd5e1;font-size:.92rem;margin:0 0 12px">
+      Uses the <a href="https://www.namecheap.com/support/api/intro/" target="_blank" rel="noopener">Namecheap API</a>.
+      Requires API enablement (Profile → Tools → API Access) and IP allow-listing.
+    </p>
+    <div class="warning-box" style="margin-bottom:12px">
+      ⚠ Namecheap API requires the calling IP to be added to the allow-list in your account profile.
+      Also, <code>setHosts</code> replaces ALL host records — the script preserves your existing records and only modifies <code>_wab</code>.
+    </div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">Download the script: <a class="download-btn" href="/downloads/namecheap-wab-dns.js" download>⬇ namecheap-wab-dns.js</a></div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">Install dependencies: <code>npm install node-fetch@2 fast-xml-parser</code></div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">Run:
+<pre>NAMECHEAP_USER=your-user \
+NAMECHEAP_API_KEY=your-api-key \
+NAMECHEAP_CLIENT_IP=1.2.3.4 \
+  node namecheap-wab-dns.js enable example.com
+
+# Same env vars, then:
+node namecheap-wab-dns.js disable example.com</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SUMMARY TABLE ── -->
+  <div class="card">
+    <h2>How it works <span class="pill">all registrars</span></h2>
+    <div class="step"><div class="step-num">1</div><div class="step-body">Fetch WAB record template (<code>GET /api/discovery/provider/record-template</code>) for the TXT value.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body">Read existing TXT records via the registrar's API.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body">Add or replace the <code>_wab</code> TXT record (registrar-specific call).</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-body">Verify with <code>/api/discovery/provider/status</code> — propagation may take 5-30 minutes for some registrars.</div></div>
+  </div>
+
+  <p style="text-align:center;margin-top:30px;font-size:.85rem;color:#475569">
+    <a href="/provider-onboarding">← Provider Onboarding</a> ·
+    <a href="/cloudflare-integration">Cloudflare</a> ·
+    <a href="/route53-integration">Route 53</a> ·
+    <a href="/azure-dns-integration">Azure DNS</a> ·
+    <a href="/dns">DNS Discovery</a>
+  </p>
+</div>
+</body>
+</html>

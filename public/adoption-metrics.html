@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB Adoption Metrics — Live Dashboard</title>
+  <meta name="description" content="Live adoption metrics for the WAB DNS Discovery protocol: domain coverage, readiness rates, value scores, use-case distribution, and trend data over 30 days.">
+  <link rel="stylesheet" href="/css/styles.css?v=3.3.0">
+  <style>
+    body { background:#081123; color:#e8efff; }
+    .hero { padding:100px 20px 24px; text-align:center; }
+    .hero h1 { font-size:clamp(1.8rem,4vw,2.6rem); margin-bottom:6px; }
+    .hero p { color:#9eb1d8; max-width:820px; margin:0 auto; }
+    .wrap { max-width:1180px; margin:0 auto; padding:0 18px 70px; }
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:18px; }
+    .kpi { background:linear-gradient(180deg,rgba(17,24,39,.92),rgba(10,16,30,.96)); border:1px solid rgba(148,163,184,.2); border-radius:14px; padding:14px; text-align:center; }
+    .kpi .v { font-size:1.7rem; font-weight:800; color:#fcd34d; line-height:1.1; }
+    .kpi .l { font-size:.78rem; color:#9eb1d8; margin-top:6px; text-transform:uppercase; letter-spacing:.6px; }
+    .panel { background:linear-gradient(180deg,rgba(17,24,39,.92),rgba(10,16,30,.96)); border:1px solid rgba(148,163,184,.2); border-radius:14px; padding:16px; margin-bottom:16px; }
+    .panel h3 { margin:0 0 10px; color:#fcd34d; font-size:1rem; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media (max-width:760px) { .grid2 { grid-template-columns:1fr; } }
+    table { width:100%; border-collapse:collapse; font-size:.84rem; }
+    th, td { padding:8px 10px; text-align:left; border-bottom:1px solid rgba(148,163,184,.14); }
+    th { color:#a8b7d7; font-weight:600; font-size:.74rem; text-transform:uppercase; letter-spacing:.5px; }
+    td.num { text-align:right; font-variant-numeric:tabular-nums; color:#c4b5fd; }
+    .bar { display:inline-block; height:10px; background:linear-gradient(90deg,#f59e0b,#b45309); border-radius:6px; vertical-align:middle; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#1f2937; color:#a8b7d7; font-size:.72rem; }
+    .pill.ok { background:#064e3b; color:#a7f3d0; }
+    .pill.warn { background:#78350f; color:#fcd34d; }
+    .empty { color:#7a8db0; font-size:.84rem; padding:14px; text-align:center; }
+    .meta { color:#7a8db0; font-size:.78rem; text-align:right; margin-bottom:8px; }
+    .spark { display:flex; gap:2px; align-items:flex-end; height:60px; padding-top:6px; }
+    .spark .b { flex:1; background:#fcd34d; min-height:2px; border-radius:2px 2px 0 0; }
+    .spark .b:hover { background:#fef3c7; }
+    .day-row { display:flex; align-items:center; gap:8px; font-size:.78rem; padding:3px 0; }
+    .day-row .d { width:90px; color:#9eb1d8; font-variant-numeric:tabular-nums; }
+    .day-row .n { width:38px; text-align:right; color:#c4b5fd; font-variant-numeric:tabular-nums; }
+    .day-row .b-track { flex:1; background:rgba(148,163,184,.1); border-radius:4px; overflow:hidden; height:8px; }
+    .day-row .b-fill { height:100%; background:linear-gradient(90deg,#f59e0b,#fcd34d); }
+    a { color:#fcd34d; }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <h1>WAB Adoption Metrics</h1>
+    <p>Live dashboard powered by every <code>/api/discovery/usage-proof</code> run. Tracks domain coverage, agent readiness, end-to-end value, and use-case distribution across the WAB DNS Discovery protocol.</p>
+  </section>
+
+  <div class="wrap">
+    <div class="meta" id="meta">Loading…</div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3>Daily activity (last 30 days)</h3>
+        <div id="daily" class="empty">Loading…</div>
+      </div>
+
+      <div class="panel">
+        <h3>Top use-cases</h3>
+        <div id="useCases" class="empty">Loading…</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3>Top domains</h3>
+        <div id="topDomains" class="empty">Loading…</div>
+      </div>
+
+      <div class="panel">
+        <h3>Recent runs</h3>
+        <div id="recent" class="empty">Loading…</div>
+      </div>
+    </div>
+
+    <div class="panel" style="text-align:center;color:#9eb1d8;font-size:.86rem;">
+      Want your domain on this dashboard? Run any <a href="/dns">WAB DNS</a> usage proof —
+      or one-click enable via
+      <a href="/cloudflare-integration">Cloudflare</a>,
+      <a href="/route53-integration">Route 53</a>,
+      <a href="/azure-dns-integration">Azure DNS</a>,
+      <a href="/gcp-dns-integration">Google Cloud DNS</a>,
+      <a href="/cpanel-integration">cPanel</a>,
+      <a href="/plesk-integration">Plesk</a>, or
+      <a href="/registrar-integrations">GoDaddy / Namecheap</a>.
+    </div>
+  </div>
+
+  <script>
+    const fmt = (n, d = 0) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: d });
+    const pct = (n) => (Number(n || 0) * 100).toFixed(1) + '%';
+
+    function kpi(label, value) {
+      return `<div class="kpi"><div class="v">${value}</div><div class="l">${label}</div></div>`;
+    }
+
+    function renderDaily(rows) {
+      if (!rows || !rows.length) { return '<div class="empty">No runs in the last 30 days yet.</div>'; }
+      const max = Math.max(...rows.map(r => r.runs), 1);
+      return rows.map(r => `
+        <div class="day-row">
+          <div class="d">${r.day}</div>
+          <div class="b-track"><div class="b-fill" style="width:${(r.runs / max) * 100}%"></div></div>
+          <div class="n">${r.runs}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderUseCases(rows) {
+      if (!rows || !rows.length) { return '<div class="empty">No use-case data yet.</div>'; }
+      const max = Math.max(...rows.map(r => r.runs), 1);
+      return `<table>
+        <thead><tr><th>Use case</th><th class="num">Runs</th><th class="num">Ready</th><th class="num">Avg score</th></tr></thead>
+        <tbody>${rows.map(r => `
+          <tr>
+            <td>${r.use_case || '—'}</td>
+            <td class="num">${fmt(r.runs)}</td>
+            <td class="num">${fmt(r.ready)}</td>
+            <td class="num">${fmt(r.avg_value_score, 2)}</td>
+          </tr>
+        `).join('')}</tbody>
+      </table>`;
+    }
+
+    function renderTopDomains(rows) {
+      if (!rows || !rows.length) { return '<div class="empty">No domains tracked yet.</div>'; }
+      return `<table>
+        <thead><tr><th>Domain</th><th class="num">Runs</th><th class="num">Ready</th><th class="num">Avg score</th></tr></thead>
+        <tbody>${rows.map(r => `
+          <tr>
+            <td>${r.domain}</td>
+            <td class="num">${fmt(r.runs)}</td>
+            <td class="num">${fmt(r.ready)}</td>
+            <td class="num">${fmt(r.avg_value_score, 2)}</td>
+          </tr>
+        `).join('')}</tbody>
+      </table>`;
+    }
+
+    function renderRecent(rows) {
+      if (!rows || !rows.length) { return '<div class="empty">No recent runs.</div>'; }
+      return `<table>
+        <thead><tr><th>Domain</th><th>Use case</th><th class="num">Score</th><th class="num">When</th></tr></thead>
+        <tbody>${rows.map(r => `
+          <tr>
+            <td>${r.domain}</td>
+            <td>${r.preferred_use_case || '—'} ${r.readiness_ok ? '<span class="pill ok">ready</span>' : '<span class="pill warn">pending</span>'}</td>
+            <td class="num">${fmt(r.value_score, 2)}</td>
+            <td class="num">${r.created_at ? r.created_at.replace('T',' ').slice(0,16) : ''}</td>
+          </tr>
+        `).join('')}</tbody>
+      </table>`;
+    }
+
+    async function load() {
+      const r = await fetch('/api/discovery/adoption-metrics');
+      if (!r.ok) {
+        document.getElementById('meta').textContent = 'Failed to load metrics: HTTP ' + r.status;
+        return;
+      }
+      const data = await r.json();
+      const t = data.totals || {};
+      document.getElementById('kpis').innerHTML = [
+        kpi('Total runs',        fmt(t.total_runs)),
+        kpi('Unique domains',    fmt(t.unique_domains)),
+        kpi('Readiness rate',    pct(t.readiness_rate)),
+        kpi('Avg value score',   fmt(t.avg_value_score, 2)),
+        kpi('Avg end-to-end',    fmt(t.avg_end_to_end_ms) + ' ms'),
+        kpi('Exec success rate', pct(t.success_rate)),
+      ].join('');
+
+      document.getElementById('daily').innerHTML      = renderDaily(data.daily_last_30);
+      document.getElementById('useCases').innerHTML   = renderUseCases(data.by_use_case);
+      document.getElementById('topDomains').innerHTML = renderTopDomains(data.top_domains);
+      document.getElementById('recent').innerHTML     = renderRecent(data.recent_runs);
+      document.getElementById('meta').textContent     = 'Live · generated ' + (data.generated_at || '').replace('T',' ').slice(0,19) + ' UTC';
+    }
+
+    load().catch(err => {
+      document.getElementById('meta').textContent = 'Error loading metrics: ' + err.message;
+    });
+  </script>
+</body>
+</html>

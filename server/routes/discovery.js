@@ -1555,6 +1555,109 @@ router.get('/api/discovery/usage-proof-runs', (req, res) => {
   }
 });
 
+// ───────────────────────────────────────────────────────────────────
+// GET /api/discovery/adoption-metrics
+//   Aggregate analytics across all WAB Discovery usage runs.
+//   Powers the public adoption dashboard at /adoption-metrics
+// ───────────────────────────────────────────────────────────────────
+router.get('/api/discovery/adoption-metrics', (_req, res) => {
+  try {
+    const totals = db.prepare(`
+      SELECT
+        COUNT(*) AS total_runs,
+        COUNT(DISTINCT domain) AS unique_domains,
+        SUM(CASE WHEN readiness_ok = 1 THEN 1 ELSE 0 END) AS ready_runs,
+        SUM(CASE WHEN execution_attempted = 1 THEN 1 ELSE 0 END) AS exec_attempted,
+        SUM(CASE WHEN execution_succeeded = 1 THEN 1 ELSE 0 END) AS exec_succeeded,
+        AVG(value_score) AS avg_value_score,
+        AVG(end_to_end_ms) AS avg_end_to_end_ms
+      FROM discovery_usage_runs
+    `).get();
+
+    const byUseCase = db.prepare(`
+      SELECT preferred_use_case AS use_case, COUNT(*) AS runs,
+             SUM(CASE WHEN readiness_ok = 1 THEN 1 ELSE 0 END) AS ready,
+             AVG(value_score) AS avg_value_score
+      FROM discovery_usage_runs
+      WHERE preferred_use_case IS NOT NULL AND preferred_use_case != ''
+      GROUP BY preferred_use_case
+      ORDER BY runs DESC
+      LIMIT 10
+    `).all();
+
+    const daily = db.prepare(`
+      SELECT date(created_at) AS day,
+             COUNT(*) AS runs,
+             COUNT(DISTINCT domain) AS domains,
+             SUM(CASE WHEN readiness_ok = 1 THEN 1 ELSE 0 END) AS ready
+      FROM discovery_usage_runs
+      WHERE created_at >= datetime('now', '-30 days')
+      GROUP BY day
+      ORDER BY day ASC
+    `).all();
+
+    const topDomains = db.prepare(`
+      SELECT domain, COUNT(*) AS runs,
+             SUM(CASE WHEN readiness_ok = 1 THEN 1 ELSE 0 END) AS ready,
+             AVG(value_score) AS avg_value_score,
+             MAX(created_at) AS last_seen
+      FROM discovery_usage_runs
+      GROUP BY domain
+      ORDER BY runs DESC
+      LIMIT 20
+    `).all();
+
+    const recent = db.prepare(`
+      SELECT domain, preferred_use_case, readiness_ok, value_score, created_at
+      FROM discovery_usage_runs
+      ORDER BY id DESC
+      LIMIT 20
+    `).all();
+
+    const t = totals || {};
+    const safeDiv = (a, b) => (b > 0 ? Number(a || 0) / Number(b) : 0);
+
+    res.json({
+      wab_version: WAB_VERSION,
+      generated_at: new Date().toISOString(),
+      totals: {
+        total_runs: Number(t.total_runs || 0),
+        unique_domains: Number(t.unique_domains || 0),
+        ready_runs: Number(t.ready_runs || 0),
+        readiness_rate: safeDiv(t.ready_runs, t.total_runs),
+        exec_attempted: Number(t.exec_attempted || 0),
+        exec_succeeded: Number(t.exec_succeeded || 0),
+        success_rate: safeDiv(t.exec_succeeded, t.exec_attempted),
+        avg_value_score: Number(t.avg_value_score || 0),
+        avg_end_to_end_ms: Number(t.avg_end_to_end_ms || 0),
+      },
+      by_use_case: byUseCase.map(r => ({
+        use_case: r.use_case,
+        runs: r.runs,
+        ready: r.ready,
+        avg_value_score: Number(r.avg_value_score || 0),
+      })),
+      daily_last_30: daily.map(r => ({
+        day: r.day, runs: r.runs, domains: r.domains, ready: r.ready,
+      })),
+      top_domains: topDomains.map(r => ({
+        domain: r.domain, runs: r.runs, ready: r.ready,
+        avg_value_score: Number(r.avg_value_score || 0),
+        last_seen: r.last_seen,
+      })),
+      recent_runs: recent.map(r => ({
+        domain: r.domain,
+        preferred_use_case: r.preferred_use_case,
+        readiness_ok: !!r.readiness_ok,
+        value_score: Number(r.value_score || 0),
+        created_at: r.created_at,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'adoption_metrics_failed', details: err.message });
+  }
+});
+
 // ═════════════════════════════════════════════════════════════════════
 // 11. GET /api/discovery/:siteId — Discovery doc for a specific site
 //    (defined AFTER named routes to prevent shadowing)

@@ -278,6 +278,15 @@ app.get('/plesk-integration', noCache, (req, res) => {
 app.get('/gcp-dns-integration', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'gcp-dns-integration.html'));
 });
+app.get('/azure-dns-integration', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'azure-dns-integration.html'));
+});
+app.get('/registrar-integrations', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'registrar-integrations.html'));
+});
+app.get('/adoption-metrics', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'adoption-metrics.html'));
+});
 app.use('/', apiLimiter, discoveryRoutes);
 app.use('/api/premium', apiLimiter, premiumRoutes);
 app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WAB DNS — Azure DNS Integration</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 0; }
+    .page { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
+    h1 { font-size: 1.7rem; margin-bottom: 6px; }
+    .sub { color: #94a3b8; margin-bottom: 32px; font-size: .97rem; }
+    .card { background: #1e293b; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
+    h2 { font-size: 1.1rem; margin: 0 0 14px; }
+    label { display: block; font-size: .85rem; color: #94a3b8; margin-bottom: 4px; margin-top: 14px; }
+    label:first-child { margin-top: 0; }
+    input[type=text], input[type=password] {
+      width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid #334155;
+      color: #e2e8f0; border-radius: 6px; padding: 9px 12px; font-size: .93rem;
+    }
+    input:focus { outline: 2px solid #6366f1; border-color: transparent; }
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+    .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .btn { padding: 9px 20px; border-radius: 7px; border: none; cursor: pointer; font-size: .92rem; font-weight: 600; }
+    .btn:hover { opacity: .85; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-enable    { background: #0078d4; color: #fff; }
+    .btn-disable   { background: #ef4444; color: #fff; }
+    .btn-verify    { background: #6366f1; color: #fff; }
+    .btn-secondary { background: #334155; color: #e2e8f0; }
+    #statusBar { margin-top: 18px; min-height: 36px; padding: 10px 14px; border-radius: 7px; background: #0f172a; font-size: .88rem; color: #94a3b8; display: none; }
+    #statusBar.ok   { display: block; color: #4ade80; border: 1px solid #166534; }
+    #statusBar.err  { display: block; color: #f87171; border: 1px solid #7f1d1d; }
+    #statusBar.info { display: block; color: #93c5fd; border: 1px solid #1e3a5f; }
+    pre { background: #0f172a; border-radius: 7px; padding: 14px 16px; font-size: .82rem; color: #94a3b8; overflow-x: auto; white-space: pre-wrap; word-break: break-word; margin: 14px 0 0; }
+    code { background: #0f172a; padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 14px; }
+    .tab { padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: .84rem; background: #0f172a; color: #94a3b8; border: 1px solid #334155; }
+    .tab.active { background: #6366f1; color: #fff; border-color: transparent; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .info-box { background: #0c2340; border: 1px solid #1e3a5f; border-radius: 8px; padding: 12px 16px; font-size: .87rem; color: #93c5fd; margin-bottom: 18px; }
+    a { color: #818cf8; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1>Azure DNS × WAB Discovery</h1>
+  <p class="sub">
+    Enable or disable the WAB DNS Discovery TXT record on any Azure DNS zone via the
+    <a href="https://learn.microsoft.com/en-us/rest/api/dns/" target="_blank" rel="noopener">Azure DNS REST API</a>.
+  </p>
+
+  <div class="info-box">
+    ℹ <strong>Bearer token required.</strong>
+    Generate via: <code>az account get-access-token --resource https://management.azure.com/</code>
+    or use a Service Principal with the <code>DNS Zone Contributor</code> role.
+    Token expires in ~60 minutes.
+  </div>
+
+  <!-- ── STEP 1: token ── -->
+  <div class="card">
+    <h2>1. Authentication</h2>
+    <label>Azure Bearer Token <span style="color:#64748b;font-weight:400">(stays in browser memory)</span></label>
+    <input type="password" id="azToken" placeholder="eyJ0eXAiOi…" autocomplete="off">
+    <p style="margin:8px 0 0;font-size:.82rem;color:#64748b">
+      Quick command: <code>az account get-access-token --resource https://management.azure.com/ --query accessToken -o tsv</code>
+    </p>
+  </div>
+
+  <!-- ── STEP 2: zone ── -->
+  <div class="card">
+    <h2>2. Subscription, Resource Group, Zone</h2>
+    <div class="row">
+      <div>
+        <label>Subscription ID</label>
+        <input type="text" id="azSub" placeholder="00000000-0000-0000-0000-000000000000">
+      </div>
+      <div>
+        <label>Resource Group</label>
+        <input type="text" id="azRg" placeholder="my-resource-group">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>DNS Zone Name</label>
+        <input type="text" id="azZone" placeholder="example.com">
+      </div>
+      <div>
+        <label>Domain <span style="color:#64748b;font-weight:400">(usually same as zone)</span></label>
+        <input type="text" id="azDomain" placeholder="example.com">
+      </div>
+    </div>
+    <label>Endpoint URL <span style="color:#64748b;font-weight:400">(blank = auto)</span></label>
+    <input type="text" id="azEndpoint" placeholder="https://example.com/.well-known/wab.json">
+  </div>
+
+  <!-- ── STEP 3: actions ── -->
+  <div class="card">
+    <h2>3. Actions</h2>
+    <div class="actions">
+      <button class="btn btn-enable"    id="btnEnable"  onclick="azAction('enable')">✓ Enable WAB Discovery</button>
+      <button class="btn btn-disable"   id="btnDisable" onclick="azAction('disable')">✗ Disable WAB Discovery</button>
+      <button class="btn btn-verify"    id="btnVerify"  onclick="azVerify()">⟳ Verify Status</button>
+      <button class="btn btn-secondary" onclick="window.open('/provider-sandbox','_blank')">Open Sandbox</button>
+    </div>
+    <div id="statusBar"></div>
+    <pre id="jsonOut" style="display:none"></pre>
+  </div>
+
+  <!-- ── CODE SNIPPETS ── -->
+  <div class="card">
+    <h2>Code Snippets</h2>
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('cli')">Azure CLI</div>
+      <div class="tab" onclick="switchTab('ps')">PowerShell</div>
+      <div class="tab" onclick="switchTab('tf')">Terraform</div>
+    </div>
+    <div id="tab-cli" class="tab-panel active">
+<pre># Enable
+az network dns record-set txt add-record \
+  --resource-group my-rg \
+  --zone-name example.com \
+  --record-set-name _wab \
+  --value "v=wab1; endpoint=https://example.com/.well-known/wab.json"
+
+# Disable
+az network dns record-set txt delete \
+  --resource-group my-rg \
+  --zone-name example.com \
+  --name _wab \
+  --yes
+</pre>
+    </div>
+    <div id="tab-ps" class="tab-panel">
+<pre># PowerShell with Az.Dns module
+$txt = New-AzDnsRecordConfig -Value "v=wab1; endpoint=https://example.com/.well-known/wab.json"
+New-AzDnsRecordSet `
+  -Name "_wab" -RecordType TXT -Ttl 3600 `
+  -ZoneName "example.com" -ResourceGroupName "my-rg" `
+  -DnsRecords $txt
+
+# Disable
+Remove-AzDnsRecordSet -Name "_wab" -RecordType TXT `
+  -ZoneName "example.com" -ResourceGroupName "my-rg" -Confirm:$false
+</pre>
+    </div>
+    <div id="tab-tf" class="tab-panel">
+<pre>resource "azurerm_dns_txt_record" "wab_discovery" {
+  name                = "_wab"
+  zone_name           = "example.com"
+  resource_group_name = "my-rg"
+  ttl                 = 3600
+
+  record {
+    value = "v=wab1; endpoint=https://example.com/.well-known/wab.json"
+  }
+}
+</pre>
+    </div>
+  </div>
+
+  <!-- ── IAM ── -->
+  <div class="card">
+    <h2>Required Role</h2>
+    <p style="font-size:.85rem;color:#94a3b8;margin:0 0 10px">
+      Use the built-in <strong>DNS Zone Contributor</strong> role scoped to the zone (or RG).
+      Required actions:
+    </p>
+<pre>Microsoft.Network/dnsZones/TXT/read
+Microsoft.Network/dnsZones/TXT/write
+Microsoft.Network/dnsZones/TXT/delete</pre>
+  </div>
+
+  <p style="text-align:center;margin-top:30px;font-size:.85rem;color:#475569">
+    <a href="/provider-onboarding">← Provider Onboarding</a> ·
+    <a href="/cloudflare-integration">Cloudflare</a> ·
+    <a href="/route53-integration">Route 53</a> ·
+    <a href="/gcp-dns-integration">Google Cloud DNS</a> ·
+    <a href="/dns">DNS Discovery</a>
+  </p>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`#tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function setStatus(msg, type) { const b = document.getElementById('statusBar'); b.textContent = msg; b.className = type; }
+function showJson(o) { const p = document.getElementById('jsonOut'); p.textContent = JSON.stringify(o, null, 2); p.style.display = 'block'; }
+
+function getInputs() {
+  return {
+    token:   document.getElementById('azToken').value.trim(),
+    sub:     document.getElementById('azSub').value.trim(),
+    rg:      document.getElementById('azRg').value.trim(),
+    zone:    document.getElementById('azZone').value.trim(),
+    domain:  document.getElementById('azDomain').value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, ''),
+    ep:      document.getElementById('azEndpoint').value.trim(),
+  };
+}
+
+async function azReq(token, method, path, body) {
+  const r = await fetch(`https://management.azure.com${path}?api-version=2018-05-01`, {
+    method,
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const txt = await r.text();
+  if (r.status === 404) return null;
+  if (!r.ok) {
+    let parsed; try { parsed = JSON.parse(txt); } catch {}
+    throw new Error(`Azure ${r.status}: ${parsed?.error?.message || txt.slice(0, 300)}`);
+  }
+  try { return JSON.parse(txt); } catch { return txt; }
+}
+
+async function azAction(action) {
+  const inp = getInputs();
+  if (!inp.token)  return setStatus('Please paste an Azure bearer token.', 'err');
+  if (!inp.sub)    return setStatus('Please enter the Subscription ID.', 'err');
+  if (!inp.rg)     return setStatus('Please enter the Resource Group.', 'err');
+  if (!inp.zone)   return setStatus('Please enter the DNS zone name.', 'err');
+  if (!inp.domain) inp.domain = inp.zone;
+
+  document.getElementById('btnEnable').disabled  = true;
+  document.getElementById('btnDisable').disabled = true;
+  try {
+    const ep = inp.ep || `https://${inp.domain}/.well-known/wab.json`;
+    setStatus('Fetching WAB record template…', 'info');
+    const tpl = await (await fetch(`/api/discovery/provider/record-template?domain=${encodeURIComponent(inp.domain)}&endpoint=${encodeURIComponent(ep)}`)).json();
+    const txtVal = tpl.record && tpl.record.value;
+    if (!txtVal) throw new Error('Could not fetch WAB record template.');
+
+    // Azure stores record name relative to zone — usually "_wab" if zone == domain, else "_wab.subdomain"
+    const recName = inp.domain === inp.zone ? '_wab' : `_wab.${inp.domain.replace(`.${inp.zone}`, '')}`;
+    const path    = `/subscriptions/${inp.sub}/resourceGroups/${inp.rg}/providers/Microsoft.Network/dnsZones/${inp.zone}/TXT/${recName}`;
+
+    if (action === 'enable') {
+      // PUT replaces the record set entirely (atomic upsert)
+      const body = {
+        properties: {
+          TTL: 3600,
+          TXTRecords: [{ value: [txtVal] }]
+        }
+      };
+      setStatus(`Submitting PUT to Azure DNS for ${recName}.${inp.zone}…`, 'info');
+      const out = await azReq(inp.token, 'PUT', path, body);
+      setStatus(`✓ TXT record set for ${recName}.${inp.zone}. WAB Discovery is ENABLED.`, 'ok');
+      showJson(out);
+    } else {
+      setStatus('Deleting TXT record set…', 'info');
+      const out = await azReq(inp.token, 'DELETE', path);
+      if (out === null) {
+        setStatus(`No _wab TXT record found for ${inp.zone} — already disabled.`, 'ok');
+        showJson({ note: 'no record found' });
+      } else {
+        setStatus(`✓ TXT record deleted. WAB Discovery is DISABLED.`, 'ok');
+        showJson({ deleted: recName, zone: inp.zone });
+      }
+    }
+  } catch (err) {
+    setStatus(`Error: ${err.message}`, 'err');
+  } finally {
+    document.getElementById('btnEnable').disabled  = false;
+    document.getElementById('btnDisable').disabled = false;
+  }
+}
+
+async function azVerify() {
+  const { domain, zone } = getInputs();
+  const d = domain || zone;
+  if (!d) return setStatus('Please enter a domain.', 'err');
+  setStatus('Checking WAB status…', 'info');
+  try {
+    const j = await (await fetch(`/api/discovery/provider/status?domain=${encodeURIComponent(d)}`)).json();
+    if (j.status === 'enabled')      setStatus(`✓ ${d} — ENABLED.`, 'ok');
+    else if (j.status === 'partial') setStatus(`⚠ ${d} — partial.`, 'info');
+    else setStatus(`✗ ${d} — DISABLED.`, 'err');
+    showJson(j);
+  } catch (err) { setStatus(`Verify error: ${err.message}`, 'err'); }
+}
+</script>
+</body>
+</html>
