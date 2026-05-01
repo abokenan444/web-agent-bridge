@@ -257,6 +257,9 @@ app.get('/activate', noCache, (req, res) => {
 app.get('/activate-dns', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'activate.html'));
 });
+app.get('/provider-onboarding', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'provider-onboarding.html'));
+});
 app.use('/', apiLimiter, discoveryRoutes);
 app.use('/api/premium', apiLimiter, premiumRoutes);
 app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);
