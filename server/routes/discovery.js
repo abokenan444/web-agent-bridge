@@ -101,6 +101,323 @@ function toBooleanState(v) {
   return v ? 'yes' : 'no';
 }
 
+function resolveAbsoluteUrl(origin, pathOrUrl) {
+  if (!pathOrUrl) return null;
+  try {
+    return new URL(pathOrUrl, origin).toString();
+  } catch {
+    return null;
+  }
+}
+
+function pickUsageAction(actions, preferredUseCase) {
+  const list = Array.isArray(actions) ? actions : [];
+  if (!list.length) return null;
+
+  const byUseCase = {
+    booking: ['booking', 'reserve', 'book', 'createBooking', 'schedule'],
+    messaging: ['message', 'messaging', 'sendMessage', 'contact'],
+    payment: ['payment', 'checkout', 'purchase', 'pay'],
+    checkout: ['checkout', 'purchase', 'pay', 'order'],
+    search: ['search', 'find', 'lookup'],
+    'content-reading': ['read', 'readContent', 'extract', 'extractData'],
+    'general-automation': ['click', 'navigate', 'scroll', 'readContent']
+  };
+
+  const preferred = byUseCase[preferredUseCase] || [];
+  for (const keyword of preferred) {
+    const hit = list.find((a) => String(a.name || '').toLowerCase().includes(keyword.toLowerCase()));
+    if (hit) return hit;
+  }
+
+  const safeFallbackOrder = ['search', 'readContent', 'read', 'click', 'scroll', 'navigate', 'fillForms'];
+  for (const name of safeFallbackOrder) {
+    const hit = list.find((a) => String(a.name || '') === name);
+    if (hit) return hit;
+  }
+
+  return list[0] || null;
+}
+
+function buildActionParams(actionName) {
+  const n = String(actionName || '');
+  if (n === 'search') return { q: 'sample query' };
+  if (n === 'readContent' || n === 'read') return { selector: 'body' };
+  if (n === 'navigate') return { url: '/' };
+  if (n === 'scroll') return { amount: 1 };
+  if (n === 'fillForms') return { fields: { email: 'usage-proof@wab.test' } };
+  if (n === 'click') return { selector: 'button, a' };
+  return { sample: true };
+}
+
+async function parseJsonSafe(res) {
+  return res.json().catch(() => ({}));
+}
+
+async function buildUsageProof(domain, opts = {}) {
+  const apiKey = (opts.apiKey || '').trim();
+  const preferredUseCase = (opts.preferredUseCase || '').trim().toLowerCase();
+  const startedAt = Date.now();
+
+  const out = {
+    wab_version: WAB_VERSION,
+    checked_at: new Date().toISOString(),
+    domain,
+    intent: {
+      mode: apiKey ? 'execute' : 'readiness',
+      preferred_use_case: preferredUseCase || null,
+    },
+    kpi: {
+      end_to_end_ms: null,
+      discovery_ms: null,
+      auth_ms: null,
+      execution_ms: null,
+      discovered_actions_count: 0,
+      business_commands_count: 0,
+      value_score: 0,
+    },
+    usage_proof: {
+      ok: false,
+      readiness_ok: false,
+      execution_attempted: false,
+      execution_succeeded: false,
+      selected_action: null,
+      use_case: null,
+      detail: null,
+      steps: [
+        { key: 'verify_core', ok: false, detail: null },
+        { key: 'discover_actions', ok: false, detail: null },
+        { key: 'authenticate_agent', ok: false, detail: null },
+        { key: 'execute_real_action', ok: false, detail: null },
+      ],
+    },
+    baseline: null,
+  };
+
+  const discoveryStart = Date.now();
+  const baseline = await buildProof(domain, { includeAgentRun: true });
+  out.baseline = baseline;
+  out.kpi.discovery_ms = Date.now() - discoveryStart;
+
+  const coreOk = !!(baseline && baseline.dns && baseline.dns.ok && baseline.wab_json && baseline.wab_json.ok);
+  out.usage_proof.steps[0].ok = coreOk;
+  out.usage_proof.steps[0].detail = coreOk ? 'DNS + wab.json verified' : 'core verification failed';
+  out.usage_proof.use_case = baseline && baseline.wab_json ? baseline.wab_json.use_case : null;
+
+  if (!coreOk) {
+    out.usage_proof.detail = 'usage proof blocked: core verification failed';
+    out.kpi.end_to_end_ms = Date.now() - startedAt;
+    return out;
+  }
+
+  let wabUrl;
+  try {
+    wabUrl = new URL(baseline.wab_json.url);
+  } catch {
+    out.usage_proof.detail = 'usage proof blocked: invalid wab.json URL';
+    out.kpi.end_to_end_ms = Date.now() - startedAt;
+    return out;
+  }
+  const origin = wabUrl.origin;
+
+  const discoverUrl = origin + '/api/wab/discover';
+  const fallbackDiscoverUrl = origin + '/agent-bridge.json';
+  let discoverDoc = null;
+  try {
+    const discoverRes = await safeFetch(discoverUrl, {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+    }, {
+      requireHttps: true,
+      allowList: hostAllowList(domain, wabUrl.hostname),
+      timeoutMs: 8000,
+      maxBytes: 1024 * 1024,
+      allowedContentTypes: ['application/json'],
+    });
+    const discoverBody = await parseJsonSafe(discoverRes);
+    if (discoverRes.ok) {
+      discoverDoc = discoverBody && (discoverBody.result || discoverBody);
+    } else {
+      const fallbackRes = await safeFetch(fallbackDiscoverUrl, {
+        method: 'GET',
+        headers: { accept: 'application/json' },
+      }, {
+        requireHttps: true,
+        allowList: hostAllowList(domain, wabUrl.hostname),
+        timeoutMs: 8000,
+        maxBytes: 1024 * 1024,
+        allowedContentTypes: ['application/json'],
+      });
+      const fallbackBody = await parseJsonSafe(fallbackRes);
+      if (fallbackRes.ok) discoverDoc = fallbackBody && (fallbackBody.result || fallbackBody);
+    }
+  } catch (_) {
+    discoverDoc = null;
+  }
+
+  const actionsEndpoint = resolveAbsoluteUrl(origin,
+    discoverDoc && discoverDoc.endpoints && discoverDoc.endpoints.actions
+      ? discoverDoc.endpoints.actions
+      : '/api/wab/actions'
+  );
+
+  let actions = [];
+  if (actionsEndpoint) {
+    try {
+      const actionsRes = await safeFetch(actionsEndpoint, {
+        method: 'GET',
+        headers: { accept: 'application/json' },
+      }, {
+        requireHttps: true,
+        allowList: hostAllowList(domain, wabUrl.hostname),
+        timeoutMs: 8000,
+        maxBytes: 1024 * 1024,
+        allowedContentTypes: ['application/json'],
+      });
+      const actionsBody = await parseJsonSafe(actionsRes);
+      if (actionsRes.ok) {
+        const payload = actionsBody && (actionsBody.result || actionsBody);
+        actions = Array.isArray(payload && payload.actions) ? payload.actions : [];
+      }
+    } catch (_) {
+      actions = [];
+    }
+  }
+
+  out.kpi.discovered_actions_count = actions.length;
+  const commandSet = new Set((baseline.wab_json && baseline.wab_json.commands) || []);
+  const businessHints = ['booking', 'checkout', 'payment', 'message', 'messaging', 'purchase'];
+  out.kpi.business_commands_count = businessHints.filter((k) => commandSet.has(k)).length;
+
+  out.usage_proof.steps[1].ok = actions.length > 0;
+  out.usage_proof.steps[1].detail = actions.length > 0
+    ? `discovered ${actions.length} executable actions`
+    : 'no executable actions discovered';
+  out.usage_proof.readiness_ok = out.usage_proof.steps[1].ok;
+
+  const picked = pickUsageAction(actions, preferredUseCase || out.usage_proof.use_case || 'general-automation');
+  out.usage_proof.selected_action = picked ? picked.name : null;
+
+  if (!apiKey) {
+    out.usage_proof.detail = 'readiness proof complete; provide api_key to run real execution proof';
+    out.kpi.value_score = Math.max(0,
+      Math.min(100, (out.usage_proof.readiness_ok ? 45 : 0) + Math.min(out.kpi.discovered_actions_count * 5, 30) + Math.min(out.kpi.business_commands_count * 10, 25))
+    );
+    out.kpi.end_to_end_ms = Date.now() - startedAt;
+    return out;
+  }
+
+  if (!picked) {
+    out.usage_proof.detail = 'execution proof blocked: no action candidate found';
+    out.kpi.value_score = 25;
+    out.kpi.end_to_end_ms = Date.now() - startedAt;
+    return out;
+  }
+
+  out.usage_proof.execution_attempted = true;
+
+  const authUrl = origin + '/api/wab/authenticate';
+  const authStart = Date.now();
+  let token = null;
+  try {
+    const authRes = await safeFetch(authUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ apiKey, meta: { name: 'usage-proof-lab' } }),
+    }, {
+      requireHttps: true,
+      allowList: hostAllowList(domain, wabUrl.hostname),
+      timeoutMs: 8000,
+      maxBytes: 1024 * 1024,
+      allowedContentTypes: ['application/json'],
+    });
+    const authBody = await parseJsonSafe(authRes);
+    const payload = authBody && (authBody.result || authBody);
+    if (authRes.ok && payload && payload.token) {
+      token = payload.token;
+      out.usage_proof.steps[2].ok = true;
+      out.usage_proof.steps[2].detail = 'agent authentication succeeded';
+    } else {
+      out.usage_proof.steps[2].ok = false;
+      out.usage_proof.steps[2].detail = `agent authentication failed (HTTP ${authRes.status})`;
+    }
+  } catch (err) {
+    out.usage_proof.steps[2].ok = false;
+    out.usage_proof.steps[2].detail = err && err.message ? err.message : 'auth_request_failed';
+  }
+  out.kpi.auth_ms = Date.now() - authStart;
+
+  if (!token) {
+    out.usage_proof.detail = 'execution proof failed at auth step';
+    out.kpi.value_score = Math.max(10, out.usage_proof.readiness_ok ? 40 : 10);
+    out.kpi.end_to_end_ms = Date.now() - startedAt;
+    return out;
+  }
+
+  const execUrl = origin + '/api/wab/actions/' + encodeURIComponent(picked.name);
+  const execStart = Date.now();
+  try {
+    const execRes = await safeFetch(execUrl, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer ' + token,
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        id: 'usage-proof',
+        params: buildActionParams(picked.name),
+      }),
+    }, {
+      requireHttps: true,
+      allowList: hostAllowList(domain, wabUrl.hostname),
+      timeoutMs: 10000,
+      maxBytes: 1024 * 1024,
+      allowedContentTypes: ['application/json'],
+    });
+    const execBody = await parseJsonSafe(execRes);
+    if (execRes.ok) {
+      out.usage_proof.steps[3].ok = true;
+      out.usage_proof.steps[3].detail = 'real action executed successfully';
+      out.usage_proof.execution_succeeded = true;
+      out.usage_proof.detail = 'usage proof complete: real action execution succeeded';
+      out.usage_proof.execution_result = execBody && (execBody.result || execBody);
+    } else {
+      const errCode = execBody && execBody.error && execBody.error.code;
+      if (errCode === 'HUMAN_GATE_REQUIRED' || errCode === 'HUMAN_GATE_PENDING' || errCode === 'INTENT_BLOCKED') {
+        out.usage_proof.steps[3].ok = true;
+        out.usage_proof.steps[3].detail = `execution reached policy gate (${errCode})`;
+        out.usage_proof.execution_succeeded = false;
+        out.usage_proof.detail = 'execution reached a real policy gate; operational flow is active';
+      } else {
+        out.usage_proof.steps[3].ok = false;
+        out.usage_proof.steps[3].detail = `execution failed (HTTP ${execRes.status})`;
+        out.usage_proof.execution_succeeded = false;
+        out.usage_proof.detail = 'execution proof failed';
+      }
+      out.usage_proof.execution_result = execBody;
+    }
+  } catch (err) {
+    out.usage_proof.steps[3].ok = false;
+    out.usage_proof.steps[3].detail = err && err.message ? err.message : 'execution_request_failed';
+    out.usage_proof.detail = 'execution request failed';
+  }
+  out.kpi.execution_ms = Date.now() - execStart;
+
+  out.usage_proof.ok = out.usage_proof.steps[0].ok && out.usage_proof.steps[1].ok && out.usage_proof.steps[2].ok && out.usage_proof.steps[3].ok;
+  out.kpi.value_score = Math.max(0,
+    Math.min(100,
+      (out.usage_proof.steps[0].ok ? 20 : 0) +
+      (out.usage_proof.steps[1].ok ? 20 : 0) +
+      (out.usage_proof.steps[2].ok ? 20 : 0) +
+      (out.usage_proof.steps[3].ok ? 30 : 0) +
+      Math.min(out.kpi.business_commands_count * 5, 10)
+    )
+  );
+  out.kpi.end_to_end_ms = Date.now() - startedAt;
+  return out;
+}
+
 async function buildProof(domain, opts = {}) {
   const includeAgentRun = opts.includeAgentRun === true;
   const out = {
@@ -687,7 +1004,32 @@ router.get('/api/discovery/test-agent', async (req, res) => {
 });
 
 // ═════════════════════════════════════════════════════════════════════
-// 8. GET /api/discovery/:siteId — Discovery doc for a specific site
+// 8. POST /api/discovery/usage-proof
+//    Real execution proof + KPIs (readiness if no api_key is supplied).
+// ═════════════════════════════════════════════════════════════════════
+
+router.post('/api/discovery/usage-proof', async (req, res) => {
+  const domain = sanitizeDomain((req.body && req.body.domain) || req.query.domain || '');
+  if (!domain) {
+    return res.status(400).json({
+      error: 'domain is required',
+      hint: 'Use POST /api/discovery/usage-proof with {"domain":"example.com"}',
+    });
+  }
+
+  const apiKey = (req.body && req.body.api_key) || '';
+  const preferredUseCase = (req.body && req.body.preferred_use_case) || '';
+
+  try {
+    const proof = await buildUsageProof(domain, { apiKey, preferredUseCase });
+    return res.json(proof);
+  } catch (err) {
+    return res.status(500).json({ error: 'usage_proof_failed', details: err.message });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// 9. GET /api/discovery/:siteId — Discovery doc for a specific site
 //    (defined AFTER named routes to prevent shadowing)
 // ═════════════════════════════════════════════════════════════════════
 
@@ -720,4 +1062,6 @@ module.exports._internals = {
   deriveEndpointFromRecord,
   summarizeUseCase,
   hostAllowList,
+  pickUsageAction,
+  resolveAbsoluteUrl,
 };

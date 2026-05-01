@@ -70,6 +70,7 @@ function renderProof(data) {
   const use = document.getElementById('useCaseValue');
   const badges = document.getElementById('stateBadges');
   const discoverPathBadge = document.getElementById('proofDiscoverPathBadge');
+  const usageKpi = document.getElementById('usageKpiValue');
   if (!status || !out || !txt || !wab || !use || !badges) return;
 
   const states = data.statuses || {};
@@ -119,6 +120,18 @@ function renderProof(data) {
       ? '✓ Verifiable proof ready.'
       : '✗ Verification incomplete. Check DNS record, endpoint, and agent flow.') +
     '</span>';
+
+  if (usageKpi) {
+    if (data && data.kpi) {
+      usageKpi.textContent =
+        'value_score=' + (data.kpi.value_score != null ? data.kpi.value_score : '—') +
+        ' · actions=' + (data.kpi.discovered_actions_count != null ? data.kpi.discovered_actions_count : '—') +
+        ' · business_cmds=' + (data.kpi.business_commands_count != null ? data.kpi.business_commands_count : '—') +
+        ' · e2e_ms=' + (data.kpi.end_to_end_ms != null ? data.kpi.end_to_end_ms : '—');
+    } else {
+      usageKpi.textContent = '—';
+    }
+  }
 }
 
 window.verifyLiveProof = async function () {
@@ -154,6 +167,40 @@ window.testWithAgent = async function () {
     renderProof(data);
   } catch (err) {
     status.innerHTML = '<span class="danger">Agent test failed: ' + ((err && err.message) || err) + '</span>';
+  }
+};
+
+window.runUsageProof = async function () {
+  const domain = (document.getElementById('dnsDomain').value || '').trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  const apiKey = (document.getElementById('dnsUsageApiKey') && document.getElementById('dnsUsageApiKey').value || '').trim();
+  const preferredUseCase = (document.getElementById('dnsUsageUseCase') && document.getElementById('dnsUsageUseCase').value || '').trim();
+  const status = document.getElementById('proofStatus');
+  if (!status) return;
+  if (!domain) {
+    status.innerHTML = '<span class="danger">Please enter a domain.</span>';
+    return;
+  }
+  status.innerHTML = '<span class="warn">Running usage proof (' + (apiKey ? 'real execution' : 'readiness only') + ')…</span>';
+  try {
+    const res = await fetch('/api/discovery/usage-proof', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({
+        domain,
+        api_key: apiKey,
+        preferred_use_case: preferredUseCase || undefined,
+      }),
+    });
+    const data = await res.json();
+    renderProof(data);
+    if (data && data.usage_proof) {
+      const ok = data.usage_proof.ok || data.usage_proof.readiness_ok;
+      status.innerHTML = '<span class="' + (ok ? 'ok' : 'danger') + '">' +
+        (data.usage_proof.detail || (ok ? 'Usage proof completed.' : 'Usage proof failed.')) +
+      '</span>';
+    }
+  } catch (err) {
+    status.innerHTML = '<span class="danger">Usage proof failed: ' + ((err && err.message) || err) + '</span>';
   }
 };
 
@@ -317,6 +364,7 @@ function bindHandlers() {
   const advancedBtn = document.getElementById('dnsAdvancedToggleBtn');
   const proofVerifyBtn = document.getElementById('dnsProofVerifyBtn');
   const proofAgentBtn = document.getElementById('dnsProofAgentBtn');
+  const usageProofBtn = document.getElementById('dnsUsageProofBtn');
 
   if (enBtn) enBtn.addEventListener('click', () => window.setLang('en'));
   if (arBtn) arBtn.addEventListener('click', () => window.setLang('ar'));
@@ -325,6 +373,7 @@ function bindHandlers() {
   if (advancedBtn) advancedBtn.addEventListener('click', () => window.toggleAdvanced());
   if (proofVerifyBtn) proofVerifyBtn.addEventListener('click', () => window.verifyLiveProof());
   if (proofAgentBtn) proofAgentBtn.addEventListener('click', () => window.testWithAgent());
+  if (usageProofBtn) usageProofBtn.addEventListener('click', () => window.runUsageProof());
 }
 
 document.addEventListener('DOMContentLoaded', () => {

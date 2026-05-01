@@ -50,4 +50,21 @@ describe('discovery proof helpers', () => {
       'example.com', '*.example.com', 'api.example.net', '*.api.example.net',
     ]));
   });
+
+  test('pickUsageAction prefers use-case specific action names', () => {
+    const picked = _internals.pickUsageAction([
+      { name: 'search' },
+      { name: 'createBooking' },
+      { name: 'readContent' },
+    ], 'booking');
+    expect(picked).toEqual({ name: 'createBooking' });
+  });
+
+  test('pickUsageAction falls back to safe defaults', () => {
+    const picked = _internals.pickUsageAction([
+      { name: 'readContent' },
+      { name: 'click' },
+    ], 'unknown-use-case');
+    expect(picked).toEqual({ name: 'readContent' });
+  });
 });
