@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WAB DNS — Cloudflare One-Click Integration</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 0; }
+    .page { max-width: 860px; margin: 0 auto; padding: 40px 20px 80px; }
+    h1 { font-size: 1.7rem; margin-bottom: 6px; }
+    .sub { color: #94a3b8; margin-bottom: 32px; font-size: .97rem; }
+    .card { background: #1e293b; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
+    h2 { font-size: 1.1rem; margin: 0 0 14px; }
+    label { display: block; font-size: .85rem; color: #94a3b8; margin-bottom: 4px; margin-top: 14px; }
+    label:first-child { margin-top: 0; }
+    input[type=text], input[type=password] {
+      width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid #334155;
+      color: #e2e8f0; border-radius: 6px; padding: 9px 12px; font-size: .93rem;
+    }
+    input:focus { outline: 2px solid #6366f1; border-color: transparent; }
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+    .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .btn { padding: 9px 20px; border-radius: 7px; border: none; cursor: pointer; font-size: .92rem; font-weight: 600; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-enable  { background: #22c55e; color: #000; }
+    .btn-disable { background: #ef4444; color: #fff; }
+    .btn-verify  { background: #6366f1; color: #fff; }
+    .btn-secondary { background: #334155; color: #e2e8f0; }
+    #statusBar { margin-top: 18px; min-height: 36px; padding: 10px 14px; border-radius: 7px; background: #0f172a; font-size: .88rem; color: #94a3b8; display: none; }
+    #statusBar.ok   { display: block; color: #4ade80; border: 1px solid #166534; }
+    #statusBar.err  { display: block; color: #f87171; border: 1px solid #7f1d1d; }
+    #statusBar.info { display: block; color: #93c5fd; border: 1px solid #1e3a5f; }
+    pre { background: #0f172a; border-radius: 7px; padding: 14px 16px; font-size: .82rem; color: #94a3b8; overflow-x: auto; white-space: pre-wrap; word-break: break-word; margin: 14px 0 0; }
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: .74rem; font-weight: 700; background: #1d4ed8; color: #bfdbfe; margin-left: 8px; vertical-align: middle; }
+    .badge.green { background: #14532d; color: #86efac; }
+    .badge.red   { background: #7f1d1d; color: #fca5a5; }
+    .step { counter-increment: step; display: flex; gap: 14px; margin-bottom: 18px; }
+    .step-num { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: #334155; color: #e2e8f0; font-size: .82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .step-body { flex: 1; padding-top: 3px; }
+    a { color: #818cf8; }
+    code { background: #0f172a; padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 14px; }
+    .tab { padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: .84rem; background: #0f172a; color: #94a3b8; border: 1px solid #334155; }
+    .tab.active { background: #6366f1; color: #fff; border-color: transparent; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1>Cloudflare × WAB DNS Discovery</h1>
+  <p class="sub">
+    One-click enable or disable the WAB DNS Discovery TXT record for any domain managed in Cloudflare.
+    Uses the <a href="https://developers.cloudflare.com/api/" target="_blank" rel="noopener">Cloudflare API</a> directly from your browser — your token never leaves your device.
+  </p>
+
+  <!-- ── STEP 1: credentials ── -->
+  <div class="card">
+    <h2>1. Cloudflare Credentials</h2>
+    <label>API Token <span style="color:#94a3b8;font-weight:400">(needs <code>Zone:DNS:Edit</code> permission)</span></label>
+    <input type="password" id="cfToken" placeholder="eyJhbGci…" autocomplete="off">
+    <p style="margin:8px 0 0;font-size:.82rem;color:#64748b">
+      Create a scoped token at
+      <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">dash.cloudflare.com → API Tokens</a>.
+      Select template <strong>Edit zone DNS</strong> and restrict to the zone you need.
+    </p>
+  </div>
+
+  <!-- ── STEP 2: domain ── -->
+  <div class="card">
+    <h2>2. Domain</h2>
+    <div class="row">
+      <div>
+        <label>Root domain (Cloudflare zone)</label>
+        <input type="text" id="cfDomain" placeholder="example.com">
+      </div>
+      <div>
+        <label>Endpoint URL <span style="color:#94a3b8;font-weight:400">(leave blank for auto)</span></label>
+        <input type="text" id="cfEndpoint" placeholder="https://example.com/.well-known/wab.json">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: actions ── -->
+  <div class="card">
+    <h2>3. Actions</h2>
+    <div class="actions">
+      <button class="btn btn-enable"    id="btnEnable"  onclick="cfAction('enable')">✓ Enable WAB Discovery</button>
+      <button class="btn btn-disable"   id="btnDisable" onclick="cfAction('disable')">✗ Disable WAB Discovery</button>
+      <button class="btn btn-verify"    id="btnVerify"  onclick="cfVerify()">⟳ Verify Status</button>
+      <button class="btn btn-secondary" onclick="window.open('/provider-sandbox','_blank')">Open Sandbox</button>
+    </div>
+    <div id="statusBar"></div>
+    <pre id="jsonOut" style="display:none"></pre>
+  </div>
+
+  <!-- ── HOW IT WORKS ── -->
+  <div class="card">
+    <h2>How it works</h2>
+    <div style="counter-reset:step">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">Fetch the WAB <strong>record template</strong> for your domain (<code>GET /api/discovery/provider/record-template</code>) to get the exact TXT value.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">Resolve the Cloudflare <strong>Zone ID</strong> from the domain name (<code>GET /zones?name=…</code>).</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body"><strong>Enable:</strong> look up existing <code>_wab</code> TXT record → create it if absent, or update it if the value changed.<br>
+        <strong>Disable:</strong> look up the record → delete it if found.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">Call <code>GET /api/discovery/provider/status?domain=…</code> to confirm WAB sees the record live (DNS propagation may take up to 60 s).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CODE SNIPPETS ── -->
+  <div class="card">
+    <h2>Code Snippets</h2>
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('nodejs')">Node.js</div>
+      <div class="tab" onclick="switchTab('curl')">cURL</div>
+      <div class="tab" onclick="switchTab('python')">Python</div>
+    </div>
+
+    <div id="tab-nodejs" class="tab-panel active">
+<pre>// npm install node-fetch
+const fetch = require('node-fetch');
+
+const CF_TOKEN = process.env.CF_API_TOKEN;
+const DOMAIN   = 'example.com';
+const WAB_ENDPOINT = `https://${DOMAIN}/.well-known/wab.json`;
+const TXT_VALUE = `v=wab1; endpoint=${WAB_ENDPOINT}`;
+
+async function cfHeaders() {
+  return { Authorization: `Bearer ${CF_TOKEN}`, 'Content-Type': 'application/json' };
+}
+
+async function getZoneId(domain) {
+  const r = await fetch(`https://api.cloudflare.com/client/v4/zones?name=${domain}`, { headers: await cfHeaders() });
+  const j = await r.json();
+  if (!j.success || !j.result[0]) throw new Error('Zone not found');
+  return j.result[0].id;
+}
+
+async function enableWAB() {
+  const zoneId = await getZoneId(DOMAIN);
+  const base = `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`;
+  // check existing
+  const list = await (await fetch(`${base}?type=TXT&name=_wab.${DOMAIN}`, { headers: await cfHeaders() })).json();
+  if (list.result && list.result[0]) {
+    // update
+    const id = list.result[0].id;
+    await fetch(`${base}/${id}`, { method: 'PUT', headers: await cfHeaders(),
+      body: JSON.stringify({ type: 'TXT', name: `_wab.${DOMAIN}`, content: TXT_VALUE, ttl: 3600 }) });
+    console.log('Updated _wab TXT record');
+  } else {
+    await fetch(base, { method: 'POST', headers: await cfHeaders(),
+      body: JSON.stringify({ type: 'TXT', name: `_wab.${DOMAIN}`, content: TXT_VALUE, ttl: 3600 }) });
+    console.log('Created _wab TXT record');
+  }
+}
+
+async function disableWAB() {
+  const zoneId = await getZoneId(DOMAIN);
+  const base = `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`;
+  const list = await (await fetch(`${base}?type=TXT&name=_wab.${DOMAIN}`, { headers: await cfHeaders() })).json();
+  if (list.result && list.result[0]) {
+    await fetch(`${base}/${list.result[0].id}`, { method: 'DELETE', headers: await cfHeaders() });
+    console.log('Deleted _wab TXT record');
+  } else {
+    console.log('No _wab record found (already disabled)');
+  }
+}
+
+enableWAB().catch(console.error);
+</pre>
+    </div>
+
+    <div id="tab-curl" class="tab-panel">
+<pre># 1. Get Zone ID
+ZONE=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=example.com" \
+  -H "Authorization: Bearer $CF_API_TOKEN" | jq -r '.result[0].id')
+
+# 2. Create TXT record
+curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE/dns_records" \
+  -H "Authorization: Bearer $CF_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "type":    "TXT",
+    "name":    "_wab.example.com",
+    "content": "v=wab1; endpoint=https://example.com/.well-known/wab.json",
+    "ttl":     3600
+  }'
+
+# Delete (disable)
+REC=$(curl -s "https://api.cloudflare.com/client/v4/zones/$ZONE/dns_records?type=TXT&name=_wab.example.com" \
+  -H "Authorization: Bearer $CF_API_TOKEN" | jq -r '.result[0].id')
+curl -s -X DELETE "https://api.cloudflare.com/client/v4/zones/$ZONE/dns_records/$REC" \
+  -H "Authorization: Bearer $CF_API_TOKEN"
+</pre>
+    </div>
+
+    <div id="tab-python" class="tab-panel">
+<pre>import os, requests
+
+CF_TOKEN = os.environ['CF_API_TOKEN']
+DOMAIN   = 'example.com'
+HEADERS  = {'Authorization': f'Bearer {CF_TOKEN}', 'Content-Type': 'application/json'}
+TXT_VAL  = f'v=wab1; endpoint=https://{DOMAIN}/.well-known/wab.json'
+
+def zone_id():
+    r = requests.get(f'https://api.cloudflare.com/client/v4/zones?name={DOMAIN}', headers=HEADERS)
+    return r.json()['result'][0]['id']
+
+def enable_wab():
+    zid = zone_id()
+    base = f'https://api.cloudflare.com/client/v4/zones/{zid}/dns_records'
+    lst = requests.get(f'{base}?type=TXT&name=_wab.{DOMAIN}', headers=HEADERS).json()
+    payload = {'type': 'TXT', 'name': f'_wab.{DOMAIN}', 'content': TXT_VAL, 'ttl': 3600}
+    if lst['result']:
+        requests.put(f'{base}/{lst["result"][0]["id"]}', json=payload, headers=HEADERS)
+        print('Updated')
+    else:
+        requests.post(base, json=payload, headers=HEADERS)
+        print('Created')
+
+def disable_wab():
+    zid = zone_id()
+    base = f'https://api.cloudflare.com/client/v4/zones/{zid}/dns_records'
+    lst = requests.get(f'{base}?type=TXT&name=_wab.{DOMAIN}', headers=HEADERS).json()
+    if lst['result']:
+        requests.delete(f'{base}/{lst["result"][0]["id"]}', headers=HEADERS)
+        print('Deleted')
+    else:
+        print('Already disabled')
+
+enable_wab()
+</pre>
+    </div>
+  </div>
+
+  <p style="text-align:center;margin-top:30px;font-size:.85rem;color:#475569">
+    <a href="/provider-onboarding">← Back to Provider Onboarding</a> ·
+    <a href="/provider-sandbox">Provider Sandbox</a> ·
+    <a href="/dns">DNS Discovery</a>
+  </p>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`#tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function setStatus(msg, type) {
+  const bar = document.getElementById('statusBar');
+  bar.textContent = msg;
+  bar.className = type;
+}
+
+function showJson(obj) {
+  const pre = document.getElementById('jsonOut');
+  pre.textContent = JSON.stringify(obj, null, 2);
+  pre.style.display = 'block';
+}
+
+function getInputs() {
+  const token  = document.getElementById('cfToken').value.trim();
+  const domain = document.getElementById('cfDomain').value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const ep     = document.getElementById('cfEndpoint').value.trim() || `https://${domain}/.well-known/wab.json`;
+  return { token, domain, ep };
+}
+
+async function cfHeaders(token) {
+  return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+}
+
+async function getZoneId(token, domain) {
+  const r = await fetch(`https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(domain)}`, {
+    headers: await cfHeaders(token)
+  });
+  const j = await r.json();
+  if (!j.success || !j.result || !j.result[0]) throw new Error(`Zone not found for "${domain}". Make sure the domain is in your Cloudflare account.`);
+  return j.result[0].id;
+}
+
+async function cfAction(action) {
+  const { token, domain, ep } = getInputs();
+  if (!token) return setStatus('Please enter your Cloudflare API Token.', 'err');
+  if (!domain) return setStatus('Please enter a domain name.', 'err');
+
+  document.getElementById(`btn${action === 'enable' ? 'Enable' : 'Disable'}`).disabled = true;
+  setStatus('Fetching WAB record template…', 'info');
+
+  try {
+    // 1. get record value from WAB
+    const tplRes = await fetch(`/api/discovery/provider/record-template?domain=${encodeURIComponent(domain)}&endpoint=${encodeURIComponent(ep)}`);
+    const tpl    = await tplRes.json();
+    const txtVal = tpl.record && tpl.record.value;
+    if (!txtVal) throw new Error('Could not fetch WAB record template.');
+
+    setStatus('Resolving Cloudflare Zone ID…', 'info');
+    const zoneId = await getZoneId(token, domain);
+
+    const baseUrl = `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`;
+    const cfHdr   = await cfHeaders(token);
+    const listUrl = `${baseUrl}?type=TXT&name=_wab.${domain}`;
+
+    setStatus('Looking up existing _wab TXT record…', 'info');
+    const listRes = await fetch(listUrl, { headers: cfHdr });
+    const listJ   = await listRes.json();
+    const existing = listJ.result && listJ.result[0];
+
+    let resultJson;
+    if (action === 'enable') {
+      const body = JSON.stringify({ type: 'TXT', name: `_wab.${domain}`, content: txtVal, ttl: 3600 });
+      if (existing) {
+        setStatus(`Updating existing record (id=${existing.id})…`, 'info');
+        const r = await fetch(`${baseUrl}/${existing.id}`, { method: 'PUT', headers: cfHdr, body });
+        resultJson = await r.json();
+        if (!resultJson.success) throw new Error(JSON.stringify(resultJson.errors));
+        setStatus(`✓ _wab TXT record updated for ${domain}. DNS propagation may take up to 60 s.`, 'ok');
+      } else {
+        setStatus('Creating new _wab TXT record…', 'info');
+        const r = await fetch(baseUrl, { method: 'POST', headers: cfHdr, body });
+        resultJson = await r.json();
+        if (!resultJson.success) throw new Error(JSON.stringify(resultJson.errors));
+        setStatus(`✓ _wab TXT record created for ${domain}. WAB Discovery is now ENABLED.`, 'ok');
+      }
+    } else {
+      // disable
+      if (!existing) {
+        setStatus(`No _wab TXT record found for ${domain} — already disabled.`, 'ok');
+        showJson({ note: 'no record found', domain });
+        return;
+      }
+      setStatus(`Deleting record (id=${existing.id})…`, 'info');
+      const r = await fetch(`${baseUrl}/${existing.id}`, { method: 'DELETE', headers: cfHdr });
+      resultJson = await r.json();
+      if (!resultJson.success) throw new Error(JSON.stringify(resultJson.errors));
+      setStatus(`✓ _wab TXT record deleted for ${domain}. WAB Discovery is now DISABLED.`, 'ok');
+    }
+    showJson(resultJson);
+  } catch (err) {
+    setStatus(`Error: ${err.message}`, 'err');
+  } finally {
+    document.getElementById('btnEnable').disabled  = false;
+    document.getElementById('btnDisable').disabled = false;
+  }
+}
+
+async function cfVerify() {
+  const { domain } = getInputs();
+  if (!domain) return setStatus('Please enter a domain name.', 'err');
+  setStatus('Checking WAB status via DNS…', 'info');
+  try {
+    const r = await fetch(`/api/discovery/provider/status?domain=${encodeURIComponent(domain)}`);
+    const j = await r.json();
+    const st = j.status;
+    if (st === 'enabled')  setStatus(`✓ ${domain} — WAB Discovery is ENABLED (record verified).`, 'ok');
+    else if (st === 'partial') setStatus(`⚠ ${domain} — DNS found but endpoint has issues (status: partial).`, 'info');
+    else setStatus(`✗ ${domain} — WAB Discovery is DISABLED (no valid TXT record found).`, 'err');
+    showJson(j);
+  } catch (err) {
+    setStatus(`Verify error: ${err.message}`, 'err');
+  }
+}
+</script>
+</body>
+</html>
