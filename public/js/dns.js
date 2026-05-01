@@ -69,7 +69,7 @@ function renderProof(data) {
   const wab = document.getElementById('proofWabJson');
   const use = document.getElementById('useCaseValue');
   const badges = document.getElementById('stateBadges');
-  const fallbackBadge = document.getElementById('proofFallbackBadge');
+  const discoverPathBadge = document.getElementById('proofDiscoverPathBadge');
   if (!status || !out || !txt || !wab || !use || !badges) return;
 
   const states = data.statuses || {};
@@ -90,12 +90,24 @@ function renderProof(data) {
   const agentOk = data.execution_proof && data.execution_proof.ok;
   const coreOk = data.dns && data.dns.ok && data.wab_json && data.wab_json.ok;
 
-  if (fallbackBadge) {
+  if (discoverPathBadge) {
     const discoverStep = data.execution_proof && data.execution_proof.steps
       ? data.execution_proof.steps.find((s) => s.key === 'agent_discover_call')
       : null;
-    const usedFallback = !!(discoverStep && typeof discoverStep.detail === 'string' && discoverStep.detail.includes('fallback /agent-bridge.json succeeded'));
-    fallbackBadge.style.display = usedFallback ? 'block' : 'none';
+    const detail = discoverStep && typeof discoverStep.detail === 'string' ? discoverStep.detail : '';
+    const usedFallback = detail.includes('fallback /agent-bridge.json succeeded');
+    const usedPrimary = detail.includes('GET /api/wab/discover succeeded');
+
+    if (usedFallback) {
+      discoverPathBadge.style.display = 'block';
+      discoverPathBadge.innerHTML = '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(250,204,21,.15);border:1px solid rgba(250,204,21,.45);color:#fde68a;font-size:.78rem;font-weight:700;letter-spacing:.03em">Fallback Used: /agent-bridge.json</span>';
+    } else if (usedPrimary) {
+      discoverPathBadge.style.display = 'block';
+      discoverPathBadge.innerHTML = '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.45);color:#86efac;font-size:.78rem;font-weight:700;letter-spacing:.03em">Primary Path: /api/wab/discover</span>';
+    } else {
+      discoverPathBadge.style.display = 'none';
+      discoverPathBadge.innerHTML = '';
+    }
   }
 
   status.innerHTML = '<span class="' + ((agentOk || coreOk) ? 'ok' : 'danger') + '">' +
