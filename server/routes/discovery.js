@@ -30,6 +30,26 @@ try {
 
 const WAB_VERSION = '1.2.0';
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS discovery_usage_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    domain TEXT NOT NULL,
+    mode TEXT NOT NULL,
+    preferred_use_case TEXT,
+    selected_action TEXT,
+    readiness_ok INTEGER DEFAULT 0,
+    execution_attempted INTEGER DEFAULT 0,
+    execution_succeeded INTEGER DEFAULT 0,
+    value_score REAL DEFAULT 0,
+    end_to_end_ms INTEGER,
+    detail TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_discovery_usage_runs_domain_time
+    ON discovery_usage_runs(domain, created_at DESC);
+`);
+
 // ─── Helpers ─────────────────────────────────────────────────────────
 
 function findSiteByDomain(domain) {
@@ -139,15 +159,65 @@ function pickUsageAction(actions, preferredUseCase) {
   return list[0] || null;
 }
 
-function buildActionParams(actionName) {
-  const n = String(actionName || '');
+function buildActionParams(actionName, useCase) {
+  const n = String(actionName || '').toLowerCase();
+  const uc = String(useCase || '').toLowerCase();
+
+  if (uc === 'booking' || n.includes('book') || n.includes('reserve')) {
+    return {
+      check_in: '2026-06-20',
+      check_out: '2026-06-22',
+      guests: 2,
+      city: 'Riyadh'
+    };
+  }
+  if (uc === 'messaging' || n.includes('message') || n.includes('contact')) {
+    return {
+      channel: 'support',
+      message: 'Hello from WAB Usage Proof test.',
+      subject: 'Usage proof check'
+    };
+  }
+  if (uc === 'payment' || uc === 'checkout' || n.includes('checkout') || n.includes('pay') || n.includes('purchase')) {
+    return {
+      amount: 10,
+      currency: 'USD',
+      reference: 'usage-proof-demo'
+    };
+  }
+
   if (n === 'search') return { q: 'sample query' };
-  if (n === 'readContent' || n === 'read') return { selector: 'body' };
+  if (n === 'readcontent' || n === 'read') return { selector: 'body' };
   if (n === 'navigate') return { url: '/' };
   if (n === 'scroll') return { amount: 1 };
-  if (n === 'fillForms') return { fields: { email: 'usage-proof@wab.test' } };
+  if (n === 'fillforms') return { fields: { email: 'usage-proof@wab.test' } };
   if (n === 'click') return { selector: 'button, a' };
   return { sample: true };
+}
+
+function storeUsageProofRun(domain, proof) {
+  try {
+    db.prepare(`
+      INSERT INTO discovery_usage_runs (
+        domain, mode, preferred_use_case, selected_action,
+        readiness_ok, execution_attempted, execution_succeeded,
+        value_score, end_to_end_ms, detail
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      domain,
+      (proof.intent && proof.intent.mode) || 'readiness',
+      (proof.intent && proof.intent.preferred_use_case) || null,
+      (proof.usage_proof && proof.usage_proof.selected_action) || null,
+      proof.usage_proof && proof.usage_proof.readiness_ok ? 1 : 0,
+      proof.usage_proof && proof.usage_proof.execution_attempted ? 1 : 0,
+      proof.usage_proof && proof.usage_proof.execution_succeeded ? 1 : 0,
+      (proof.kpi && Number(proof.kpi.value_score)) || 0,
+      (proof.kpi && Number(proof.kpi.end_to_end_ms)) || null,
+      (proof.usage_proof && proof.usage_proof.detail) || null
+    );
+  } catch (_) {
+    // History storage is non-blocking for proof flow.
+  }
 }
 
 async function parseJsonSafe(res) {
@@ -298,7 +368,8 @@ async function buildUsageProof(domain, opts = {}) {
       : 'no commands or executable actions discovered');
   out.usage_proof.readiness_ok = out.usage_proof.steps[1].ok;
 
-  const picked = pickUsageAction(actions, preferredUseCase || out.usage_proof.use_case || 'general-automation');
+  const effectiveUseCase = preferredUseCase || out.usage_proof.use_case || 'general-automation';
+  const picked = pickUsageAction(actions, effectiveUseCase);
   out.usage_proof.selected_action = picked ? picked.name : null;
 
   if (!apiKey) {
@@ -376,7 +447,7 @@ async function buildUsageProof(domain, opts = {}) {
       },
       body: JSON.stringify({
         id: 'usage-proof',
-        params: buildActionParams(picked.name),
+        params: buildActionParams(picked.name, effectiveUseCase),
       }),
     }, {
       requireHttps: true,
@@ -1032,9 +1103,57 @@ router.post('/api/discovery/usage-proof', async (req, res) => {
 
   try {
     const proof = await buildUsageProof(domain, { apiKey, preferredUseCase });
+    storeUsageProofRun(domain, proof);
     return res.json(proof);
   } catch (err) {
     return res.status(500).json({ error: 'usage_proof_failed', details: err.message });
+  }
+});
+
+router.get('/api/discovery/usage-proof-runs', (req, res) => {
+  const domain = sanitizeDomain(req.query.domain || '');
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
+
+  try {
+    const rows = domain
+      ? db.prepare(`
+          SELECT domain, mode, preferred_use_case, selected_action, readiness_ok,
+                 execution_attempted, execution_succeeded, value_score, end_to_end_ms,
+                 detail, created_at
+          FROM discovery_usage_runs
+          WHERE domain = ?
+          ORDER BY id DESC
+          LIMIT ?
+        `).all(domain, limit)
+      : db.prepare(`
+          SELECT domain, mode, preferred_use_case, selected_action, readiness_ok,
+                 execution_attempted, execution_succeeded, value_score, end_to_end_ms,
+                 detail, created_at
+          FROM discovery_usage_runs
+          ORDER BY id DESC
+          LIMIT ?
+        `).all(limit);
+
+    return res.json({
+      wab_version: WAB_VERSION,
+      domain: domain || null,
+      total: rows.length,
+      runs: rows.map((r) => ({
+        domain: r.domain,
+        mode: r.mode,
+        preferred_use_case: r.preferred_use_case,
+        selected_action: r.selected_action,
+        readiness_ok: !!r.readiness_ok,
+        execution_attempted: !!r.execution_attempted,
+        execution_succeeded: !!r.execution_succeeded,
+        value_score: Number(r.value_score || 0),
+        end_to_end_ms: r.end_to_end_ms,
+        detail: r.detail,
+        created_at: r.created_at,
+      }))
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'usage_proof_runs_failed', details: err.message });
   }
 });
 
@@ -1074,4 +1193,5 @@ module.exports._internals = {
   hostAllowList,
   pickUsageAction,
   resolveAbsoluteUrl,
+  buildActionParams,
 };

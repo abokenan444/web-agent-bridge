@@ -199,10 +199,54 @@ window.runUsageProof = async function () {
         (data.usage_proof.detail || (ok ? 'Usage proof completed.' : 'Usage proof failed.')) +
       '</span>';
     }
+    loadUsageTrend(domain).catch(() => {});
   } catch (err) {
     status.innerHTML = '<span class="danger">Usage proof failed: ' + ((err && err.message) || err) + '</span>';
   }
 };
+
+async function loadUsageTrend(domain) {
+  const summary = document.getElementById('usageTrendSummary');
+  const list = document.getElementById('usageTrendList');
+  if (!summary || !list) return;
+
+  const cleanDomain = (domain || '').trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  if (!cleanDomain) {
+    summary.textContent = 'Enter a domain to load usage trend.';
+    list.textContent = '—';
+    return;
+  }
+
+  summary.textContent = 'Loading usage trend…';
+  list.textContent = '';
+
+  try {
+    const res = await fetch('/api/discovery/usage-proof-runs?domain=' + encodeURIComponent(cleanDomain) + '&limit=20');
+    const data = await res.json();
+    const runs = Array.isArray(data && data.runs) ? data.runs : [];
+
+    if (!runs.length) {
+      summary.textContent = 'No usage proof runs yet for this domain.';
+      list.textContent = 'Run Usage Proof to start collecting trend data.';
+      return;
+    }
+
+    const avgScore = Math.round(runs.reduce((acc, r) => acc + Number(r.value_score || 0), 0) / runs.length);
+    const execSuccessCount = runs.filter((r) => r.execution_succeeded).length;
+    const readinessCount = runs.filter((r) => r.readiness_ok).length;
+    summary.textContent = 'runs=' + runs.length + ' · avg_score=' + avgScore + ' · readiness_ok=' + readinessCount + ' · execution_ok=' + execSuccessCount;
+
+    list.innerHTML = runs.slice(0, 20).map((r) => {
+      const state = r.execution_succeeded ? 'exec-ok' : (r.readiness_ok ? 'ready' : 'fail');
+      const action = r.selected_action || '—';
+      const t = r.created_at || 'unknown-time';
+      return '<div>[' + state + '] score=' + Number(r.value_score || 0) + ' · action=' + escapeHtml(action) + ' · ms=' + (r.end_to_end_ms != null ? r.end_to_end_ms : '—') + ' · ' + escapeHtml(t) + '</div>';
+    }).join('');
+  } catch (err) {
+    summary.textContent = 'Failed to load usage trend.';
+    list.textContent = ((err && err.message) || err);
+  }
+}
 
 window.toggleAdvanced = function () {
   const blocks = document.querySelectorAll('.advanced-block');
@@ -381,6 +425,8 @@ document.addEventListener('DOMContentLoaded', () => {
   checkCanonicalRecords().catch(() => {});
   checkDnssecForWab().catch(() => {});
   loadLiveAdoption().catch(() => {});
+  const initDomain = (document.getElementById('dnsDomain') && document.getElementById('dnsDomain').value || '').trim();
+  loadUsageTrend(initDomain).catch(() => {});
   const navbar = document.getElementById('navbar');
   window.addEventListener('scroll', () => {
     if (!navbar) return;

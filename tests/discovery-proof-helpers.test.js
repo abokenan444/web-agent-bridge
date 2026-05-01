@@ -67,4 +67,21 @@ describe('discovery proof helpers', () => {
     ], 'unknown-use-case');
     expect(picked).toEqual({ name: 'readContent' });
   });
+
+  test('buildActionParams returns booking template for booking use-case', () => {
+    const params = _internals.buildActionParams('createBooking', 'booking');
+    expect(params).toMatchObject({
+      check_in: expect.any(String),
+      check_out: expect.any(String),
+      guests: 2,
+    });
+  });
+
+  test('buildActionParams returns messaging template for messaging use-case', () => {
+    const params = _internals.buildActionParams('sendMessage', 'messaging');
+    expect(params).toMatchObject({
+      channel: 'support',
+      message: expect.any(String),
+    });
+  });
 });
