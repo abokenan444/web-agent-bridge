@@ -286,22 +286,32 @@ async function buildUsageProof(domain, opts = {}) {
 
   out.kpi.discovered_actions_count = actions.length;
   const commandSet = new Set((baseline.wab_json && baseline.wab_json.commands) || []);
+  const discoveredCommandCount = commandSet.size;
   const businessHints = ['booking', 'checkout', 'payment', 'message', 'messaging', 'purchase'];
   out.kpi.business_commands_count = businessHints.filter((k) => commandSet.has(k)).length;
 
-  out.usage_proof.steps[1].ok = actions.length > 0;
+  out.usage_proof.steps[1].ok = actions.length > 0 || discoveredCommandCount > 0;
   out.usage_proof.steps[1].detail = actions.length > 0
     ? `discovered ${actions.length} executable actions`
-    : 'no executable actions discovered';
+    : (discoveredCommandCount > 0
+      ? `discovered ${discoveredCommandCount} commands in wab.json (actions endpoint not publicly listable)`
+      : 'no commands or executable actions discovered');
   out.usage_proof.readiness_ok = out.usage_proof.steps[1].ok;
 
   const picked = pickUsageAction(actions, preferredUseCase || out.usage_proof.use_case || 'general-automation');
   out.usage_proof.selected_action = picked ? picked.name : null;
 
   if (!apiKey) {
-    out.usage_proof.detail = 'readiness proof complete; provide api_key to run real execution proof';
+    out.usage_proof.detail = out.usage_proof.readiness_ok
+      ? 'readiness proof complete; provide api_key to run real execution proof'
+      : 'readiness is incomplete; provide api_key and verify commands/actions availability';
     out.kpi.value_score = Math.max(0,
-      Math.min(100, (out.usage_proof.readiness_ok ? 45 : 0) + Math.min(out.kpi.discovered_actions_count * 5, 30) + Math.min(out.kpi.business_commands_count * 10, 25))
+      Math.min(100,
+        (out.usage_proof.readiness_ok ? 45 : 0) +
+        Math.min(out.kpi.discovered_actions_count * 5, 30) +
+        Math.min(discoveredCommandCount * 3, 20) +
+        Math.min(out.kpi.business_commands_count * 10, 25)
+      )
     );
     out.kpi.end_to_end_ms = Date.now() - startedAt;
     return out;
