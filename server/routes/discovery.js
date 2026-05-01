@@ -7,6 +7,8 @@ const express = require('express');
 const router = express.Router();
 const { findSiteById, db } = require('../models/db');
 const { authenticateToken } = require('../middleware/auth');
+const { safeFetch } = require('../utils/safe-fetch');
+const { verify } = require('../../packages/dns-verify/src/index');
 
 // Fairness module is proprietary — provide stubs when not available
 let calculateNeutralityScore, fairnessWeightedSearch, registerInDirectory, getDirectoryListings, generateFairnessReport;
@@ -50,6 +52,224 @@ function getRequestDomain(req) {
 
 function parseSiteConfig(site) {
   try { return JSON.parse(site.config || '{}'); } catch (_) { return {}; }
+}
+
+function sanitizeDomain(input) {
+  if (!input || typeof input !== 'string') return '';
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/.*$/, '')
+    .replace(/:\d+$/, '')
+    .replace(/^www\./, '');
+}
+
+function deriveEndpointFromRecord(rawRecords, parsedRecord) {
+  if (parsedRecord && parsedRecord.endpoint) return parsedRecord.endpoint;
+  const first = (rawRecords || [])[0] || '';
+  const match = /endpoint=([^;\s]+)/i.exec(first);
+  return match ? match[1] : null;
+}
+
+function summarizeUseCase(wabDoc) {
+  const raw = (wabDoc && wabDoc.use_case) ||
+    (wabDoc && wabDoc.provider && wabDoc.provider.use_case) ||
+    (wabDoc && wabDoc.provider && wabDoc.provider.category) ||
+    '';
+  if (raw) return String(raw);
+
+  const commands = new Set((wabDoc && wabDoc.capabilities && wabDoc.capabilities.commands) || []);
+  if (commands.has('checkout')) return 'checkout';
+  if (commands.has('booking')) return 'booking';
+  if (commands.has('message') || commands.has('messaging')) return 'messaging';
+  if (commands.has('search')) return 'search';
+  if (commands.has('read') || commands.has('readContent')) return 'content-reading';
+  return 'general-automation';
+}
+
+function hostAllowList(domain, endpointHost) {
+  const list = [domain, '*.' + domain];
+  if (endpointHost && endpointHost !== domain) {
+    list.push(endpointHost);
+    list.push('*.' + endpointHost);
+  }
+  return Array.from(new Set(list));
+}
+
+function toBooleanState(v) {
+  return v ? 'yes' : 'no';
+}
+
+async function buildProof(domain, opts = {}) {
+  const includeAgentRun = opts.includeAgentRun === true;
+  const out = {
+    wab_version: WAB_VERSION,
+    checked_at: new Date().toISOString(),
+    domain,
+    three_steps: [
+      'Add TXT record at _wab.<domain>',
+      'Serve /.well-known/wab.json',
+      'Agent discovers and runs a test call',
+    ],
+    dns: {
+      fqdn: `_wab.${domain}`,
+      ok: false,
+      ad: false,
+      records: [],
+      parsed: null,
+      error: null,
+    },
+    wab_json: {
+      url: null,
+      ok: false,
+      http_status: null,
+      provider: null,
+      commands: [],
+      use_case: null,
+      error: null,
+    },
+    execution_proof: {
+      attempted: includeAgentRun,
+      ok: false,
+      steps: [
+        { key: 'discover_dns', ok: false, detail: null },
+        { key: 'fetch_wab_json', ok: false, detail: null },
+        { key: 'agent_discover_call', ok: false, detail: null },
+        { key: 'agent_ping_call', ok: false, detail: null },
+      ],
+      result: null,
+      error: null,
+    },
+    statuses: {
+      registered: 'no',
+      dns_verified: 'no',
+      agent_ready: 'no',
+      production: 'no',
+    },
+  };
+
+  // Internal registration is informative only. DNS + wab.json remain sufficient.
+  const internalSite = findSiteByDomain(domain);
+  if (internalSite) {
+    const cfg = parseSiteConfig(internalSite);
+    out.statuses.registered = 'yes';
+    out.statuses.production = toBooleanState((cfg.environment || 'production') === 'production');
+  }
+
+  const proof = await verify(domain, { timeoutMs: 6000 }).catch((err) => ({
+    ok: false,
+    records: [{
+      type: '_wab',
+      ad: false,
+      raw: [],
+      parsed: null,
+      error: err && err.message ? err.message : 'verify_failed',
+      code: err && err.code,
+    }],
+  }));
+
+  const wabRecord = (proof.records || []).find((r) => r.type === '_wab') || {};
+  out.dns.ok = !!wabRecord.ok;
+  out.dns.ad = !!wabRecord.ad;
+  out.dns.records = wabRecord.raw || [];
+  out.dns.parsed = wabRecord.parsed || null;
+  out.dns.error = wabRecord.error || null;
+  out.execution_proof.steps[0].ok = out.dns.ok;
+  out.execution_proof.steps[0].detail = out.dns.ok ? 'valid _wab TXT record' : (out.dns.error || 'missing _wab record');
+  out.statuses.dns_verified = toBooleanState(out.dns.ok);
+
+  const endpoint = deriveEndpointFromRecord(out.dns.records, out.dns.parsed);
+  out.wab_json.url = endpoint;
+
+  if (!endpoint) {
+    out.wab_json.error = 'endpoint missing in _wab record';
+    out.execution_proof.error = out.wab_json.error;
+    return out;
+  }
+
+  let endpointUrl;
+  try {
+    endpointUrl = new URL(endpoint);
+  } catch {
+    out.wab_json.error = 'invalid endpoint URL';
+    out.execution_proof.error = out.wab_json.error;
+    return out;
+  }
+
+  try {
+    const wabRes = await safeFetch(endpointUrl.toString(), {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+    }, {
+      requireHttps: true,
+      allowList: hostAllowList(domain, endpointUrl.hostname),
+      timeoutMs: 8000,
+      maxBytes: 1024 * 1024,
+      allowedContentTypes: ['application/json', 'application/ld+json', 'text/plain'],
+    });
+    out.wab_json.http_status = wabRes.status;
+    const doc = await wabRes.json();
+    out.wab_json.ok = wabRes.ok && doc && typeof doc === 'object';
+    out.wab_json.provider = doc && doc.provider ? {
+      name: doc.provider.name || null,
+      domain: doc.provider.domain || null,
+      category: doc.provider.category || null,
+    } : null;
+    out.wab_json.commands = (doc && doc.capabilities && doc.capabilities.commands) || [];
+    out.wab_json.use_case = summarizeUseCase(doc);
+    out.execution_proof.steps[1].ok = out.wab_json.ok;
+    out.execution_proof.steps[1].detail = out.wab_json.ok ? 'wab.json fetched and parsed' : 'wab.json invalid';
+    out.statuses.agent_ready = toBooleanState(out.wab_json.ok && out.wab_json.commands.length > 0);
+
+    if (!includeAgentRun) return out;
+
+    const endpointOrigin = endpointUrl.origin;
+    const discoverUrl = endpointOrigin + '/api/wab/discover';
+    const pingUrl = endpointOrigin + '/api/wab/ping';
+
+    try {
+      const discoverRes = await safeFetch(discoverUrl, {
+        method: 'GET',
+        headers: { accept: 'application/json' },
+      }, {
+        requireHttps: true,
+        allowList: hostAllowList(domain, endpointUrl.hostname),
+        timeoutMs: 8000,
+        maxBytes: 1024 * 1024,
+        allowedContentTypes: ['application/json'],
+      });
+      const discoverBody = await discoverRes.json().catch(() => ({}));
+      out.execution_proof.steps[2].ok = !!discoverRes.ok;
+      out.execution_proof.steps[2].detail = discoverRes.ok ? 'GET /api/wab/discover succeeded' : ('HTTP ' + discoverRes.status);
+
+      const pingRes = await safeFetch(pingUrl, {
+        method: 'GET',
+        headers: { accept: 'application/json' },
+      }, {
+        requireHttps: true,
+        allowList: hostAllowList(domain, endpointUrl.hostname),
+        timeoutMs: 8000,
+        maxBytes: 512 * 1024,
+        allowedContentTypes: ['application/json'],
+      });
+      const pingBody = await pingRes.json().catch(() => ({}));
+      out.execution_proof.steps[3].ok = !!pingRes.ok;
+      out.execution_proof.steps[3].detail = pingRes.ok ? 'GET /api/wab/ping succeeded' : ('HTTP ' + pingRes.status);
+      out.execution_proof.ok = out.execution_proof.steps.every((s) => s.ok);
+      out.execution_proof.result = {
+        discovered: discoverBody && (discoverBody.result || discoverBody),
+        ping: pingBody && (pingBody.result || pingBody),
+      };
+    } catch (err) {
+      out.execution_proof.error = err && err.message ? err.message : 'agent_test_failed';
+    }
+  } catch (err) {
+    out.wab_json.error = err && err.message ? err.message : 'wab_fetch_failed';
+    out.execution_proof.error = out.wab_json.error;
+  }
+
+  return out;
 }
 
 function buildDiscoveryDocument(site) {
@@ -387,7 +607,55 @@ router.get('/api/discovery/search', (req, res) => {
 });
 
 // ═════════════════════════════════════════════════════════════════════
-// 6. GET /api/discovery/:siteId — Discovery doc for a specific site
+// 6. GET /api/discovery/verify-live?domain=example.com
+//    Verifiable proof: DNS TXT + wab.json + explicit status model.
+// ═════════════════════════════════════════════════════════════════════
+
+router.get('/api/discovery/verify-live', async (req, res) => {
+  const domain = sanitizeDomain(req.query.domain || '');
+  if (!domain) {
+    return res.status(400).json({
+      error: 'domain is required',
+      hint: 'Use /api/discovery/verify-live?domain=example.com',
+    });
+  }
+  try {
+    const proof = await buildProof(domain, { includeAgentRun: false });
+    return res.json(proof);
+  } catch (err) {
+    return res.status(500).json({ error: 'verify_live_failed', details: err.message });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// 7. GET /api/discovery/test-agent?domain=example.com
+//    Execution proof: discover → ping (official consumer path).
+// ═════════════════════════════════════════════════════════════════════
+
+router.get('/api/discovery/test-agent', async (req, res) => {
+  const domain = sanitizeDomain(req.query.domain || '');
+  if (!domain) {
+    return res.status(400).json({
+      error: 'domain is required',
+      hint: 'Use /api/discovery/test-agent?domain=example.com',
+    });
+  }
+  try {
+    const proof = await buildProof(domain, { includeAgentRun: true });
+    if (!proof.execution_proof.ok) {
+      return res.status(200).json({
+        ...proof,
+        warning: 'agent flow did not fully pass; inspect execution_proof.steps',
+      });
+    }
+    return res.json(proof);
+  } catch (err) {
+    return res.status(500).json({ error: 'agent_test_failed', details: err.message });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// 8. GET /api/discovery/:siteId — Discovery doc for a specific site
 //    (defined AFTER named routes to prevent shadowing)
 // ═════════════════════════════════════════════════════════════════════
 
@@ -415,3 +683,9 @@ function safeParseTags(tags) {
 }
 
 module.exports = router;
+module.exports._internals = {
+  sanitizeDomain,
+  deriveEndpointFromRecord,
+  summarizeUseCase,
+  hostAllowList,
+};

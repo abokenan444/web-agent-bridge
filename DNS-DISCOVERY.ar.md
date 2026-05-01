@@ -6,6 +6,26 @@
 
 ---
 
+## نموذج 3 خطوات (المسار السريع)
+
+1. أضف TXT في `_wab.yourdomain.com`
+2. وفّر `/.well-known/wab.json`
+3. نفّذ تحقق مباشر + اختبار وكيل (`discover -> ping`)
+
+هذا كافٍ لتفعيل البروتوكول. لا تحتاج `appId` لإثبات التفعيل.
+
+للإثبات الفوري داخل المنصة، افتح صفحة `/dns` واستخدم:
+- `Verify Live` (إثبات DNS TXT + wab.json)
+- `Test with Agent` (إثبات discover -> execute)
+
+مثال consumer رسمي متعدد النطاقات:
+
+```bash
+node examples/dns-discovery-agent.js webagentbridge.com example.com
+```
+
+---
+
 ## كيف تعمل الآلية
 
 عندما يرغب وكيل ذكاء اصطناعي في التفاعل مع `example.com`، فإنه يقوم بإجراء بحث في DNS عن سجل TXT محدد في النطاق الفرعي `_wab.example.com`.

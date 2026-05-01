@@ -6,6 +6,26 @@ This works exactly like SPF, DKIM, or DMARC records for email. By adding a simpl
 
 ---
 
+## The 3-Step Model (fast path)
+
+1. Add TXT at `_wab.yourdomain.com`
+2. Serve `/.well-known/wab.json`
+3. Verify live + run an agent flow (`discover -> ping`)
+
+This is enough for protocol-level activation. No `appId` is required for verification.
+
+For one-click proof in the platform UI, open `/dns` and use:
+- `Verify Live` (DNS TXT + wab.json proof)
+- `Test with Agent` (discover -> execute proof)
+
+Official multi-domain consumer example:
+
+```bash
+node examples/dns-discovery-agent.js webagentbridge.com example.com
+```
+
+---
+
 ## How It Works
 
 When an AI agent wants to interact with `example.com`, it performs a DNS lookup for a specific TXT record at `_wab.example.com`.

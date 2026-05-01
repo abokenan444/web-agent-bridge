@@ -43,6 +43,7 @@
     .toc{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 14px}
     .toc a{background:rgba(255,255,255,.04);border:1px solid rgba(148,163,184,.22);color:#e5edff;padding:6px 12px;border-radius:999px;font-size:.85rem;text-decoration:none}
     .toc a:hover{border-color:#fbbf24;color:#fcd34d}
+    .advanced-block{display:none}
   </style>
 </head>
 <body>
@@ -69,8 +70,10 @@
     <p data-en="Announce your AI-readiness at the infrastructure level. Add a single DNS TXT record at _wab.yourdomain.com and any compatible AI agent will instantly find your wab.json capabilities — no HTTP probe required." data-ar="أعلن عن جاهزية موقعك للذكاء الاصطناعي على مستوى البنية التحتية. أضف سجل TXT واحد في _wab.yourdomain.com وسيجد أي وكيل ذكاء اصطناعي متوافق ملف القدرات wab.json فوراً — دون الحاجة لأي طلب HTTP أولي.">Announce your AI-readiness at the infrastructure level. Add a single DNS TXT record at <code>_wab.yourdomain.com</code> and any compatible AI agent will instantly find your <code>wab.json</code> capabilities — no HTTP probe required.</p>
     <div class="toc">
       <a href="#what-is">What & Why</a>
+      <a href="#quickstart">3 Steps</a>
       <a href="#format">Record Format</a>
       <a href="#verifier">Live Verifier</a>
+      <a href="#proof-lab">Proof Lab</a>
       <a href="#setup">Setup Guides</a>
       <a href="#troubleshoot">Troubleshooting</a>
       <a href="#repo-links">Repo & Docs</a>
@@ -91,6 +94,18 @@
         <li data-en="Versionable — the v=wab1 prefix lets the protocol evolve without breaking older agents." data-ar="قابل للترقية — البادئة v=wab1 تسمح بتطوير البروتوكول دون كسر الوكلاء القدامى.">Versionable — the <code>v=wab1</code> prefix lets the protocol evolve without breaking older agents.</li>
       </ul>
       <span class="badge" data-en="MIT-licensed open protocol" data-ar="بروتوكول مفتوح برخصة MIT">MIT-licensed open protocol</span>
+    </div>
+
+    <!-- ═══════════════ QUICKSTART ═══════════════ -->
+    <div class="card" id="quickstart">
+      <h3 data-en="The whole thing in 3 steps" data-ar="كل العملية في 3 خطوات">The whole thing in 3 steps</h3>
+      <ol>
+        <li data-en="Add TXT at _wab.yourdomain.com" data-ar="أضف TXT في _wab.yourdomain.com">Add TXT at <code>_wab.yourdomain.com</code></li>
+        <li data-en="Serve /.well-known/wab.json" data-ar="وفّر /.well-known/wab.json">Serve <code>/.well-known/wab.json</code></li>
+        <li data-en="Run Verify Live + Test with Agent" data-ar="شغّل Verify Live + Test with Agent">Run <b>Verify Live</b> + <b>Test with Agent</b></li>
+      </ol>
+      <p data-en="No appId required for protocol verification. DNS + wab.json are sufficient." data-ar="لا يلزم appId للتحقق البروتوكولي. DNS + wab.json كافيان.">No appId required for protocol verification. DNS + wab.json are sufficient.</p>
+      <button id="dnsAdvancedToggleBtn" class="btn secondary" style="margin-top:4px" data-en="Show Advanced Trust/Privacy Layer" data-ar="إظهار طبقة الثقة/الخصوصية المتقدمة">Show Advanced Trust/Privacy Layer</button>
     </div>
 
     <!-- ═══════════════ HOW IT WORKS ═══════════════ -->
@@ -204,8 +219,38 @@
       </div>
     </div>
 
+    <!-- ═══════════════ PROOF LAB ═══════════════ -->
+    <div class="card" id="proof-lab">
+      <h3 data-en="Proof Lab — verify and execute live" data-ar="مختبر الإثبات — تحقق ونفّذ مباشرة">Proof Lab — verify and execute live</h3>
+      <p data-en="This section proves real activation and real usage. For each domain: DNS TXT, wab.json URL, live verify, and agent test flow (discover → ping)." data-ar="هذا القسم يثبت التفعيل الحقيقي والاستخدام الحقيقي. لكل نطاق: DNS TXT، رابط wab.json، تحقق مباشر، وتدفق اختبار الوكيل (discover → ping).">This section proves real activation and real usage.</p>
+      <div class="verifier">
+        <button id="dnsProofVerifyBtn" class="btn" data-en="Verify Live" data-ar="تحقق مباشر">Verify Live</button>
+        <button id="dnsProofAgentBtn" class="btn secondary" data-en="Test with Agent" data-ar="اختبر مع وكيل">Test with Agent</button>
+        <div id="proofStatus" style="margin-top:10px;font-size:.92rem"></div>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:10px">
+          <div class="card" style="padding:12px">
+            <h4 style="margin:0 0 6px">State</h4>
+            <div id="stateBadges" style="font-size:.9rem;color:#cbd5e1"></div>
+          </div>
+          <div class="card" style="padding:12px">
+            <h4 style="margin:0 0 6px">Use-case</h4>
+            <div id="useCaseValue" style="font-size:.9rem;color:#cbd5e1">—</div>
+          </div>
+          <div class="card" style="padding:12px">
+            <h4 style="margin:0 0 6px">DNS TXT</h4>
+            <div id="proofTxt" style="font-size:.84rem;color:#cbd5e1;word-break:break-word">—</div>
+          </div>
+          <div class="card" style="padding:12px">
+            <h4 style="margin:0 0 6px">wab.json</h4>
+            <div id="proofWabJson" style="font-size:.84rem;color:#cbd5e1;word-break:break-word">—</div>
+          </div>
+        </div>
+        <pre id="proofOut">{}</pre>
+      </div>
+    </div>
+
     <!-- ═══════════════ PRIVACY MODEL ═══════════════ -->
-    <div class="card" id="privacy">
+    <div class="card advanced-block" id="privacy">
       <h3 data-en="DNS Privacy Model — what DoH does and does not protect" data-ar="نموذج خصوصية DNS — ما الذي يحميه DoH وما لا يحميه">DNS Privacy Model — what DoH does and does not protect</h3>
       <p data-en="WAB Discovery never uses plain UDP DNS. Every lookup of _wab.example.com uses DNS over HTTPS (DoH), so the query is encrypted between the agent and the resolver. This is a real privacy upgrade — but it is not perfect, and we want you to understand the exact threat model." data-ar="لا يستخدم اكتشاف WAB أبداً DNS التقليدي عبر UDP. كل استعلام لـ _wab.example.com يتم عبر DNS over HTTPS (DoH)، فيكون مشفراً بين الوكيل والمحلل. هذه تحسين خصوصية حقيقي — لكنه ليس مثالياً، ونريد أن تفهم نموذج التهديد بدقة.">WAB Discovery never uses plain UDP DNS. Every lookup of <code>_wab.example.com</code> uses DNS over HTTPS (DoH), so the query is encrypted between the agent and the resolver.</p>
       <table class="table">
@@ -223,7 +268,7 @@
     </div>
 
     <!-- ═══════════════ SILENT HANDSHAKE ═══════════════ -->
-    <div class="card" id="silent-handshake">
+    <div class="card advanced-block" id="silent-handshake">
       <h3 data-en="Silent Handshake — agent-aware sites, zero cookie banners" data-ar="المصافحة الصامتة — مواقع تفهم الوكلاء بدون نوافذ كوكيز">Silent Handshake — agent-aware sites, zero cookie banners</h3>
       <p data-en="When a WAB-aware site advertises _wab and _wab-trust over DNS, the visiting agent and the site can negotiate intent in the background — no privacy popup, no cookie banner, no consent click-fest. The site declares 'I respect your agent, here is the contract' once, in DNS, signed and cacheable." data-ar="عندما يعلن موقع متوافق مع WAB عن _wab و _wab-trust في DNS، يمكن للوكيل الزائر والموقع أن يتفاوضا في الخلفية — بدون نوافذ خصوصية ولا بانر كوكيز ولا نقرات موافقة. يعلن الموقع مرة واحدة في DNS: «أنا أحترم وكيلك، هذا هو العقد».">When a WAB-aware site advertises <code>_wab</code> and <code>_wab-trust</code> over DNS, the agent and site negotiate intent in the background — no privacy popup, no cookie banner, no consent click-fest.</p>
       <ol>
@@ -340,8 +385,6 @@ curl -s -H 'accept: application/dns-json' \
     </div>
 
   </div>
-
-  
 
   
   <script src="/js/dns.js"></script>
