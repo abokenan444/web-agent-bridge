@@ -80,6 +80,58 @@
       </div>
 
       <div class="card">
+        <h3>5) Webhook Signature Verification</h3>
+        <span class="badge">Security</span>
+        <p>
+          Verify the <code>x-wab-signature</code> header on your callback endpoint to confirm the request came from WAB.
+          The signature is <code>HMAC-SHA256(requestBody, callbackSecret)</code> encoded as hex.
+        </p>
+        <p><strong>Node.js</strong></p>
+        <pre>const crypto = require('crypto');
+
+function verifyWabSignature(rawBody, receivedSig, secret) {
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(rawBody)            // raw Buffer or string
+    .digest('hex');
+  // constant-time compare to prevent timing attacks
+  return crypto.timingSafeEqual(
+    Buffer.from(expected, 'utf8'),
+    Buffer.from(receivedSig, 'utf8')
+  );
+}
+
+// Express example
+app.post('/webhooks/wab', express.raw({ type: '*/*' }), (req, res) => {
+  const sig = req.headers['x-wab-signature'];
+  if (!verifyWabSignature(req.body, sig, process.env.WAB_CALLBACK_SECRET)) {
+    return res.status(401).send('Invalid signature');
+  }
+  const payload = JSON.parse(req.body.toString());
+  // … process payload
+  res.sendStatus(200);
+});</pre>
+        <p><strong>Python (Flask)</strong></p>
+        <pre>import hmac, hashlib
+from flask import Flask, request, abort
+
+app = Flask(__name__)
+WAB_SECRET = os.environ['WAB_CALLBACK_SECRET']
+
+@app.route('/webhooks/wab', methods=['POST'])
+def wab_webhook():
+    sig = request.headers.get('x-wab-signature', '')
+    expected = hmac.new(
+        WAB_SECRET.encode(), request.data, hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(expected, sig):
+        abort(401)
+    payload = request.get_json(force=True)
+    # … process payload
+    return '', 200</pre>
+      </div>
+
+      <div class="card">
         <h3>Enable/Disable Flow</h3>
         <span class="badge">One-click UX</span>
         <ul>
