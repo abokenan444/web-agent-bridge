@@ -69,6 +69,7 @@ function renderProof(data) {
   const wab = document.getElementById('proofWabJson');
   const use = document.getElementById('useCaseValue');
   const badges = document.getElementById('stateBadges');
+  const fallbackBadge = document.getElementById('proofFallbackBadge');
   if (!status || !out || !txt || !wab || !use || !badges) return;
 
   const states = data.statuses || {};
@@ -88,6 +89,15 @@ function renderProof(data) {
 
   const agentOk = data.execution_proof && data.execution_proof.ok;
   const coreOk = data.dns && data.dns.ok && data.wab_json && data.wab_json.ok;
+
+  if (fallbackBadge) {
+    const discoverStep = data.execution_proof && data.execution_proof.steps
+      ? data.execution_proof.steps.find((s) => s.key === 'agent_discover_call')
+      : null;
+    const usedFallback = !!(discoverStep && typeof discoverStep.detail === 'string' && discoverStep.detail.includes('fallback /agent-bridge.json succeeded'));
+    fallbackBadge.style.display = usedFallback ? 'block' : 'none';
+  }
+
   status.innerHTML = '<span class="' + ((agentOk || coreOk) ? 'ok' : 'danger') + '">' +
     ((agentOk || coreOk)
       ? '✓ Verifiable proof ready.'
