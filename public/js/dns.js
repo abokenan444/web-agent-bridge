@@ -104,6 +104,10 @@ function renderProof(data) {
     } else if (usedPrimary) {
       discoverPathBadge.style.display = 'block';
       discoverPathBadge.innerHTML = '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.45);color:#86efac;font-size:.78rem;font-weight:700;letter-spacing:.03em">Primary Path: /api/wab/discover</span>';
+    } else if (discoverStep && discoverStep.ok === false) {
+      const detailText = detail ? (' — ' + detail.replace(/"/g, '&quot;')) : '';
+      discoverPathBadge.style.display = 'block';
+      discoverPathBadge.innerHTML = '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.45);color:#fca5a5;font-size:.78rem;font-weight:700;letter-spacing:.03em" title="' + detail.replace(/"/g, '&quot;') + '">Discovery Path Failed' + detailText + '</span>';
     } else {
       discoverPathBadge.style.display = 'none';
       discoverPathBadge.innerHTML = '';
