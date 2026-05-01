@@ -26,6 +26,7 @@
   ],
   "tags": [
     {"name": "Discovery", "description": "WAB Discovery Protocol endpoints"},
+    {"name": "Provider", "description": "DNS provider and registrar integration APIs"},
     {"name": "WAB Protocol", "description": "Core WAB command protocol over HTTP"},
     {"name": "Registry", "description": "Public directory of WAB-enabled sites"},
     {"name": "Plans", "description": "Subscription plan information"},
@@ -345,6 +346,94 @@
         ],
         "responses": {
           "200": {"description": "Fairness-weighted search results"}
+        }
+      }
+    },
+    "/api/discovery/provider/manifest": {
+      "get": {
+        "tags": ["Provider"],
+        "summary": "Provider protocol manifest",
+        "description": "Machine-readable contract for DNS providers and registrars implementing one-click WAB DNS Discovery.",
+        "operationId": "providerManifest",
+        "responses": {
+          "200": {"description": "Provider manifest"}
+        }
+      }
+    },
+    "/api/discovery/provider/record-template": {
+      "get": {
+        "tags": ["Provider"],
+        "summary": "Build record template",
+        "description": "Returns ready-to-write TXT record payload for a specific domain.",
+        "operationId": "providerRecordTemplate",
+        "parameters": [
+          {"name": "domain", "in": "query", "required": true, "schema": {"type": "string"}},
+          {"name": "endpoint", "in": "query", "required": false, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {"description": "Record template payload"},
+          "400": {"description": "Invalid domain or endpoint"}
+        }
+      }
+    },
+    "/api/discovery/provider/enable-plan": {
+      "get": {
+        "tags": ["Provider"],
+        "summary": "Get one-click enable/disable plan",
+        "description": "Returns an implementation playbook with DNS operation, verify polling, and rollback hints.",
+        "operationId": "providerEnablePlan",
+        "parameters": [
+          {"name": "domain", "in": "query", "required": true, "schema": {"type": "string"}},
+          {"name": "action", "in": "query", "required": false, "schema": {"type": "string", "enum": ["enable", "disable"], "default": "enable"}},
+          {"name": "endpoint", "in": "query", "required": false, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {"description": "Enable/disable execution plan"},
+          "400": {"description": "Invalid request"}
+        }
+      }
+    },
+    "/api/discovery/provider/status": {
+      "get": {
+        "tags": ["Provider"],
+        "summary": "Provider status check",
+        "description": "Returns machine-friendly state for UI toggles: enabled, partial, or disabled.",
+        "operationId": "providerStatus",
+        "parameters": [
+          {"name": "domain", "in": "query", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {"description": "Current provider status"},
+          "400": {"description": "Domain required"}
+        }
+      }
+    },
+    "/api/discovery/provider/verify-batch": {
+      "post": {
+        "tags": ["Provider"],
+        "summary": "Batch verify domains",
+        "description": "Verifies up to 50 domains in one request and optionally sends callback webhook with results.",
+        "operationId": "providerVerifyBatch",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["domains"],
+                "properties": {
+                  "domains": {"type": "array", "items": {"type": "string"}, "maxItems": 50},
+                  "include_agent_run": {"type": "boolean", "default": false},
+                  "callback_url": {"type": "string", "format": "uri"},
+                  "callback_secret": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Batch verification results"},
+          "400": {"description": "Invalid request"}
         }
       }
     },

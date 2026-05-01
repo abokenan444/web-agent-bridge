@@ -141,6 +141,79 @@ function buildProviderRecordTemplate(domain, endpointOverride) {
   };
 }
 
+function buildProviderEnablePlan(domain, options = {}) {
+  const action = options.action === 'disable' ? 'disable' : 'enable';
+  const endpointOverride = options.endpointOverride || null;
+  const template = buildProviderRecordTemplate(domain, endpointOverride);
+
+  const enableSteps = [
+    {
+      step: 1,
+      title: 'Write DNS TXT record',
+      operation: 'dns.write_record',
+      payload: template.record,
+    },
+    {
+      step: 2,
+      title: 'Verify propagation (poll)',
+      operation: 'http.poll',
+      endpoint: `/api/discovery/provider/status?domain=${encodeURIComponent(domain)}`,
+      until: "status == 'enabled'",
+      interval_seconds: 20,
+      timeout_seconds: 1200,
+    },
+    {
+      step: 3,
+      title: 'Optional deep check',
+      operation: 'http.get',
+      endpoint: `/api/discovery/test-agent?domain=${encodeURIComponent(domain)}`,
+      optional: true,
+    }
+  ];
+
+  const disableSteps = [
+    {
+      step: 1,
+      title: 'Delete DNS TXT record',
+      operation: 'dns.delete_record',
+      payload: {
+        host: '_wab',
+        host_fqdn: `_wab.${domain}`,
+        type: 'TXT',
+      },
+    },
+    {
+      step: 2,
+      title: 'Verify disabled state (poll)',
+      operation: 'http.poll',
+      endpoint: `/api/discovery/provider/status?domain=${encodeURIComponent(domain)}`,
+      until: "status == 'disabled'",
+      interval_seconds: 20,
+      timeout_seconds: 1200,
+    }
+  ];
+
+  return {
+    domain,
+    action,
+    protocol: 'wab-dns-discovery-v1',
+    objective: action === 'enable'
+      ? 'Enable WAB DNS Discovery with one click.'
+      : 'Disable WAB DNS Discovery with one click.',
+    template,
+    verification: {
+      status: `/api/discovery/provider/status?domain=${encodeURIComponent(domain)}`,
+      verify_live: `/api/discovery/verify-live?domain=${encodeURIComponent(domain)}`,
+      test_agent: `/api/discovery/test-agent?domain=${encodeURIComponent(domain)}`,
+    },
+    rollback: {
+      on_enable_failure: 'Delete _wab TXT and mark state as disabled.',
+      on_disable_failure: 'Re-check provider DNS write propagation and retry delete.',
+    },
+    steps: action === 'enable' ? enableSteps : disableSteps,
+  };
+}
+
 function buildCallbackSignature(payloadText, secret) {
   if (!secret) return null;
   const sig = crypto.createHmac('sha256', secret).update(payloadText).digest('hex');
@@ -1227,6 +1300,47 @@ router.get('/api/discovery/provider/record-template', (req, res) => {
       verify_live: `/api/discovery/verify-live?domain=${encodeURIComponent(domain)}`,
       test_agent: `/api/discovery/test-agent?domain=${encodeURIComponent(domain)}`,
     }
+  });
+});
+
+router.get('/api/discovery/provider/enable-plan', (req, res) => {
+  const domain = sanitizeDomain(req.query.domain || '');
+  const action = String(req.query.action || 'enable').toLowerCase();
+  const endpointOverride = String(req.query.endpoint || '').trim();
+
+  if (!domain) {
+    return res.status(400).json({
+      error: 'domain is required',
+      hint: 'Use /api/discovery/provider/enable-plan?domain=example.com&action=enable',
+    });
+  }
+  if (action !== 'enable' && action !== 'disable') {
+    return res.status(400).json({ error: 'action must be enable or disable' });
+  }
+  if (endpointOverride) {
+    let parsed;
+    try {
+      parsed = new URL(endpointOverride);
+    } catch {
+      return res.status(400).json({ error: 'invalid endpoint URL' });
+    }
+    if (parsed.protocol !== 'https:') {
+      return res.status(400).json({ error: 'endpoint must use https' });
+    }
+  }
+
+  const plan = buildProviderEnablePlan(domain, {
+    action,
+    endpointOverride: endpointOverride || null,
+  });
+
+  return res.json({
+    wab_version: WAB_VERSION,
+    request: {
+      domain,
+      action,
+    },
+    plan,
   });
 });
 
