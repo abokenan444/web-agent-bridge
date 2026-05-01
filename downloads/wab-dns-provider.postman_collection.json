@@ -1,0 +1,106 @@
+{
+  "info": {
+    "name": "WAB DNS Provider APIs",
+    "_postman_id": "4b8f3c5a-6b8f-4d40-a1a0-0ef4a9cf9f15",
+    "description": "Postman collection for DNS provider and registrar integration with WAB DNS Discovery.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Provider Manifest",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/discovery/provider/manifest",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "discovery", "provider", "manifest"]
+        }
+      }
+    },
+    {
+      "name": "Record Template",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/discovery/provider/record-template?domain={{domain}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "discovery", "provider", "record-template"],
+          "query": [
+            { "key": "domain", "value": "{{domain}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Provider Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/discovery/provider/status?domain={{domain}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "discovery", "provider", "status"],
+          "query": [
+            { "key": "domain", "value": "{{domain}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Enable Plan",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/discovery/provider/enable-plan?domain={{domain}}&action=enable",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "discovery", "provider", "enable-plan"],
+          "query": [
+            { "key": "domain", "value": "{{domain}}" },
+            { "key": "action", "value": "enable" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Disable Plan",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/discovery/provider/enable-plan?domain={{domain}}&action=disable",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "discovery", "provider", "enable-plan"],
+          "query": [
+            { "key": "domain", "value": "{{domain}}" },
+            { "key": "action", "value": "disable" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Batch Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"domains\": [\"{{domain}}\", \"example.com\"],\n  \"include_agent_run\": false\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/discovery/provider/verify-batch",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "discovery", "provider", "verify-batch"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "https://www.webagentbridge.com" },
+    { "key": "domain", "value": "webagentbridge.com" }
+  ]
+}

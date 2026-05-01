@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB Provider Sandbox</title>
+  <meta name="description" content="Interactive sandbox for DNS providers and registrars to test WAB DNS Discovery APIs.">
+  <link rel="stylesheet" href="/css/styles.css?v=3.3.0">
+  <style>
+    body { background:#081123; color:#e8efff; }
+    .hero { padding:100px 20px 30px; text-align:center; }
+    .hero h1 { font-size:clamp(1.8rem,4vw,2.8rem); margin-bottom:8px; }
+    .hero p { color:#9eb1d8; max-width:820px; margin:0 auto; }
+    .wrap { max-width:1100px; margin:0 auto; padding:0 18px 70px; }
+    .panel { background:linear-gradient(180deg,rgba(17,24,39,.92),rgba(10,16,30,.96)); border:1px solid rgba(148,163,184,.2); border-radius:14px; padding:14px; margin-bottom:14px; }
+    .panel h3 { margin:0 0 8px; color:#fcd34d; }
+    .row { display:grid; grid-template-columns:2fr 1fr; gap:10px; }
+    @media (max-width:760px) { .row { grid-template-columns:1fr; } }
+    label { display:block; font-size:.8rem; color:#a8b7d7; margin-bottom:5px; }
+    input, select, textarea { width:100%; background:#0b162a; border:1px solid rgba(148,163,184,.28); color:#e8efff; border-radius:10px; padding:10px; font-family:Consolas, monospace; font-size:.85rem; }
+    textarea { min-height:90px; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    button { background:linear-gradient(135deg,#f59e0b,#b45309); color:#fff; border:none; border-radius:10px; padding:9px 12px; cursor:pointer; font-weight:700; font-size:.82rem; }
+    button.alt { background:linear-gradient(135deg,#334155,#1f2937); }
+    pre { background:#020617; border:1px solid rgba(148,163,184,.26); border-radius:10px; padding:12px; color:#c4b5fd; overflow:auto; min-height:180px; }
+    .hint { color:#9eb1d8; font-size:.84rem; }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <h1>Provider Sandbox</h1>
+    <p>Run provider integration APIs end-to-end: manifest, record template, status, one-click plan, and batch verify.</p>
+  </section>
+
+  <div class="wrap">
+    <div class="panel">
+      <h3>Request Builder</h3>
+      <div class="row">
+        <div>
+          <label>Domain</label>
+          <input id="domain" value="webagentbridge.com" placeholder="example.com">
+        </div>
+        <div>
+          <label>Action</label>
+          <select id="action">
+            <option value="enable">enable</option>
+            <option value="disable">disable</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div>
+          <label>Batch Domains (comma separated)</label>
+          <input id="batchDomains" value="webagentbridge.com, example.com">
+        </div>
+        <div>
+          <label>Include Agent Run</label>
+          <select id="includeAgentRun">
+            <option value="false" selected>false</option>
+            <option value="true">true</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions">
+        <button onclick="runManifest()">Manifest</button>
+        <button onclick="runTemplate()">Record Template</button>
+        <button onclick="runStatus()">Status</button>
+        <button onclick="runPlan()">Enable/Disable Plan</button>
+        <button onclick="runBatch()">Verify Batch</button>
+        <button class="alt" onclick="clearOut()">Clear</button>
+      </div>
+      <p class="hint">Tip: use this page during provider integration QA before shipping one-click toggle in production.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Response</h3>
+      <pre id="out">{}</pre>
+    </div>
+  </div>
+
+  <script>
+    async function call(url, opts) {
+      const out = document.getElementById('out');
+      out.textContent = 'Loading ' + url + ' ...';
+      try {
+        const res = await fetch(url, opts || {});
+        const data = await res.json().catch(() => ({}));
+        out.textContent = JSON.stringify({ http_status: res.status, data: data }, null, 2);
+      } catch (err) {
+        out.textContent = JSON.stringify({ error: String(err) }, null, 2);
+      }
+    }
+
+    function getDomain() {
+      return (document.getElementById('domain').value || '').trim();
+    }
+
+    function runManifest() {
+      call('/api/discovery/provider/manifest');
+    }
+
+    function runTemplate() {
+      const d = getDomain();
+      call('/api/discovery/provider/record-template?domain=' + encodeURIComponent(d));
+    }
+
+    function runStatus() {
+      const d = getDomain();
+      call('/api/discovery/provider/status?domain=' + encodeURIComponent(d));
+    }
+
+    function runPlan() {
+      const d = getDomain();
+      const action = document.getElementById('action').value;
+      call('/api/discovery/provider/enable-plan?domain=' + encodeURIComponent(d) + '&action=' + encodeURIComponent(action));
+    }
+
+    function runBatch() {
+      const raw = (document.getElementById('batchDomains').value || '');
+      const domains = raw.split(',').map((s) => s.trim()).filter(Boolean);
+      const includeAgentRun = document.getElementById('includeAgentRun').value === 'true';
+      call('/api/discovery/provider/verify-batch', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ domains: domains, include_agent_run: includeAgentRun })
+      });
+    }
+
+    function clearOut() {
+      document.getElementById('out').textContent = '{}';
+    }
+  </script>
+</body>
+</html>

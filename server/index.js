@@ -260,6 +260,9 @@ app.get('/activate-dns', noCache, (req, res) => {
 app.get('/provider-onboarding', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'provider-onboarding.html'));
 });
+app.get('/provider-sandbox', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'provider-sandbox.html'));
+});
 app.use('/', apiLimiter, discoveryRoutes);
 app.use('/api/premium', apiLimiter, premiumRoutes);
 app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);
