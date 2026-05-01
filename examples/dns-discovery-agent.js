@@ -88,18 +88,37 @@ async function runDomain(domain) {
   }
 
   const origin = endpointUrl.origin;
+  const discoverUrl = origin + '/api/wab/discover';
+  const fallbackDiscoverUrl = origin + '/agent-bridge.json';
 
   try {
-    const discoverRes = await safeFetch(origin + '/api/wab/discover', { headers: { accept: 'application/json' } }, {
+    const discoverRes = await safeFetch(discoverUrl, { headers: { accept: 'application/json' } }, {
       requireHttps: true,
       allowList,
       timeoutMs: 8000,
       maxBytes: 1024 * 1024,
       allowedContentTypes: ['application/json'],
     });
-    const discoverJson = await discoverRes.json();
-    result.discover = discoverJson;
-    logStep(discoverRes.ok, 'Agent discover', 'GET /api/wab/discover');
+    if (discoverRes.ok) {
+      const discoverJson = await discoverRes.json();
+      result.discover = discoverJson;
+      logStep(true, 'Agent discover', 'GET /api/wab/discover');
+    } else {
+      const fallbackRes = await safeFetch(fallbackDiscoverUrl, { headers: { accept: 'application/json' } }, {
+        requireHttps: true,
+        allowList,
+        timeoutMs: 8000,
+        maxBytes: 1024 * 1024,
+        allowedContentTypes: ['application/json'],
+      });
+      const fallbackJson = await fallbackRes.json().catch(() => ({}));
+      if (fallbackRes.ok) {
+        result.discover = fallbackJson;
+        logStep(true, 'Agent discover', `fallback /agent-bridge.json (discover HTTP ${discoverRes.status})`);
+      } else {
+        logStep(false, 'Agent discover', `discover HTTP ${discoverRes.status}; fallback HTTP ${fallbackRes.status}`);
+      }
+    }
   } catch (err) {
     logStep(false, 'Agent discover', err.message);
   }

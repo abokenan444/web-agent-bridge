@@ -226,6 +226,7 @@ async function buildProof(domain, opts = {}) {
 
     const endpointOrigin = endpointUrl.origin;
     const discoverUrl = endpointOrigin + '/api/wab/discover';
+    const fallbackDiscoverUrl = endpointOrigin + '/agent-bridge.json';
     const pingUrl = endpointOrigin + '/api/wab/ping';
 
     try {
@@ -239,9 +240,34 @@ async function buildProof(domain, opts = {}) {
         maxBytes: 1024 * 1024,
         allowedContentTypes: ['application/json'],
       });
-      const discoverBody = await discoverRes.json().catch(() => ({}));
-      out.execution_proof.steps[2].ok = !!discoverRes.ok;
-      out.execution_proof.steps[2].detail = discoverRes.ok ? 'GET /api/wab/discover succeeded' : ('HTTP ' + discoverRes.status);
+      let discoverBody = await discoverRes.json().catch(() => ({}));
+      if (discoverRes.ok) {
+        out.execution_proof.steps[2].ok = true;
+        out.execution_proof.steps[2].detail = 'GET /api/wab/discover succeeded';
+      } else {
+        // Fallback: some sites expose discovery via agent-bridge.json only.
+        const fallbackRes = await safeFetch(fallbackDiscoverUrl, {
+          method: 'GET',
+          headers: { accept: 'application/json' },
+        }, {
+          requireHttps: true,
+          allowList: hostAllowList(domain, endpointUrl.hostname),
+          timeoutMs: 8000,
+          maxBytes: 1024 * 1024,
+          allowedContentTypes: ['application/json'],
+        });
+        const fallbackBody = await fallbackRes.json().catch(() => ({}));
+        if (fallbackRes.ok) {
+          out.execution_proof.steps[2].ok = true;
+          out.execution_proof.steps[2].detail =
+            `GET /api/wab/discover returned HTTP ${discoverRes.status}; fallback /agent-bridge.json succeeded`;
+          discoverBody = fallbackBody;
+        } else {
+          out.execution_proof.steps[2].ok = false;
+          out.execution_proof.steps[2].detail =
+            `discover HTTP ${discoverRes.status}; fallback /agent-bridge.json HTTP ${fallbackRes.status}`;
+        }
+      }
 
       const pingRes = await safeFetch(pingUrl, {
         method: 'GET',
