@@ -256,7 +256,13 @@ async function buildProof(domain, opts = {}) {
       const pingBody = await pingRes.json().catch(() => ({}));
       out.execution_proof.steps[3].ok = !!pingRes.ok;
       out.execution_proof.steps[3].detail = pingRes.ok ? 'GET /api/wab/ping succeeded' : ('HTTP ' + pingRes.status);
-      out.execution_proof.ok = out.execution_proof.steps.every((s) => s.ok);
+      // `agent_discover_call` can fail on sites that expose discovery only via
+      // wab.json but not /api/wab/discover. Treat it as best-effort so the
+      // core proof remains: DNS -> wab.json -> agent call result.
+      out.execution_proof.ok =
+        out.execution_proof.steps[0].ok &&
+        out.execution_proof.steps[1].ok &&
+        out.execution_proof.steps[3].ok;
       out.execution_proof.result = {
         discovered: discoverBody && (discoverBody.result || discoverBody),
         ping: pingBody && (pingBody.result || pingBody),
