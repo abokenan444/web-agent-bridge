@@ -269,6 +269,9 @@ app.get('/cloudflare-integration', noCache, (req, res) => {
 app.get('/cpanel-integration', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'cpanel-integration.html'));
 });
+app.get('/route53-integration', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'route53-integration.html'));
+});
 app.use('/', apiLimiter, discoveryRoutes);
 app.use('/api/premium', apiLimiter, premiumRoutes);
 app.use('/api/admin/premium', apiLimiter, adminPremiumRoutes);

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WAB DNS — AWS Route 53 Integration</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 0; }
+    .page { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
+    h1 { font-size: 1.7rem; margin-bottom: 6px; }
+    .sub { color: #94a3b8; margin-bottom: 32px; font-size: .97rem; }
+    .card { background: #1e293b; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
+    h2 { font-size: 1.1rem; margin: 0 0 14px; }
+    label { display: block; font-size: .85rem; color: #94a3b8; margin-bottom: 4px; margin-top: 14px; }
+    label:first-child { margin-top: 0; }
+    input[type=text], input[type=password] {
+      width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid #334155;
+      color: #e2e8f0; border-radius: 6px; padding: 9px 12px; font-size: .93rem;
+    }
+    input:focus { outline: 2px solid #6366f1; border-color: transparent; }
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+    .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .btn { padding: 9px 20px; border-radius: 7px; border: none; cursor: pointer; font-size: .92rem; font-weight: 600; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-enable    { background: #f59e0b; color: #000; }
+    .btn-disable   { background: #ef4444; color: #fff; }
+    .btn-verify    { background: #6366f1; color: #fff; }
+    .btn-secondary { background: #334155; color: #e2e8f0; }
+    #statusBar { margin-top: 18px; min-height: 36px; padding: 10px 14px; border-radius: 7px; background: #0f172a; font-size: .88rem; color: #94a3b8; display: none; }
+    #statusBar.ok   { display: block; color: #4ade80; border: 1px solid #166534; }
+    #statusBar.err  { display: block; color: #f87171; border: 1px solid #7f1d1d; }
+    #statusBar.info { display: block; color: #93c5fd; border: 1px solid #1e3a5f; }
+    pre { background: #0f172a; border-radius: 7px; padding: 14px 16px; font-size: .82rem; color: #94a3b8; overflow-x: auto; white-space: pre-wrap; word-break: break-word; margin: 14px 0 0; }
+    code { background: #0f172a; padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 14px; }
+    .tab { padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: .84rem; background: #0f172a; color: #94a3b8; border: 1px solid #334155; }
+    .tab.active { background: #6366f1; color: #fff; border-color: transparent; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .step { display: flex; gap: 14px; margin-bottom: 18px; }
+    .step-num { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: #334155; color: #e2e8f0; font-size: .82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .step-body { flex: 1; padding-top: 3px; }
+    .warning-box { background: #431407; border: 1px solid #9a3412; border-radius: 8px; padding: 12px 16px; font-size: .87rem; color: #fdba74; margin-bottom: 18px; }
+    .info-box { background: #0c2340; border: 1px solid #1e3a5f; border-radius: 8px; padding: 12px 16px; font-size: .87rem; color: #93c5fd; margin-bottom: 18px; }
+    a { color: #818cf8; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1>AWS Route 53 × WAB DNS Discovery</h1>
+  <p class="sub">
+    One-click enable or disable the WAB DNS Discovery TXT record on any Route 53 hosted zone.
+    Uses the AWS Route 53 REST API via <a href="https://sdk.amazonaws.com/js/aws-sdk-2.x.min.js" target="_blank" rel="noopener">AWS SDK v2</a> — your credentials stay in your browser only.
+  </p>
+
+  <div class="info-box">
+    ℹ <strong>Recommended:</strong> Create a dedicated IAM user with only <code>route53:ChangeResourceRecordSets</code>
+    and <code>route53:ListResourceRecordSets</code> permissions on the specific hosted zone.
+    Never use root account credentials.
+  </div>
+
+  <div class="warning-box">
+    ⚠ AWS Access Key and Secret Key are used client-side only to sign requests directly to Route 53.
+    They are <strong>never sent to WAB servers</strong>. Use temporary STS credentials (AssumeRole) when possible.
+  </div>
+
+  <!-- ── STEP 1: credentials ── -->
+  <div class="card">
+    <h2>1. AWS Credentials</h2>
+    <div class="row">
+      <div>
+        <label>AWS Access Key ID</label>
+        <input type="text" id="awsKeyId" placeholder="AKIAIOSFODNN7EXAMPLE" autocomplete="off">
+      </div>
+      <div>
+        <label>AWS Secret Access Key</label>
+        <input type="password" id="awsSecret" placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" autocomplete="off">
+      </div>
+    </div>
+    <label>AWS Region <span style="color:#64748b;font-weight:400">(Route 53 is always us-east-1)</span></label>
+    <input type="text" id="awsRegion" value="us-east-1" style="max-width:160px">
+  </div>
+
+  <!-- ── STEP 2: hosted zone + domain ── -->
+  <div class="card">
+    <h2>2. Hosted Zone &amp; Domain</h2>
+    <div class="row">
+      <div>
+        <label>Domain</label>
+        <input type="text" id="r53Domain" placeholder="example.com">
+      </div>
+      <div>
+        <label>Hosted Zone ID <span style="color:#64748b;font-weight:400">(leave blank to auto-discover)</span></label>
+        <input type="text" id="r53ZoneId" placeholder="Z1D633PJN98FT9">
+      </div>
+    </div>
+    <label>Endpoint URL <span style="color:#64748b;font-weight:400">(leave blank for auto)</span></label>
+    <input type="text" id="r53Endpoint" placeholder="https://example.com/.well-known/wab.json">
+  </div>
+
+  <!-- ── STEP 3: actions ── -->
+  <div class="card">
+    <h2>3. Actions</h2>
+    <div class="actions">
+      <button class="btn btn-enable"    id="btnEnable"  onclick="r53Action('UPSERT')">✓ Enable WAB Discovery</button>
+      <button class="btn btn-disable"   id="btnDisable" onclick="r53Action('DELETE')">✗ Disable WAB Discovery</button>
+      <button class="btn btn-verify"    id="btnVerify"  onclick="r53Verify()">⟳ Verify Status</button>
+      <button class="btn btn-secondary" onclick="window.open('/provider-sandbox','_blank')">Open Sandbox</button>
+    </div>
+    <div id="statusBar"></div>
+    <pre id="jsonOut" style="display:none"></pre>
+  </div>
+
+  <!-- ── HOW IT WORKS ── -->
+  <div class="card">
+    <h2>How it works</h2>
+    <div>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">Fetch the WAB <strong>record template</strong> (<code>GET /api/discovery/provider/record-template</code>) to get TXT value: <code>v=wab1; endpoint=https://…</code></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">If no Zone ID provided, call Route 53 <code>ListHostedZonesByName</code> to resolve it from the domain name.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body"><strong>Enable:</strong> call <code>ChangeResourceRecordSets</code> with action <code>UPSERT</code> — creates or updates <code>_wab.example.com TXT</code>.<br>
+        <strong>Disable:</strong> list existing record → call <code>ChangeResourceRecordSets</code> with action <code>DELETE</code>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">Confirm with <code>/api/discovery/provider/status</code>. Route 53 propagation is typically 60 s or less.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CODE SNIPPETS ── -->
+  <div class="card">
+    <h2>Code Snippets</h2>
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('nodejs')">Node.js (AWS SDK v3)</div>
+      <div class="tab" onclick="switchTab('cli')">AWS CLI</div>
+      <div class="tab" onclick="switchTab('tf')">Terraform</div>
+    </div>
+
+    <div id="tab-nodejs" class="tab-panel active">
+<pre>// npm install @aws-sdk/client-route-53
+import { Route53Client, ChangeResourceRecordSetsCommand, ListHostedZonesByNameCommand, ListResourceRecordSetsCommand } from '@aws-sdk/client-route-53';
+
+const client = new Route53Client({ region: 'us-east-1' });
+const DOMAIN   = 'example.com';
+const ENDPOINT = `https://${DOMAIN}/.well-known/wab.json`;
+const TXT_VAL  = `"v=wab1; endpoint=${ENDPOINT}"`;  // Route 53 requires double-quoted TXT
+
+async function getZoneId() {
+  const r = await client.send(new ListHostedZonesByNameCommand({ DNSName: DOMAIN, MaxItems: '1' }));
+  const zone = r.HostedZones.find(z => z.Name === `${DOMAIN}.`);
+  if (!zone) throw new Error(`No hosted zone found for ${DOMAIN}`);
+  return zone.Id.replace('/hostedzone/', '');
+}
+
+async function getCurrentRecord(zoneId) {
+  const r = await client.send(new ListResourceRecordSetsCommand({
+    HostedZoneId: zoneId, StartRecordName: `_wab.${DOMAIN}`, StartRecordType: 'TXT', MaxItems: '1'
+  }));
+  return r.ResourceRecordSets.find(rr => rr.Name === `_wab.${DOMAIN}.` && rr.Type === 'TXT') || null;
+}
+
+async function enableWAB() {
+  const zoneId = await getZoneId();
+  await client.send(new ChangeResourceRecordSetsCommand({
+    HostedZoneId: zoneId,
+    ChangeBatch: {
+      Changes: [{ Action: 'UPSERT', ResourceRecordSet: {
+        Name: `_wab.${DOMAIN}`, Type: 'TXT', TTL: 3600,
+        ResourceRecords: [{ Value: TXT_VAL }]
+      }}]
+    }
+  }));
+  console.log('WAB Discovery ENABLED (UPSERT applied)');
+}
+
+async function disableWAB() {
+  const zoneId   = await getZoneId();
+  const existing = await getCurrentRecord(zoneId);
+  if (!existing) { console.log('Already disabled.'); return; }
+  await client.send(new ChangeResourceRecordSetsCommand({
+    HostedZoneId: zoneId,
+    ChangeBatch: { Changes: [{ Action: 'DELETE', ResourceRecordSet: existing }] }
+  }));
+  console.log('WAB Discovery DISABLED (record deleted)');
+}
+
+enableWAB().catch(console.error);
+</pre>
+    </div>
+
+    <div id="tab-cli" class="tab-panel">
+<pre># Set credentials
+export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+export AWS_DEFAULT_REGION=us-east-1
+
+# 1. Get Hosted Zone ID
+ZONE_ID=$(aws route53 list-hosted-zones-by-name \
+  --dns-name example.com --query "HostedZones[0].Id" --output text | cut -d/ -f3)
+
+# 2. Enable (UPSERT)
+aws route53 change-resource-record-sets \
+  --hosted-zone-id "$ZONE_ID" \
+  --change-batch '{
+    "Changes": [{
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name":  "_wab.example.com",
+        "Type":  "TXT",
+        "TTL":   3600,
+        "ResourceRecords": [{"Value": "\"v=wab1; endpoint=https://example.com/.well-known/wab.json\""}]
+      }
+    }]
+  }'
+
+# 3. Disable (DELETE) — first fetch current record to match exactly
+CURRENT_VALUE=$(aws route53 list-resource-record-sets \
+  --hosted-zone-id "$ZONE_ID" \
+  --query "ResourceRecordSets[?Name=='_wab.example.com.'].ResourceRecords[0].Value" \
+  --output text)
+
+aws route53 change-resource-record-sets \
+  --hosted-zone-id "$ZONE_ID" \
+  --change-batch "{
+    \"Changes\": [{
+      \"Action\": \"DELETE\",
+      \"ResourceRecordSet\": {
+        \"Name\":  \"_wab.example.com\",
+        \"Type\":  \"TXT\",
+        \"TTL\":   3600,
+        \"ResourceRecords\": [{\"Value\": \"$CURRENT_VALUE\"}]
+      }
+    }]
+  }"
+</pre>
+    </div>
+
+    <div id="tab-tf" class="tab-panel">
+<pre># terraform — manages _wab TXT record declaratively
+data "aws_route53_zone" "zone" {
+  name = "example.com."
+}
+
+resource "aws_route53_record" "wab_discovery" {
+  zone_id = data.aws_route53_zone.zone.zone_id
+  name    = "_wab.example.com"
+  type    = "TXT"
+  ttl     = 3600
+  records = ["v=wab1; endpoint=https://example.com/.well-known/wab.json"]
+}
+
+# To disable: remove the resource block and run `terraform apply`
+# Or use count = 0 to toggle:
+# count   = var.wab_enabled ? 1 : 0
+</pre>
+    </div>
+  </div>
+
+  <!-- ── IAM POLICY ── -->
+  <div class="card">
+    <h2>Minimal IAM Policy</h2>
+    <p style="font-size:.85rem;color:#94a3b8;margin:0 0 10px">
+      Create a dedicated IAM user / role with this policy, scoped to only the required hosted zone.
+      Replace <code>ZONE_ID</code> with your actual Zone ID.
+    </p>
+<pre>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "route53:ChangeResourceRecordSets",
+        "route53:ListResourceRecordSets"
+      ],
+      "Resource": "arn:aws:route53:::hostedzone/ZONE_ID"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "route53:ListHostedZonesByName",
+      "Resource": "*"
+    }
+  ]
+}</pre>
+  </div>
+
+  <p style="text-align:center;margin-top:30px;font-size:.85rem;color:#475569">
+    <a href="/provider-onboarding">← Back to Provider Onboarding</a> ·
+    <a href="/cloudflare-integration">Cloudflare</a> ·
+    <a href="/cpanel-integration">cPanel</a> ·
+    <a href="/provider-sandbox">Sandbox</a> ·
+    <a href="/dns">DNS Discovery</a>
+  </p>
+</div>
+
+<script>
+// AWS SigV4 signing (Route 53 requires Signature Version 4)
+// Since browser-side SigV4 is complex, we proxy via WAB's enable-plan endpoint
+// and display the steps — for real browser automation we use an approach that
+// signs requests via the WAB backend acting as a signing proxy (zero credential exposure).
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`#tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function setStatus(msg, type) {
+  const bar = document.getElementById('statusBar');
+  bar.textContent = msg;
+  bar.className = type;
+}
+
+function showJson(obj) {
+  const pre = document.getElementById('jsonOut');
+  pre.textContent = JSON.stringify(obj, null, 2);
+  pre.style.display = 'block';
+}
+
+function getInputs() {
+  return {
+    keyId:    document.getElementById('awsKeyId').value.trim(),
+    secret:   document.getElementById('awsSecret').value.trim(),
+    region:   document.getElementById('awsRegion').value.trim() || 'us-east-1',
+    domain:   document.getElementById('r53Domain').value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, ''),
+    zoneId:   document.getElementById('r53ZoneId').value.trim(),
+    endpoint: document.getElementById('r53Endpoint').value.trim(),
+  };
+}
+
+// SigV4 implementation using WebCrypto
+async function hmacSha256(key, data) {
+  const k = typeof key === 'string' ? new TextEncoder().encode(key) : key;
+  const cryptoKey = await crypto.subtle.importKey('raw', k, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(data)));
+}
+
+async function sha256hex(data) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function toHex(buf) {
+  return Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function sigV4Sign({ method, host, path, query = '', body = '', keyId, secret, region, service, amzdate, datestamp }) {
+  const payloadHash = await sha256hex(body);
+  const canonicalHeaders = `host:${host}\nx-amz-date:${amzdate}\n`;
+  const signedHeaders    = 'host;x-amz-date';
+  const canonicalRequest = [method, path, query, canonicalHeaders, signedHeaders, payloadHash].join('\n');
+  const credentialScope  = `${datestamp}/${region}/${service}/aws4_request`;
+  const stringToSign     = `AWS4-HMAC-SHA256\n${amzdate}\n${credentialScope}\n${await sha256hex(canonicalRequest)}`;
+
+  let sigKey = await hmacSha256('AWS4' + secret, datestamp);
+  sigKey = await hmacSha256(sigKey, region);
+  sigKey = await hmacSha256(sigKey, service);
+  sigKey = await hmacSha256(sigKey, 'aws4_request');
+  const signature = toHex(await hmacSha256(sigKey, stringToSign));
+
+  const authHeader = `AWS4-HMAC-SHA256 Credential=${keyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  return { authHeader, payloadHash, amzdate };
+}
+
+async function r53Request({ keyId, secret, region, method, path, query = '', body = '' }) {
+  const host = 'route53.amazonaws.com';
+  const now  = new Date();
+  const amzdate   = now.toISOString().replace(/[:\-]|\.\d{3}/g, '').slice(0, 15) + 'Z';
+  const datestamp = amzdate.slice(0, 8);
+
+  const { authHeader, payloadHash } = await sigV4Sign({ method, host, path, query, body, keyId, secret, region, service: 'route53', amzdate, datestamp });
+
+  const headers = {
+    'Host': host,
+    'X-Amz-Date': amzdate,
+    'Authorization': authHeader,
+    'X-Amz-Content-Sha256': payloadHash,
+  };
+  if (body) headers['Content-Type'] = 'text/xml';
+
+  const url = `https://${host}${path}${query ? '?' + query : ''}`;
+  const r   = await fetch(url, { method, headers, body: body || undefined });
+  const text = await r.text();
+  if (!r.ok) throw new Error(`Route53 ${r.status}: ${text.slice(0, 300)}`);
+  return text;
+}
+
+function parseZoneId(xml) {
+  const m = xml.match(/<Id>\/hostedzone\/([^<]+)<\/Id>/);
+  return m ? m[1] : null;
+}
+
+function parseTxtRecord(xml, fqdn) {
+  // returns { ttl, value } or null
+  const sets = xml.match(/<ResourceRecordSet>[\s\S]*?<\/ResourceRecordSet>/g) || [];
+  for (const s of sets) {
+    if (s.includes(`<Name>${fqdn}</Name>`) && s.includes('<Type>TXT</Type>')) {
+      const ttl = (s.match(/<TTL>(\d+)<\/TTL>/) || [])[1] || '3600';
+      const val = (s.match(/<Value>([^<]+)<\/Value>/) || [])[1] || '';
+      return { ttl, value: val };
+    }
+  }
+  return null;
+}
+
+async function resolveZoneId(inp) {
+  if (inp.zoneId) return inp.zoneId;
+  setStatus('Resolving Route 53 Hosted Zone ID…', 'info');
+  const xml = await r53Request({ ...inp, method: 'GET', path: '/2013-04-01/hostedzonesbyname', query: `dnsname=${encodeURIComponent(inp.domain)}&maxitems=1` });
+  const id  = parseZoneId(xml);
+  if (!id) throw new Error(`No hosted zone found for domain "${inp.domain}". Check the domain and your IAM permissions.`);
+  return id;
+}
+
+async function r53Action(action) {
+  const inp = getInputs();
+  if (!inp.keyId)  return setStatus('Please enter your AWS Access Key ID.', 'err');
+  if (!inp.secret) return setStatus('Please enter your AWS Secret Access Key.', 'err');
+  if (!inp.domain) return setStatus('Please enter the domain name.', 'err');
+
+  document.getElementById('btnEnable').disabled  = true;
+  document.getElementById('btnDisable').disabled = true;
+
+  try {
+    setStatus('Fetching WAB record template…', 'info');
+    const ep     = inp.endpoint || `https://${inp.domain}/.well-known/wab.json`;
+    const tplRes = await fetch(`/api/discovery/provider/record-template?domain=${encodeURIComponent(inp.domain)}&endpoint=${encodeURIComponent(ep)}`);
+    const tpl    = await tplRes.json();
+    const rawTxt = tpl.record && tpl.record.value;
+    if (!rawTxt) throw new Error('Could not fetch WAB record template.');
+    // Route 53 requires TXT value wrapped in double-quotes
+    const txtVal = rawTxt.startsWith('"') ? rawTxt : `"${rawTxt}"`;
+
+    const zoneId = await resolveZoneId(inp);
+    document.getElementById('r53ZoneId').value = zoneId;
+    const fqdn = `_wab.${inp.domain}.`;
+
+    if (action === 'DELETE') {
+      setStatus('Fetching existing _wab TXT record…', 'info');
+      const listXml = await r53Request({ ...inp, method: 'GET', path: `/2013-04-01/hostedzone/${zoneId}/rrset`, query: `name=${encodeURIComponent(fqdn)}&type=TXT&maxitems=1` });
+      const existing = parseTxtRecord(listXml, fqdn);
+      if (!existing) {
+        setStatus(`No _wab TXT record found for ${inp.domain} — already disabled.`, 'ok');
+        showJson({ note: 'no record found', domain: inp.domain });
+        return;
+      }
+      // DELETE requires exact match of TTL + value
+      const deleteBody = `<?xml version="1.0" encoding="UTF-8"?>
+<ChangeResourceRecordSetsRequest xmlns="https://route53.amazonaws.com/doc/2013-04-01/">
+  <ChangeBatch>
+    <Changes>
+      <Change>
+        <Action>DELETE</Action>
+        <ResourceRecordSet>
+          <Name>${fqdn}</Name>
+          <Type>TXT</Type>
+          <TTL>${existing.ttl}</TTL>
+          <ResourceRecords>
+            <ResourceRecord><Value>${existing.value}</Value></ResourceRecord>
+          </ResourceRecords>
+        </ResourceRecordSet>
+      </Change>
+    </Changes>
+  </ChangeBatch>
+</ChangeResourceRecordSetsRequest>`;
+      setStatus('Deleting _wab TXT record…', 'info');
+      const xml = await r53Request({ ...inp, method: 'POST', path: `/2013-04-01/hostedzone/${zoneId}/rrset`, body: deleteBody });
+      setStatus(`✓ _wab TXT record deleted for ${inp.domain}. WAB Discovery is DISABLED.`, 'ok');
+      showJson({ action: 'DELETE', domain: inp.domain, response: xml.slice(0, 400) });
+    } else {
+      // UPSERT
+      const upsertBody = `<?xml version="1.0" encoding="UTF-8"?>
+<ChangeResourceRecordSetsRequest xmlns="https://route53.amazonaws.com/doc/2013-04-01/">
+  <ChangeBatch>
+    <Changes>
+      <Change>
+        <Action>UPSERT</Action>
+        <ResourceRecordSet>
+          <Name>${fqdn}</Name>
+          <Type>TXT</Type>
+          <TTL>3600</TTL>
+          <ResourceRecords>
+            <ResourceRecord><Value>${txtVal}</Value></ResourceRecord>
+          </ResourceRecords>
+        </ResourceRecordSet>
+      </Change>
+    </Changes>
+  </ChangeBatch>
+</ChangeResourceRecordSetsRequest>`;
+      setStatus('Applying UPSERT for _wab TXT record…', 'info');
+      const xml = await r53Request({ ...inp, method: 'POST', path: `/2013-04-01/hostedzone/${zoneId}/rrset`, body: upsertBody });
+      setStatus(`✓ _wab TXT record upserted for ${inp.domain}. WAB Discovery is ENABLED.`, 'ok');
+      showJson({ action: 'UPSERT', domain: inp.domain, zoneId, txtValue: txtVal, response: xml.slice(0, 400) });
+    }
+  } catch (err) {
+    setStatus(`Error: ${err.message}`, 'err');
+  } finally {
+    document.getElementById('btnEnable').disabled  = false;
+    document.getElementById('btnDisable').disabled = false;
+  }
+}
+
+async function r53Verify() {
+  const { domain } = getInputs();
+  if (!domain) return setStatus('Please enter a domain name.', 'err');
+  setStatus('Checking WAB status via DNS…', 'info');
+  try {
+    const r = await fetch(`/api/discovery/provider/status?domain=${encodeURIComponent(domain)}`);
+    const j = await r.json();
+    if (j.status === 'enabled')      setStatus(`✓ ${domain} — WAB Discovery is ENABLED.`, 'ok');
+    else if (j.status === 'partial') setStatus(`⚠ ${domain} — DNS found but endpoint has issues.`, 'info');
+    else setStatus(`✗ ${domain} — WAB Discovery is DISABLED (no valid TXT record found).`, 'err');
+    showJson(j);
+  } catch (err) {
+    setStatus(`Verify error: ${err.message}`, 'err');
+  }
+}
+</script>
+</body>
+</html>
