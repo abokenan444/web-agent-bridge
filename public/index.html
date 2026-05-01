@@ -990,6 +990,19 @@ console.<span class="fn">log</span>(actions);
     </div>
   </section>
 
+  <!-- ═══════════ LIVE DNS ADOPTION ═══════════ -->
+  <section class="section" id="live-dns-adoption">
+    <div class="container">
+      <div class="section-header">
+        <span class="label">Live Adoption</span>
+        <h2>Businesses Using WAB DNS Discovery</h2>
+        <p>This list is auto-generated from real registry registrations only. No static seeded entries.</p>
+      </div>
+      <div id="indexLiveAdoptionStatus" style="margin-bottom:14px;color:var(--text-secondary);">Loading live registry…</div>
+      <div id="indexLiveAdoptionList" class="grid-3" style="display:none;"></div>
+    </div>
+  </section>
+
 
   <!-- ═══════════ CTA ═══════════ -->
   <section class="section" style="text-align:center;">
@@ -1067,6 +1080,57 @@ console.<span class="fn">log</span>(actions);
         ? 'rgba(10, 14, 26, 0.95)' 
         : 'rgba(10, 14, 26, 0.8)';
     });
+
+    function escapeHtml(v) {
+      return String(v)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function loadIndexLiveAdoption() {
+      const status = document.getElementById('indexLiveAdoptionStatus');
+      const list = document.getElementById('indexLiveAdoptionList');
+      if (!status || !list) return;
+
+      status.textContent = 'Loading live registry…';
+      list.style.display = 'none';
+      list.innerHTML = '';
+
+      try {
+        const res = await fetch('/api/discovery/registry?limit=12');
+        const data = await res.json();
+        const entries = Array.isArray(data && data.listings) ? data.listings : [];
+
+        if (!entries.length) {
+          status.textContent = 'No businesses are currently listed. New real registrations will appear here automatically.';
+          return;
+        }
+
+        list.innerHTML = entries.map((entry) => {
+          const name = escapeHtml(entry.name || entry.domain || 'Unnamed site');
+          const domain = escapeHtml(entry.domain || '');
+          const category = escapeHtml(entry.category || 'general');
+          const desc = escapeHtml(entry.description || 'WAB-enabled website');
+          const score = Number.isFinite(Number(entry.neutrality_score)) ? Number(entry.neutrality_score) : 0;
+          return '<div class="card fade-in" style="border-left:3px solid #10b981;">' +
+            '<h3 style="margin-bottom:8px">' + name + '</h3>' +
+            '<p style="margin-bottom:10px">' + desc + '</p>' +
+            '<p style="color:var(--text-secondary);font-size:.88rem;margin:0">' + domain + '</p>' +
+            '<p style="color:var(--text-secondary);font-size:.82rem;margin-top:6px">' + category + ' · neutrality ' + score + '</p>' +
+          '</div>';
+        }).join('');
+
+        list.style.display = 'grid';
+        status.textContent = 'Live list loaded from registry.';
+      } catch (err) {
+        status.textContent = 'Failed to load live registry: ' + ((err && err.message) || err);
+      }
+    }
+
+    loadIndexLiveAdoption();
   </script>
   <script src="/js/cookie-consent.js?v=3.0.1"></script>
 </body>

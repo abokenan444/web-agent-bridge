@@ -259,6 +259,56 @@ async function checkCanonicalRecords() {
       : '⚠ ' + pass + '/' + total + ' records live — ' + fail + ' missing or propagating.') + '</span>';
 }
 
+async function loadLiveAdoption() {
+  const status = document.getElementById('liveAdoptionStatus');
+  const list = document.getElementById('liveAdoptionList');
+  if (!status || !list) return;
+
+  status.innerHTML = '<span class="warn">Loading live registry…</span>';
+  list.style.display = 'none';
+  list.innerHTML = '';
+
+  try {
+    const res = await fetch('/api/discovery/registry?limit=24');
+    const data = await res.json();
+    const entries = Array.isArray(data && data.listings) ? data.listings : [];
+
+    if (!entries.length) {
+      status.innerHTML = '<span class="warn">No businesses are currently listed. New registrations will appear here automatically.</span>';
+      return;
+    }
+
+    const cards = entries.map((entry) => {
+      const safeName = escapeHtml(entry.name || entry.domain || 'Unnamed site');
+      const safeDomain = escapeHtml(entry.domain || '');
+      const safeDescription = escapeHtml(entry.description || 'WAB-enabled website');
+      const safeCategory = escapeHtml(entry.category || 'general');
+      const score = Number.isFinite(Number(entry.neutrality_score)) ? Number(entry.neutrality_score) : 0;
+
+      return '<article class="live-item">' +
+        '<h4>' + safeName + '</h4>' +
+        '<p>' + safeDescription + '</p>' +
+        '<div class="live-meta">' + safeDomain + ' · ' + safeCategory + ' · score ' + score + '</div>' +
+      '</article>';
+    }).join('');
+
+    list.innerHTML = cards;
+    list.style.display = 'grid';
+    status.innerHTML = '<span class="ok">✓ Live list loaded from real registrations.</span>';
+  } catch (err) {
+    status.innerHTML = '<span class="danger">Failed to load live registry: ' + ((err && err.message) || err) + '</span>';
+  }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function bindHandlers() {
   const enBtn = document.getElementById('enBtn');
   const arBtn = document.getElementById('arBtn');
@@ -281,6 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindHandlers();
   checkCanonicalRecords().catch(() => {});
   checkDnssecForWab().catch(() => {});
+  loadLiveAdoption().catch(() => {});
   const navbar = document.getElementById('navbar');
   window.addEventListener('scroll', () => {
     if (!navbar) return;

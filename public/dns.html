@@ -44,6 +44,11 @@
     .toc a{background:rgba(255,255,255,.04);border:1px solid rgba(148,163,184,.22);color:#e5edff;padding:6px 12px;border-radius:999px;font-size:.85rem;text-decoration:none}
     .toc a:hover{border-color:#fbbf24;color:#fcd34d}
     .advanced-block{display:none}
+    .live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:12px}
+    .live-item{background:rgba(2,6,23,.6);border:1px solid rgba(148,163,184,.2);border-radius:12px;padding:12px}
+    .live-item h4{margin:0 0 6px;color:#fef3c7;font-size:.98rem}
+    .live-item p{margin:0 0 8px;color:#cbd5e1;font-size:.88rem;line-height:1.55}
+    .live-meta{font-size:.78rem;color:#93c5fd}
   </style>
 </head>
 <body>
@@ -249,6 +254,14 @@
         </div>
         <pre id="proofOut">{}</pre>
       </div>
+    </div>
+
+    <!-- ═══════════════ LIVE ADOPTION ═══════════════ -->
+    <div class="card" id="live-adoption">
+      <h3 data-en="Businesses Using WAB DNS Discovery (Live)" data-ar="الشركات التي تستخدم WAB DNS Discovery (مباشر)">Businesses Using WAB DNS Discovery (Live)</h3>
+      <p data-en="Auto-listed from real registrations only. No static or manually seeded entries." data-ar="قائمة تلقائية من التسجيلات الحقيقية فقط. لا توجد بيانات ثابتة أو مزروعة يدويًا.">Auto-listed from real registrations only. No static or manually seeded entries.</p>
+      <div id="liveAdoptionStatus" style="margin-top:8px;font-size:.9rem;color:#94a3b8">Loading live registry…</div>
+      <div id="liveAdoptionList" class="live-grid" style="display:none"></div>
     </div>
 
     <!-- ═══════════════ PRIVACY MODEL ═══════════════ -->
