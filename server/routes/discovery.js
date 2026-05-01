@@ -1085,6 +1085,163 @@ router.get('/api/discovery/test-agent', async (req, res) => {
 });
 
 // ═════════════════════════════════════════════════════════════════════
+// 8. GET /api/discovery/provider/manifest
+//    Provider-facing protocol contract for one-click DNS toggles.
+// ═════════════════════════════════════════════════════════════════════
+
+router.get('/api/discovery/provider/manifest', (_req, res) => {
+  return res.json({
+    wab_version: WAB_VERSION,
+    protocol: 'wab-dns-discovery-v1',
+    txt_record: {
+      host: '_wab',
+      type: 'TXT',
+      format: 'v=wab1; endpoint=https://<domain>/.well-known/wab.json',
+      required_keys: ['v', 'endpoint'],
+      constraints: {
+        endpoint_scheme: 'https',
+        endpoint_path_recommended: '/.well-known/wab.json',
+      }
+    },
+    toggle_flow: {
+      enable: [
+        'Create TXT _wab.<domain>',
+        'Verify DNS + endpoint',
+        'Show DNS verified / Agent-ready status'
+      ],
+      disable: [
+        'Delete TXT _wab.<domain>',
+        'Verify disabled state',
+        'Show disabled status'
+      ]
+    },
+    verification_endpoints: {
+      verify_live: '/api/discovery/verify-live?domain=<domain>',
+      test_agent: '/api/discovery/test-agent?domain=<domain>',
+      provider_status: '/api/discovery/provider/status?domain=<domain>',
+      provider_verify_batch: '/api/discovery/provider/verify-batch'
+    },
+    examples: {
+      txt_value: 'v=wab1; endpoint=https://example.com/.well-known/wab.json',
+      status_call: '/api/discovery/provider/status?domain=example.com',
+      batch_body: {
+        domains: ['example.com', 'shop.example.com'],
+        include_agent_run: false
+      }
+    }
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// 9. GET /api/discovery/provider/status?domain=example.com
+//    Machine-friendly status for registrar/provider toggles.
+// ═════════════════════════════════════════════════════════════════════
+
+router.get('/api/discovery/provider/status', async (req, res) => {
+  const domain = sanitizeDomain(req.query.domain || '');
+  if (!domain) {
+    return res.status(400).json({
+      error: 'domain is required',
+      hint: 'Use /api/discovery/provider/status?domain=example.com'
+    });
+  }
+
+  try {
+    const proof = await buildProof(domain, { includeAgentRun: false });
+    const dnsVerified = !!(proof.dns && proof.dns.ok);
+    const endpointReady = !!(proof.wab_json && proof.wab_json.ok);
+    const status = dnsVerified && endpointReady ? 'enabled' : (dnsVerified ? 'partial' : 'disabled');
+
+    return res.json({
+      wab_version: WAB_VERSION,
+      domain,
+      status,
+      flags: {
+        dns_verified: dnsVerified,
+        endpoint_ready: endpointReady,
+        agent_ready: proof.statuses && proof.statuses.agent_ready === 'yes'
+      },
+      diagnostics: {
+        dns_error: proof.dns && proof.dns.error,
+        endpoint_error: proof.wab_json && proof.wab_json.error
+      },
+      checked_at: proof.checked_at
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'provider_status_failed', details: err.message });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// 10. POST /api/discovery/provider/verify-batch
+//     Batch verification for DNS providers and registrars.
+// ═════════════════════════════════════════════════════════════════════
+
+router.post('/api/discovery/provider/verify-batch', async (req, res) => {
+  const domainsRaw = Array.isArray(req.body && req.body.domains) ? req.body.domains : [];
+  const includeAgentRun = !!(req.body && req.body.include_agent_run);
+  const domains = domainsRaw.map((d) => sanitizeDomain(d)).filter(Boolean);
+
+  if (!domains.length) {
+    return res.status(400).json({
+      error: 'domains[] is required',
+      hint: 'Use {"domains":["example.com"],"include_agent_run":false}'
+    });
+  }
+  if (domains.length > 50) {
+    return res.status(400).json({ error: 'max 50 domains per request' });
+  }
+
+  try {
+    const results = [];
+    for (const domain of domains) {
+      try {
+        const proof = await buildProof(domain, { includeAgentRun });
+        const dnsVerified = !!(proof.dns && proof.dns.ok);
+        const endpointReady = !!(proof.wab_json && proof.wab_json.ok);
+        const status = dnsVerified && endpointReady ? 'enabled' : (dnsVerified ? 'partial' : 'disabled');
+        results.push({
+          domain,
+          status,
+          dns_verified: dnsVerified,
+          endpoint_ready: endpointReady,
+          agent_ready: proof.statuses && proof.statuses.agent_ready === 'yes',
+          checked_at: proof.checked_at,
+          dns_error: proof.dns && proof.dns.error,
+          endpoint_error: proof.wab_json && proof.wab_json.error,
+        });
+      } catch (err) {
+        results.push({
+          domain,
+          status: 'error',
+          dns_verified: false,
+          endpoint_ready: false,
+          agent_ready: false,
+          error: err && err.message ? err.message : 'verify_failed',
+        });
+      }
+    }
+
+    const summary = {
+      total: results.length,
+      enabled: results.filter((r) => r.status === 'enabled').length,
+      partial: results.filter((r) => r.status === 'partial').length,
+      disabled: results.filter((r) => r.status === 'disabled').length,
+      error: results.filter((r) => r.status === 'error').length,
+    };
+
+    return res.json({
+      wab_version: WAB_VERSION,
+      include_agent_run: includeAgentRun,
+      summary,
+      results,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'provider_verify_batch_failed', details: err.message });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════
 // 8. POST /api/discovery/usage-proof
 //    Real execution proof + KPIs (readiness if no api_key is supplied).
 // ═════════════════════════════════════════════════════════════════════
@@ -1158,7 +1315,7 @@ router.get('/api/discovery/usage-proof-runs', (req, res) => {
 });
 
 // ═════════════════════════════════════════════════════════════════════
-// 9. GET /api/discovery/:siteId — Discovery doc for a specific site
+// 11. GET /api/discovery/:siteId — Discovery doc for a specific site
 //    (defined AFTER named routes to prevent shadowing)
 // ═════════════════════════════════════════════════════════════════════
 
