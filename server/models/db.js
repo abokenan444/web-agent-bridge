@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID: uuidv4 } = require('crypto');
 const { encryptOptional, decryptOptional } = require('../utils/secureFields');
 
 const isTest = process.env.NODE_ENV === 'test';

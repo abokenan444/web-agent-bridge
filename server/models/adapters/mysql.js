@@ -10,7 +10,7 @@
 
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID: uuidv4 } = require('crypto');
 
 const pool = mysql.createPool(process.env.DATABASE_URL);
 
