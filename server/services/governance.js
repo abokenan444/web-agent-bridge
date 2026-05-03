@@ -145,7 +145,7 @@ function matchPolicy(agentId, { resource, action, scope }) {
   const rows = db.prepare(`
     SELECT * FROM gov_policies
      WHERE agent_id = ?
-       AND (expires_at IS NULL OR expires_at > datetime('now'))
+       AND (expires_at IS NULL OR datetime(expires_at) > datetime('now'))
        AND resource = ?
        AND (action = ? OR action = '*')
        AND (scope IS NULL OR scope = ?)
