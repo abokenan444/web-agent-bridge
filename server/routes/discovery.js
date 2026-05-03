@@ -1929,22 +1929,28 @@ router.get('/api/discovery/trust-leaderboard', (_req, res) => {
 
 // Helper: compute the latest composite WAB Score for a domain.
 //   Score is a weighted blend of:
-//     - signature/trust integrity   (40%)  ← from discovery_trust_runs
-//     - execution success rate      (25%)  ← from discovery_usage_runs
-//     - latency (lower is better)   (15%)
-//     - readiness rate              (10%)
-//     - sample volume bonus         (10%)  (cold domains are penalised)
+//     - signature/trust integrity   (30%)  ← discovery_trust_runs
+//     - execution success rate      (20%)  ← discovery_usage_runs
+//     - latency (lower is better)   (10%)
+//     - readiness rate              ( 8%)
+//     - sample volume bonus         ( 7%)
+//     - configured fairness         (15%)  ← sites.config (neutrality)
+//     - configured security signals (10%)  ← sites.config (perms/restrictions/logging)
+//   Components with no data shrink the max so cold-start sites aren't
+//   double-penalised purely for lack of usage history.
 function computeWabScore(domain) {
   const out = {
     domain,
     score: 0,
     label: 'unrated',
     components: {
-      trust: { score: 0, weight: 40, available: false },
-      success: { score: 0, weight: 25, available: false },
-      latency: { score: 0, weight: 15, available: false, ms: null },
-      readiness: { score: 0, weight: 10, available: false },
-      volume: { score: 0, weight: 10, runs: 0 },
+      trust:      { score: 0, weight: 30, available: false },
+      success:    { score: 0, weight: 20, available: false },
+      latency:    { score: 0, weight: 10, available: false, ms: null },
+      readiness:  { score: 0, weight:  8, available: false },
+      volume:     { score: 0, weight:  7, runs: 0 },
+      fairness:   { score: 0, weight: 15, available: false },
+      security:   { score: 0, weight: 10, available: false, signals: [] },
     },
     error_classes: {},
     signature_valid_rate: 0,
@@ -1954,6 +1960,7 @@ function computeWabScore(domain) {
     cold_start: false,
     last_seen: null,
     last_trust_check: null,
+    site_registered: false,
   };
 
   // --- Trust component (latest run) ---
@@ -2044,6 +2051,46 @@ function computeWabScore(domain) {
     } catch { /* best-effort */ }
   } else {
     out.cold_start = true;
+  }
+
+  // --- Configuration-based components: fairness + security ---
+  // Pulled from sites.config (set by the site owner). Independent of
+  // behavioral telemetry; available even for brand-new registrations.
+  let siteRow = null;
+  try {
+    siteRow = db.prepare(
+      `SELECT * FROM sites WHERE LOWER(REPLACE(domain, 'www.', '')) = ? AND active = 1`
+    ).get(domain);
+  } catch { /* sites table may not exist in some test setups */ }
+
+  if (siteRow) {
+    out.site_registered = true;
+
+    // Fairness / neutrality (calculateNeutralityScore returns 0–100 or {score})
+    try {
+      const fr = calculateNeutralityScore(siteRow);
+      const fScore = typeof fr === 'number' ? fr : Number((fr && fr.score) || 0);
+      if (Number.isFinite(fScore) && fScore > 0) {
+        out.components.fairness.score = Math.max(0, Math.min(100, fScore));
+        out.components.fairness.available = true;
+      }
+    } catch { /* fairness module optional */ }
+
+    // Security configuration signals from sites.config
+    try {
+      let cfg = {};
+      try { cfg = siteRow.config ? JSON.parse(siteRow.config) : {}; } catch { cfg = {}; }
+      let sec = 60; // baseline for a registered site
+      const sigs = [];
+      if (cfg.agentPermissions) { sec += 15; sigs.push('agent_permissions_configured'); }
+      if (cfg.restrictions && Object.keys(cfg.restrictions).length) { sec += 10; sigs.push('restrictions_defined'); }
+      if (cfg.logging)         { sec += 8;  sigs.push('logging_enabled'); }
+      if (cfg.rateLimit)       { sec += 5;  sigs.push('rate_limit_set'); }
+      if (cfg.requireAuth)     { sec += 5;  sigs.push('auth_required'); }
+      out.components.security.score = Math.max(0, Math.min(100, sec));
+      out.components.security.signals = sigs;
+      out.components.security.available = true;
+    } catch { /* best-effort */ }
   }
 
   // --- Composite weighted score ---
@@ -2297,4 +2344,5 @@ module.exports._internals = {
   pickUsageAction,
   resolveAbsoluteUrl,
   buildActionParams,
+  computeWabScore,
 };
