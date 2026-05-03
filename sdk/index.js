@@ -624,6 +624,8 @@ try { WABToolkit = require('../packages/langchain').WABToolkit; } catch {
 
 // SPEC §8.10–§8.13 client helper
 const { SafetyShieldClient } = require('./safety-shield');
+// Phase 19 — Safe Mode trust gate
+const { WABSafeMode, WABSafeModeError, POLICIES: WAB_SAFE_POLICIES } = require('./safe-mode');
 
 module.exports = {
   WABAgent,
@@ -633,4 +635,7 @@ module.exports = {
   WABAgentOS,
   WABToolkit,
   SafetyShieldClient,
+  WABSafeMode,
+  WABSafeModeError,
+  WAB_SAFE_POLICIES,
 };

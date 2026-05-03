@@ -346,6 +346,169 @@ router.get('/accounts/:id/log', authenticateToken, (req, res) => {
   res.json({ log: rows });
 });
 
+/* ───── Provider Kit (Phase 19) ──────────────────────────────────────
+ *
+ * GET /api/providers/kit/:provider?domain=example.com
+ *
+ * Returns a self-contained "Enable AI Access (WAB)" kit for any provider:
+ *   - DNS template (record name, type, value, TTL)
+ *   - wab.json starter (3 templates: messaging | booking | generic)
+ *   - keypair generation script (Node + browser-friendly)
+ *   - validation curl/script
+ *   - provider-specific UI copy + integration hints (panel/CLI/API)
+ *
+ * Public — no auth — so providers can preview before integrating. The
+ * actual record push still goes through /quick-enable (auth + adapter).
+ */
+const PROVIDER_KIT_HINTS = {
+  cloudflare: {
+    label: 'Cloudflare',
+    panel_path: 'DNS → Records → Add record',
+    cli: 'wrangler dns record create',
+    api_doc: 'https://developers.cloudflare.com/api/operations/dns-records-for-a-zone-create-dns-record',
+    button_label: 'Enable AI Access (WAB)',
+    integration_hint: 'Add a one-click action to the DNS dashboard that POSTs to /api/providers/quick-enable. Surface the resulting WAB Score badge on the domain summary card.',
+  },
+  godaddy:    { label: 'GoDaddy',     panel_path: 'My Products → DNS → Records → Add', cli: null, api_doc: 'https://developer.godaddy.com/doc/endpoint/domains', button_label: 'Enable AI Access (WAB)' },
+  namecheap:  { label: 'Namecheap',   panel_path: 'Domain List → Manage → Advanced DNS → Add New Record', cli: null, api_doc: 'https://www.namecheap.com/support/api/methods/', button_label: 'Enable AI Access (WAB)' },
+  route53:    { label: 'AWS Route 53', panel_path: 'Hosted zones → Create record', cli: 'aws route53 change-resource-record-sets', api_doc: 'https://docs.aws.amazon.com/Route53/latest/APIReference/', button_label: 'Enable AI Access (WAB)' },
+  azure:      { label: 'Azure DNS',    panel_path: 'DNS zones → Recordsets → +Recordset', cli: 'az network dns record-set txt', api_doc: 'https://learn.microsoft.com/en-us/rest/api/dns/', button_label: 'Enable AI Access (WAB)' },
+  gcp:        { label: 'Google Cloud DNS', panel_path: 'Network services → Cloud DNS → Zone → Add record set', cli: 'gcloud dns record-sets create', api_doc: 'https://cloud.google.com/dns/docs/reference/rest/v1', button_label: 'Enable AI Access (WAB)' },
+  cpanel:     { label: 'cPanel',       panel_path: 'Zone Editor → Add Record (TXT)', cli: 'cpanel-uapi DNS add_zone_record', api_doc: 'https://api.docs.cpanel.net/', button_label: 'Enable AI Access (WAB)' },
+  plesk:      { label: 'Plesk',        panel_path: 'Domains → DNS Settings → Add Record (TXT)', cli: 'plesk bin dns --add', api_doc: 'https://docs.plesk.com/en-US/obsidian/api-rpc/', button_label: 'Enable AI Access (WAB)' },
+  hostinger:  { label: 'Hostinger',    panel_path: 'hPanel → Domains → DNS / Nameservers → Manage DNS records → Add record (TXT)', cli: null, api_doc: 'https://developers.hostinger.com/', button_label: 'Enable AI Access (WAB)' },
+  generic:    { label: 'Generic DNS', panel_path: 'DNS / Zone editor → Add TXT record', cli: null, api_doc: null, button_label: 'Enable AI Access (WAB)' },
+};
+
+function buildManifestTemplate(domain, kind) {
+  const base = {
+    wab_version: '1.3',
+    name: domain,
+    description: `WAB-enabled site at ${domain}`,
+    endpoint: `https://${domain}/.well-known/wab.json`,
+    contact: { type: 'web', url: `https://${domain}/` },
+  };
+  if (kind === 'messaging') {
+    return { ...base, capabilities: { discovery: true, read: true, execute: true },
+      actions: [
+        { id: 'send_message', name: 'Send a direct message', method: 'POST', url: `https://${domain}/api/messages`, params: [{ name: 'to', type: 'string', required: true }, { name: 'body', type: 'string', required: true }] },
+        { id: 'list_inbox', name: 'List recent messages', method: 'GET', url: `https://${domain}/api/messages`, readonly: true },
+      ] };
+  }
+  if (kind === 'booking') {
+    return { ...base, capabilities: { discovery: true, read: true, execute: true },
+      actions: [
+        { id: 'list_slots', name: 'List available slots', method: 'GET', url: `https://${domain}/api/availability`, readonly: true, params: [{ name: 'date', type: 'string', required: true }] },
+        { id: 'book', name: 'Book a slot', method: 'POST', url: `https://${domain}/api/bookings`, params: [{ name: 'slot_id', type: 'string', required: true }, { name: 'name', type: 'string', required: true }, { name: 'email', type: 'string', required: true }] },
+      ] };
+  }
+  return { ...base, capabilities: { discovery: true, read: true, execute: false },
+    actions: [{ id: 'home', name: 'Home page', method: 'GET', url: `https://${domain}/`, readonly: true }] };
+}
+
+router.get('/kit/:provider', (req, res) => {
+  const provider = String(req.params.provider || '').toLowerCase();
+  const hints = PROVIDER_KIT_HINTS[provider] || PROVIDER_KIT_HINTS.generic;
+
+  const rawDomain = String(req.query.domain || 'example.com');
+  const domain = sanitizeDomainQuick(rawDomain) || 'example.com';
+  const kind = ['messaging', 'booking', 'generic'].includes(req.query.kind) ? req.query.kind : 'generic';
+
+  // Placeholder values — operator should swap these for their own.
+  const samplePk = 'BASE64_PUBLIC_KEY_REPLACE_ME';
+  const txt = `v=wab1;manifest=https://${domain}/.well-known/wab.json;pk=ed25519:${samplePk}`;
+
+  const dns = {
+    name: `_wab.${domain}`,
+    type: 'TXT',
+    value: txt,
+    ttl: 300,
+    instructions: hints.panel_path,
+  };
+
+  const manifest = buildManifestTemplate(domain, kind);
+
+  // Self-contained Node generator script the operator can run locally.
+  const generatorScript =
+`#!/usr/bin/env node
+// One-shot Ed25519 keypair + signed wab.json + DNS TXT line.
+// Save as wab-enable.js and run:  node wab-enable.js ${domain}
+const crypto = require('crypto');
+const fs = require('fs');
+const domain = process.argv[2] || '${domain}';
+const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
+const pubB64  = publicKey.export({ type: 'spki', format: 'der' }).slice(-32).toString('base64');
+const privB64 = privateKey.export({ type: 'pkcs8', format: 'der' }).slice(-32).toString('base64');
+const manifest = ${JSON.stringify(manifest, null, 2)};
+manifest.endpoint = 'https://' + domain + '/.well-known/wab.json';
+const canonical = Buffer.from(JSON.stringify(manifest));
+const sig = crypto.sign(null, canonical, privateKey).toString('base64');
+manifest.signature = { algorithm: 'ed25519', value: sig, key_id: crypto.createHash('sha256').update(pubB64).digest('base64').slice(0, 16), signed_at: new Date().toISOString() };
+fs.writeFileSync('wab.json', JSON.stringify(manifest, null, 2));
+fs.writeFileSync('wab-private.key', privB64);
+console.log('wab.json written. Upload to https://' + domain + '/.well-known/wab.json');
+console.log('Add DNS TXT record:');
+console.log('  Name:  _wab.' + domain);
+console.log('  Type:  TXT');
+console.log('  Value: v=wab1;manifest=https://' + domain + '/.well-known/wab.json;pk=ed25519:' + pubB64);
+console.log('Keep wab-private.key safe — it is your signing identity.');
+`;
+
+  // Validation snippet — runs against the WAB API.
+  const validateScript =
+`# Verify trust + score after publishing:
+curl -s https://webagentbridge.com/api/discovery/trust/${domain} | jq
+curl -s https://webagentbridge.com/api/discovery/score/${domain} | jq
+curl -s 'https://webagentbridge.com/api/discovery/compliance/${domain}?policy=standard' | jq
+`;
+
+  res.json({
+    wab_version: '1.3.0',
+    provider,
+    provider_label: hints.label,
+    domain,
+    kit_kind: kind,
+    button: {
+      label: hints.button_label,
+      action_url: `https://webagentbridge.com/api/providers/quick-enable`,
+      integration_hint: hints.integration_hint || 'Bind this button to a single POST to /api/providers/quick-enable with the user\'s domain. Show the returned wab.json + DNS record in a confirmation modal, then push it via your existing DNS code path.',
+    },
+    dns,
+    manifest,
+    manifest_alternatives: ['messaging', 'booking', 'generic'],
+    scripts: {
+      generator_node: generatorScript,
+      validate_bash: validateScript,
+    },
+    provider_panel: {
+      path: hints.panel_path,
+      cli: hints.cli,
+      api_doc: hints.api_doc,
+    },
+    next_steps: [
+      `Save scripts.generator_node as wab-enable.js and run: node wab-enable.js ${domain}`,
+      `Place the resulting wab.json at https://${domain}/.well-known/wab.json (HTTPS, application/json).`,
+      `Add the DNS TXT record shown in dns.value to ${dns.name}.`,
+      `Verify with scripts.validate_bash — expect trust_score ≥ 80 and signature_valid:true.`,
+      `Embed the badge: <img src="https://webagentbridge.com/badge/${domain}.svg">`,
+    ],
+    score_badge: `https://webagentbridge.com/badge/${domain}.svg`,
+    compliance_endpoint: `https://webagentbridge.com/api/discovery/compliance/${domain}`,
+  });
+});
+
+router.get('/kit', (_req, res) => {
+  res.json({
+    wab_version: '1.3.0',
+    providers: Object.keys(PROVIDER_KIT_HINTS).map(k => ({
+      provider: k,
+      label: PROVIDER_KIT_HINTS[k].label,
+      kit_url: `/api/providers/kit/${k}?domain=example.com`,
+    })),
+    note: 'Pass ?domain=<yourdomain>&kind=messaging|booking|generic to customise.',
+  });
+});
+
 /* ───── Zero-Friction Quick-Enable (Phase 18) ────────────────────────
  * One call, one round-trip:
  *   1. Generate fresh Ed25519 keypair (server never persists private key).
