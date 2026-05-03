@@ -205,6 +205,65 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_wab_ads_status ON wab_ads(status);
   CREATE INDEX IF NOT EXISTS idx_ad_events_ad ON ad_events(ad_id);
   CREATE INDEX IF NOT EXISTS idx_ad_events_created ON ad_events(created_at);
+
+  -- ─── DNS Provider Account System (v1.3) ────────────────────────────
+  -- Stores user-supplied credentials (encrypted at rest) for managed
+  -- one-click WAB DNS Discovery enable/disable across DNS providers
+  -- and registrars. Credentials never leave the server unencrypted.
+  CREATE TABLE IF NOT EXISTS provider_accounts (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    provider_type TEXT NOT NULL CHECK(provider_type IN (
+      'cloudflare','route53','azure','gcp','cpanel','plesk','godaddy','namecheap'
+    )),
+    label TEXT NOT NULL,
+    credentials TEXT NOT NULL,
+    config TEXT DEFAULT '{}',
+    status TEXT DEFAULT 'pending' CHECK(status IN ('pending','active','error','disabled')),
+    last_test_at TEXT,
+    last_test_ok INTEGER DEFAULT 0,
+    last_test_error TEXT,
+    last_sync_at TEXT,
+    domains_count INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_provider_accounts_user ON provider_accounts(user_id);
+  CREATE INDEX IF NOT EXISTS idx_provider_accounts_type ON provider_accounts(provider_type);
+
+  CREATE TABLE IF NOT EXISTS provider_domains (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id TEXT NOT NULL,
+    domain TEXT NOT NULL,
+    zone_id TEXT,
+    wab_enabled INTEGER DEFAULT 0,
+    wab_record_value TEXT,
+    last_action TEXT,
+    last_action_at TEXT,
+    last_action_status TEXT,
+    last_action_error TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT,
+    FOREIGN KEY (account_id) REFERENCES provider_accounts(id) ON DELETE CASCADE,
+    UNIQUE(account_id, domain)
+  );
+  CREATE INDEX IF NOT EXISTS idx_provider_domains_account ON provider_domains(account_id);
+  CREATE INDEX IF NOT EXISTS idx_provider_domains_domain ON provider_domains(domain);
+
+  CREATE TABLE IF NOT EXISTS provider_action_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id TEXT NOT NULL,
+    domain TEXT,
+    action TEXT NOT NULL,
+    status TEXT NOT NULL,
+    duration_ms INTEGER,
+    detail TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (account_id) REFERENCES provider_accounts(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_provider_action_log_account_time
+    ON provider_action_log(account_id, created_at DESC);
 `);
 
 function generateLicenseKey() {

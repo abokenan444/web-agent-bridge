@@ -44,6 +44,9 @@
         <a href="#" data-view="ads">📢 Ads Manager</a>
         <a href="#" data-view="ad-submissions">📋 Ad Submissions</a>
         <a href="#" data-view="workspace">🤖 Agent Workspace</a>
+        <a href="#" data-view="discovery">🔍 DNS Discovery</a>
+        <a href="#" data-view="trust">🛡️ Trust Layer</a>
+        <a href="#" data-view="providers">🔗 DNS Providers</a>
         <a href="#" data-view="api-modules">🔌 API Modules</a>
       </nav>
       <div class="sidebar-footer">
@@ -413,6 +416,117 @@
         </div>
       </div>
 
+      <!-- ═══════════ DNS DISCOVERY ═══════════ -->
+      <div id="view-discovery" class="view">
+        <div class="page-header">
+          <h1>🔍 DNS Discovery</h1>
+          <button class="btn btn-ghost btn-sm" onclick="loadDiscovery()">↻ Refresh</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="label">Runs (30d)</div><div class="value" id="discRuns">–</div></div>
+          <div class="stat-card"><div class="label">Unique Domains</div><div class="value" id="discDomains">–</div></div>
+          <div class="stat-card"><div class="label">Successful Executions</div><div class="value" id="discSuccess">–</div></div>
+          <div class="stat-card"><div class="label">Avg Value Score</div><div class="value" id="discAvgScore">–</div></div>
+        </div>
+        <div class="card" style="margin-top:24px">
+          <h3 style="margin-bottom:16px;">Last 7 Days</h3>
+          <div id="discTimeline"></div>
+        </div>
+        <div class="grid-2" style="margin-top:24px">
+          <div class="card">
+            <h3 style="margin-bottom:16px;">Top Domains (30d)</h3>
+            <div class="table-wrapper"><table>
+              <thead><tr><th>Domain</th><th>Runs</th><th>Avg Score</th></tr></thead>
+              <tbody id="discTopDomains"></tbody>
+            </table></div>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:16px;">Recent Runs</h3>
+            <div class="table-wrapper" style="max-height:480px;overflow-y:auto"><table>
+              <thead><tr><th>Domain</th><th>Mode</th><th>Action</th><th>OK</th><th>Score</th><th>When</th></tr></thead>
+              <tbody id="discRunsTable"></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ TRUST LAYER ═══════════ -->
+      <div id="view-trust" class="view">
+        <div class="page-header">
+          <h1>🛡️ Trust Layer (v1.3)</h1>
+          <a href="/wab-trust" target="_blank" class="btn btn-primary btn-sm">Public Verifier</a>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="label">Verifications (30d)</div><div class="value" id="trustRuns">–</div></div>
+          <div class="stat-card"><div class="label">Domains Checked</div><div class="value" id="trustDomains">–</div></div>
+          <div class="stat-card"><div class="label">Avg Trust Score</div><div class="value" id="trustAvgScore">–</div></div>
+          <div class="stat-card"><div class="label">Valid Signatures</div><div class="value" id="trustValid">–</div></div>
+          <div class="stat-card"><div class="label">Signed Manifests</div><div class="value" id="trustSigned">–</div></div>
+          <div class="stat-card"><div class="label">Domains with PK</div><div class="value" id="trustPk">–</div></div>
+        </div>
+        <div class="grid-2" style="margin-top:24px">
+          <div class="card">
+            <h3 style="margin-bottom:16px;">Trust Leaderboard</h3>
+            <div class="table-wrapper"><table>
+              <thead><tr><th>Domain</th><th>Score</th><th>Last Run</th></tr></thead>
+              <tbody id="trustLeaderboard"></tbody>
+            </table></div>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:16px;">Recent Verifications</h3>
+            <div class="table-wrapper" style="max-height:480px;overflow-y:auto"><table>
+              <thead><tr><th>Domain</th><th>Score</th><th>DNSSEC</th><th>PK</th><th>Sig</th><th>HTTPS</th><th>When</th></tr></thead>
+              <tbody id="trustRunsTable"></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ DNS PROVIDERS ═══════════ -->
+      <div id="view-providers" class="view">
+        <div class="page-header">
+          <h1>🔗 DNS Providers</h1>
+          <button class="btn btn-ghost btn-sm" onclick="loadProvidersAdmin()">↻ Refresh</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="label">Connected Accounts</div><div class="value" id="provAccounts">–</div></div>
+          <div class="stat-card"><div class="label">Active</div><div class="value" id="provActive" style="color:#4ade80">–</div></div>
+          <div class="stat-card"><div class="label">Errored</div><div class="value" id="provErrored" style="color:#f87171">–</div></div>
+          <div class="stat-card"><div class="label">Domains Managed</div><div class="value" id="provDomains">–</div></div>
+          <div class="stat-card"><div class="label">_wab Records Live</div><div class="value" id="provWab" style="color:#4ade80">–</div></div>
+        </div>
+        <div class="card" style="margin-top:24px">
+          <h3 style="margin-bottom:16px;">Accounts by Provider</h3>
+          <div class="table-wrapper"><table>
+            <thead><tr><th>Provider</th><th>Accounts</th><th>Active</th><th>Domains</th></tr></thead>
+            <tbody id="provByType"></tbody>
+          </table></div>
+        </div>
+        <div class="grid-2" style="margin-top:24px">
+          <div class="card">
+            <h3 style="margin-bottom:16px;">All Connected Accounts</h3>
+            <div class="table-wrapper" style="max-height:480px;overflow-y:auto"><table>
+              <thead><tr><th>User</th><th>Provider</th><th>Label</th><th>Status</th><th>Domains</th><th>Last Test</th></tr></thead>
+              <tbody id="provAccountsTable"></tbody>
+            </table></div>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:16px;">Recent Provider Actions</h3>
+            <div class="table-wrapper" style="max-height:480px;overflow-y:auto"><table>
+              <thead><tr><th>Provider</th><th>Domain</th><th>Action</th><th>Status</th><th>ms</th><th>When</th></tr></thead>
+              <tbody id="provActionsTable"></tbody>
+            </table></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:24px">
+          <h3 style="margin-bottom:16px;">Domains Under Management</h3>
+          <div class="table-wrapper" style="max-height:480px;overflow-y:auto"><table>
+            <thead><tr><th>User</th><th>Provider</th><th>Domain</th><th>WAB</th><th>Last Action</th><th>Status</th></tr></thead>
+            <tbody id="provDomainsTable"></tbody>
+          </table></div>
+        </div>
+      </div>
+
       <!-- ═══════════ API MODULES ═══════════ -->
       <div id="view-api-modules" class="view">
         <div class="page-header">
@@ -421,10 +535,10 @@
         </div>
 
         <div class="stats-grid">
-          <div class="stat-card"><div class="label">Total Modules</div><div class="value">10</div></div>
-          <div class="stat-card"><div class="label">Open Source</div><div class="value" style="color:#4ade80">1</div></div>
-          <div class="stat-card"><div class="label">Partial Open</div><div class="value" style="color:#fbbf24">5</div></div>
-          <div class="stat-card"><div class="label">Fully Closed</div><div class="value" style="color:#f87171">4</div></div>
+          <div class="stat-card"><div class="label">Total Modules</div><div class="value" id="modTotal">–</div></div>
+          <div class="stat-card"><div class="label">Open Source</div><div class="value" id="modOpen" style="color:#4ade80">–</div></div>
+          <div class="stat-card"><div class="label">Partial Open</div><div class="value" id="modPartial" style="color:#fbbf24">–</div></div>
+          <div class="stat-card"><div class="label">Fully Closed</div><div class="value" id="modClosed" style="color:#f87171">–</div></div>
           <div class="stat-card"><div class="label">API Keys Issued</div><div class="value" id="apiKeysCount">–</div></div>
         </div>
 
@@ -432,19 +546,8 @@
           <h3 style="margin-bottom:16px;">Module Status</h3>
           <div class="table-wrapper">
             <table>
-              <thead><tr><th>Module</th><th>Route</th><th>Type</th><th>Min Plan</th><th>Status</th></tr></thead>
-              <tbody>
-                <tr><td>Agent Firewall</td><td><code>/api/v1/firewall</code></td><td>🟡 Partial</td><td>PRO</td><td><span style="color:#4ade80">● Active</span></td></tr>
-                <tr><td>Cryptographic Notary</td><td><code>/api/v1/notary</code></td><td>🔴 Closed</td><td>BUSINESS</td><td><span style="color:#94a3b8">● Engine Required</span></td></tr>
-                <tr><td>Dark Pattern Detector</td><td><code>/api/v1/dark-pattern</code></td><td>🔴 Closed</td><td>FREE</td><td><span style="color:#94a3b8">● Engine Required</span></td></tr>
-                <tr><td>Collective Bargaining</td><td><code>/api/v1/bargaining</code></td><td>🟡 Partial</td><td>PRO</td><td><span style="color:#4ade80">● Active</span></td></tr>
-                <tr><td>Gov Intelligence</td><td><code>/api/v1/gov</code></td><td>🔴 Closed</td><td>BUSINESS</td><td><span style="color:#94a3b8">● Engine Required</span></td></tr>
-                <tr><td>Price Time Machine</td><td><code>/api/v1/price</code></td><td>🟡 Partial</td><td>FREE</td><td><span style="color:#4ade80">● Active</span></td></tr>
-                <tr><td>Neural Engine</td><td><code>/api/v1/neural</code></td><td>🔴 Closed</td><td>PRO</td><td><span style="color:#94a3b8">● Engine Required</span></td></tr>
-                <tr><td>WAB Protocol</td><td><code>/api/v1/protocol</code></td><td>🟢 Open</td><td>FREE</td><td><span style="color:#4ade80">● Active</span></td></tr>
-                <tr><td>Bounty Network</td><td><code>/api/v1/bounty</code></td><td>🟡 Partial</td><td>FREE</td><td><span style="color:#4ade80">● Active</span></td></tr>
-                <tr><td>Affiliate Intelligence</td><td><code>/api/v1/affiliate</code></td><td>🟡 Partial</td><td>PRO</td><td><span style="color:#4ade80">● Active</span></td></tr>
-              </tbody>
+              <thead><tr><th>Module</th><th>Route</th><th>Type</th></tr></thead>
+              <tbody id="modulesTableBody"></tbody>
             </table>
           </div>
         </div>
@@ -514,6 +617,10 @@
         case 'ads': loadAds(); break;
         case 'ad-submissions': loadAdSubmissions(); break;
         case 'workspace': loadWorkspace(); break;
+        case 'discovery': loadDiscovery(); break;
+        case 'trust': loadTrust(); break;
+        case 'providers': loadProvidersAdmin(); break;
+        case 'api-modules': loadApiModules(); break;
       }
     }
 
@@ -1238,6 +1345,116 @@
         });
         loadWorkspace();
       } catch (err) { console.error(err); }
+    }
+
+    // ─── DNS Discovery ─────────────────────────────────────────────────
+    async function loadDiscovery() {
+      try {
+        const [statsRes, runsRes] = await Promise.all([
+          fetch(`${API}/discovery/stats`, { headers: headers() }),
+          fetch(`${API}/discovery/runs?limit=50`, { headers: headers() })
+        ]);
+        const stats = await statsRes.json();
+        const runs = (await runsRes.json()).runs || [];
+        const t = stats.totals || {};
+        document.getElementById('discRuns').textContent = t.runs || 0;
+        document.getElementById('discDomains').textContent = t.domains || 0;
+        document.getElementById('discSuccess').textContent = t.successes || 0;
+        document.getElementById('discAvgScore').textContent = t.avg_score ? Number(t.avg_score).toFixed(2) : '0';
+        const tl = stats.last7d || [];
+        document.getElementById('discTimeline').innerHTML = tl.length
+          ? tl.map(d => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);"><span>${esc(d.day)}</span><span><strong>${d.runs}</strong> runs · ${d.successes} ok</span></div>`).join('')
+          : '<div style="color:var(--text-muted)">No discovery activity yet.</div>';
+        document.getElementById('discTopDomains').innerHTML = (stats.topDomains || []).map(d =>
+          `<tr><td>${esc(d.domain)}</td><td>${d.runs}</td><td>${d.score ? Number(d.score).toFixed(2) : '0'}</td></tr>`
+        ).join('') || '<tr><td colspan="3" style="color:var(--text-muted)">No data</td></tr>';
+        document.getElementById('discRunsTable').innerHTML = runs.map(r =>
+          `<tr><td>${esc(r.domain)}</td><td>${esc(r.mode)}</td><td>${esc(r.selected_action || '—')}</td><td>${r.execution_succeeded ? '✅' : (r.execution_attempted ? '❌' : '·')}</td><td>${r.value_score ? Number(r.value_score).toFixed(2) : '0'}</td><td><small>${esc(r.created_at)}</small></td></tr>`
+        ).join('') || '<tr><td colspan="6" style="color:var(--text-muted)">No runs</td></tr>';
+      } catch (e) { console.error('discovery:', e); }
+    }
+
+    // ─── Trust Layer ────────────────────────────────────────────────────
+    async function loadTrust() {
+      try {
+        const [statsRes, runsRes] = await Promise.all([
+          fetch(`${API}/trust/stats`, { headers: headers() }),
+          fetch(`${API}/trust/runs?limit=50`, { headers: headers() })
+        ]);
+        const stats = await statsRes.json();
+        const runs = (await runsRes.json()).runs || [];
+        const t = stats.totals || {};
+        document.getElementById('trustRuns').textContent = t.runs || 0;
+        document.getElementById('trustDomains').textContent = t.domains || 0;
+        document.getElementById('trustAvgScore').textContent = t.avg_score ? Math.round(Number(t.avg_score)) : '0';
+        document.getElementById('trustValid').textContent = t.valid_sigs || 0;
+        document.getElementById('trustSigned').textContent = t.signed_manifests || 0;
+        document.getElementById('trustPk').textContent = t.domains_with_pk || 0;
+        document.getElementById('trustLeaderboard').innerHTML = (stats.leaderboard || []).map(d =>
+          `<tr><td>${esc(d.domain)}</td><td><strong>${d.score}</strong></td><td><small>${esc(d.last_run)}</small></td></tr>`
+        ).join('') || '<tr><td colspan="3" style="color:var(--text-muted)">No verifications yet</td></tr>';
+        document.getElementById('trustRunsTable').innerHTML = runs.map(r =>
+          `<tr><td>${esc(r.domain)}</td><td>${r.score}</td><td>${esc(r.dnssec || '—')}</td><td>${r.has_pk ? '✅' : '·'}</td><td>${r.sig_valid ? '✅' : (r.signed_manifest ? '❌' : '·')}</td><td>${r.https_ok ? '✅' : '·'}</td><td><small>${esc(r.created_at)}</small></td></tr>`
+        ).join('') || '<tr><td colspan="7" style="color:var(--text-muted)">No runs</td></tr>';
+      } catch (e) { console.error('trust:', e); }
+    }
+
+    // ─── DNS Providers Admin View ──────────────────────────────────────
+    const PROV_LABELS = {
+      cloudflare: 'Cloudflare', route53: 'AWS Route 53', azure: 'Azure DNS', gcp: 'Google Cloud DNS',
+      cpanel: 'cPanel/WHM', plesk: 'Plesk', godaddy: 'GoDaddy', namecheap: 'Namecheap'
+    };
+    async function loadProvidersAdmin() {
+      try {
+        const [statsRes, accRes, domRes] = await Promise.all([
+          fetch(`${API}/providers/stats`, { headers: headers() }),
+          fetch(`${API}/providers/accounts?limit=200`, { headers: headers() }),
+          fetch(`${API}/providers/domains?limit=200`, { headers: headers() })
+        ]);
+        const stats = await statsRes.json();
+        const accs = (await accRes.json()).accounts || [];
+        const doms = (await domRes.json()).domains || [];
+        const t = stats.totals || {};
+        document.getElementById('provAccounts').textContent = t.accounts || 0;
+        document.getElementById('provActive').textContent = t.active || 0;
+        document.getElementById('provErrored').textContent = t.errored || 0;
+        document.getElementById('provDomains').textContent = t.domains_under_management || 0;
+        document.getElementById('provWab').textContent = t.wab_enabled_domains || 0;
+
+        document.getElementById('provByType').innerHTML = (stats.byProvider || []).map(p =>
+          `<tr><td>${esc(PROV_LABELS[p.provider_type] || p.provider_type)}</td><td>${p.accounts}</td><td>${p.active || 0}</td><td>${p.domains || 0}</td></tr>`
+        ).join('') || '<tr><td colspan="4" style="color:var(--text-muted)">No providers connected</td></tr>';
+
+        document.getElementById('provAccountsTable').innerHTML = accs.map(a => {
+          const statusColor = a.status === 'active' ? '#4ade80' : (a.status === 'error' ? '#f87171' : '#94a3b8');
+          return `<tr><td>${esc(a.user_email || '—')}</td><td>${esc(PROV_LABELS[a.provider_type] || a.provider_type)}</td><td>${esc(a.label)}</td><td><span style="color:${statusColor}">● ${esc(a.status)}</span></td><td>${a.domains_count || 0}</td><td><small>${esc(a.last_test_at || 'never')}</small></td></tr>`;
+        }).join('') || '<tr><td colspan="6" style="color:var(--text-muted)">No accounts</td></tr>';
+
+        document.getElementById('provActionsTable').innerHTML = (stats.recentActions || []).map(a => {
+          const statusColor = a.status === 'ok' ? '#4ade80' : '#f87171';
+          return `<tr><td>${esc(PROV_LABELS[a.provider_type] || a.provider_type || '—')}</td><td>${esc(a.domain || '—')}</td><td>${esc(a.action)}</td><td><span style="color:${statusColor}">${esc(a.status)}</span></td><td>${a.duration_ms || '—'}</td><td><small>${esc(a.created_at)}</small></td></tr>`;
+        }).join('') || '<tr><td colspan="6" style="color:var(--text-muted)">No actions yet</td></tr>';
+
+        document.getElementById('provDomainsTable').innerHTML = doms.map(d =>
+          `<tr><td>${esc(d.user_email || '—')}</td><td>${esc(PROV_LABELS[d.provider_type] || d.provider_type)}</td><td>${esc(d.domain)}</td><td>${d.wab_enabled ? '<span style="color:#4ade80">● ON</span>' : '<span style="color:#94a3b8">○ OFF</span>'}</td><td>${esc(d.last_action || '—')}</td><td>${esc(d.last_action_status || '—')}${d.last_action_error ? ' <small style="color:#f87171">'+esc(d.last_action_error)+'</small>' : ''}</td></tr>`
+        ).join('') || '<tr><td colspan="6" style="color:var(--text-muted)">No domains</td></tr>';
+      } catch (e) { console.error('providers admin:', e); }
+    }
+
+    // ─── API Modules (real DB-driven) ──────────────────────────────────
+    async function loadApiModules() {
+      try {
+        const res = await fetch(`${API}/modules/stats`, { headers: headers() });
+        const m = await res.json();
+        document.getElementById('modTotal').textContent = m.total || 0;
+        document.getElementById('modOpen').textContent = m.open || 0;
+        document.getElementById('modPartial').textContent = m.partial || 0;
+        document.getElementById('modClosed').textContent = m.closed || 0;
+        const typeIcon = (o) => o === 'open' ? '🟢 Open' : (o === 'partial' ? '🟡 Partial' : '🔴 Closed');
+        document.getElementById('modulesTableBody').innerHTML = (m.modules || []).map(mod =>
+          `<tr><td>${esc(mod.label)}</td><td><code>/api/${esc(mod.id)}</code></td><td>${typeIcon(mod.openness)}</td></tr>`
+        ).join('');
+      } catch (e) { console.error('modules:', e); }
     }
 
     // ─── Styles ─────────────────────────────────────────────────────────

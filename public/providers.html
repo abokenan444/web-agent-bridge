@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DNS Providers — Web Agent Bridge</title>
+  <meta name="description" content="Connect Cloudflare, Route 53, Azure DNS, GCP, cPanel, Plesk, GoDaddy, or Namecheap and toggle WAB DNS Discovery on every domain you own — server-side, encrypted, audit-logged.">
+  <script>
+    (function () {
+      try { if (!localStorage.getItem('wab_token')) window.location.replace('/login'); }
+      catch (e) { window.location.replace('/login'); }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    body { background: #0b0f17; color: #e5e7eb; font-family: 'Inter', system-ui, sans-serif; margin: 0; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; padding-bottom:24px; border-bottom:1px solid #1f2937; margin-bottom:32px; }
+    .topbar h1 { font-size:1.6rem; margin:0; font-weight:700; }
+    .topbar .actions { display:flex; gap:12px; }
+    .btn { display:inline-block; padding:10px 18px; border-radius:8px; border:1px solid #374151; background:#1f2937; color:#e5e7eb; font-weight:600; cursor:pointer; font-size:0.92rem; text-decoration:none; transition:all 0.15s; }
+    .btn:hover { background:#374151; border-color:#4b5563; }
+    .btn-primary { background:linear-gradient(135deg,#3b82f6,#1d4ed8); border-color:transparent; color:#fff; }
+    .btn-primary:hover { filter:brightness(1.1); }
+    .btn-danger { background:#7f1d1d; border-color:#991b1b; color:#fee2e2; }
+    .btn-danger:hover { background:#991b1b; }
+    .btn-success { background:#065f46; border-color:#047857; color:#d1fae5; }
+    .btn-sm { padding:6px 12px; font-size:0.82rem; }
+    .grid { display:grid; gap:20px; }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    @media(max-width:900px){ .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} }
+    .card { background:#111827; border:1px solid #1f2937; border-radius:12px; padding:24px; }
+    .card h2 { font-size:1.15rem; margin:0 0 16px; }
+    .stat { background:#111827; border:1px solid #1f2937; border-radius:12px; padding:18px; text-align:center; }
+    .stat .label { color:#94a3b8; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.06em; }
+    .stat .value { font-size:1.8rem; font-weight:800; margin-top:6px; }
+    .provider-pick { border:1px solid #1f2937; border-radius:10px; padding:16px; cursor:pointer; transition:all 0.15s; background:#0f172a; }
+    .provider-pick:hover { border-color:#3b82f6; background:#111827; }
+    .provider-pick h3 { margin:0 0 4px; font-size:1rem; }
+    .provider-pick small { color:#94a3b8; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:10px 12px; text-align:left; border-bottom:1px solid #1f2937; font-size:0.92rem; }
+    th { color:#94a3b8; font-weight:600; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; }
+    .pill { display:inline-block; padding:3px 10px; border-radius:999px; font-size:0.75rem; font-weight:600; }
+    .pill-ok { background:#064e3b; color:#6ee7b7; }
+    .pill-err { background:#7f1d1d; color:#fecaca; }
+    .pill-pending { background:#374151; color:#cbd5e1; }
+    .form-group { margin-bottom:14px; }
+    .form-group label { display:block; margin-bottom:6px; font-size:0.85rem; color:#cbd5e1; font-weight:500; }
+    .form-group input, .form-group textarea, .form-group select {
+      width:100%; padding:10px 12px; background:#0f172a; border:1px solid #374151;
+      border-radius:8px; color:#e5e7eb; font-family:inherit; font-size:0.9rem;
+    }
+    .form-group input:focus, .form-group textarea:focus { outline:none; border-color:#3b82f6; }
+    .form-group small.help { display:block; color:#94a3b8; margin-top:4px; font-size:0.78rem; }
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:50; padding:24px; }
+    .modal.active { display:flex; }
+    .modal-content { background:#111827; border:1px solid #1f2937; border-radius:14px; padding:28px; max-width:560px; width:100%; max-height:85vh; overflow-y:auto; }
+    .modal-content h2 { margin-top:0; }
+    .alert { padding:12px 14px; border-radius:8px; margin-bottom:16px; font-size:0.9rem; }
+    .alert-ok { background:#064e3b; border:1px solid #047857; color:#d1fae5; }
+    .alert-err { background:#7f1d1d; border:1px solid #991b1b; color:#fecaca; }
+    .empty { text-align:center; color:#94a3b8; padding:40px 20px; }
+    code { background:#0f172a; padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono', monospace; font-size:0.82rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h1>🔗 DNS Providers</h1>
+        <div style="color:#94a3b8;font-size:0.9rem;margin-top:4px;">Connect your DNS provider to enable one-click WAB Discovery on every domain you own.</div>
+      </div>
+      <div class="actions">
+        <a href="/dashboard" class="btn">← Dashboard</a>
+        <button class="btn btn-primary" onclick="openProviderPicker()">+ Connect Provider</button>
+      </div>
+    </div>
+
+    <div id="alertBox"></div>
+
+    <div class="grid grid-4" style="margin-bottom:32px;">
+      <div class="stat"><div class="label">Connected</div><div class="value" id="kAccounts">–</div></div>
+      <div class="stat"><div class="label">Active</div><div class="value" id="kActive" style="color:#4ade80">–</div></div>
+      <div class="stat"><div class="label">Domains</div><div class="value" id="kDomains">–</div></div>
+      <div class="stat"><div class="label">_wab Live</div><div class="value" id="kWab" style="color:#4ade80">–</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:32px;">
+      <h2>Your Connected Accounts</h2>
+      <div id="accountsList"></div>
+    </div>
+
+    <div class="card" id="domainsCard" style="display:none;">
+      <h2 id="domainsHeader">Domains</h2>
+      <div id="domainsList"></div>
+    </div>
+  </div>
+
+  <!-- Provider picker modal -->
+  <div class="modal" id="pickerModal">
+    <div class="modal-content">
+      <h2>Choose your DNS provider</h2>
+      <div class="grid grid-2" id="pickerGrid"></div>
+      <div style="text-align:right; margin-top:16px;"><button class="btn" onclick="closeModal('pickerModal')">Cancel</button></div>
+    </div>
+  </div>
+
+  <!-- Connect form modal -->
+  <div class="modal" id="connectModal">
+    <div class="modal-content">
+      <h2 id="connectTitle">Connect Provider</h2>
+      <form id="connectForm" onsubmit="event.preventDefault(); submitConnect();">
+        <input type="hidden" id="connectType">
+        <div class="form-group">
+          <label>Label (your name for this account)</label>
+          <input type="text" id="connectLabel" placeholder="My Cloudflare account">
+        </div>
+        <div id="credFields"></div>
+        <div id="configFields"></div>
+        <div id="connectAlert"></div>
+        <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:16px;">
+          <button type="button" class="btn" onclick="closeModal('connectModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="connectSubmit">Save & Test</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API = '/api/providers';
+    const TOKEN = localStorage.getItem('wab_token');
+    let PROVIDER_TYPES = [];
+    let ACCOUNTS = [];
+    let SELECTED_ACCOUNT = null;
+
+    function H() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKEN}` }; }
+    function esc(s){ const d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+    function openModal(id){ document.getElementById(id).classList.add('active'); }
+    function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+    function flash(msg, ok=true){
+      const el = document.getElementById('alertBox');
+      el.innerHTML = `<div class="alert ${ok?'alert-ok':'alert-err'}">${esc(msg)}</div>`;
+      setTimeout(() => { el.innerHTML = ''; }, 6000);
+    }
+
+    async function loadTypes() {
+      const r = await fetch(`${API}/types`);
+      const j = await r.json();
+      PROVIDER_TYPES = j.providers || [];
+    }
+
+    async function loadAccounts() {
+      const r = await fetch(`${API}/accounts`, { headers: H() });
+      if (r.status === 401) { window.location = '/login'; return; }
+      const j = await r.json();
+      ACCOUNTS = j.accounts || [];
+      renderAccounts();
+      renderStats();
+    }
+
+    function renderStats() {
+      const total = ACCOUNTS.length;
+      const active = ACCOUNTS.filter(a => a.status === 'active').length;
+      const domains = ACCOUNTS.reduce((n, a) => n + (a.domains_count || 0), 0);
+      document.getElementById('kAccounts').textContent = total;
+      document.getElementById('kActive').textContent = active;
+      document.getElementById('kDomains').textContent = domains;
+      document.getElementById('kWab').textContent = '…';
+      // _wab live count comes from the currently-selected account view
+    }
+
+    function statusPill(a) {
+      if (a.status === 'active') return '<span class="pill pill-ok">● active</span>';
+      if (a.status === 'error') return `<span class="pill pill-err">● error</span>`;
+      return '<span class="pill pill-pending">○ pending</span>';
+    }
+
+    function renderAccounts() {
+      const root = document.getElementById('accountsList');
+      if (!ACCOUNTS.length) {
+        root.innerHTML = '<div class="empty">You have not connected any DNS provider yet.<br><br><button class="btn btn-primary" onclick="openProviderPicker()">+ Connect your first provider</button></div>';
+        return;
+      }
+      root.innerHTML = '<table><thead><tr><th>Provider</th><th>Label</th><th>Status</th><th>Domains</th><th>Last Test</th><th></th></tr></thead><tbody>' +
+        ACCOUNTS.map(a => {
+          const t = PROVIDER_TYPES.find(p => p.type === a.provider_type) || { label: a.provider_type };
+          const errMsg = a.last_test_error ? `<br><small style="color:#fca5a5">${esc(a.last_test_error)}</small>` : '';
+          return `<tr>
+            <td><strong>${esc(t.label)}</strong></td>
+            <td>${esc(a.label)}</td>
+            <td>${statusPill(a)}${errMsg}</td>
+            <td>${a.domains_count || 0}</td>
+            <td><small>${esc(a.last_test_at || 'never')}</small></td>
+            <td style="text-align:right; white-space:nowrap;">
+              <button class="btn btn-sm" onclick="testAccount('${a.id}')">Test</button>
+              <button class="btn btn-sm" onclick="syncAccount('${a.id}')">Sync</button>
+              <button class="btn btn-sm" onclick="viewDomains('${a.id}')">Domains</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteAccount('${a.id}')">Delete</button>
+            </td>
+          </tr>`;
+        }).join('') + '</tbody></table>';
+    }
+
+    function openProviderPicker() {
+      const grid = document.getElementById('pickerGrid');
+      grid.innerHTML = PROVIDER_TYPES.map(p => `
+        <div class="provider-pick" onclick="openConnect('${p.type}')">
+          <h3>${esc(p.label)}</h3>
+          <small>${(p.credential_fields || []).map(f => esc(f.label)).join(' · ')}</small>
+        </div>`).join('');
+      openModal('pickerModal');
+    }
+
+    function openConnect(type) {
+      closeModal('pickerModal');
+      const p = PROVIDER_TYPES.find(x => x.type === type);
+      if (!p) return;
+      document.getElementById('connectType').value = type;
+      document.getElementById('connectTitle').textContent = `Connect ${p.label}`;
+      document.getElementById('connectLabel').value = p.label;
+      document.getElementById('connectAlert').innerHTML = '';
+      document.getElementById('credFields').innerHTML = (p.credential_fields || []).map(renderField).join('');
+      document.getElementById('configFields').innerHTML = (p.config_fields || []).length
+        ? '<hr style="border-color:#1f2937;margin:16px 0"><h3 style="font-size:0.95rem;color:#94a3b8;margin:0 0 12px">Configuration</h3>' + (p.config_fields).map(renderField).join('')
+        : '';
+      openModal('connectModal');
+    }
+
+    function renderField(f) {
+      const id = `f_${f.key}`;
+      const required = f.required ? 'required' : '';
+      const help = f.help ? `<small class="help">${esc(f.help)}</small>` : '';
+      if (f.type === 'textarea') {
+        return `<div class="form-group"><label>${esc(f.label)}${f.required?' *':''}</label><textarea id="${id}" name="${esc(f.key)}" rows="6" ${required}></textarea>${help}</div>`;
+      }
+      const t = f.type === 'password' ? 'password' : 'text';
+      return `<div class="form-group"><label>${esc(f.label)}${f.required?' *':''}</label><input type="${t}" id="${id}" name="${esc(f.key)}" ${required}>${help}</div>`;
+    }
+
+    async function submitConnect() {
+      const type = document.getElementById('connectType').value;
+      const p = PROVIDER_TYPES.find(x => x.type === type);
+      const credentials = {};
+      const config = {};
+      for (const f of (p.credential_fields || [])) credentials[f.key] = document.getElementById(`f_${f.key}`).value.trim();
+      for (const f of (p.config_fields || [])) config[f.key] = document.getElementById(`f_${f.key}`).value.trim();
+      const label = document.getElementById('connectLabel').value.trim() || p.label;
+      const alertEl = document.getElementById('connectAlert');
+      const submitBtn = document.getElementById('connectSubmit');
+      submitBtn.disabled = true; submitBtn.textContent = 'Saving…';
+      alertEl.innerHTML = '';
+      try {
+        const r = await fetch(`${API}/accounts`, {
+          method: 'POST', headers: H(),
+          body: JSON.stringify({ provider_type: type, label, credentials, config })
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || 'Failed to save');
+        alertEl.innerHTML = '<div class="alert alert-ok">Saved. Testing connection…</div>';
+        const t = await fetch(`${API}/accounts/${j.account.id}/test`, { method: 'POST', headers: H() });
+        const tj = await t.json();
+        if (!t.ok) {
+          alertEl.innerHTML = `<div class="alert alert-err">Saved, but test failed: ${esc(tj.error)}</div>`;
+        } else {
+          alertEl.innerHTML = `<div class="alert alert-ok">✅ Connected (${esc(tj.detail)}). Syncing zones…</div>`;
+          await fetch(`${API}/accounts/${j.account.id}/sync`, { method: 'POST', headers: H() });
+          setTimeout(() => { closeModal('connectModal'); flash('Provider connected and synced.'); loadAccounts(); }, 600);
+          return;
+        }
+      } catch (e) {
+        alertEl.innerHTML = `<div class="alert alert-err">${esc(e.message)}</div>`;
+      } finally {
+        submitBtn.disabled = false; submitBtn.textContent = 'Save & Test';
+      }
+      loadAccounts();
+    }
+
+    async function testAccount(id) {
+      flash('Testing…');
+      const r = await fetch(`${API}/accounts/${id}/test`, { method: 'POST', headers: H() });
+      const j = await r.json();
+      flash(r.ok ? `✅ ${j.detail || 'OK'}` : `❌ ${j.error}`, r.ok);
+      loadAccounts();
+    }
+
+    async function syncAccount(id) {
+      flash('Syncing zones…');
+      const r = await fetch(`${API}/accounts/${id}/sync`, { method: 'POST', headers: H() });
+      const j = await r.json();
+      flash(r.ok ? `✅ Synced ${j.count} domains` : `❌ ${j.error}`, r.ok);
+      loadAccounts();
+      if (SELECTED_ACCOUNT === id) viewDomains(id);
+    }
+
+    async function deleteAccount(id) {
+      if (!confirm('Delete this provider account? Stored credentials will be erased. This will not remove DNS records you already published.')) return;
+      const r = await fetch(`${API}/accounts/${id}`, { method: 'DELETE', headers: H() });
+      flash(r.ok ? 'Account deleted.' : 'Delete failed.', r.ok);
+      if (SELECTED_ACCOUNT === id) {
+        SELECTED_ACCOUNT = null;
+        document.getElementById('domainsCard').style.display = 'none';
+      }
+      loadAccounts();
+    }
+
+    async function viewDomains(id) {
+      SELECTED_ACCOUNT = id;
+      const acc = ACCOUNTS.find(a => a.id === id);
+      const card = document.getElementById('domainsCard');
+      card.style.display = 'block';
+      const t = PROVIDER_TYPES.find(p => p.type === acc.provider_type) || { label: acc.provider_type };
+      document.getElementById('domainsHeader').textContent = `Domains — ${t.label} · ${acc.label}`;
+      document.getElementById('domainsList').innerHTML = '<div class="empty">Loading…</div>';
+      const r = await fetch(`${API}/accounts/${id}/domains`, { headers: H() });
+      const j = await r.json();
+      const domains = j.domains || [];
+      const wabLive = domains.filter(d => d.wab_enabled).length;
+      document.getElementById('kWab').textContent = wabLive;
+      if (!domains.length) {
+        document.getElementById('domainsList').innerHTML = '<div class="empty">No domains synced yet. Click <strong>Sync</strong> on this account to fetch them from your provider.</div>';
+        return;
+      }
+      document.getElementById('domainsList').innerHTML = '<table><thead><tr><th>Domain</th><th>WAB</th><th>Last Action</th><th></th></tr></thead><tbody>' +
+        domains.map(d => `<tr>
+          <td><strong>${esc(d.domain)}</strong>${d.zone_id ? `<br><small style="color:#94a3b8">zone: <code>${esc(d.zone_id)}</code></small>` : ''}</td>
+          <td>${d.wab_enabled ? '<span class="pill pill-ok">● ON</span>' : '<span class="pill pill-pending">○ OFF</span>'}</td>
+          <td>${d.last_action ? `${esc(d.last_action)} · <span style="color:${d.last_action_status==='ok'?'#6ee7b7':'#fca5a5'}">${esc(d.last_action_status||'—')}</span><br><small style="color:#94a3b8">${esc(d.last_action_at||'')}</small>${d.last_action_error?'<br><small style="color:#fca5a5">'+esc(d.last_action_error)+'</small>':''}` : '<small style="color:#94a3b8">—</small>'}</td>
+          <td style="text-align:right;white-space:nowrap;">
+            ${d.wab_enabled
+              ? `<button class="btn btn-sm btn-danger" onclick="toggleWab('${id}','${esc(d.domain)}',false)">Disable WAB</button>`
+              : `<button class="btn btn-sm btn-success" onclick="toggleWab('${id}','${esc(d.domain)}',true)">Enable WAB</button>`}
+          </td>
+        </tr>`).join('') + '</tbody></table>';
+    }
+
+    async function toggleWab(accountId, domain, on) {
+      const path = on ? 'enable-wab' : 'disable-wab';
+      flash(`${on?'Enabling':'Disabling'} WAB on ${domain}…`);
+      const r = await fetch(`${API}/accounts/${accountId}/domains/${encodeURIComponent(domain)}/${path}`, {
+        method: 'POST', headers: H()
+      });
+      const j = await r.json();
+      flash(r.ok ? `✅ ${domain}: ${j.detail || 'ok'}` : `❌ ${domain}: ${j.error}`, r.ok);
+      viewDomains(accountId);
+    }
+
+    (async function init() {
+      await loadTypes();
+      await loadAccounts();
+    })();
+  </script>
+</body>
+</html>

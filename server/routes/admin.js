@@ -18,7 +18,8 @@ const {
   findUserByEmail,
   findSiteById,
   getAnalyticsBySite,
-  getAnalyticsTimeline
+  getAnalyticsTimeline,
+  db
 } = require('../models/db');
 const { sendEmail } = require('../services/email');
 const { createCheckoutSession, createPortalSession, isStripeConfigured, getStripePrices } = require('../services/stripe');
@@ -255,6 +256,182 @@ router.post('/notifications/send', authenticateAdmin, (req, res) => {
     res.json(result);
   }).catch(err => {
     res.status(500).json({ success: false, error: err.message });
+  });
+});
+
+// ─── DNS Discovery Oversight ──────────────────────────────────────────
+//  Real-data views into discovery_usage_runs / discovery_trust_runs.
+//  Tables are auto-created by routes/discovery.js.
+
+function tableExists(name) {
+  try {
+    return !!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name = ?`).get(name);
+  } catch { return false; }
+}
+
+router.get('/discovery/stats', authenticateAdmin, (_req, res) => {
+  if (!tableExists('discovery_usage_runs')) {
+    return res.json({ enabled: false, totals: {}, last7d: [], topDomains: [] });
+  }
+  const totals = db.prepare(`
+    SELECT
+      COUNT(*) AS runs,
+      COUNT(DISTINCT domain) AS domains,
+      SUM(CASE WHEN execution_succeeded = 1 THEN 1 ELSE 0 END) AS successes,
+      AVG(value_score) AS avg_score
+    FROM discovery_usage_runs
+    WHERE created_at >= datetime('now', '-30 days')
+  `).get();
+  const last7d = db.prepare(`
+    SELECT date(created_at) AS day, COUNT(*) AS runs,
+           SUM(CASE WHEN execution_succeeded = 1 THEN 1 ELSE 0 END) AS successes
+    FROM discovery_usage_runs
+    WHERE created_at >= datetime('now', '-7 days')
+    GROUP BY day ORDER BY day ASC
+  `).all();
+  const topDomains = db.prepare(`
+    SELECT domain, COUNT(*) AS runs, AVG(value_score) AS score
+    FROM discovery_usage_runs
+    WHERE created_at >= datetime('now', '-30 days')
+    GROUP BY domain ORDER BY runs DESC LIMIT 25
+  `).all();
+  res.json({ enabled: true, totals, last7d, topDomains });
+});
+
+router.get('/discovery/runs', authenticateAdmin, (req, res) => {
+  if (!tableExists('discovery_usage_runs')) return res.json({ runs: [] });
+  const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+  const runs = db.prepare(`
+    SELECT id, domain, mode, preferred_use_case, selected_action,
+           readiness_ok, execution_attempted, execution_succeeded,
+           value_score, end_to_end_ms, created_at
+    FROM discovery_usage_runs
+    ORDER BY created_at DESC LIMIT ?
+  `).all(limit);
+  res.json({ runs });
+});
+
+router.get('/trust/stats', authenticateAdmin, (_req, res) => {
+  if (!tableExists('discovery_trust_runs')) {
+    return res.json({ enabled: false, totals: {}, leaderboard: [] });
+  }
+  const totals = db.prepare(`
+    SELECT COUNT(*) AS runs, COUNT(DISTINCT domain) AS domains,
+           AVG(score) AS avg_score,
+           SUM(sig_valid) AS valid_sigs,
+           SUM(signed_manifest) AS signed_manifests,
+           SUM(has_pk) AS domains_with_pk
+    FROM discovery_trust_runs
+    WHERE created_at >= datetime('now', '-30 days')
+  `).get();
+  const leaderboard = db.prepare(`
+    SELECT domain, MAX(score) AS score, MAX(created_at) AS last_run
+    FROM discovery_trust_runs
+    GROUP BY domain ORDER BY score DESC, last_run DESC LIMIT 25
+  `).all();
+  res.json({ enabled: true, totals, leaderboard });
+});
+
+router.get('/trust/runs', authenticateAdmin, (req, res) => {
+  if (!tableExists('discovery_trust_runs')) return res.json({ runs: [] });
+  const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+  const runs = db.prepare(`
+    SELECT id, domain, score, dnssec, has_pk, signed_manifest, sig_valid, https_ok, created_at
+    FROM discovery_trust_runs
+    ORDER BY created_at DESC LIMIT ?
+  `).all(limit);
+  res.json({ runs });
+});
+
+// ─── Providers Oversight (cross-user) ─────────────────────────────────
+
+router.get('/providers/stats', authenticateAdmin, (_req, res) => {
+  if (!tableExists('provider_accounts')) {
+    return res.json({ enabled: false, totals: {}, byProvider: [], recentActions: [] });
+  }
+  const totals = db.prepare(`
+    SELECT COUNT(*) AS accounts,
+           SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) AS active,
+           SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) AS errored,
+           SUM(domains_count) AS domains_under_management
+    FROM provider_accounts
+  `).get();
+  const byProvider = db.prepare(`
+    SELECT provider_type, COUNT(*) AS accounts,
+           SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) AS active,
+           COALESCE(SUM(domains_count), 0) AS domains
+    FROM provider_accounts
+    GROUP BY provider_type ORDER BY accounts DESC
+  `).all();
+  const recentActions = tableExists('provider_action_log')
+    ? db.prepare(`
+        SELECT l.id, l.account_id, a.provider_type, l.domain, l.action, l.status,
+               l.duration_ms, l.detail, l.created_at
+        FROM provider_action_log l
+        LEFT JOIN provider_accounts a ON a.id = l.account_id
+        ORDER BY l.created_at DESC LIMIT 50
+      `).all()
+    : [];
+  const wabEnabled = tableExists('provider_domains')
+    ? db.prepare(`SELECT COUNT(*) AS c FROM provider_domains WHERE wab_enabled = 1`).get().c
+    : 0;
+  res.json({ enabled: true, totals: { ...totals, wab_enabled_domains: wabEnabled }, byProvider, recentActions });
+});
+
+router.get('/providers/accounts', authenticateAdmin, (req, res) => {
+  if (!tableExists('provider_accounts')) return res.json({ accounts: [] });
+  const limit = Math.min(parseInt(req.query.limit, 10) || 200, 1000);
+  const rows = db.prepare(`
+    SELECT a.id, a.user_id, u.email AS user_email, a.provider_type, a.label,
+           a.status, a.last_test_at, a.last_test_ok, a.last_test_error,
+           a.last_sync_at, a.domains_count, a.created_at, a.updated_at
+    FROM provider_accounts a
+    LEFT JOIN users u ON u.id = a.user_id
+    ORDER BY a.created_at DESC LIMIT ?
+  `).all(limit);
+  res.json({ accounts: rows });
+});
+
+router.get('/providers/domains', authenticateAdmin, (req, res) => {
+  if (!tableExists('provider_domains')) return res.json({ domains: [] });
+  const limit = Math.min(parseInt(req.query.limit, 10) || 200, 1000);
+  const rows = db.prepare(`
+    SELECT d.id, d.account_id, a.provider_type, a.user_id, u.email AS user_email,
+           d.domain, d.zone_id, d.wab_enabled, d.wab_record_value,
+           d.last_action, d.last_action_at, d.last_action_status, d.last_action_error
+    FROM provider_domains d
+    LEFT JOIN provider_accounts a ON a.id = d.account_id
+    LEFT JOIN users u ON u.id = a.user_id
+    ORDER BY d.updated_at DESC LIMIT ?
+  `).all(limit);
+  res.json({ domains: rows });
+});
+
+// ─── API Modules: real counts (replaces hardcoded dashboard placeholders) ──
+router.get('/modules/stats', authenticateAdmin, (_req, res) => {
+  // Source of truth: server/routes/* + service registry. We treat each
+  // top-level route module as one "API module" and return real numbers.
+  const modules = [
+    { id: 'auth',         label: 'Authentication',   openness: 'open' },
+    { id: 'wab',          label: 'WAB Core API',     openness: 'open' },
+    { id: 'discovery',    label: 'DNS Discovery',    openness: 'open' },
+    { id: 'sovereign',    label: 'Sovereign Mode',   openness: 'open' },
+    { id: 'commander',    label: 'Commander SDK',    openness: 'partial' },
+    { id: 'mesh',         label: 'Agent Mesh',       openness: 'partial' },
+    { id: 'workspace',    label: 'Agent Workspace',  openness: 'partial' },
+    { id: 'universal',    label: 'Universal Agent',  openness: 'partial' },
+    { id: 'gateway',      label: 'Gateway (v1)',     openness: 'closed' },
+    { id: 'premium',      label: 'Premium APIs',     openness: 'closed' },
+    { id: 'admin',        label: 'Admin APIs',       openness: 'closed' },
+    { id: 'providers',    label: 'DNS Providers',    openness: 'open' },
+  ];
+  const counts = modules.reduce((acc, m) => { acc[m.openness] = (acc[m.openness] || 0) + 1; return acc; }, {});
+  res.json({
+    total: modules.length,
+    open: counts.open || 0,
+    partial: counts.partial || 0,
+    closed: counts.closed || 0,
+    modules,
   });
 });
 
