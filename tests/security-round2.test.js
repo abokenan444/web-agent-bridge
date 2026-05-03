@@ -291,23 +291,27 @@ describe('server integration: CSP nonce + admin gating', () => {
     app = require('../server/index');
   });
 
-  test('home page sets both CSP and CSP-Report-Only headers with a nonce', async () => {
+  test('home page sets both CSP and CSP-Report-Only headers; nonce lives in Report-Only', async () => {
     const res = await request(app).get('/').expect(200);
     const csp = res.headers['content-security-policy'];
     const cspRO = res.headers['content-security-policy-report-only'];
     expect(csp).toBeDefined();
     expect(cspRO).toBeDefined();
-    expect(csp).toMatch(/'nonce-[A-Za-z0-9+/=]+'/);
+    // Enforced policy keeps 'unsafe-inline' for legacy inline scripts; adding
+    // a nonce alongside 'unsafe-inline' would make browsers ignore the latter
+    // (CSP3), breaking every existing inline <script>. The nonce/strict-dynamic
+    // policy is shipped Report-Only so we can migrate page-by-page.
+    expect(csp).toMatch(/'unsafe-inline'/);
     expect(cspRO).toMatch(/'nonce-[A-Za-z0-9+/=]+'/);
     expect(cspRO).toMatch(/strict-dynamic/);
   });
 
-  test('different requests get different nonces', async () => {
+  test('different requests get different nonces (Report-Only)', async () => {
     const a = await request(app).get('/');
     const b = await request(app).get('/');
     const grab = (h) => (h.match(/'nonce-([^']+)'/) || [])[1];
-    expect(grab(a.headers['content-security-policy'])).not.toBe(
-      grab(b.headers['content-security-policy'])
+    expect(grab(a.headers['content-security-policy-report-only'])).not.toBe(
+      grab(b.headers['content-security-policy-report-only'])
     );
   });
 

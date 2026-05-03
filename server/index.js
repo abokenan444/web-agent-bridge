@@ -89,7 +89,11 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: [...scriptSrc, (req, res) => `'nonce-${res.locals.cspNonce}'`],
+        // NOTE: Adding a nonce alongside 'unsafe-inline' makes browsers ignore
+        // 'unsafe-inline' (CSP3 spec). All existing public/admin pages still
+        // rely on inline <script> blocks, so we keep 'unsafe-inline' enforced
+        // here and use the Report-Only policy below to track nonce migration.
+        scriptSrc: scriptSrc,
         scriptSrcAttr: [...scriptSrc, "'unsafe-hashes'"],
         styleSrc: [...styleSrc, 'https://fonts.googleapis.com'],
         imgSrc: ["'self'", 'data:', 'https:'],

@@ -18,14 +18,14 @@
         <p style="color:var(--text-muted);">Web Agent Bridge Administration</p>
       </div>
       <div class="alert alert-error" id="loginError" style="display:none;"></div>
-      <form id="loginForm" onsubmit="return handleLogin(event)">
+      <form id="loginForm" method="post" action="/admin/login" autocomplete="on" onsubmit="return handleLogin(event)">
         <div class="form-group">
           <label>Email</label>
-          <input type="email" class="form-input" id="email" required autofocus placeholder="your@email.com">
+          <input type="email" name="email" class="form-input" id="email" required autofocus autocomplete="username" placeholder="admin@webagentbridge.com">
         </div>
         <div class="form-group">
           <label>Password</label>
-          <input type="password" class="form-input" id="password" required placeholder="••••••••">
+          <input type="password" name="password" class="form-input" id="password" required autocomplete="current-password" placeholder="••••••••">
         </div>
         <button type="submit" class="btn btn-primary" style="width:100%;margin-top:16px;" id="submitBtn">Sign In</button>
       </form>
@@ -42,7 +42,7 @@
 
     async function handleLogin(e) {
       e.preventDefault();
-      const email = document.getElementById('email').value.trim();
+      const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       const errEl = document.getElementById('loginError');
       const btn = document.getElementById('submitBtn');
