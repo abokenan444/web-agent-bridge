@@ -9,6 +9,11 @@
   [![One-Click DNS Discovery](https://img.shields.io/badge/DNS%20Discovery-One--Click-6366f1?style=flat-square&logo=dns&logoColor=white)](https://webagentbridge.com/activate)
   [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/NnbpJYEF)
 
+  [![Tamper-Evident Audit](https://img.shields.io/badge/Audit-Tamper--Evident_HMAC_Chain-0ea5e9?style=flat-square&logo=keybase&logoColor=white)](#-governance-layer--enterprise-security--compliance)
+  [![Human-in-the-Loop Approvals](https://img.shields.io/badge/Approvals-Human--in--the--Loop-22c55e?style=flat-square&logo=checkmarx&logoColor=white)](#-governance-layer--enterprise-security--compliance)
+  [![Kill Switch](https://img.shields.io/badge/Kill_Switch-Per--Agent-ef4444?style=flat-square&logo=stopsign&logoColor=white)](#-governance-layer--enterprise-security--compliance)
+  [![Tests](https://img.shields.io/badge/Governance_Tests-26%2F26_passing-22c55e?style=flat-square&logo=jest&logoColor=white)](tests/governance.test.js)
+
   <br />
   <a href="https://webagentbridge.com"><strong>Website</strong></a> ·
   <a href="https://webagentbridge.com/docs"><strong>Documentation</strong></a> ·
@@ -57,6 +62,48 @@ initWAB({
 });
 ```
 
+### 3. The Agent Builder Way: Governance-First Agents
+
+If you're building an AI agent that touches Stripe, Gmail, ClickUp, or any sensitive API, wrap every action in the **Governance Layer**. Permissions, human-in-the-loop approvals, tamper-evident audit, kill-switch and spend caps — server-enforced and one call away:
+
+```javascript
+const { WABGovernance } = require('web-agent-bridge/sdk');
+
+// 1) one-time: register the agent identity
+const { agent_id, agent_token } = await WABGovernance.register({
+  apiBase: 'https://webagentbridge.com',
+  displayName: 'My Stripe Agent',
+});
+
+const gov = new WABGovernance({
+  apiBase: 'https://webagentbridge.com',
+  agentId: agent_id,
+  agentToken: agent_token,
+  onApprovalRequired: async (req) => {
+    // post to Slack/Email; return 'approved' or 'rejected'
+    return await askHuman(req);
+  },
+});
+
+// 2) define boundaries
+await gov.definePolicy({
+  resource: 'stripe', action: 'write', scope: 'refunds',
+  max_amount: 50, daily_cap: 200, currency: 'USD',
+});
+await gov.definePolicy({
+  resource: 'stripe', action: 'write', scope: 'refunds-large',
+  max_amount: 5000, requires_approval: true,
+});
+
+// 3) wrap every action
+await gov.guard(
+  { resource: 'stripe', action: 'write', scope: 'refunds', amount: 49.99 },
+  async () => stripe.refunds.create({ charge: 'ch_x' }),
+);
+```
+
+👉 **Run the full 9-step demo:** [`node examples/governance-agent.js`](examples/governance-agent.js) — walks register → policies → deny → allow → approval gate → audit → kill switch.
+
 ---
 
 ## ✨ Core Features
@@ -75,6 +122,35 @@ Works on any website, even those without the WAB script installed, using our adv
 
 ### 🗣️ Multilingual Support
 Full Arabic and English interface with auto-detection. The smart agent understands and responds in any language the user writes in.
+
+---
+
+## 🛡️ Governance Layer — Enterprise Security & Compliance
+
+The **WAB Governance Layer** sits *above* the protocol and turns any agent into a compliance-ready, auditable, kill-switch-controlled identity. It's the missing piece for agents that touch real money, mailboxes, or production systems.
+
+```
+┌──────────────────────────────────────────────┐
+│  Layer 3: Governance  (permissions · audit)   │  ← /api/governance
+├──────────────────────────────────────────────┤
+│  Layer 2: WAB Protocol  (AICommands · trust)  │  ← /api/discovery
+├──────────────────────────────────────────────┤
+│  Layer 1: Dynamic Shield  (price · OCR)       │  ← /api/shield
+└──────────────────────────────────────────────┘
+```
+
+| Capability | What it gives you |
+|------------|-------------------|
+| **🔐 Permission Boundaries** | Per-agent `resource × action × scope` policies with `effect=allow\|deny`. Most-specific match wins. |
+| **🙋 Human-in-the-Loop Approvals** | Mark any policy `requires_approval: true` — sensitive actions are routed through async human gates with TTL. |
+| **🧾 Tamper-Evident Audit** | Every event hash-chained with HMAC: `hash_n = HMAC(secret, prev_hash ‖ row)`. `verifyAuditChain()` detects any tampering. |
+| **🛑 Kill Switch** | One call disables an agent globally and auto-cancels all pending approvals (no resurrection). |
+| **💰 Spend & Rate Limits** | Per-call `max_amount`, rolling 24h `daily_cap`, per-minute `per_call_rate`. |
+| **🕵️ Param Redaction** | `password`, `api_key`, `token`, `cookie`, `cvv`, `ssn` are automatically redacted before audit storage. |
+
+**Verified end-to-end** — [26/26 governance tests passing](tests/governance.test.js) covering security (10), operational (10) and SDK (6) scenarios.
+
+Full demo: [`examples/governance-agent.js`](examples/governance-agent.js) · API surface: `/api/governance/*` · SDK: `WABGovernance` class.
 
 ---
 

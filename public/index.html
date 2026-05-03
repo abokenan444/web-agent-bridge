@@ -25,6 +25,7 @@
       </a>
       <ul class="navbar-links">
         <li><a href="#features">Features</a></li>
+        <li><a href="#governance">Governance</a></li>
         <li><a href="#packages">Packages</a></li>
         <li><a href="#integrations">Integrations</a></li>
         <li><a href="#how-it-works">How It Works</a></li>
@@ -165,6 +166,74 @@
           <p>Standard WebDriver BiDi protocol support via <code>window.__wab_bidi</code> — compatible with any automation framework that speaks the standard.</p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ GOVERNANCE LAYER ═══════════ -->
+  <section class="section" id="governance" style="background: linear-gradient(180deg, var(--bg-primary) 0%, #f1f5f9 100%);">
+    <div class="container">
+      <div class="section-header">
+        <span class="label" style="background:#0ea5e9; color:#fff;">Enterprise Security &amp; Compliance</span>
+        <h2>Governance Layer — for agents that touch real money</h2>
+        <p>The missing layer above the protocol: per-agent permissions, human-in-the-loop approvals, tamper-evident audit, kill-switch and spend caps — all server-enforced, all open-source, all one SDK call away.</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:18px;">
+          <img alt="Tamper-Evident Audit" src="https://img.shields.io/badge/Audit-Tamper--Evident_HMAC_Chain-0ea5e9?style=for-the-badge&logo=keybase&logoColor=white" />
+          <img alt="Human-in-the-Loop Approvals" src="https://img.shields.io/badge/Approvals-Human--in--the--Loop-22c55e?style=for-the-badge&logo=checkmarx&logoColor=white" />
+          <img alt="Kill Switch" src="https://img.shields.io/badge/Kill_Switch-Per--Agent-ef4444?style=for-the-badge&logo=stopsign&logoColor=white" />
+          <img alt="Tests" src="https://img.shields.io/badge/Governance_Tests-26%2F26-22c55e?style=for-the-badge&logo=jest&logoColor=white" />
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-top:32px;">
+        <div class="card fade-in">
+          <div class="card-icon blue">🔐</div>
+          <h3>Permission Boundaries</h3>
+          <p>Per-agent <code>resource × action × scope</code> policies with <code>allow</code> or <code>deny</code> effect. Most-specific scope wins. Deny-by-default.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-1">
+          <div class="card-icon green">🙋</div>
+          <h3>Human-in-the-Loop Approvals</h3>
+          <p>Mark any policy <code>requires_approval: true</code>. Sensitive actions wait for an explicit human <em>approve</em> or <em>reject</em> with TTL. SDK <code>onApprovalRequired</code> hook routes to Slack, email or webhook.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-2">
+          <div class="card-icon cyan">🧾</div>
+          <h3>Tamper-Evident Audit</h3>
+          <p>Every event hash-chained with HMAC: <code>hash<sub>n</sub> = HMAC(secret, prev_hash ‖ row)</code>. <code>verifyAuditChain()</code> rebuilds the chain and reports the first divergence — a single altered byte breaks every subsequent hash.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-1">
+          <div class="card-icon" style="background:#fee2e2; color:#dc2626;">🛑</div>
+          <h3>Kill Switch</h3>
+          <p>One <code>POST /agents/:id/kill</code> disables the agent globally. All pending approvals are auto-cancelled — no resurrection via stale approval requests.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-2">
+          <div class="card-icon orange">💰</div>
+          <h3>Spend &amp; Rate Limits</h3>
+          <p>Per-call <code>max_amount</code>, rolling 24-hour <code>daily_cap</code>, per-minute <code>per_call_rate</code>. Runaway loops can't drain your Stripe balance.</p>
+        </div>
+        <div class="card fade-in fade-in-delay-3">
+          <div class="card-icon purple">🕵️</div>
+          <h3>Auto-Redaction</h3>
+          <p>Fields named <code>password</code>, <code>api_key</code>, <code>token</code>, <code>cookie</code>, <code>cvv</code>, <code>ssn</code> are automatically replaced with <code>[redacted]</code> before audit storage. Token itself is sha256-hashed at rest.</p>
+        </div>
+      </div>
+
+      <div class="card fade-in" style="margin-top:32px; max-width:880px; margin-left:auto; margin-right:auto; background:#0f172a; color:#e2e8f0;">
+        <div style="font-family: 'JetBrains Mono', Menlo, monospace; font-size:13px; line-height:1.6; overflow-x:auto;">
+<pre style="margin:0; color:#e2e8f0; background:transparent;"><span style="color:#64748b;">// One call wraps permission check + approval gate + execute + audit</span>
+<span style="color:#7dd3fc;">await</span> gov.<span style="color:#fbbf24;">guard</span>(
+  { resource: <span style="color:#86efac;">'stripe'</span>, action: <span style="color:#86efac;">'write'</span>, scope: <span style="color:#86efac;">'refunds'</span>, amount: <span style="color:#fda4af;">49.99</span> },
+  <span style="color:#7dd3fc;">async</span> () =&gt; stripe.refunds.<span style="color:#fbbf24;">create</span>({ charge: <span style="color:#86efac;">'ch_x'</span> }),
+);</pre>
+        </div>
+        <p style="margin-top:18px; color:#cbd5e1; font-size:14px;">
+          ▶ Run the full 9-step demo:
+          <code style="background:#1e293b; padding:4px 10px; border-radius:4px; color:#86efac;">node examples/governance-agent.js</code>
+        </p>
+      </div>
+
+      <p style="text-align:center; margin-top:24px; color:#64748b;">
+        Verified by <a href="https://github.com/abokenan444/web-agent-bridge/blob/master/tests/governance.test.js" style="color:#0ea5e9; font-weight:600;">26 automated tests</a> covering security (10), operational (10), and SDK (6) scenarios.
+      </p>
     </div>
   </section>
 
