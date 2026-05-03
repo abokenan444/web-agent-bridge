@@ -12,15 +12,22 @@ app.commandLine.appendSwitch('enable-zero-copy');
 app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
 app.commandLine.appendSwitch('enable-accelerated-video-decode');
 app.commandLine.appendSwitch('canvas-oop-rasterization');
-app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,VaapiVideoEncoder,CanvasOopRasterization');
 
-// Memory optimization
-app.commandLine.appendSwitch('js-flags', '--max-old-space-size=256 --optimize-for-size --gc-interval=100');
+// IMPORTANT: Electron flags with the same name are merged — NOT replaced — only on first call.
+// Calling appendSwitch('enable-features', X) twice replaces X with the second value, dropping the first.
+// Combine all features into a single comma-separated value.
+app.commandLine.appendSwitch(
+  'enable-features',
+  'VaapiVideoDecoder,VaapiVideoEncoder,CanvasOopRasterization,BackForwardCache'
+);
+
+// Memory optimization — give V8 enough room for modern web pages (1 GB) and let GC be adaptive.
+// Previously --max-old-space-size=256 caused OOM crashes on heavy pages (e.g. YouTube, Google Docs).
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=1024 --expose-gc');
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
-app.commandLine.appendSwitch('enable-features', 'BackForwardCache');
 
-// Process limits - reduces memory per webview
-app.commandLine.appendSwitch('renderer-process-limit', '4');
+// Process limits — 8 renderers strikes a better balance between memory and tab responsiveness.
+app.commandLine.appendSwitch('renderer-process-limit', '8');
 
 // Network
 app.commandLine.appendSwitch('enable-quic');
@@ -700,7 +707,8 @@ let store = null;
 let wabIndex = null;
 let ghostMode = false;
 let currentUA = USER_AGENTS[0];
-const WAB_API_BASE = 'http://localhost:3003'; // Local dev, switch to https://webagentbridge.com for production
+// Production endpoint. Set WAB_API_BASE_OVERRIDE env var (e.g. http://localhost:3000) for local dev.
+const WAB_API_BASE = process.env.WAB_API_BASE_OVERRIDE || 'https://webagentbridge.com';
 let sovereignShieldEnabled = true;
 let sovereignShieldIntelVersion = 0;
 const sovereignIntelHosts = new Set();
@@ -804,13 +812,17 @@ function postJSON(url, body) {
   });
 }
 
-// ──────────────────────── HTTP Helper ────────────────────────
-function fetchJSON(url) {
-  return new Promise((resolve, reject) => {
+// ──────────────────────── HTTP Helpers ────────────────────────
+const MAX_REDIRECTS = 5;
+
+function fetchJSON(url, redirectsLeft = MAX_REDIRECTS) {
+  return new Promise((resolve) => {
     const mod = url.startsWith('https') ? https : http;
     const req = mod.get(url, { headers: { 'User-Agent': currentUA, 'Accept': 'application/json' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return fetchJSON(res.headers.location).then(resolve).catch(reject);
+        if (redirectsLeft <= 0) { res.resume(); return resolve(null); }
+        res.resume();
+        return fetchJSON(res.headers.location, redirectsLeft - 1).then(resolve);
       }
       let data = '';
       res.on('data', c => data += c);
@@ -824,12 +836,14 @@ function fetchJSON(url) {
   });
 }
 
-function fetchText(url) {
-  return new Promise((resolve, reject) => {
+function fetchText(url, redirectsLeft = MAX_REDIRECTS) {
+  return new Promise((resolve) => {
     const mod = url.startsWith('https') ? https : http;
     const req = mod.get(url, { headers: { 'User-Agent': currentUA } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return fetchText(res.headers.location).then(resolve).catch(reject);
+        if (redirectsLeft <= 0) { res.resume(); return resolve(''); }
+        res.resume();
+        return fetchText(res.headers.location, redirectsLeft - 1).then(resolve);
       }
       let data = '';
       res.on('data', c => data += c);
@@ -1219,8 +1233,22 @@ function setupIPC() {
   ipcMain.handle('auth:status', () => store.get('auth') || { loggedIn: false });
   ipcMain.handle('auth:logout', () => { store.set('auth', { loggedIn: false }); return true; });
 
-  // ── External links ──
-  ipcMain.handle('shell:open', (_, url) => shell.openExternal(url));
+  // ── External links (protocol-whitelisted) ──
+  // Prevents javascript:, file:, data:, ms-msdt: and other dangerous schemes from being opened
+  // by passing through ipcRenderer. Only http(s)/mailto/tel are allowed.
+  const SAFE_OPEN_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
+  ipcMain.handle('shell:open', (_, url) => {
+    try {
+      const u = new URL(String(url || ''));
+      if (!SAFE_OPEN_PROTOCOLS.has(u.protocol)) {
+        return { ok: false, error: 'protocol_not_allowed', protocol: u.protocol };
+      }
+      shell.openExternal(u.toString());
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: 'invalid_url' };
+    }
+  });
 
   // ── Search cache ──
   ipcMain.handle('cache:search-get', (_, query) => store.getCachedSearch(query));
@@ -1464,6 +1492,44 @@ function setupIPC() {
     await ses.clearCache();
     adUrlCache.clear();
     return true;
+  });
+
+  // ── Webview helpers (devtools / zoom / find / print) ──
+  // Renderer passes webContentsId from webview.getWebContentsId().
+  const getWc = (id) => {
+    try { return require('electron').webContents.fromId(Number(id)); } catch { return null; }
+  };
+  ipcMain.handle('view:open-devtools', (_, wcId) => {
+    const wc = getWc(wcId); if (wc) wc.openDevTools({ mode: 'detach' }); return !!wc;
+  });
+  ipcMain.handle('view:close-devtools', (_, wcId) => {
+    const wc = getWc(wcId); if (wc) wc.closeDevTools(); return !!wc;
+  });
+  ipcMain.handle('view:zoom-in', (_, wcId) => {
+    const wc = getWc(wcId); if (!wc) return null;
+    const z = Math.min(5, wc.getZoomFactor() + 0.1); wc.setZoomFactor(z);
+    return Math.round(z * 100);
+  });
+  ipcMain.handle('view:zoom-out', (_, wcId) => {
+    const wc = getWc(wcId); if (!wc) return null;
+    const z = Math.max(0.25, wc.getZoomFactor() - 0.1); wc.setZoomFactor(z);
+    return Math.round(z * 100);
+  });
+  ipcMain.handle('view:zoom-reset', (_, wcId) => {
+    const wc = getWc(wcId); if (!wc) return null;
+    wc.setZoomFactor(1); return 100;
+  });
+  ipcMain.handle('view:find', (_, wcId, text, options) => {
+    const wc = getWc(wcId); if (!wc || !text) return false;
+    wc.findInPage(String(text), options || {}); return true;
+  });
+  ipcMain.handle('view:find-stop', (_, wcId, action) => {
+    const wc = getWc(wcId); if (!wc) return false;
+    wc.stopFindInPage(action || 'clearSelection'); return true;
+  });
+  ipcMain.handle('view:print', (_, wcId) => {
+    const wc = getWc(wcId); if (!wc) return false;
+    wc.print({ silent: false, printBackground: true }); return true;
   });
 }
 

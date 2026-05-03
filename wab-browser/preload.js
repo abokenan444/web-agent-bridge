@@ -143,6 +143,19 @@ contextBridge.exposeInMainWorld('wab', {
     clearCache: () => ipcRenderer.invoke('perf:clear-cache'),
   },
 
+  // Active webview controls (DevTools / Zoom / Find / Print).
+  // Pass webContentsId from <webview>.getWebContentsId() (number).
+  view: {
+    openDevTools: (wcId) => ipcRenderer.invoke('view:open-devtools', wcId),
+    closeDevTools: (wcId) => ipcRenderer.invoke('view:close-devtools', wcId),
+    zoomIn: (wcId) => ipcRenderer.invoke('view:zoom-in', wcId),
+    zoomOut: (wcId) => ipcRenderer.invoke('view:zoom-out', wcId),
+    zoomReset: (wcId) => ipcRenderer.invoke('view:zoom-reset', wcId),
+    find: (wcId, text, options) => ipcRenderer.invoke('view:find', wcId, text, options),
+    findStop: (wcId, action) => ipcRenderer.invoke('view:find-stop', wcId, action),
+    print: (wcId) => ipcRenderer.invoke('view:print', wcId),
+  },
+
   // Events from main
   onNewTab: (cb) => ipcRenderer.on('open-new-tab', (_, url) => cb(url)),
 });

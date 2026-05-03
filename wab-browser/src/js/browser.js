@@ -139,9 +139,19 @@
   // ──────────────────────── Tab Management ────────────────────────
 
   function attachWebviewEvents(webview, id) {
-    webview.addEventListener('did-start-loading', () => setTabLoading(id, true));
+    webview.addEventListener('did-start-loading', () => { setTabLoading(id, true); hideErrorOverlay(); });
     webview.addEventListener('did-stop-loading', () => setTabLoading(id, false));
-    webview.addEventListener('did-fail-load', () => setTabLoading(id, false));
+    webview.addEventListener('did-fail-load', (e) => {
+      setTabLoading(id, false);
+      // -3 = ABORTED (user cancelled); ignore subframe errors
+      if (e.errorCode === -3 || !e.isMainFrame) return;
+      if (state.activeTabId === id) showErrorOverlay(e.validatedURL || webview.getURL?.() || '', e.errorCode, e.errorDescription);
+    });
+
+    webview.addEventListener('found-in-page', (e) => {
+      if (state.activeTabId !== id) return;
+      document.dispatchEvent(new CustomEvent('wab:found-in-page', { detail: e.result || {} }));
+    });
 
     webview.addEventListener('page-title-updated', (e) => {
       setTabTitle(id, e.title);
@@ -1424,6 +1434,129 @@
     try { return new URL(url).hostname.replace(/^www\./, ''); } catch(_) { return ''; }
   }
 
+  // ──────────────────────── View Controls (Phase 17) ────────────────────────
+  function activeWcId() {
+    const wv = getActiveWebview();
+    if (!wv || typeof wv.getWebContentsId !== 'function') return null;
+    try { return wv.getWebContentsId(); } catch(_) { return null; }
+  }
+
+  async function toggleDevTools() {
+    const id = activeWcId(); if (id == null) return;
+    try { await wab.view.openDevTools(id); } catch(_) {}
+  }
+
+  async function zoomActive(action) {
+    const id = activeWcId(); if (id == null) return;
+    try {
+      if (action === 'in') await wab.view.zoomIn(id);
+      else if (action === 'out') await wab.view.zoomOut(id);
+      else await wab.view.zoomReset(id);
+    } catch(_) {}
+  }
+
+  async function printActive() {
+    const id = activeWcId(); if (id == null) return;
+    try { await wab.view.print(id); } catch(_) {}
+  }
+
+  // Find In Page
+  let _findMatchOrdinal = 0, _findMatches = 0;
+  function openFindBar() {
+    const bar = document.getElementById('find-bar');
+    const input = document.getElementById('find-input');
+    if (!bar || !input) return;
+    bar.classList.remove('hidden');
+    input.focus();
+    input.select();
+  }
+  function closeFindBar() {
+    const bar = document.getElementById('find-bar');
+    if (!bar || bar.classList.contains('hidden')) return;
+    bar.classList.add('hidden');
+    const id = activeWcId();
+    if (id != null) { try { wab.view.findStop(id, 'clearSelection'); } catch(_) {} }
+    _findMatches = 0; _findMatchOrdinal = 0;
+    const c = document.getElementById('find-count'); if (c) c.textContent = '0/0';
+  }
+  async function runFind(text, opts) {
+    const id = activeWcId(); if (id == null) return;
+    if (!text) {
+      try { await wab.view.findStop(id, 'clearSelection'); } catch(_) {}
+      _findMatches = 0; _findMatchOrdinal = 0;
+      const c = document.getElementById('find-count'); if (c) c.textContent = '0/0';
+      return;
+    }
+    try { await wab.view.find(id, text, opts || {}); } catch(_) {}
+  }
+
+  function setupFindBarUI() {
+    const input = document.getElementById('find-input');
+    const next = document.getElementById('find-next');
+    const prev = document.getElementById('find-prev');
+    const close = document.getElementById('find-close');
+    if (!input) return;
+    let debounce = null;
+    input.addEventListener('input', () => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => runFind(input.value, { findNext: false }), 120);
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        runFind(input.value, { forward: !e.shiftKey, findNext: true });
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeFindBar();
+      }
+    });
+    next?.addEventListener('click', () => runFind(input.value, { forward: true, findNext: true }));
+    prev?.addEventListener('click', () => runFind(input.value, { forward: false, findNext: true }));
+    close?.addEventListener('click', closeFindBar);
+
+    // Listen for found-in-page events from the active webview
+    document.addEventListener('wab:found-in-page', (ev) => {
+      const r = ev.detail || {};
+      _findMatches = r.matches || 0;
+      _findMatchOrdinal = r.activeMatchOrdinal || 0;
+      const c = document.getElementById('find-count');
+      if (c) c.textContent = `${_findMatchOrdinal}/${_findMatches}`;
+    });
+  }
+
+  // Error Overlay
+  let _lastFailedUrl = '';
+  function showErrorOverlay(url, code, desc) {
+    _lastFailedUrl = url || '';
+    const ov = document.getElementById('error-overlay');
+    const msg = document.getElementById('error-message');
+    const u = document.getElementById('error-url');
+    if (!ov) return;
+    if (msg) msg.textContent = desc ? `${desc} (${code})` : 'The page could not be reached.';
+    if (u) u.textContent = url || '';
+    ov.classList.remove('hidden');
+  }
+  function hideErrorOverlay() {
+    const ov = document.getElementById('error-overlay');
+    if (ov) ov.classList.add('hidden');
+  }
+  function setupErrorOverlay() {
+    document.getElementById('error-retry')?.addEventListener('click', () => {
+      hideErrorOverlay();
+      const wv = getActiveWebview();
+      if (_lastFailedUrl && wv) { try { wv.loadURL(_lastFailedUrl); } catch(_) { wv.reload?.(); } }
+      else wv?.reload?.();
+    });
+    document.getElementById('error-back')?.addEventListener('click', () => {
+      hideErrorOverlay();
+      getActiveWebview()?.goBack?.();
+    });
+    document.getElementById('error-home')?.addEventListener('click', () => {
+      hideErrorOverlay();
+      navigate('https://webagentbridge.com');
+    });
+  }
+
   // ──────────────────────── Keyboard Shortcuts ────────────────────────
   document.addEventListener('keydown', (e) => {
     const ctrl = e.ctrlKey || e.metaKey;
@@ -1457,6 +1590,20 @@
     if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); getActiveWebview()?.goBack(); }
     // Alt+Right: Forward
     if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); getActiveWebview()?.goForward(); }
+    // F12: DevTools
+    if (e.key === 'F12') { e.preventDefault(); toggleDevTools(); }
+    // Ctrl+Shift+I: DevTools (alt)
+    if (ctrl && shift && (e.key === 'I' || e.key === 'i')) { e.preventDefault(); toggleDevTools(); }
+    // Ctrl+F: Find in page
+    if (ctrl && !shift && (e.key === 'f' || e.key === 'F')) { e.preventDefault(); openFindBar(); }
+    // Ctrl+= or Ctrl++: Zoom in
+    if (ctrl && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoomActive('in'); }
+    // Ctrl+-: Zoom out
+    if (ctrl && e.key === '-') { e.preventDefault(); zoomActive('out'); }
+    // Ctrl+0: Zoom reset
+    if (ctrl && e.key === '0') { e.preventDefault(); zoomActive('reset'); }
+    // Ctrl+P: Print
+    if (ctrl && !shift && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); printActive(); }
     // Escape: Close menu/sidebar/suggestions
     if (e.key === 'Escape') {
       closeMenu();
@@ -1465,6 +1612,7 @@
       if (chatOpen) toggleChat();
       if (notifOpen) toggleNotifications();
       if (universalOpen) toggleUniversal();
+      closeFindBar();
       dom.urlInput.blur();
     }
     // Ctrl+Tab: Next tab
@@ -1655,6 +1803,10 @@
 
   // ──────────────────────── Init ────────────────────────
   async function init() {
+    // Phase 17: wire find-bar + error overlay UI
+    setupFindBarUI();
+    setupErrorOverlay();
+
     // Resolve new-tab path from main process
     NEW_TAB_URL = await wab.app.newTabPath();
 

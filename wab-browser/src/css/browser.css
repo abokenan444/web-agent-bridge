@@ -1247,3 +1247,61 @@ button:disabled { opacity: 0.3; pointer-events: none; }
   animation: uni-spin .7s linear infinite;
 }
 @keyframes uni-spin { to { transform: rotate(360deg); } }
+
+
+/* -------- Find In Page Bar (Phase 17) -------- */
+#find-bar {
+  position: absolute; top: 56px; right: 16px; z-index: 9000;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg-secondary, #1e1e2e); border: 1px solid var(--border, #2a2a3a);
+  border-radius: 10px; padding: 6px 8px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  contain: layout style;
+  animation: findBarIn .15s ease-out;
+}
+#find-bar.hidden { display: none; }
+@keyframes findBarIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+#find-input {
+  background: var(--bg-primary, #131320); color: var(--text, #e6e6f0);
+  border: 1px solid var(--border, #2a2a3a); border-radius: 6px;
+  padding: 5px 8px; font-size: 13px; width: 220px; outline: none;
+}
+#find-input:focus { border-color: var(--accent, #6366f1); }
+#find-count { font-size: 11px; color: var(--text-muted, #888); min-width: 36px; text-align: center; }
+#find-bar button {
+  background: transparent; border: 0; color: var(--text, #e6e6f0);
+  padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 13px;
+}
+#find-bar button:hover { background: var(--hover, rgba(255,255,255,.08)); }
+
+/* -------- Error Overlay (Phase 17) -------- */
+#error-overlay {
+  position: absolute; inset: 0; z-index: 8500;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-primary, #0f0f1a);
+  contain: layout style paint;
+}
+#error-overlay.hidden { display: none; }
+.error-card {
+  max-width: 480px; padding: 32px 28px; text-align: center;
+  background: var(--bg-secondary, #1a1a2a); border: 1px solid var(--border, #2a2a3a);
+  border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.error-icon { font-size: 48px; margin-bottom: 12px; }
+.error-card h2 { margin: 0 0 8px; font-size: 18px; color: var(--text, #e6e6f0); }
+.error-card p { margin: 4px 0; font-size: 13px; color: var(--text-muted, #aaa); }
+.error-url { font-family: monospace; font-size: 11px; word-break: break-all; opacity: .7; margin-top: 8px; }
+.error-actions { display: flex; gap: 8px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
+.error-btn {
+  background: var(--bg-primary, #131320); color: var(--text, #e6e6f0);
+  border: 1px solid var(--border, #2a2a3a); border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; cursor: pointer; transition: all .15s;
+}
+.error-btn:hover { background: var(--hover, rgba(255,255,255,.08)); transform: translateY(-1px); }
+.error-btn.primary { background: var(--accent, #6366f1); border-color: var(--accent, #6366f1); color: #fff; }
+.error-btn.primary:hover { background: var(--accent-hover, #7c7ff0); }
+
+/* -------- Smooth Perf (Phase 17) -------- */
+.tab { will-change: transform; contain: layout style; }
+#sidebar, #chat-panel, #notif-panel, #universal-panel { contain: layout style; }
+#tabs-container { scroll-behavior: smooth; }
