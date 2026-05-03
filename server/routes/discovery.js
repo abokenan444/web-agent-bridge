@@ -1919,6 +1919,348 @@ router.get('/api/discovery/trust-leaderboard', (_req, res) => {
 });
 
 // ═════════════════════════════════════════════════════════════════════
+// WAB Score / Compliance / Badge — Phase 18
+//   Strategic adoption layer: make WAB the cheaper, safer default.
+//   - Score: observable, machine-comparable signal an agent can rank by.
+//   - Compliance: allow/restrict/deny verdict with signed reasons,
+//     so enterprise agents can run in "WAB-only" mode.
+//   - Badge: viral SVG that any WAB site can embed.
+// ═════════════════════════════════════════════════════════════════════
+
+// Helper: compute the latest composite WAB Score for a domain.
+//   Score is a weighted blend of:
+//     - signature/trust integrity   (40%)  ← from discovery_trust_runs
+//     - execution success rate      (25%)  ← from discovery_usage_runs
+//     - latency (lower is better)   (15%)
+//     - readiness rate              (10%)
+//     - sample volume bonus         (10%)  (cold domains are penalised)
+function computeWabScore(domain) {
+  const out = {
+    domain,
+    score: 0,
+    label: 'unrated',
+    components: {
+      trust: { score: 0, weight: 40, available: false },
+      success: { score: 0, weight: 25, available: false },
+      latency: { score: 0, weight: 15, available: false, ms: null },
+      readiness: { score: 0, weight: 10, available: false },
+      volume: { score: 0, weight: 10, runs: 0 },
+    },
+    error_classes: {},
+    signature_valid_rate: 0,
+    success_rate: 0,
+    avg_latency_ms: null,
+    sample_size: 0,
+    cold_start: false,
+    last_seen: null,
+    last_trust_check: null,
+  };
+
+  // --- Trust component (latest run) ---
+  let trustRow = null;
+  try {
+    trustRow = db.prepare(`
+      SELECT score, sig_valid, has_pk, signed_manifest, https_ok, dnssec, created_at
+      FROM discovery_trust_runs WHERE domain = ?
+      ORDER BY id DESC LIMIT 1
+    `).get(domain);
+  } catch { /* table may not exist yet */ }
+  if (trustRow) {
+    out.components.trust.score = Math.max(0, Math.min(100, Number(trustRow.score || 0)));
+    out.components.trust.available = true;
+    out.last_trust_check = trustRow.created_at;
+  }
+
+  // --- Trust history → signature_valid_rate (last 50 runs) ---
+  try {
+    const hist = db.prepare(`
+      SELECT sig_valid FROM discovery_trust_runs
+      WHERE domain = ? ORDER BY id DESC LIMIT 50
+    `).all(domain);
+    if (hist.length) {
+      const valid = hist.filter(r => r.sig_valid).length;
+      out.signature_valid_rate = valid / hist.length;
+    }
+  } catch { /* best-effort */ }
+
+  // --- Usage runs aggregation (last 200 runs in last 30d) ---
+  let usage = null;
+  try {
+    usage = db.prepare(`
+      SELECT
+        COUNT(*) AS runs,
+        SUM(CASE WHEN readiness_ok = 1 THEN 1 ELSE 0 END) AS ready,
+        SUM(CASE WHEN execution_attempted = 1 THEN 1 ELSE 0 END) AS attempted,
+        SUM(CASE WHEN execution_succeeded = 1 THEN 1 ELSE 0 END) AS succeeded,
+        AVG(end_to_end_ms) AS avg_ms,
+        MAX(created_at) AS last_seen
+      FROM discovery_usage_runs
+      WHERE domain = ? AND created_at >= datetime('now', '-30 days')
+    `).get(domain);
+  } catch { /* table may not exist */ }
+
+  if (usage && usage.runs > 0) {
+    out.sample_size = Number(usage.runs);
+    out.last_seen = usage.last_seen;
+    out.components.volume.runs = Number(usage.runs);
+    out.components.volume.score = Math.min(100, Math.log2(usage.runs + 1) * 20);
+
+    if (usage.attempted > 0) {
+      out.success_rate = Number(usage.succeeded || 0) / Number(usage.attempted);
+      out.components.success.score = Math.round(out.success_rate * 100);
+      out.components.success.available = true;
+    }
+    if (usage.runs > 0) {
+      const readiness = Number(usage.ready || 0) / Number(usage.runs);
+      out.components.readiness.score = Math.round(readiness * 100);
+      out.components.readiness.available = true;
+    }
+    if (usage.avg_ms != null) {
+      const ms = Number(usage.avg_ms);
+      out.avg_latency_ms = Math.round(ms);
+      out.components.latency.ms = Math.round(ms);
+      // 200ms or less → 100; 5000ms+ → 0; linear in between.
+      const lat = Math.max(0, Math.min(100, 100 - ((ms - 200) / 4800) * 100));
+      out.components.latency.score = Math.round(lat);
+      out.components.latency.available = true;
+    }
+
+    // Error classes
+    try {
+      const errs = db.prepare(`
+        SELECT detail FROM discovery_usage_runs
+        WHERE domain = ? AND execution_attempted = 1 AND execution_succeeded = 0
+          AND created_at >= datetime('now', '-30 days')
+        LIMIT 200
+      `).all(domain);
+      for (const r of errs) {
+        let cls = 'unknown';
+        try {
+          const d = JSON.parse(r.detail || '{}');
+          cls = String(d.error_class || d.error_code || d.error || 'unknown').slice(0, 40);
+        } catch { cls = 'unknown'; }
+        out.error_classes[cls] = (out.error_classes[cls] || 0) + 1;
+      }
+    } catch { /* best-effort */ }
+  } else {
+    out.cold_start = true;
+  }
+
+  // --- Composite weighted score ---
+  // Components with data contribute their weight; missing components
+  // shrink the maximum so a brand-new but well-signed domain isn't
+  // penalised purely for lack of usage history.
+  const c = out.components;
+  let weighted = 0, maxWeighted = 0;
+  for (const k of Object.keys(c)) {
+    const comp = c[k];
+    if (comp.available || (k === 'volume' && comp.runs > 0)) {
+      weighted += (comp.score / 100) * comp.weight;
+      maxWeighted += comp.weight;
+    }
+  }
+  out.score = maxWeighted > 0 ? Math.round((weighted / maxWeighted) * 100) : 0;
+
+  if (out.score >= 90)      out.label = 'platinum';
+  else if (out.score >= 75) out.label = 'gold';
+  else if (out.score >= 60) out.label = 'silver';
+  else if (out.score >= 40) out.label = 'bronze';
+  else if (out.score > 0)   out.label = 'basic';
+  else                      out.label = 'unrated';
+
+  return out;
+}
+
+// GET /api/discovery/score/:domain
+//   Public, observable signal for agents. Cacheable for 60s.
+router.get('/api/discovery/score/:domain', (req, res) => {
+  const domain = sanitizeDomain(req.params.domain || '');
+  if (!domain) return res.status(400).json({ error: 'invalid_domain' });
+  try {
+    const result = computeWabScore(domain);
+    res.set('Cache-Control', 'public, max-age=60');
+    res.set('X-WAB-Version', WAB_VERSION);
+    res.json({
+      wab_version: WAB_VERSION,
+      generated_at: new Date().toISOString(),
+      ...result,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'score_failed', details: err.message });
+  }
+});
+
+// GET /api/discovery/compliance/:domain?policy=strict|standard|permissive
+//   Returns a verdict an agent can use as a policy gate:
+//     - allow:    safe to run write/exec actions
+//     - restrict: read-only / no payments / no PII writes
+//     - deny:     do not interact (no DNS, fake signature, etc.)
+//
+//   Policies (defaults; can be overridden via query):
+//     strict      — DNSSEC + signed manifest + score ≥ 75
+//     standard    — DNS + signed manifest + score ≥ 60   (default)
+//     permissive  — DNS + score ≥ 40
+const COMPLIANCE_POLICIES = {
+  strict:     { require_dnssec: true,  require_signature: true,  min_score: 75 },
+  standard:   { require_dnssec: false, require_signature: true,  min_score: 60 },
+  permissive: { require_dnssec: false, require_signature: false, min_score: 40 },
+};
+
+router.get('/api/discovery/compliance/:domain', (req, res) => {
+  const domain = sanitizeDomain(req.params.domain || '');
+  if (!domain) return res.status(400).json({ error: 'invalid_domain' });
+
+  const policyName = String(req.query.policy || 'standard').toLowerCase();
+  const policy = COMPLIANCE_POLICIES[policyName] || COMPLIANCE_POLICIES.standard;
+
+  const reasons = [];
+  let verdict = 'allow';
+
+  // Pull the latest trust check (no live network call — agents that need a
+  // live check should hit /api/discovery/trust/:domain first).
+  let trustRow = null;
+  try {
+    trustRow = db.prepare(`
+      SELECT score, sig_valid, has_pk, signed_manifest, https_ok, dnssec, created_at
+      FROM discovery_trust_runs WHERE domain = ?
+      ORDER BY id DESC LIMIT 1
+    `).get(domain);
+  } catch { /* table may not exist */ }
+
+  const score = computeWabScore(domain);
+
+  // Hard fails → deny
+  if (!trustRow) {
+    reasons.push({ code: 'no_trust_record', severity: 'deny', message: 'Run /api/discovery/trust/:domain first' });
+    verdict = 'deny';
+  } else {
+    if (!trustRow.has_pk) {
+      reasons.push({ code: 'no_public_key', severity: 'deny', message: 'No pk= in DNS — cannot verify identity' });
+      verdict = 'deny';
+    }
+    if (!trustRow.https_ok) {
+      reasons.push({ code: 'no_https_endpoint', severity: 'deny', message: 'Endpoint is not HTTPS' });
+      verdict = 'deny';
+    }
+
+    // Soft fails → restrict
+    if (verdict !== 'deny') {
+      if (policy.require_dnssec && trustRow.dnssec !== 'verified') {
+        reasons.push({ code: 'dnssec_required', severity: 'restrict', message: 'Policy requires DNSSEC AD flag' });
+        verdict = 'restrict';
+      }
+      if (policy.require_signature && !trustRow.sig_valid) {
+        reasons.push({ code: 'signature_required', severity: 'restrict', message: 'Policy requires a valid Ed25519 manifest signature' });
+        verdict = 'restrict';
+      }
+      if (score.score < policy.min_score) {
+        reasons.push({
+          code: 'score_below_threshold',
+          severity: 'restrict',
+          message: `WAB Score ${score.score} below policy minimum ${policy.min_score}`,
+        });
+        verdict = 'restrict';
+      }
+    }
+  }
+
+  // Sign the verdict so downstream agents can prove what was returned.
+  const verdictPayload = {
+    wab_version: WAB_VERSION,
+    domain,
+    policy: policyName,
+    verdict,
+    score: score.score,
+    score_label: score.label,
+    reasons,
+    signature_valid_rate: score.signature_valid_rate,
+    success_rate: score.success_rate,
+    last_trust_check: trustRow ? trustRow.created_at : null,
+    generated_at: new Date().toISOString(),
+  };
+  let serverSig = null;
+  try {
+    if (typeof wabCrypto.signServerPayload === 'function') {
+      serverSig = wabCrypto.signServerPayload(verdictPayload);
+    }
+  } catch { /* optional */ }
+
+  res.set('Cache-Control', 'public, max-age=60');
+  res.set('X-WAB-Version', WAB_VERSION);
+  res.set('X-WAB-Compliance', verdict);
+  res.json({ ...verdictPayload, server_signature: serverSig });
+});
+
+// GET /badge/:domain.svg
+//   Embeddable SVG badge — like shields.io. Two pills: "WAB" + score/label.
+//   Agents see it; users see a trust signal; sites get a viral hook.
+function _wabBadgeColor(score) {
+  if (score >= 90) return '#16a34a';   // platinum / green
+  if (score >= 75) return '#22c55e';   // gold
+  if (score >= 60) return '#84cc16';   // silver
+  if (score >= 40) return '#eab308';   // bronze
+  if (score > 0)   return '#f97316';   // basic / orange
+  return '#6b7280';                    // unrated / gray
+}
+
+router.get('/badge/:domainfile', (req, res) => {
+  const file = String(req.params.domainfile || '');
+  const m = file.match(/^([a-z0-9.-]+)\.svg$/i);
+  if (!m) return res.status(404).type('text/plain').send('not_found');
+  const domain = sanitizeDomain(m[1]);
+  if (!domain) return res.status(400).type('text/plain').send('invalid_domain');
+
+  let score = 0, label = 'unrated';
+  try {
+    const r = computeWabScore(domain);
+    score = r.score;
+    label = r.label;
+  } catch { /* fall through with defaults */ }
+
+  const style = String(req.query.style || 'flat').toLowerCase();
+  const right = score > 0 ? `${label} ${score}` : 'unrated';
+  const color = _wabBadgeColor(score);
+
+  // Approximate widths for Verdana 11px (works fine without web fonts).
+  const charW = 6.5;
+  const padX = 8;
+  const leftLabel = 'WAB';
+  const leftW = Math.round(leftLabel.length * charW + padX * 2);
+  const rightW = Math.round(right.length * charW + padX * 2);
+  const totalW = leftW + rightW;
+  const radius = style === 'flat-square' ? 0 : 3;
+
+  const escape = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="20" role="img" aria-label="WAB: ${escape(right)}">
+  <title>WAB: ${escape(right)}</title>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#fff" stop-opacity=".7"/>
+    <stop offset=".1" stop-color="#aaa" stop-opacity=".1"/>
+    <stop offset=".9" stop-color="#000" stop-opacity=".3"/>
+    <stop offset="1" stop-color="#000" stop-opacity=".5"/>
+  </linearGradient>
+  <clipPath id="r"><rect width="${totalW}" height="20" rx="${radius}" fill="#fff"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="${leftW}" height="20" fill="#374151"/>
+    <rect x="${leftW}" width="${rightW}" height="20" fill="${color}"/>
+    <rect width="${totalW}" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="${leftW / 2}" y="15" fill="#010101" fill-opacity=".3">${leftLabel}</text>
+    <text x="${leftW / 2}" y="14">${leftLabel}</text>
+    <text x="${leftW + rightW / 2}" y="15" fill="#010101" fill-opacity=".3">${escape(right)}</text>
+    <text x="${leftW + rightW / 2}" y="14">${escape(right)}</text>
+  </g>
+</svg>`;
+
+  res.set('Content-Type', 'image/svg+xml; charset=utf-8');
+  res.set('Cache-Control', 'public, max-age=300, s-maxage=300');
+  res.set('X-WAB-Version', WAB_VERSION);
+  res.send(svg);
+});
+
+// ═════════════════════════════════════════════════════════════════════
 // 11. GET /api/discovery/:siteId — Discovery doc for a specific site
 //    (defined AFTER named routes to prevent shadowing)
 // ═════════════════════════════════════════════════════════════════════
