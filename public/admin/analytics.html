@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H } = AdminShell;
+
+AdminShell.init({
+  page: 'analytics',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>Platform Analytics</h1>
+        <p class="page-sub">Aggregated from <code>GET /api/admin/analytics?days=N</code> (real DB query, no caching).</p>
+        <div class="toolbar">
+          <label>Window:&nbsp;
+            <select id="days" class="form-input">
+              <option value="7">7 days</option>
+              <option value="30" selected>30 days</option>
+              <option value="90">90 days</option>
+            </select>
+          </label>
+        </div>
+        <div id="content"><div class="empty">Loading…</div></div>
+      </div>
+    `;
+
+    async function load() {
+      const days = document.getElementById('days').value;
+      const r = await api('/api/admin/analytics?days=' + days);
+      const c = document.getElementById('content');
+      const totals = r.totals || {};
+      const events = r.events || r.byEvent || [];
+      const top = r.topSites || [];
+      c.innerHTML = `
+        <div class="grid stats-grid" style="margin:18px 0;">
+          ${Object.entries(totals).map(([k,v]) => `
+            <div class="stat-card">
+              <div class="stat-label">${H(k.replace(/_/g,' '))}</div>
+              <div class="stat-value">${H(typeof v === 'number' ? v.toLocaleString() : v)}</div>
+            </div>
+          `).join('') || '<div class="empty">No totals.</div>'}
+        </div>
+
+        <h3>Events by type</h3>
+        ${events.length ? `<div class="table-wrapper"><table>
+          <thead><tr><th>Event</th><th>Count</th></tr></thead>
+          <tbody>${events.map(e => `<tr><td>${H(e.event_type || e.event)}</td><td>${H(e.count || e.c)}</td></tr>`).join('')}</tbody>
+        </table></div>` : '<div class="empty">No events.</div>'}
+
+        <h3 style="margin-top:24px;">Top sites</h3>
+        ${top.length ? `<div class="table-wrapper"><table>
+          <thead><tr><th>Domain</th><th>Events</th></tr></thead>
+          <tbody>${top.map(s => `<tr><td>${H(s.domain)}</td><td>${H(s.events || s.count)}</td></tr>`).join('')}</tbody>
+        </table></div>` : '<div class="empty">No site activity.</div>'}
+      `;
+    }
+
+    document.getElementById('days').addEventListener('change', load);
+    await load();
+  },
+});
+</script>
+</body>
+</html>

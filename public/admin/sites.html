@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sites — WAB Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, fmtDate, toast } = AdminShell;
+const TIERS = ['free','starter','pro','enterprise'];
+
+AdminShell.init({
+  page: 'sites',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>Sites</h1>
+        <p class="page-sub">All registered sites. Tier and active toggle write directly to <code>PUT /api/admin/sites/:id</code>.</p>
+        <div class="toolbar">
+          <input id="q" class="form-input" placeholder="Filter by domain, name, or owner email…" />
+          <span class="spacer"></span>
+          <span id="count" style="color:#64748b;font-size:14px;"></span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr>
+              <th>Domain</th><th>Name</th><th>Owner</th><th>Tier</th>
+              <th>Active</th><th>Created</th><th style="text-align:right;">Analytics</th>
+            </tr></thead>
+            <tbody id="tbody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="modal">
+        <div class="modal" style="max-width:760px;">
+          <div class="modal-header">
+            <h2 id="modalTitle">Site analytics</h2>
+            <button class="modal-close" data-close>&times;</button>
+          </div>
+          <div class="modal-body" id="modalBody"></div>
+        </div>
+      </div>
+    `;
+
+    let sites = [];
+    async function load() {
+      const r = await api('/api/admin/sites');
+      sites = r.sites || [];
+      render(document.getElementById('q').value);
+    }
+
+    function render(filter = '') {
+      const f = filter.trim().toLowerCase();
+      const list = !f ? sites : sites.filter(s =>
+        (s.domain || '').toLowerCase().includes(f) ||
+        (s.name || '').toLowerCase().includes(f) ||
+        (s.owner_email || s.user_email || '').toLowerCase().includes(f)
+      );
+      document.getElementById('count').textContent = `${list.length} of ${sites.length} sites`;
+      const tbody = document.getElementById('tbody');
+      if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No sites.</td></tr>'; return; }
+      tbody.innerHTML = list.map(s => `
+        <tr>
+          <td><strong>${H(s.domain)}</strong></td>
+          <td>${H(s.name || '—')}</td>
+          <td>${H(s.owner_email || s.user_email || '—')}</td>
+          <td>
+            <select class="form-input" data-tier="${H(s.id)}">
+              ${TIERS.map(t => `<option value="${t}"${s.tier===t?' selected':''}>${t}</option>`).join('')}
+            </select>
+          </td>
+          <td>
+            <label class="toggle"><input type="checkbox" data-active="${H(s.id)}"${s.active==1||s.active===true?' checked':''}> <span></span></label>
+          </td>
+          <td>${H(fmtDate(s.created_at))}</td>
+          <td style="text-align:right;">
+            <button class="btn btn-ghost btn-sm" data-analytics="${H(s.id)}">View</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('q').addEventListener('input', e => render(e.target.value));
+
+    document.getElementById('tbody').addEventListener('change', async (e) => {
+      const tierId = e.target.getAttribute('data-tier');
+      const activeId = e.target.getAttribute('data-active');
+      try {
+        if (tierId) {
+          await api('/api/admin/sites/' + encodeURIComponent(tierId), { method: 'PUT', body: { tier: e.target.value } });
+          toast('Tier updated → ' + e.target.value, 'success');
+        } else if (activeId) {
+          await api('/api/admin/sites/' + encodeURIComponent(activeId), { method: 'PUT', body: { active: e.target.checked ? 1 : 0 } });
+          toast('Active = ' + e.target.checked, 'success');
+        }
+      } catch (err) { toast(err.message, 'error'); load(); }
+    });
+
+    document.getElementById('tbody').addEventListener('click', async (e) => {
+      const id = e.target.getAttribute('data-analytics');
+      if (!id) return;
+      const modal = document.getElementById('modal');
+      const body = document.getElementById('modalBody');
+      body.innerHTML = '<div class="empty">Loading…</div>';
+      modal.classList.add('open');
+      try {
+        const r = await api('/api/admin/sites/' + encodeURIComponent(id) + '/analytics?days=30');
+        document.getElementById('modalTitle').textContent = r.site.domain + ' — last ' + r.period;
+        body.innerHTML = `
+          <dl class="kv">
+            <dt>License key</dt><dd><code>${H(r.site.license_key || '—')}</code></dd>
+            <dt>Tier</dt><dd><span class="badge badge-${H(r.site.tier)}">${H(r.site.tier)}</span></dd>
+          </dl>
+          <h3 style="margin-top:24px;">Event summary</h3>
+          ${(r.summary && r.summary.length) ? `
+            <div class="table-wrapper"><table><thead><tr><th>Event</th><th>Count</th></tr></thead><tbody>
+            ${r.summary.map(row => `<tr><td>${H(row.event_type || row.event || '?')}</td><td>${H(row.count || row.c || 0)}</td></tr>`).join('')}
+            </tbody></table></div>
+          ` : '<div class="empty">No analytics yet.</div>'}
+        `;
+      } catch (err) {
+        body.innerHTML = `<div class="empty" style="color:#dc2626;">${H(err.message)}</div>`;
+      }
+    });
+
+    document.querySelector('#modal [data-close]').addEventListener('click', () => document.getElementById('modal').classList.remove('open'));
+    document.getElementById('modal').addEventListener('click', e => { if (e.target.id === 'modal') document.getElementById('modal').classList.remove('open'); });
+
+    await load();
+  },
+});
+</script>
+</body>
+</html>

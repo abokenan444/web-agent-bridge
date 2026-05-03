@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMTP — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, toast } = AdminShell;
+
+AdminShell.init({
+  page: 'smtp',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>SMTP / Email</h1>
+        <p class="page-sub">Outgoing mail server. Saved via <code>PUT /api/admin/smtp</code>. Password is masked on read; leave blank to keep existing.</p>
+
+        <form id="cfg" class="card" style="padding:18px;display:grid;gap:14px;max-width:760px;">
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;">
+            <label>Host<input class="form-input" name="host" required placeholder="smtp.example.com"></label>
+            <label>Port<input class="form-input" name="port" type="number" placeholder="587"></label>
+          </div>
+          <label class="check"><input type="checkbox" name="secure"> Use TLS (port 465 typical)</label>
+          <label>Username<input class="form-input" name="username" required></label>
+          <label>Password<input class="form-input" name="password" type="password" placeholder="leave blank to keep existing"></label>
+          <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px;">
+            <label>From name<input class="form-input" name="fromName" placeholder="WAB"></label>
+            <label>From email<input class="form-input" name="fromEmail" required></label>
+          </div>
+          <label class="check"><input type="checkbox" name="enabled"> Enabled</label>
+          <div class="btn-row" style="justify-content:flex-end;">
+            <button class="btn btn-primary" type="submit">Save SMTP</button>
+          </div>
+        </form>
+
+        <div class="card" style="padding:18px;margin-top:24px;max-width:760px;">
+          <h3 style="margin:0 0 10px;">Send test email</h3>
+          <form id="test" style="display:flex;gap:10px;">
+            <input class="form-input" name="testEmail" type="email" placeholder="recipient@example.com" required style="flex:1;">
+            <button class="btn btn-secondary" type="submit">Send test</button>
+          </form>
+        </div>
+      </div>
+    `;
+
+    async function load() {
+      const r = await api('/api/admin/smtp');
+      const s = r.settings || {};
+      const f = document.getElementById('cfg');
+      f.host.value = s.host || '';
+      f.port.value = s.port || 587;
+      f.secure.checked = !!s.secure;
+      f.username.value = s.username || '';
+      f.fromName.value = s.fromName || s.from_name || 'WAB';
+      f.fromEmail.value = s.fromEmail || s.from_email || '';
+      f.enabled.checked = !!s.enabled;
+    }
+
+    document.getElementById('cfg').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const body = {
+        host: f.host.value.trim(),
+        port: Number(f.port.value) || 587,
+        secure: f.secure.checked,
+        username: f.username.value.trim(),
+        fromName: f.fromName.value.trim(),
+        fromEmail: f.fromEmail.value.trim(),
+        enabled: f.enabled.checked,
+      };
+      const pw = f.password.value;
+      if (pw) body.password = pw;
+      try {
+        await api('/api/admin/smtp', { method: 'PUT', body });
+        toast('SMTP saved', 'success');
+        f.password.value = '';
+        load();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+
+    document.getElementById('test').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const testEmail = e.target.testEmail.value.trim();
+      try {
+        const r = await api('/api/admin/smtp/test', { method: 'POST', body: { testEmail } });
+        if (r && r.success) toast('Test sent', 'success');
+        else toast((r && r.error) || 'Failed', 'error');
+      } catch (err) { toast(err.message, 'error'); }
+    });
+
+    await load();
+  },
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DNS Discovery — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, fmtDate } = AdminShell;
+
+AdminShell.init({
+  page: 'discovery',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>DNS Discovery — Oversight</h1>
+        <p class="page-sub">Live data from <code>discovery_usage_runs</code>. Read-only.</p>
+        <div id="stats" class="grid stats-grid" style="margin:18px 0;"></div>
+        <h3>Top domains (30d)</h3>
+        <div id="top" class="table-wrapper"></div>
+        <h3 style="margin-top:24px;">Recent runs</h3>
+        <div id="runs" class="table-wrapper"></div>
+      </div>
+    `;
+
+    const [s, r] = await Promise.all([
+      api('/api/admin/discovery/stats'),
+      api('/api/admin/discovery/runs?limit=100'),
+    ]);
+    if (!s.enabled) { root.querySelector('#stats').innerHTML = '<div class="empty">Discovery telemetry not enabled.</div>'; return; }
+    const t = s.totals || {};
+    document.getElementById('stats').innerHTML = `
+      <div class="stat-card"><div class="stat-label">Runs (30d)</div><div class="stat-value">${H(t.runs || 0)}</div></div>
+      <div class="stat-card"><div class="stat-label">Domains</div><div class="stat-value">${H(t.domains || 0)}</div></div>
+      <div class="stat-card"><div class="stat-label">Successes</div><div class="stat-value">${H(t.successes || 0)}</div></div>
+      <div class="stat-card"><div class="stat-label">Avg score</div><div class="stat-value">${H((t.avg_score || 0).toFixed ? t.avg_score.toFixed(2) : t.avg_score || 0)}</div></div>
+    `;
+    const top = s.topDomains || [];
+    document.getElementById('top').innerHTML = top.length ? `<table>
+      <thead><tr><th>Domain</th><th>Runs</th><th>Avg score</th></tr></thead>
+      <tbody>${top.map(d => `<tr><td>${H(d.domain)}</td><td>${H(d.runs)}</td><td>${H((d.score || 0).toFixed ? d.score.toFixed(2) : d.score)}</td></tr>`).join('')}</tbody>
+    </table>` : '<div class="empty">No data.</div>';
+    const runs = r.runs || [];
+    document.getElementById('runs').innerHTML = runs.length ? `<table>
+      <thead><tr><th>Time</th><th>Domain</th><th>Action</th><th>Ready</th><th>Executed</th><th>OK</th><th>Score</th><th>Latency</th></tr></thead>
+      <tbody>${runs.map(x => `<tr>
+        <td>${H(fmtDate(x.created_at))}</td><td>${H(x.domain)}</td><td>${H(x.selected_action || '—')}</td>
+        <td>${x.readiness_ok ? '✅' : '—'}</td><td>${x.execution_attempted ? '▶' : '—'}</td>
+        <td>${x.execution_succeeded ? '✅' : x.execution_attempted ? '❌' : '—'}</td>
+        <td>${H((x.value_score || 0).toFixed ? x.value_score.toFixed(2) : x.value_score || 0)}</td>
+        <td>${H(x.end_to_end_ms || '—')}ms</td>
+      </tr>`).join('')}</tbody>
+    </table>` : '<div class="empty">No runs yet.</div>';
+  },
+});
+</script>
+</body>
+</html>

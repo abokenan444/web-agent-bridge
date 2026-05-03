@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Users — WAB Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, fmtDate, toast, confirmAsync } = AdminShell;
+const TIERS = ['free','starter','pro','enterprise'];
+
+AdminShell.init({
+  page: 'users',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>Users</h1>
+        <p class="page-sub">All registered accounts. Edits hit <code>/api/admin/users/:id</code> and apply immediately.</p>
+        <div class="toolbar">
+          <input id="q" class="form-input" placeholder="Filter by name, email, or company…" />
+          <span class="spacer"></span>
+          <span id="count" style="color:#64748b;font-size:14px;"></span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr>
+              <th>Name</th><th>Email</th><th>Company</th><th>Sites</th><th>Tier</th>
+              <th>Registered</th><th style="text-align:right;">Actions</th>
+            </tr></thead>
+            <tbody id="tbody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="modal">
+        <div class="modal" style="max-width:780px;">
+          <div class="modal-header">
+            <h2 id="modalTitle">User</h2>
+            <button class="modal-close" data-close>&times;</button>
+          </div>
+          <div class="modal-body" id="modalBody"></div>
+        </div>
+      </div>
+    `;
+
+    let users = [];
+
+    async function load() {
+      const r = await api('/api/admin/users');
+      users = r.users || [];
+      render(document.getElementById('q').value);
+    }
+
+    function render(filter = '') {
+      const f = filter.trim().toLowerCase();
+      const list = !f ? users : users.filter(u =>
+        (u.name || '').toLowerCase().includes(f) ||
+        (u.email || '').toLowerCase().includes(f) ||
+        (u.company || '').toLowerCase().includes(f)
+      );
+      const tbody = document.getElementById('tbody');
+      document.getElementById('count').textContent = `${list.length} of ${users.length} users`;
+      if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No users.</td></tr>'; return; }
+      tbody.innerHTML = list.map(u => `
+        <tr>
+          <td><strong>${H(u.name)}</strong></td>
+          <td>${H(u.email)}</td>
+          <td>${H(u.company || '—')}</td>
+          <td>${u.sites_count || 0}</td>
+          <td>${tierBadge(u.tier || 'free')}</td>
+          <td>${H(fmtDate(u.created_at))}</td>
+          <td style="text-align:right;">
+            <div class="btn-row" style="justify-content:flex-end;">
+              <button class="btn btn-ghost btn-sm" data-view="${H(u.id)}">View</button>
+              <button class="btn btn-danger btn-sm" data-del="${H(u.id)}" data-name="${H(u.name)}">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function tierBadge(t) { return `<span class="badge badge-${H(t)}">${H(t)}</span>`; }
+
+    document.getElementById('q').addEventListener('input', (e) => render(e.target.value));
+
+    document.getElementById('tbody').addEventListener('click', async (e) => {
+      const v = e.target.getAttribute('data-view');
+      const d = e.target.getAttribute('data-del');
+      if (v) return openDetail(v);
+      if (d) {
+        if (!await confirmAsync(`Delete user "${e.target.getAttribute('data-name')}"? This is permanent.`)) return;
+        try {
+          await api('/api/admin/users/' + encodeURIComponent(d), { method: 'DELETE' });
+          toast('User deleted', 'success');
+          load();
+        } catch (err) { toast(err.message, 'error'); }
+      }
+    });
+
+    async function openDetail(id) {
+      const modal = document.getElementById('modal');
+      const body = document.getElementById('modalBody');
+      const title = document.getElementById('modalTitle');
+      body.innerHTML = '<div class="empty">Loading…</div>';
+      modal.classList.add('open');
+      try {
+        const r = await api('/api/admin/users/' + encodeURIComponent(id));
+        const u = r.user;
+        title.textContent = u.name + ' — ' + u.email;
+        body.innerHTML = `
+          <dl class="kv">
+            <dt>ID</dt><dd><code>${H(u.id)}</code></dd>
+            <dt>Email</dt><dd>${H(u.email)}</dd>
+            <dt>Company</dt><dd>${H(u.company || '—')}</dd>
+            <dt>Registered</dt><dd>${H(fmtDate(u.created_at))}</dd>
+          </dl>
+          <h3 style="margin-top:24px;margin-bottom:10px;">Sites (${(u.sites || []).length})</h3>
+          <div class="table-wrapper">
+            <table><thead><tr><th>Domain</th><th>Tier</th><th>Change</th></tr></thead><tbody>
+            ${(u.sites || []).map(s => `
+              <tr>
+                <td><strong>${H(s.domain)}</strong><br><small style="color:#64748b;">${H(s.id)}</small></td>
+                <td>${tierBadge(s.tier || 'free')}</td>
+                <td>
+                  <select class="form-input" data-tier-site="${H(s.id)}" data-user="${H(u.id)}">
+                    ${TIERS.map(t => `<option value="${t}"${s.tier===t?' selected':''}>${t}</option>`).join('')}
+                  </select>
+                </td>
+              </tr>
+            `).join('') || '<tr><td colspan="3" class="empty">No sites.</td></tr>'}
+            </tbody></table>
+          </div>
+        `;
+        body.querySelectorAll('select[data-tier-site]').forEach(sel => {
+          sel.addEventListener('change', async (ev) => {
+            const sid = ev.target.getAttribute('data-tier-site');
+            const uid = ev.target.getAttribute('data-user');
+            const tier = ev.target.value;
+            try {
+              await api('/api/admin/users/' + encodeURIComponent(uid) + '/tier', {
+                method: 'PUT', body: { tier, siteId: sid },
+              });
+              toast(`Tier updated → ${tier}`, 'success');
+              load();
+            } catch (err) { toast(err.message, 'error'); }
+          });
+        });
+      } catch (err) {
+        body.innerHTML = `<div class="empty" style="color:#dc2626;">${H(err.message)}</div>`;
+      }
+    }
+
+    document.querySelector('#modal [data-close]').addEventListener('click', () => {
+      document.getElementById('modal').classList.remove('open');
+    });
+    document.getElementById('modal').addEventListener('click', (e) => {
+      if (e.target.id === 'modal') document.getElementById('modal').classList.remove('open');
+    });
+
+    await load();
+  },
+});
+</script>
+</body>
+</html>

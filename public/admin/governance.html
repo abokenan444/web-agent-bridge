@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Governance — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, fmtDate, toast, confirmAsync } = AdminShell;
+
+AdminShell.init({
+  page: 'governance',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>🛡️ Agent Governance</h1>
+        <p class="page-sub">Phase 20 — every agent registered with the governance layer. Kill-switch, policies, approvals and HMAC audit chain are all backed by the live <code>gov_*</code> tables.</p>
+
+        <div id="stats" class="grid stats-grid" style="margin:18px 0;"></div>
+
+        <div class="toolbar">
+          <input id="q" class="form-input" placeholder="Filter by agent id, owner email, or display name…" />
+          <span class="spacer"></span>
+          <span id="count" style="color:#64748b;font-size:14px;"></span>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead><tr>
+              <th>Agent</th><th>Owner</th><th>Status</th><th>Policies</th>
+              <th>Audit events</th><th>Pending approvals</th><th>Created</th><th style="text-align:right;">Actions</th>
+            </tr></thead>
+            <tbody id="tbody"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+
+        <h2 style="margin-top:32px;">Recent denies</h2>
+        <p class="page-sub">Last 25 <code>deny</code> decisions across all agents — straight from the audit log.</p>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Time</th><th>Agent</th><th>Resource</th><th>Action</th><th>Reason</th></tr></thead>
+            <tbody id="denies"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="modal">
+        <div class="modal" style="max-width:920px;">
+          <div class="modal-header">
+            <h2 id="modalTitle">Agent</h2>
+            <button class="modal-close" data-close>&times;</button>
+          </div>
+          <div class="modal-body" id="modalBody"></div>
+        </div>
+      </div>
+    `;
+
+    function statBox(label, value, sub) {
+      return `<div class="stat-card"><div class="stat-label">${H(label)}</div>
+        <div class="stat-value">${H(value)}</div>
+        ${sub ? `<div class="stat-sub">${H(sub)}</div>` : ''}</div>`;
+    }
+    function decisionBadge(d) {
+      const cls = d === 'allow' ? 'badge-allow' : d === 'deny' ? 'badge-deny' : 'badge-pending';
+      return `<span class="badge ${cls}">${H(d || '—')}</span>`;
+    }
+    function statusBadge(s) {
+      const cls = s === 'alive' ? 'badge-active' : s === 'killed' ? 'badge-killed' : 'badge-suspended';
+      return `<span class="badge ${cls}">${H(s)}</span>`;
+    }
+
+    let agents = [];
+
+    async function loadStats() {
+      const s = await api('/api/admin/governance/stats');
+      const t = s.totals || {};
+      document.getElementById('stats').innerHTML = [
+        statBox('Agents', t.agents || 0, `${t.alive || 0} alive · ${t.killed || 0} killed`),
+        statBox('Policies', t.policies || 0),
+        statBox('Audit events', t.audit_events || 0, 'HMAC chained'),
+        statBox('Pending approvals', t.pending_approvals || 0, 'Awaiting human'),
+      ].join('');
+      const tbody = document.getElementById('denies');
+      const list = s.recentDenies || [];
+      tbody.innerHTML = list.length
+        ? list.map(d => `
+            <tr>
+              <td>${H(fmtDate(d.ts))}</td>
+              <td><code>${H(d.agent_id)}</code></td>
+              <td>${H(d.resource || '—')}</td>
+              <td>${H(d.action || '—')}</td>
+              <td>${H(d.reason || '—')}</td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="5" class="empty">No denies recorded.</td></tr>';
+    }
+
+    async function loadAgents() {
+      const r = await api('/api/admin/governance/agents');
+      agents = r.agents || [];
+      render(document.getElementById('q').value);
+    }
+
+    function render(filter = '') {
+      const f = filter.trim().toLowerCase();
+      const list = !f ? agents : agents.filter(a =>
+        (a.agent_id || '').toLowerCase().includes(f) ||
+        (a.owner_email || '').toLowerCase().includes(f) ||
+        (a.display_name || '').toLowerCase().includes(f)
+      );
+      document.getElementById('count').textContent = `${list.length} of ${agents.length} agents`;
+      const tbody = document.getElementById('tbody');
+      if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">No agents registered.</td></tr>'; return; }
+      tbody.innerHTML = list.map(a => `
+        <tr>
+          <td><strong>${H(a.display_name || a.agent_id)}</strong><br><small style="color:#64748b;"><code>${H(a.agent_id)}</code></small></td>
+          <td>${H(a.owner_email || a.owner_id || '—')}</td>
+          <td>${statusBadge(a.status)}</td>
+          <td>${H(a.policies)}</td>
+          <td>${H(a.audit_events)}</td>
+          <td>${a.pending_approvals > 0 ? `<span class="badge badge-pending">${H(a.pending_approvals)}</span>` : H(a.pending_approvals)}</td>
+          <td>${H(fmtDate(a.created_at))}</td>
+          <td style="text-align:right;">
+            <div class="btn-row" style="justify-content:flex-end;">
+              <button class="btn btn-ghost btn-sm" data-open="${H(a.agent_id)}">Manage</button>
+              ${a.status === 'alive'
+                ? `<button class="btn btn-danger btn-sm" data-kill="${H(a.agent_id)}">Kill</button>`
+                : `<button class="btn btn-secondary btn-sm" data-revive="${H(a.agent_id)}">Revive</button>`}
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('q').addEventListener('input', e => render(e.target.value));
+
+    document.getElementById('tbody').addEventListener('click', async (e) => {
+      const open = e.target.getAttribute('data-open');
+      const kill = e.target.getAttribute('data-kill');
+      const revive = e.target.getAttribute('data-revive');
+      try {
+        if (open) return openAgent(open);
+        if (kill) {
+          if (!await confirmAsync(`Kill agent "${kill}"? All future actions will be denied until revived.`)) return;
+          await api(`/api/admin/governance/agents/${encodeURIComponent(kill)}/kill`, { method: 'POST', body: { reason: 'admin_panel' } });
+          toast('Agent killed', 'success');
+          loadStats(); loadAgents();
+        }
+        if (revive) {
+          if (!await confirmAsync(`Revive agent "${revive}"?`)) return;
+          await api(`/api/admin/governance/agents/${encodeURIComponent(revive)}/revive`, { method: 'POST', body: { reason: 'admin_panel' } });
+          toast('Agent revived', 'success');
+          loadStats(); loadAgents();
+        }
+      } catch (err) { toast(err.message, 'error'); }
+    });
+
+    async function openAgent(id) {
+      const modal = document.getElementById('modal');
+      const body = document.getElementById('modalBody');
+      body.innerHTML = '<div class="empty">Loading…</div>';
+      modal.classList.add('open');
+      try {
+        const r = await api('/api/admin/governance/agents/' + encodeURIComponent(id));
+        const a = r.agent;
+        document.getElementById('modalTitle').textContent = a.display_name || a.agent_id;
+        body.innerHTML = renderAgentDetail(a, r.policies || [], r.approvals || [], r.audit || []);
+        wireAgentDetail(id);
+      } catch (err) {
+        body.innerHTML = `<div class="empty" style="color:#dc2626;">${H(err.message)}</div>`;
+      }
+    }
+
+    function renderAgentDetail(a, policies, approvals, audit) {
+      return `
+        <dl class="kv">
+          <dt>Agent ID</dt><dd><code>${H(a.agent_id)}</code></dd>
+          <dt>Owner</dt><dd>${H(a.owner_id || '—')}</dd>
+          <dt>Status</dt><dd>${a.status === 'alive' ? '<span class="badge badge-active">alive</span>' : '<span class="badge badge-killed">killed</span>'}</dd>
+          ${a.killed_reason ? `<dt>Kill reason</dt><dd>${H(a.killed_reason)}</dd>` : ''}
+          <dt>Created</dt><dd>${H(fmtDate(a.created_at))}</dd>
+        </dl>
+
+        <div class="btn-row" style="margin:16px 0;">
+          <button class="btn btn-secondary btn-sm" id="verifyBtn">🔐 Verify audit chain</button>
+        </div>
+        <div id="verifyResult"></div>
+
+        <h3 style="margin-top:24px;">Policies (${policies.length})</h3>
+        <form id="newPolicy" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:10px 0;">
+          <input class="form-input" name="resource" placeholder="resource (e.g. stripe)" required>
+          <input class="form-input" name="action" placeholder="action (read/write/*)" required>
+          <input class="form-input" name="scope" placeholder="scope (optional)">
+          <input class="form-input" name="max_amount" type="number" step="0.01" placeholder="max_amount">
+          <select class="form-input" name="effect">
+            <option value="allow">allow</option><option value="deny">deny</option>
+          </select>
+          <button class="btn btn-primary btn-sm" type="submit">Add</button>
+        </form>
+        ${policies.length ? `
+          <div class="table-wrapper"><table>
+            <thead><tr><th>Resource</th><th>Action</th><th>Scope</th><th>Max</th><th>Daily cap</th><th>Effect</th><th>Approval</th><th></th></tr></thead>
+            <tbody>
+            ${policies.map(p => `
+              <tr>
+                <td><code>${H(p.resource)}</code></td>
+                <td>${H(p.action)}</td>
+                <td>${H(p.scope || '—')}</td>
+                <td>${p.max_amount != null ? H(p.max_amount + ' ' + (p.currency || '')) : '—'}</td>
+                <td>${p.daily_cap != null ? H(p.daily_cap) : '—'}</td>
+                <td>${decisionBadge(p.effect)}</td>
+                <td>${p.requires_approval ? 'yes' : 'no'}</td>
+                <td><button class="btn btn-danger btn-sm" data-delpolicy="${H(p.id)}">×</button></td>
+              </tr>
+            `).join('')}
+            </tbody></table></div>
+        ` : '<div class="empty">No policies — agent runs unconstrained until you add some.</div>'}
+
+        <h3 style="margin-top:24px;">Pending approvals (${approvals.length})</h3>
+        ${approvals.length ? `
+          <div class="table-wrapper"><table>
+            <thead><tr><th>Resource</th><th>Action</th><th>Amount</th><th>Reason</th><th>Requested</th><th></th></tr></thead>
+            <tbody>
+            ${approvals.map(ap => `
+              <tr>
+                <td><code>${H(ap.resource)}</code></td>
+                <td>${H(ap.action)}</td>
+                <td>${ap.amount != null ? H(ap.amount + ' ' + (ap.currency || '')) : '—'}</td>
+                <td>${H(ap.reason || '—')}</td>
+                <td>${H(fmtDate(ap.created_at))}</td>
+                <td>
+                  <div class="btn-row" style="justify-content:flex-end;">
+                    <button class="btn btn-primary btn-sm" data-approve="${H(ap.request_id)}">Approve</button>
+                    <button class="btn btn-danger btn-sm" data-reject="${H(ap.request_id)}">Reject</button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+            </tbody></table></div>
+        ` : '<div class="empty">No approvals waiting.</div>'}
+
+        <h3 style="margin-top:24px;">Audit log (latest ${audit.length})</h3>
+        <div class="table-wrapper" style="max-height:340px;overflow:auto;"><table>
+          <thead><tr><th>Time</th><th>Event</th><th>Resource</th><th>Action</th><th>Decision</th><th>Reason</th></tr></thead>
+          <tbody>
+          ${audit.length ? audit.map(g => `
+            <tr>
+              <td>${H(fmtDate(g.ts))}</td>
+              <td>${H(g.event_type)}</td>
+              <td>${H(g.resource || '')}</td>
+              <td>${H(g.action || '')}</td>
+              <td>${decisionBadge(g.decision)}</td>
+              <td>${H(g.reason || '')}</td>
+            </tr>
+          `).join('') : '<tr><td colspan="6" class="empty">No events.</td></tr>'}
+          </tbody></table></div>
+      `;
+    }
+
+    function wireAgentDetail(agentId) {
+      const body = document.getElementById('modalBody');
+      body.querySelector('#verifyBtn').addEventListener('click', async () => {
+        const out = document.getElementById('verifyResult');
+        out.innerHTML = '<div class="empty">Verifying…</div>';
+        try {
+          const r = await api(`/api/admin/governance/agents/${encodeURIComponent(agentId)}/audit/verify`);
+          out.innerHTML = r.ok
+            ? `<div class="notice notice-success">✅ Chain valid · ${H(r.checked || 0)} entries verified</div>`
+            : `<div class="notice notice-error">❌ Chain broken at id ${H(r.broken_at || '?')} — ${H(r.reason || '')}</div>`;
+        } catch (err) { out.innerHTML = `<div class="notice notice-error">${H(err.message)}</div>`; }
+      });
+
+      body.querySelector('#newPolicy').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const f = e.target;
+        const body = {
+          resource: f.resource.value.trim(),
+          action: f.action.value.trim(),
+          effect: f.effect.value,
+        };
+        if (f.scope.value.trim()) body.scope = f.scope.value.trim();
+        if (f.max_amount.value) body.max_amount = Number(f.max_amount.value);
+        try {
+          await api(`/api/admin/governance/agents/${encodeURIComponent(agentId)}/policies`, { method: 'POST', body });
+          toast('Policy added', 'success');
+          openAgent(agentId);
+          loadAgents();
+        } catch (err) { toast(err.message, 'error'); }
+      });
+
+      body.addEventListener('click', async (e) => {
+        const del = e.target.getAttribute('data-delpolicy');
+        const ap = e.target.getAttribute('data-approve');
+        const rj = e.target.getAttribute('data-reject');
+        try {
+          if (del) {
+            if (!await confirmAsync('Delete policy?')) return;
+            await api(`/api/admin/governance/agents/${encodeURIComponent(agentId)}/policies/${encodeURIComponent(del)}`, { method: 'DELETE' });
+            toast('Policy deleted', 'success');
+            openAgent(agentId); loadAgents();
+          } else if (ap) {
+            await api(`/api/admin/governance/approvals/${encodeURIComponent(ap)}/decide`, { method: 'POST', body: { decision: 'approved' } });
+            toast('Approved', 'success'); openAgent(agentId); loadAgents(); loadStats();
+          } else if (rj) {
+            await api(`/api/admin/governance/approvals/${encodeURIComponent(rj)}/decide`, { method: 'POST', body: { decision: 'rejected' } });
+            toast('Rejected', 'success'); openAgent(agentId); loadAgents(); loadStats();
+          }
+        } catch (err) { toast(err.message, 'error'); }
+      });
+    }
+
+    document.querySelector('#modal [data-close]').addEventListener('click', () => document.getElementById('modal').classList.remove('open'));
+    document.getElementById('modal').addEventListener('click', e => { if (e.target.id === 'modal') document.getElementById('modal').classList.remove('open'); });
+
+    await Promise.all([loadStats(), loadAgents()]);
+  },
+});
+</script>
+</body>
+</html>

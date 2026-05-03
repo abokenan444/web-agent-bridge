@@ -435,4 +435,115 @@ router.get('/modules/stats', authenticateAdmin, (_req, res) => {
   });
 });
 
+// ─── Governance Layer (Phase 20) — admin oversight of all agents ──
+// These endpoints expose the same data as /api/governance/* but authenticate
+// via admin token instead of an agent's own token, so an admin can see and
+// act across every agent on the platform.
+const gov = (() => { try { return require('../services/governance'); } catch { return null; } });
+function ensureGovTables() {
+  return tableExists('gov_agents');
+}
+
+router.get('/governance/stats', authenticateAdmin, (_req, res) => {
+  if (!ensureGovTables()) return res.json({ enabled: false, totals: {} });
+  const totals = db.prepare(`
+    SELECT
+      COUNT(*) AS agents,
+      SUM(CASE WHEN status='alive' THEN 1 ELSE 0 END) AS alive,
+      SUM(CASE WHEN status='killed' THEN 1 ELSE 0 END) AS killed,
+      SUM(CASE WHEN status='suspended' THEN 1 ELSE 0 END) AS suspended
+    FROM gov_agents
+  `).get() || {};
+  const policies = db.prepare(`SELECT COUNT(*) AS c FROM gov_policies`).get().c;
+  const audit = db.prepare(`SELECT COUNT(*) AS c FROM gov_audit`).get().c;
+  const pending = db.prepare(`SELECT COUNT(*) AS c FROM gov_approvals WHERE status='pending'`).get().c;
+  const recentDenies = db.prepare(`
+    SELECT id, agent_id, ts, resource, action, decision, reason
+    FROM gov_audit WHERE decision='deny' ORDER BY id DESC LIMIT 25
+  `).all();
+  res.json({ enabled: true, totals: { ...totals, policies, audit_events: audit, pending_approvals: pending }, recentDenies });
+});
+
+router.get('/governance/agents', authenticateAdmin, (_req, res) => {
+  if (!ensureGovTables()) return res.json({ agents: [] });
+  const rows = db.prepare(`
+    SELECT a.agent_id, a.owner_id, u.email AS owner_email, a.display_name,
+           a.status, a.killed_at, a.killed_reason, a.created_at, a.updated_at,
+           (SELECT COUNT(*) FROM gov_policies p WHERE p.agent_id = a.agent_id) AS policies,
+           (SELECT COUNT(*) FROM gov_audit g WHERE g.agent_id = a.agent_id) AS audit_events,
+           (SELECT COUNT(*) FROM gov_approvals ap WHERE ap.agent_id = a.agent_id AND ap.status='pending') AS pending_approvals
+    FROM gov_agents a
+    LEFT JOIN users u ON u.id = a.owner_id
+    ORDER BY a.created_at DESC
+  `).all();
+  res.json({ agents: rows });
+});
+
+router.get('/governance/agents/:id', authenticateAdmin, (req, res) => {
+  if (!ensureGovTables()) return res.status(404).json({ error: 'governance_disabled' });
+  const a = db.prepare(`SELECT agent_id, owner_id, display_name, status, killed_at, killed_reason, metadata, created_at, updated_at FROM gov_agents WHERE agent_id = ?`).get(req.params.id);
+  if (!a) return res.status(404).json({ error: 'agent_not_found' });
+  const policies = db.prepare(`SELECT * FROM gov_policies WHERE agent_id = ? ORDER BY id DESC`).all(req.params.id);
+  const approvals = db.prepare(`SELECT * FROM gov_approvals WHERE agent_id = ? AND status='pending' ORDER BY created_at DESC LIMIT 50`).all(req.params.id);
+  const audit = db.prepare(`SELECT id, ts, event_type, resource, action, scope, amount, currency, decision, reason FROM gov_audit WHERE agent_id = ? ORDER BY id DESC LIMIT 200`).all(req.params.id);
+  res.json({ agent: a, policies, approvals, audit });
+});
+
+router.get('/governance/agents/:id/audit/verify', authenticateAdmin, (req, res) => {
+  const g = gov(); if (!g) return res.status(503).json({ error: 'governance_unavailable' });
+  res.json(g.verifyAuditChain(req.params.id));
+});
+
+router.post('/governance/agents/:id/kill', authenticateAdmin, (req, res) => {
+  const g = gov(); if (!g) return res.status(503).json({ error: 'governance_unavailable' });
+  const reason = (req.body && req.body.reason) || ('admin:' + (req.admin.email || req.admin.id));
+  const ok = g.killAgent(req.params.id, reason);
+  auditLog({ actorType: 'admin', actorId: String(req.admin.id), action: 'governance_kill', details: { agent_id: req.params.id, reason } });
+  res.json({ ok, status: 'killed', reason });
+});
+
+router.post('/governance/agents/:id/revive', authenticateAdmin, (req, res) => {
+  const g = gov(); if (!g) return res.status(503).json({ error: 'governance_unavailable' });
+  const reason = (req.body && req.body.reason) || ('admin:' + (req.admin.email || req.admin.id));
+  const ok = g.reviveAgent(req.params.id, reason);
+  auditLog({ actorType: 'admin', actorId: String(req.admin.id), action: 'governance_revive', details: { agent_id: req.params.id, reason } });
+  res.json({ ok, status: 'alive', reason });
+});
+
+router.post('/governance/agents/:id/policies', authenticateAdmin, (req, res) => {
+  const g = gov(); if (!g) return res.status(503).json({ error: 'governance_unavailable' });
+  const b = req.body || {};
+  if (!b.resource || !b.action) return res.status(400).json({ error: 'missing_fields', need: ['resource', 'action'] });
+  const r = g.definePolicy({
+    agentId: req.params.id, resource: String(b.resource), action: String(b.action),
+    scope: b.scope || null, maxAmount: b.max_amount, currency: b.currency,
+    dailyCap: b.daily_cap, perCallRate: b.per_call_rate,
+    requiresApproval: !!b.requires_approval,
+    effect: b.effect === 'deny' ? 'deny' : 'allow',
+    expiresAt: b.expires_at || null,
+  });
+  auditLog({ actorType: 'admin', actorId: String(req.admin.id), action: 'governance_policy_create', details: { agent_id: req.params.id, policy_id: r.id } });
+  res.status(201).json({ ok: true, id: r.id });
+});
+
+router.delete('/governance/agents/:id/policies/:pid', authenticateAdmin, (req, res) => {
+  const g = gov(); if (!g) return res.status(503).json({ error: 'governance_unavailable' });
+  const ok = g.deletePolicy(req.params.id, Number(req.params.pid));
+  auditLog({ actorType: 'admin', actorId: String(req.admin.id), action: 'governance_policy_delete', details: { agent_id: req.params.id, policy_id: req.params.pid } });
+  res.json({ ok });
+});
+
+router.post('/governance/approvals/:rid/decide', authenticateAdmin, (req, res) => {
+  const g = gov(); if (!g) return res.status(503).json({ error: 'governance_unavailable' });
+  const decision = req.body?.decision === 'approved' ? 'approved' : 'rejected';
+  const out = g.decideApproval(req.params.rid, {
+    decision,
+    decidedBy: 'admin:' + req.admin.id,
+    note: req.body?.note || null,
+  });
+  if (!out.ok) return res.status(409).json(out);
+  auditLog({ actorType: 'admin', actorId: String(req.admin.id), action: 'governance_approval_decide', details: { request_id: req.params.rid, decision } });
+  res.json(out);
+});
+
 module.exports = router;

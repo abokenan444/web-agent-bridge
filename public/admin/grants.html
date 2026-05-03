@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free Grants — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, fmtDate, toast, confirmAsync } = AdminShell;
+
+AdminShell.init({
+  page: 'grants',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>Free Grants</h1>
+        <p class="page-sub">Manually granted complimentary tier upgrades. Stored in the <code>grants</code> table; revoking a grant returns the user to their paid tier.</p>
+
+        <div class="card" style="padding:18px;margin:18px 0;">
+          <h3 style="margin:0 0 12px;">Issue a new grant</h3>
+          <form id="newGrant" class="form-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+            <input class="form-input" name="userId" placeholder="User ID" required>
+            <input class="form-input" name="siteId" placeholder="Site ID (optional)">
+            <select class="form-input" name="tier" required>
+              <option value="starter">starter</option>
+              <option value="pro" selected>pro</option>
+              <option value="enterprise">enterprise</option>
+            </select>
+            <input class="form-input" name="reason" placeholder="Reason / note">
+            <input class="form-input" name="expiresAt" placeholder="Expires (YYYY-MM-DD, optional)" style="grid-column:1 / span 3;">
+            <button class="btn btn-primary" type="submit">Grant</button>
+          </form>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead><tr>
+              <th>User</th><th>Site</th><th>Tier</th><th>Reason</th>
+              <th>Granted</th><th>Expires</th><th style="text-align:right;">Actions</th>
+            </tr></thead>
+            <tbody id="tbody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    async function load() {
+      const r = await api('/api/admin/grants');
+      const list = r.grants || [];
+      const tbody = document.getElementById('tbody');
+      if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No active grants.</td></tr>'; return; }
+      tbody.innerHTML = list.map(g => `
+        <tr>
+          <td><strong>${H(g.user_email || g.user_name || g.user_id)}</strong><br><small style="color:#64748b;">${H(g.user_id)}</small></td>
+          <td>${H(g.site_id || '—')}</td>
+          <td><span class="badge badge-${H(g.tier)}">${H(g.tier)}</span></td>
+          <td>${H(g.reason || '—')}</td>
+          <td>${H(fmtDate(g.created_at))}</td>
+          <td>${H(fmtDate(g.expires_at) || 'never')}</td>
+          <td style="text-align:right;">
+            <button class="btn btn-danger btn-sm" data-revoke="${H(g.id)}">Revoke</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('newGrant').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const body = {
+        userId: fd.get('userId'),
+        siteId: fd.get('siteId') || undefined,
+        tier: fd.get('tier'),
+        reason: fd.get('reason') || undefined,
+        expiresAt: fd.get('expiresAt') || undefined,
+      };
+      try {
+        await api('/api/admin/grants', { method: 'POST', body });
+        toast('Grant created', 'success');
+        e.target.reset();
+        load();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+
+    document.getElementById('tbody').addEventListener('click', async (e) => {
+      const id = e.target.getAttribute('data-revoke');
+      if (!id) return;
+      if (!await confirmAsync('Revoke this grant?')) return;
+      try {
+        await api('/api/admin/grants/' + encodeURIComponent(id), { method: 'DELETE' });
+        toast('Grant revoked', 'success');
+        load();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+
+    await load();
+  },
+});
+</script>
+</body>
+</html>

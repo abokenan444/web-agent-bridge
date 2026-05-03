@@ -416,6 +416,13 @@ app.get('/admin', noCache, (req, res) => {
 app.get('/admin/snapshots', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'snapshots.html'));
 });
+
+// ─── Admin sub-pages (each backed by real API endpoints in /api/admin/*) ──
+['users','sites','analytics','grants','payments','stripe','smtp','notifications','governance','discovery','trust','providers'].forEach((page) => {
+  app.get('/admin/' + page, noCache, (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'admin', page + '.html'));
+  });
+});
 app.get('/privacy', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'privacy.html'));
 });

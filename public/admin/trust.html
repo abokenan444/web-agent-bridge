@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trust Layer — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, fmtDate } = AdminShell;
+
+AdminShell.init({
+  page: 'trust',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>Trust Layer</h1>
+        <p class="page-sub">Domain trust scoring from <code>discovery_trust_runs</code>.</p>
+        <div id="stats" class="grid stats-grid" style="margin:18px 0;"></div>
+        <h3>Leaderboard</h3>
+        <div id="lb" class="table-wrapper"></div>
+        <h3 style="margin-top:24px;">Recent runs</h3>
+        <div id="runs" class="table-wrapper"></div>
+      </div>
+    `;
+    const [s, r] = await Promise.all([
+      api('/api/admin/trust/stats'),
+      api('/api/admin/trust/runs?limit=100'),
+    ]);
+    if (!s.enabled) { root.querySelector('#stats').innerHTML = '<div class="empty">Trust telemetry not enabled.</div>'; return; }
+    const t = s.totals || {};
+    document.getElementById('stats').innerHTML = `
+      <div class="stat-card"><div class="stat-label">Runs (30d)</div><div class="stat-value">${H(t.runs || 0)}</div></div>
+      <div class="stat-card"><div class="stat-label">Domains</div><div class="stat-value">${H(t.domains || 0)}</div></div>
+      <div class="stat-card"><div class="stat-label">Avg score</div><div class="stat-value">${H((t.avg_score || 0).toFixed ? t.avg_score.toFixed(2) : t.avg_score || 0)}</div></div>
+      <div class="stat-card"><div class="stat-label">Signed manifests</div><div class="stat-value">${H(t.signed_manifests || 0)}</div></div>
+    `;
+    const lb = s.leaderboard || [];
+    document.getElementById('lb').innerHTML = lb.length ? `<table>
+      <thead><tr><th>Domain</th><th>Score</th><th>Last run</th></tr></thead>
+      <tbody>${lb.map(d => `<tr><td>${H(d.domain)}</td><td>${H((d.score || 0).toFixed ? d.score.toFixed(2) : d.score)}</td><td>${H(fmtDate(d.last_run))}</td></tr>`).join('')}</tbody>
+    </table>` : '<div class="empty">No data.</div>';
+    const runs = r.runs || [];
+    document.getElementById('runs').innerHTML = runs.length ? `<table>
+      <thead><tr><th>Time</th><th>Domain</th><th>Score</th><th>DNSSEC</th><th>PK</th><th>Manifest</th><th>Sig valid</th><th>HTTPS</th></tr></thead>
+      <tbody>${runs.map(x => `<tr>
+        <td>${H(fmtDate(x.created_at))}</td><td>${H(x.domain)}</td>
+        <td>${H((x.score || 0).toFixed ? x.score.toFixed(2) : x.score)}</td>
+        <td>${x.dnssec ? '✅' : '—'}</td><td>${x.has_pk ? '✅' : '—'}</td>
+        <td>${x.signed_manifest ? '✅' : '—'}</td><td>${x.sig_valid ? '✅' : '—'}</td>
+        <td>${x.https_ok ? '✅' : '—'}</td>
+      </tr>`).join('')}</tbody>
+    </table>` : '<div class="empty">No runs yet.</div>';
+  },
+});
+</script>
+</body>
+</html>

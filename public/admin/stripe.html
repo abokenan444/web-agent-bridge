@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stripe — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, toast } = AdminShell;
+
+AdminShell.init({
+  page: 'stripe',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>Stripe Configuration</h1>
+        <p class="page-sub">Saving these values writes to <code>platform_settings</code> via <code>PUT /api/admin/stripe/config</code>. Empty fields are <em>not</em> overwritten.</p>
+
+        <div id="status" class="card" style="padding:14px 18px;margin:18px 0;"></div>
+
+        <form id="cfg" class="card" style="padding:18px;display:grid;gap:14px;max-width:760px;">
+          <h3 style="margin:0;">API keys</h3>
+          <label>Secret key (<code>sk_…</code>)<input class="form-input" name="secretKey" placeholder="sk_live_…  (leave blank to keep)"></label>
+          <label>Publishable key (<code>pk_…</code>)<input class="form-input" name="publishableKey"></label>
+          <label>Webhook secret (<code>whsec_…</code>)<input class="form-input" name="webhookSecret"></label>
+
+          <h3 style="margin:14px 0 0;">Price IDs</h3>
+          <label>Starter price<input class="form-input" name="priceStarter"></label>
+          <label>Pro price<input class="form-input" name="pricePro"></label>
+          <label>Enterprise price<input class="form-input" name="priceEnterprise"></label>
+
+          <div class="btn-row" style="justify-content:flex-end;margin-top:8px;">
+            <button class="btn btn-primary" type="submit">Save changes</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    async function load() {
+      const r = await api('/api/admin/stripe/config');
+      const status = document.getElementById('status');
+      const ok = r.configured;
+      status.innerHTML = `
+        <div style="display:flex;align-items:center;gap:14px;">
+          <span class="badge ${ok ? 'badge-active' : 'badge-suspended'}">${ok ? '● Configured' : '○ Not configured'}</span>
+          <span>Secret key on file: <strong>${r.hasSecretKey ? 'yes' : 'no'}</strong></span>
+          <span>Webhook secret: <code>${H(r.webhookSecret || '—')}</code></span>
+        </div>
+      `;
+      const f = document.getElementById('cfg');
+      f.publishableKey.value = r.publishableKey || '';
+      f.priceStarter.value = (r.prices && r.prices.starter) || '';
+      f.pricePro.value     = (r.prices && r.prices.pro) || '';
+      f.priceEnterprise.value = (r.prices && r.prices.enterprise) || '';
+    }
+
+    document.getElementById('cfg').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const body = {};
+      ['secretKey','publishableKey','webhookSecret','priceStarter','pricePro','priceEnterprise'].forEach(k => {
+        const v = f[k].value.trim(); if (v) body[k] = v;
+      });
+      if (!Object.keys(body).length) { toast('Nothing to save', 'warn'); return; }
+      try {
+        await api('/api/admin/stripe/config', { method: 'PUT', body });
+        toast('Saved', 'success');
+        f.secretKey.value = '';
+        f.webhookSecret.value = '';
+        load();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+
+    await load();
+  },
+});
+</script>
+</body>
+</html>

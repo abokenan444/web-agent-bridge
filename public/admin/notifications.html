@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notifications — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, fmtDate, toast } = AdminShell;
+
+AdminShell.init({
+  page: 'notifications',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>Notifications</h1>
+        <p class="page-sub">Outgoing email log + manual sender. Logs from <code>GET /api/admin/notifications</code>; send via <code>POST /api/admin/notifications/send</code>.</p>
+
+        <div class="card" style="padding:18px;margin:18px 0;">
+          <h3 style="margin:0 0 12px;">Send custom notification</h3>
+          <form id="send" style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;">
+            <input class="form-input" name="email" type="email" placeholder="recipient@example.com" required>
+            <input class="form-input" name="template" placeholder="template (e.g. welcome)" required>
+            <input class="form-input" name="userId" placeholder="userId (optional)">
+            <textarea class="form-input" name="data" placeholder='JSON data, e.g. {"name":"Alice"}' style="grid-column:1 / span 3;min-height:70px;"></textarea>
+            <button class="btn btn-primary" type="submit" style="grid-column:3;">Send</button>
+          </form>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead><tr>
+              <th>Date</th><th>To</th><th>Template</th><th>Status</th><th>Error</th>
+            </tr></thead>
+            <tbody id="tbody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    async function load() {
+      const r = await api('/api/admin/notifications?limit=200');
+      const list = r.logs || [];
+      const tbody = document.getElementById('tbody');
+      if (!list.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No notifications yet.</td></tr>'; return; }
+      tbody.innerHTML = list.map(l => `
+        <tr>
+          <td>${H(fmtDate(l.created_at))}</td>
+          <td>${H(l.to_email || l.email)}</td>
+          <td>${H(l.template)}</td>
+          <td><span class="badge ${l.status === 'sent' ? 'badge-active' : 'badge-suspended'}">${H(l.status)}</span></td>
+          <td style="color:#dc2626;">${H(l.error || '')}</td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('send').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      let data = {};
+      if (f.data.value.trim()) {
+        try { data = JSON.parse(f.data.value); } catch { toast('data must be valid JSON', 'error'); return; }
+      }
+      try {
+        await api('/api/admin/notifications/send', {
+          method: 'POST',
+          body: {
+            email: f.email.value.trim(),
+            template: f.template.value.trim(),
+            userId: f.userId.value.trim() || undefined,
+            data,
+          },
+        });
+        toast('Notification sent', 'success');
+        f.reset();
+        load();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+
+    await load();
+  },
+});
+</script>
+</body>
+</html>

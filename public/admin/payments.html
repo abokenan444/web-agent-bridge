@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payments — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, fmtDate, fmtMoney } = AdminShell;
+
+AdminShell.init({
+  page: 'payments',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>Payments</h1>
+        <p class="page-sub">Recent Stripe charges, persisted in <code>payments</code>. Read-only view of <code>GET /api/admin/payments</code>.</p>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr>
+              <th>Date</th><th>User</th><th>Amount</th><th>Status</th><th>Tier</th><th>Stripe ID</th>
+            </tr></thead>
+            <tbody id="tbody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    const r = await api('/api/admin/payments?limit=200');
+    const list = r.payments || [];
+    const tbody = document.getElementById('tbody');
+    if (!list.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No payments yet.</td></tr>'; return; }
+    tbody.innerHTML = list.map(p => `
+      <tr>
+        <td>${H(fmtDate(p.created_at))}</td>
+        <td>${H(p.user_email || p.user_id || '—')}</td>
+        <td>${H(fmtMoney(p.amount, p.currency || 'USD'))}</td>
+        <td><span class="badge ${p.status === 'succeeded' || p.status === 'paid' ? 'badge-active' : 'badge-pending'}">${H(p.status)}</span></td>
+        <td>${H(p.tier || '—')}</td>
+        <td><code style="font-size:12px;">${H(p.stripe_payment_id || p.stripe_id || '—')}</code></td>
+      </tr>
+    `).join('');
+  },
+});
+</script>
+</body>
+</html>

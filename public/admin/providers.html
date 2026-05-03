@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DNS Providers — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, fmtDate } = AdminShell;
+
+AdminShell.init({
+  page: 'providers',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>DNS Providers</h1>
+        <p class="page-sub">All connected provider accounts (Cloudflare, Route53, etc.) across users.</p>
+        <div id="stats" class="grid stats-grid" style="margin:18px 0;"></div>
+        <h3>Accounts</h3>
+        <div id="accounts" class="table-wrapper"></div>
+        <h3 style="margin-top:24px;">Recent provider actions</h3>
+        <div id="actions" class="table-wrapper"></div>
+      </div>
+    `;
+
+    const [s, a] = await Promise.all([
+      api('/api/admin/providers/stats'),
+      api('/api/admin/providers/accounts?limit=200'),
+    ]);
+    if (!s.enabled) { root.querySelector('#stats').innerHTML = '<div class="empty">Providers module not enabled.</div>'; return; }
+    const t = s.totals || {};
+    document.getElementById('stats').innerHTML = `
+      <div class="stat-card"><div class="stat-label">Accounts</div><div class="stat-value">${H(t.accounts || 0)}</div></div>
+      <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value">${H(t.active || 0)}</div></div>
+      <div class="stat-card"><div class="stat-label">Errored</div><div class="stat-value">${H(t.errored || 0)}</div></div>
+      <div class="stat-card"><div class="stat-label">Domains managed</div><div class="stat-value">${H(t.domains_under_management || 0)}</div></div>
+      <div class="stat-card"><div class="stat-label">WAB-enabled domains</div><div class="stat-value">${H(t.wab_enabled_domains || 0)}</div></div>
+    `;
+    const list = a.accounts || [];
+    document.getElementById('accounts').innerHTML = list.length ? `<table>
+      <thead><tr><th>User</th><th>Provider</th><th>Label</th><th>Status</th><th>Domains</th><th>Last sync</th></tr></thead>
+      <tbody>${list.map(x => `<tr>
+        <td>${H(x.user_email || x.user_id)}</td>
+        <td><strong>${H(x.provider_type)}</strong></td>
+        <td>${H(x.label || '—')}</td>
+        <td><span class="badge ${x.status === 'active' ? 'badge-active' : 'badge-suspended'}">${H(x.status)}</span></td>
+        <td>${H(x.domains_count || 0)}</td>
+        <td>${H(fmtDate(x.last_sync_at))}</td>
+      </tr>`).join('')}</tbody>
+    </table>` : '<div class="empty">No provider accounts connected.</div>';
+
+    const acts = s.recentActions || [];
+    document.getElementById('actions').innerHTML = acts.length ? `<table>
+      <thead><tr><th>Time</th><th>Provider</th><th>Domain</th><th>Action</th><th>Status</th><th>Latency</th><th>Detail</th></tr></thead>
+      <tbody>${acts.map(x => `<tr>
+        <td>${H(fmtDate(x.created_at))}</td>
+        <td>${H(x.provider_type || '?')}</td>
+        <td>${H(x.domain || '—')}</td>
+        <td>${H(x.action)}</td>
+        <td><span class="badge ${x.status === 'success' || x.status === 'ok' ? 'badge-active' : 'badge-suspended'}">${H(x.status)}</span></td>
+        <td>${H(x.duration_ms || '—')}ms</td>
+        <td style="font-size:12px;color:#64748b;">${H(x.detail || '')}</td>
+      </tr>`).join('')}</tbody>
+    </table>` : '<div class="empty">No recent provider actions.</div>';
+  },
+});
+</script>
+</body>
+</html>
