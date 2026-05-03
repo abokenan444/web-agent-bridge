@@ -626,6 +626,8 @@ try { WABToolkit = require('../packages/langchain').WABToolkit; } catch {
 const { SafetyShieldClient } = require('./safety-shield');
 // Phase 19 — Safe Mode trust gate
 const { WABSafeMode, WABSafeModeError, POLICIES: WAB_SAFE_POLICIES } = require('./safe-mode');
+// Phase 20 — Agent Governance Layer (permissions + approval + audit + kill-switch)
+const { WABGovernance, WABGovernanceError } = require('./governance');
 
 module.exports = {
   WABAgent,
@@ -638,4 +640,6 @@ module.exports = {
   WABSafeMode,
   WABSafeModeError,
   WAB_SAFE_POLICIES,
+  WABGovernance,
+  WABGovernanceError,
 };

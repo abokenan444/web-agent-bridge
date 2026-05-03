@@ -30,6 +30,7 @@ const wabApiRoutes = require('./routes/wab-api');
 const noscriptRoutes = require('./routes/noscript');
 const discoveryRoutes = require('./routes/discovery');
 const providerRoutes = require('./routes/providers');
+const governanceRoutes = require('./routes/governance');
 const premiumRoutes = require('./routes/premium');
 const adminPremiumRoutes = require('./routes/admin-premium');
 const workspaceRoutes = require('./routes/agent-workspace');
@@ -265,6 +266,7 @@ app.use('/api/wab', wabApiRoutes);
 app.use('/api/noscript', apiLimiter, noscriptRoutes);
 app.use('/api/discovery', apiLimiter, discoveryRoutes);
 app.use('/api/providers', apiLimiter, providerRoutes);
+app.use('/api/governance', apiLimiter, governanceRoutes);
 // Also expose well-known discovery endpoints at the canonical root paths so
 // agents can find them without the /api/discovery prefix (RFC 8615).
 
