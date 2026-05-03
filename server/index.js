@@ -227,6 +227,22 @@ const licenseLimiter = rateLimit({
   }
 });
 
+// Whitepaper guard — must run BEFORE express.static so we can apply strict headers
+// and intercept both /whitepaper and /whitepaper.html with the same protections.
+const whitepaperHandler = (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('X-Frame-Options', 'DENY');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('X-Robots-Tag', 'index, follow, noarchive, nosnippet, noimageindex');
+  res.set('Content-Security-Policy', "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+  res.set('X-Copyright', 'All Rights Reserved (c) 2026 Web Agent Bridge - Reproduction Prohibited');
+  res.sendFile(path.join(__dirname, '..', 'public', 'whitepaper.html'));
+};
+app.get(['/whitepaper', '/whitepaper.html'], whitepaperHandler);
+
 app.use(express.static(path.join(__dirname, '..', 'public'), {
   setHeaders(res, filePath) {
     if (filePath.endsWith('.html')) {

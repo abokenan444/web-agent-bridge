@@ -25,6 +25,18 @@ Disallow: /admin/
 Disallow: /dashboard
 Disallow: /premium-dashboard
 
+# Whitepaper: indexable but no archive / no snippet (rights protected)
+Allow: /whitepaper
+Disallow: /whitepaper.html
+
+# Block archivers explicitly
+User-agent: ia_archiver
+Disallow: /whitepaper
+Disallow: /whitepaper.html
+User-agent: archive.org_bot
+Disallow: /whitepaper
+Disallow: /whitepaper.html
+
 # AI Crawlers — Welcome! We have structured data for you.
 User-agent: GPTBot
 Allow: /

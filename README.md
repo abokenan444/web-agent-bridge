@@ -12,6 +12,7 @@
   <br />
   <a href="https://webagentbridge.com"><strong>Website</strong></a> ·
   <a href="https://webagentbridge.com/docs"><strong>Documentation</strong></a> ·
+  <a href="https://webagentbridge.com/whitepaper"><strong>Whitepaper</strong></a> ·
   <a href="https://webagentbridge.com/activate"><strong>DNS Discovery</strong></a> ·
   <a href="README.ar.md"><strong>العربية</strong></a>
 </div>
