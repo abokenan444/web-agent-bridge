@@ -233,6 +233,40 @@ function buildWabTxtValue(_userId, domain) {
   return `v=wab1;manifest=https://${domain}/.well-known/wab.json`;
 }
 
+// Build a `_wab` TXT value that includes a `pk=` field when a public key
+// is supplied — required for Trust Layer v1.3 (signed manifest verification).
+function buildWabTxtValueWithKey(domain, publicKeyB64) {
+  const base = `v=wab1;manifest=https://${domain}/.well-known/wab.json`;
+  if (!publicKeyB64) return base;
+  return `${base};pk=ed25519:${publicKeyB64}`;
+}
+
+// Build a minimal but production-shaped wab.json starter manifest.
+function buildStarterManifest(domain) {
+  return {
+    wab_version: '1.3',
+    name: domain,
+    description: `WAB-enabled site at ${domain}`,
+    endpoint: `https://${domain}/.well-known/wab.json`,
+    capabilities: {
+      discovery: true,
+      read: true,
+      execute: false,
+    },
+    actions: [
+      {
+        id: 'home',
+        name: 'Home page',
+        method: 'GET',
+        url: `https://${domain}/`,
+        readonly: true,
+      },
+    ],
+    contact: { type: 'web', url: `https://${domain}/` },
+    issued_at: new Date().toISOString(),
+  };
+}
+
 router.post('/accounts/:id/domains/:domain/enable-wab', authenticateToken, async (req, res) => {
   const acc = loadAccount(req.params.id, req.user.id);
   if (!acc) return res.status(404).json({ error: 'Account not found' });
@@ -310,6 +344,144 @@ router.get('/accounts/:id/log', authenticateToken, (req, res) => {
      ORDER BY created_at DESC LIMIT ?`
   ).all(acc.row.id, limit);
   res.json({ log: rows });
+});
+
+/* ───── Zero-Friction Quick-Enable (Phase 18) ────────────────────────
+ * One call, one round-trip:
+ *   1. Generate fresh Ed25519 keypair (server never persists private key).
+ *   2. Build a starter wab.json manifest signed with that key.
+ *   3. Build the `_wab` TXT value with embedded pk=.
+ *   4. (Optional) push the TXT record live via the provider adapter.
+ *   5. Return everything the operator needs to drop into their site.
+ *
+ * If `account_id` is omitted, this acts as a stateless generator — useful
+ * for sites that don't use a managed-DNS provider integration.
+ *
+ * Body:
+ *   { domain, account_id?, push?, manifest_overrides? }
+ *
+ * Response:
+ *   {
+ *     ok, domain,
+ *     keys: { public_key, private_key, fingerprint },   // SAVE the private!
+ *     dns: { name, type, value, ttl },
+ *     manifest: { ... signed wab.json ... },
+ *     pushed: boolean,
+ *     push_detail: string|null,
+ *     instructions: { ... }
+ *   }
+ */
+const wabCryptoLazy = (() => {
+  let mod = null;
+  return () => (mod = mod || require('../services/wab-crypto'));
+})();
+
+function sanitizeDomainQuick(s) {
+  if (!s || typeof s !== 'string') return null;
+  const d = s.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
+  return /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/.test(d) ? d : null;
+}
+
+router.post('/quick-enable', authenticateToken, async (req, res) => {
+  const body = req.body || {};
+  const domain = sanitizeDomainQuick(body.domain);
+  if (!domain) return res.status(400).json({ ok: false, error: 'invalid_domain' });
+
+  const wabCrypto = wabCryptoLazy();
+  const t0 = Date.now();
+
+  // 1. Generate keypair (stateless — caller is responsible for storing private key)
+  let kp;
+  try {
+    kp = wabCrypto.generateKeyPair();
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: 'keygen_failed', details: e.message });
+  }
+
+  // 2. Build manifest, merge any caller overrides, then sign
+  const baseManifest = buildStarterManifest(domain);
+  const manifest = {
+    ...baseManifest,
+    ...(body.manifest_overrides && typeof body.manifest_overrides === 'object' ? body.manifest_overrides : {}),
+    name: (body.manifest_overrides && body.manifest_overrides.name) || baseManifest.name,
+    endpoint: baseManifest.endpoint, // never let overrides hijack endpoint
+    wab_version: baseManifest.wab_version,
+    issued_at: baseManifest.issued_at,
+  };
+  let signedManifest;
+  try {
+    signedManifest = wabCrypto.signManifest(manifest, kp.private_key, { key_id: kp.fingerprint });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: 'sign_failed', details: e.message });
+  }
+
+  // 3. Build the DNS TXT value (with pk=)
+  const txtValue = buildWabTxtValueWithKey(domain, kp.public_key);
+  const dns = { name: `_wab.${domain}`, type: 'TXT', value: txtValue, ttl: 300 };
+
+  // 4. Optionally push to provider
+  let pushed = false;
+  let pushDetail = null;
+  let pushError = null;
+  if (body.push && body.account_id) {
+    const acc = loadAccount(body.account_id, req.user.id);
+    if (!acc) {
+      pushError = 'account_not_found';
+    } else {
+      const adapter = getAdapter(acc.row.provider_type);
+      const dom = db.prepare(`SELECT * FROM provider_domains WHERE account_id = ? AND domain = ?`)
+        .get(acc.row.id, domain);
+      const opts = dom && dom.zone_id ? { zone_id: dom.zone_id } : {};
+      try {
+        const r = await adapter.enableWAB(acc.creds, acc.config, domain, txtValue, opts);
+        pushed = true;
+        pushDetail = r && r.detail;
+        db.prepare(`INSERT INTO provider_domains
+            (account_id, domain, zone_id, wab_enabled, wab_record_value, last_action, last_action_at, last_action_status, updated_at)
+          VALUES (?, ?, ?, 1, ?, 'enable', datetime('now'), 'ok', datetime('now'))
+          ON CONFLICT(account_id, domain) DO UPDATE SET
+            wab_enabled = 1,
+            wab_record_value = excluded.wab_record_value,
+            last_action = 'enable',
+            last_action_at = datetime('now'),
+            last_action_status = 'ok',
+            last_action_error = NULL,
+            updated_at = datetime('now')`)
+          .run(acc.row.id, domain, (dom && dom.zone_id) || null, txtValue);
+        logAction(acc.row.id, domain, 'quick-enable', 'ok', Date.now() - t0, pushDetail);
+      } catch (e) {
+        pushError = String(e.message || e).slice(0, 500);
+        logAction(acc.row.id, domain, 'quick-enable', 'error', Date.now() - t0, pushError);
+      }
+    }
+  }
+
+  res.json({
+    ok: true,
+    domain,
+    keys: {
+      algorithm: 'ed25519',
+      public_key: kp.public_key,
+      private_key: kp.private_key,
+      fingerprint: kp.fingerprint,
+      created_at: kp.created_at,
+      warning: 'Store private_key securely. WAB does NOT persist it server-side.',
+    },
+    dns,
+    manifest: signedManifest,
+    pushed,
+    push_detail: pushDetail,
+    push_error: pushError,
+    instructions: {
+      step_1: `Save the wab.json manifest at: https://${domain}/.well-known/wab.json (publicly readable, served as application/json over HTTPS).`,
+      step_2: `Add a DNS TXT record. Name: _wab.${domain}  Value: ${txtValue}  TTL: 300`,
+      step_3: 'Verify the setup with: GET /api/discovery/trust/' + domain,
+      step_4: 'Check your WAB Score with: GET /api/discovery/score/' + domain,
+      step_5: 'Embed your trust badge: <img src="https://webagentbridge.com/badge/' + domain + '.svg">',
+      private_key_warning: 'Keep your private_key offline (e.g. password manager / HSM). Use it only to re-sign your manifest when capabilities change.',
+    },
+    elapsed_ms: Date.now() - t0,
+  });
 });
 
 module.exports = router;
