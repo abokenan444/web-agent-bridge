@@ -48,16 +48,21 @@
       headers,
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     });
-    if (res.status === 401) {
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { /* keep raw */ }
+    // Treat both 401 (no token) and 403 (expired/invalid/revoked admin token) as auth failure
+    const errMsg = (data && data.error) || '';
+    const isAuthFailure =
+      res.status === 401 ||
+      (res.status === 403 && /admin token|admin access|admin privileges|token has been revoked/i.test(errMsg));
+    if (isAuthFailure) {
       try { localStorage.removeItem(TOKEN_KEY); } catch {}
       location.replace('/admin/login');
       throw new Error('unauthorized');
     }
-    const text = await res.text();
-    let data = null;
-    try { data = text ? JSON.parse(text) : null; } catch { /* keep raw */ }
     if (!res.ok) {
-      const msg = (data && data.error) || res.statusText || 'request_failed';
+      const msg = errMsg || res.statusText || 'request_failed';
       const err = new Error(msg); err.status = res.status; err.body = data; throw err;
     }
     return data;
