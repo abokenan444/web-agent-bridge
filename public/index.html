@@ -538,58 +538,116 @@ console.<span class="fn">log</span>(actions);
         <p>Start free, upgrade when you need advanced features. Open source forever.</p>
       </div>
 
-      <div class="grid-3">
+      <div class="grid-3" id="pricing-grid" data-pricing-grid>
+        <!-- Server-rendered fallback. Replaced live by /api/plans on page load. -->
         <div class="pricing-card">
           <div class="pricing-tier">Free</div>
-          <div class="pricing-price">$0 <span>/mo</span></div>
-          <div class="pricing-desc">Perfect for personal projects and experimentation.</div>
+          <div class="pricing-price">€0 <span>/mo</span></div>
+          <div class="pricing-desc">Open-source core, free forever.</div>
           <ul class="pricing-features">
-            <li>Auto-discovery of actions</li>
-            <li>Click &amp; scroll permissions</li>
-            <li>Rate limiting (60/min)</li>
-            <li>Basic logging</li>
-            <li>1 site</li>
-            <li class="disabled">Form filling</li>
-            <li class="disabled">API access</li>
-            <li class="disabled">Analytics dashboard</li>
+            <li>WAP protocol &amp; SDK</li>
+            <li>DNS / .well-known discovery</li>
+            <li>Browser execution layer</li>
+            <li>MCP / REST adapters</li>
+            <li>Basic agent registration</li>
           </ul>
           <a href="/register" class="btn btn-secondary" style="width:100%;">Get Started Free</a>
         </div>
 
         <div class="pricing-card featured">
           <div class="pricing-tier">Pro</div>
-          <div class="pricing-price">$29 <span>/mo</span></div>
-          <div class="pricing-desc">For businesses that want full AI agent integration.</div>
+          <div class="pricing-price">€10 <span>/mo</span></div>
+          <div class="pricing-desc">For developers shipping production agents.</div>
           <ul class="pricing-features">
             <li>Everything in Free</li>
-            <li>Form filling &amp; submission</li>
-            <li>Internal API access</li>
-            <li>Advanced analytics</li>
-            <li>Up to 10 sites</li>
-            <li>Automated login support</li>
-            <li>Data extraction</li>
-            <li>Priority support</li>
+            <li>Workspace &amp; observability</li>
+            <li>Replay engine</li>
+            <li>Advanced orchestration</li>
+            <li>Advanced analytics &amp; data extraction</li>
           </ul>
-          <a href="/register" class="btn btn-primary" style="width:100%;">Start Pro Trial</a>
+          <a href="/register" class="btn btn-primary" style="width:100%;">Start Pro</a>
+        </div>
+
+        <div class="pricing-card">
+          <div class="pricing-tier">Business</div>
+          <div class="pricing-price">€29 <span>/mo</span></div>
+          <div class="pricing-desc">All paid features, ready for scale.</div>
+          <ul class="pricing-features">
+            <li>Everything in Pro</li>
+            <li>Hosted runtime &amp; marketplace</li>
+            <li>Vision, swarm, traffic intel</li>
+            <li>Audit logs &amp; custom domain</li>
+            <li>Agent governance layer</li>
+          </ul>
+          <a href="/register" class="btn btn-secondary" style="width:100%;">Start Business</a>
         </div>
 
         <div class="pricing-card">
           <div class="pricing-tier">Enterprise</div>
           <div class="pricing-price">Custom</div>
-          <div class="pricing-desc">Custom solutions for large-scale deployments.</div>
+          <div class="pricing-desc">Custom-built for organisations.</div>
           <ul class="pricing-features">
-            <li>Everything in Pro</li>
-            <li>Unlimited sites</li>
-            <li>Custom rate limits</li>
-            <li>Webhook integrations</li>
-            <li>SSO / SAML</li>
-            <li>Dedicated support</li>
-            <li>SLA guarantee</li>
+            <li>Everything in Business</li>
+            <li>Enterprise security &amp; SSO</li>
+            <li>Dedicated infrastructure</li>
+            <li>Priority support &amp; SLA</li>
             <li>Custom development</li>
           </ul>
           <a href="mailto:sales@webagentbridge.com" class="btn btn-secondary" style="width:100%;">Contact Sales</a>
         </div>
       </div>
+      <script>
+      (function () {
+        var GRID = document.getElementById('pricing-grid');
+        if (!GRID) return;
+        var FEATURED_ID = 'pro';
+        function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+        function fmtPrice(p){
+          if (p.billing_period === 'custom' || p.cta_type === 'contact') return 'Custom';
+          if (!p.price_cents) return (p.currency==='EUR'?'€':p.currency==='USD'?'$':p.currency+' ') + '0 <span>/' + esc(p.billing_period) + '</span>';
+          var sym = p.currency === 'EUR' ? '€' : (p.currency === 'USD' ? '$' : p.currency + ' ');
+          return sym + (p.price_cents/100).toFixed(p.price_cents % 100 === 0 ? 0 : 2) + ' <span>/' + esc(p.billing_period) + '</span>';
+        }
+        function ctaHref(p){
+          if (p.cta_type === 'contact')  return p.cta_url || 'mailto:sales@webagentbridge.com';
+          if (p.cta_type === 'external') return p.cta_url || '/register';
+          if (p.cta_type === 'register') return p.cta_url || '/register';
+          // checkout — send authenticated users straight to dashboard?plan=…, anonymous to register first.
+          return '/register?plan=' + encodeURIComponent(p.id);
+        }
+        function topFeatures(plan, catalog, max){
+          var labels = catalog.reduce(function(m,f){m[f.key]=f.label;return m;},{});
+          var keys = Object.keys(plan.features||{}).filter(function(k){return plan.features[k];});
+          // Prefer non-open-source labels (the differentiators) when listing.
+          var nonOpen = keys.filter(function(k){var f=catalog.find(function(x){return x.key===k;});return f && !f.is_open_source;});
+          var pick = nonOpen.length ? nonOpen : keys;
+          return pick.slice(0, max).map(function(k){return labels[k] || k;});
+        }
+        function render(plans, catalog){
+          if (!plans || !plans.length) return;
+          var html = plans.map(function(p){
+            var feats = topFeatures(p, catalog, 6);
+            var ctaCls = p.highlight ? 'btn-primary' : 'btn-secondary';
+            return ''
+              + '<div class="pricing-card' + (p.highlight ? ' featured' : '') + '">'
+              +   '<div class="pricing-tier">' + esc(p.name) + '</div>'
+              +   '<div class="pricing-price">' + fmtPrice(p) + '</div>'
+              +   '<div class="pricing-desc">' + esc(p.tagline || p.description || '') + '</div>'
+              +   '<ul class="pricing-features">'
+              +     feats.map(function(f){return '<li>' + esc(f) + '</li>';}).join('')
+              +   '</ul>'
+              +   '<a href="' + esc(ctaHref(p)) + '" class="btn ' + ctaCls + '" style="width:100%;">' + esc(p.cta_label || 'Get started') + '</a>'
+              + '</div>';
+          }).join('');
+          GRID.innerHTML = html;
+          GRID.style.gridTemplateColumns = 'repeat(' + Math.min(4, plans.length) + ', 1fr)';
+        }
+        fetch('/api/plans', { credentials: 'omit' })
+          .then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(d){ if (d && d.plans) render(d.plans, d.features || []); })
+          .catch(function(){ /* keep server fallback */ });
+      })();
+      </script>
     </div>
   </section>
 

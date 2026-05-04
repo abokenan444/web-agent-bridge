@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plans — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+  <style>
+    .plan-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:14px; margin:14px 0 22px; }
+    .plan-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; position:relative; }
+    .plan-card.archived { opacity:.55; }
+    .plan-card.highlight { border-color:#6366f1; box-shadow:0 0 0 2px rgba(99,102,241,.15); }
+    .plan-card h3 { margin:0 0 4px; font-size:1.1rem; }
+    .plan-card .price { font-size:1.6rem; font-weight:800; color:#0f172a; margin:6px 0 2px; }
+    .plan-card .price small { font-size:.8rem; font-weight:500; color:#64748b; }
+    .plan-card .badge-row { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
+    .plan-card .feat-count { color:#64748b; font-size:.85rem; }
+    .plan-card .actions { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+    .feature-matrix { width:100%; border-collapse:collapse; }
+    .feature-matrix th, .feature-matrix td { padding:8px 10px; border-bottom:1px solid #f1f5f9; text-align:center; vertical-align:middle; }
+    .feature-matrix th:first-child, .feature-matrix td:first-child { text-align:left; min-width:240px; }
+    .feature-matrix tr:hover td { background:#f8fafc; }
+    .feature-matrix .cat-row td { background:#f1f5f9; font-weight:700; color:#475569; text-align:left; font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; }
+    .feature-matrix input[type=checkbox] { width:18px; height:18px; cursor:pointer; }
+    .feature-matrix .col-archived { opacity:.5; }
+    .badge-osrc { background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:.7rem; font-weight:600; margin-left:6px; }
+    .badge-cta { background:#e0e7ff; color:#3730a3; padding:2px 8px; border-radius:6px; font-size:.7rem; font-weight:600; }
+    .badge-archived { background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:6px; font-size:.7rem; font-weight:600; }
+    .badge-highlight { background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:6px; font-size:.7rem; font-weight:600; }
+    .modal-bg { position:fixed; inset:0; background:rgba(15,23,42,.55); display:none; align-items:flex-start; justify-content:center; z-index:9000; padding:40px 16px; overflow-y:auto; }
+    .modal-bg.show { display:flex; }
+    .modal { background:#fff; border-radius:14px; max-width:640px; width:100%; padding:22px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+    .modal h2 { margin:0 0 14px; }
+    .modal .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .modal .form-grid label { display:flex; flex-direction:column; gap:4px; font-size:.85rem; color:#475569; }
+    .modal .form-grid label.full { grid-column:1 / span 2; }
+    .modal .actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
+  </style>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, fmtMoney, toast, confirmAsync } = AdminShell;
+
+AdminShell.init({
+  page: 'plans',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1 style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <span>📦 Plans</span>
+          <button id="newPlanBtn" class="btn btn-primary">+ Add plan</button>
+        </h1>
+        <p class="page-sub">Manage every plan, its price, the features it unlocks and its Stripe price id. Toggle a feature in the matrix to flip it for that plan — changes flow live to the public landing page (<a href="/" target="_blank">/</a> &middot; <code>/api/plans</code>) and to Stripe checkout.</p>
+
+        <div id="planGrid" class="plan-grid"><div class="empty">Loading…</div></div>
+
+        <h2 style="margin:22px 0 8px;">Feature matrix</h2>
+        <p class="page-sub" style="margin-top:0;">Tick a box to include the feature in that plan. Open-source / always-free features are tagged <span class="badge-osrc">open</span>.</p>
+        <div class="card" style="padding:0;overflow-x:auto;">
+          <table class="feature-matrix" id="matrix">
+            <thead><tr><th>Feature</th><th colspan="99">Loading…</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-bg" id="planModal">
+        <div class="modal">
+          <h2 id="modalTitle">New plan</h2>
+          <div class="alert alert-error" id="modalError" style="display:none;"></div>
+          <form id="planForm" class="form-grid">
+            <label class="full">Slug (id)
+              <input class="form-input" name="id" placeholder="e.g. business" pattern="[a-z0-9][a-z0-9_-]{1,40}" required>
+            </label>
+            <label>Display name
+              <input class="form-input" name="name" placeholder="Business" required>
+            </label>
+            <label>Tagline
+              <input class="form-input" name="tagline" placeholder="All paid features, ready for scale">
+            </label>
+            <label class="full">Description
+              <textarea class="form-input" name="description" rows="2"></textarea>
+            </label>
+            <label>Price (in cents)
+              <input class="form-input" type="number" name="price_cents" min="0" step="1" value="0" required>
+            </label>
+            <label>Currency
+              <input class="form-input" name="currency" value="EUR" maxlength="3" required>
+            </label>
+            <label>Billing period
+              <select class="form-input" name="billing_period">
+                <option value="month">month</option>
+                <option value="year">year</option>
+                <option value="one_time">one_time</option>
+                <option value="custom">custom</option>
+              </select>
+            </label>
+            <label>CTA type
+              <select class="form-input" name="cta_type">
+                <option value="checkout">checkout (Stripe)</option>
+                <option value="register">register</option>
+                <option value="contact">contact (sales)</option>
+                <option value="external">external link</option>
+              </select>
+            </label>
+            <label>CTA label
+              <input class="form-input" name="cta_label" placeholder="Start Business">
+            </label>
+            <label>CTA URL (for contact/external)
+              <input class="form-input" name="cta_url" placeholder="mailto:sales@…">
+            </label>
+            <label class="full">Stripe price id (for checkout)
+              <input class="form-input" name="stripe_price_id" placeholder="price_…">
+            </label>
+            <label>Sort order
+              <input class="form-input" type="number" name="sort_order" value="100">
+            </label>
+            <label>Flags
+              <span style="display:flex;gap:14px;align-items:center;font-size:.85rem;">
+                <span><input type="checkbox" name="highlight"> highlight</span>
+                <span><input type="checkbox" name="is_public" checked> public</span>
+              </span>
+            </label>
+            <div class="actions full">
+              <button type="button" class="btn btn-ghost" id="modalCancel">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="modalSave">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    let plans = [];
+    let features = [];
+
+    async function refresh() {
+      const r = await api('/api/admin/plans');
+      plans = r.plans || [];
+      features = r.features || [];
+      renderGrid();
+      renderMatrix();
+    }
+
+    function planLabel(p) { return p.name + (p.is_archived ? ' (archived)' : ''); }
+
+    function renderGrid() {
+      const grid = document.getElementById('planGrid');
+      if (!plans.length) { grid.innerHTML = '<div class="empty">No plans yet. Click "Add plan" to create one.</div>'; return; }
+      grid.innerHTML = plans.map(p => {
+        const featCount = Object.values(p.features || {}).filter(Boolean).length;
+        const priceTxt = p.billing_period === 'custom'
+          ? 'Custom'
+          : (p.price_cents === 0 ? 'Free' : (fmtMoney(p.price_cents, p.currency) + ' / ' + p.billing_period));
+        return `
+          <div class="plan-card ${p.highlight ? 'highlight' : ''} ${p.is_archived ? 'archived' : ''}">
+            <h3>${H(p.name)}</h3>
+            <div style="color:#64748b;font-size:.85rem;">${H(p.tagline || '')}</div>
+            <div class="price">${H(priceTxt)}</div>
+            <div class="badge-row">
+              <span class="badge-cta">${H(p.cta_type)}</span>
+              ${p.highlight ? '<span class="badge-highlight">⭐ highlight</span>' : ''}
+              ${!p.is_public ? '<span class="badge-archived">private</span>' : ''}
+              ${p.is_archived ? '<span class="badge-archived">archived</span>' : ''}
+              ${p.stripe_price_id ? '<span class="badge-osrc">Stripe ✓</span>' : ''}
+            </div>
+            <div class="feat-count">${featCount} feature${featCount===1?'':'s'} included</div>
+            <div class="actions">
+              <button class="btn btn-ghost btn-sm" data-edit="${H(p.id)}">Edit</button>
+              ${p.is_archived
+                ? `<button class="btn btn-ghost btn-sm" data-restore="${H(p.id)}">Restore</button>`
+                : `<button class="btn btn-danger btn-sm" data-archive="${H(p.id)}">Archive</button>`}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderMatrix() {
+      const visiblePlans = plans.filter(p => !p.is_archived);
+      const archivedPlans = plans.filter(p => p.is_archived);
+      const all = [...visiblePlans, ...archivedPlans];
+      const head = `<tr><th>Feature</th>${all.map(p =>
+        `<th class="${p.is_archived ? 'col-archived' : ''}">${H(p.name)}</th>`).join('')}</tr>`;
+
+      const byCat = {};
+      for (const f of features) {
+        const c = f.category || 'general';
+        (byCat[c] = byCat[c] || []).push(f);
+      }
+      const catOrder = ['core','workspace','premium','enterprise'];
+      const cats = [...catOrder.filter(c => byCat[c]), ...Object.keys(byCat).filter(c => !catOrder.includes(c))];
+
+      let bodyHtml = '';
+      for (const cat of cats) {
+        bodyHtml += `<tr class="cat-row"><td colspan="${all.length+1}">${H(cat)}</td></tr>`;
+        for (const f of byCat[cat]) {
+          bodyHtml += `<tr><td><strong>${H(f.label)}</strong>${f.is_open_source ? '<span class="badge-osrc">open</span>' : ''}<br><small style="color:#64748b;">${H(f.key)}</small>${f.description ? `<div style="color:#64748b;font-size:.8rem;margin-top:2px;">${H(f.description)}</div>` : ''}</td>`;
+          for (const p of all) {
+            const checked = p.features && p.features[f.key] ? 'checked' : '';
+            bodyHtml += `<td class="${p.is_archived ? 'col-archived' : ''}"><input type="checkbox" data-toggle="${H(p.id)}|${H(f.key)}" ${checked} ${p.is_archived ? 'disabled' : ''}></td>`;
+          }
+          bodyHtml += '</tr>';
+        }
+      }
+
+      const t = document.getElementById('matrix');
+      t.querySelector('thead').innerHTML = head;
+      t.querySelector('tbody').innerHTML = bodyHtml;
+    }
+
+    // ── Events ────────────────────────────────────────────────────
+    document.getElementById('planGrid').addEventListener('click', async (e) => {
+      const editId = e.target.getAttribute('data-edit');
+      const archId = e.target.getAttribute('data-archive');
+      const restoreId = e.target.getAttribute('data-restore');
+      if (editId) return openModal(plans.find(p => p.id === editId));
+      if (archId) {
+        if (!await confirmAsync('Archive plan "' + archId + '"? It will hide from the landing page but remain in the DB for legacy references.')) return;
+        try { await api('/api/admin/plans/' + encodeURIComponent(archId), { method: 'DELETE' }); toast('Archived','success'); refresh(); }
+        catch (err) { toast(err.message,'error'); }
+      }
+      if (restoreId) {
+        try { await api('/api/admin/plans/' + encodeURIComponent(restoreId), { method: 'PUT', body: { is_archived:false, is_public:true } }); toast('Restored','success'); refresh(); }
+        catch (err) { toast(err.message,'error'); }
+      }
+    });
+
+    document.getElementById('matrix').addEventListener('change', async (e) => {
+      const tag = e.target.getAttribute('data-toggle');
+      if (!tag) return;
+      const [planId, featureKey] = tag.split('|');
+      const included = e.target.checked;
+      try {
+        await api(`/api/admin/plans/${encodeURIComponent(planId)}/features/${encodeURIComponent(featureKey)}`,
+          { method: 'PUT', body: { included } });
+        toast(`${featureKey} ${included ? 'enabled' : 'disabled'} for ${planId}`, 'success');
+        // Mutate locally to avoid full re-render flicker.
+        const p = plans.find(x => x.id === planId);
+        if (p) { p.features = p.features || {}; if (included) p.features[featureKey] = true; else delete p.features[featureKey]; renderGrid(); }
+      } catch (err) {
+        toast(err.message, 'error');
+        e.target.checked = !included;
+      }
+    });
+
+    // ── Modal ─────────────────────────────────────────────────────
+    const modalBg = document.getElementById('planModal');
+    const form = document.getElementById('planForm');
+    const errEl = document.getElementById('modalError');
+    let editing = null;
+
+    function openModal(plan) {
+      editing = plan || null;
+      document.getElementById('modalTitle').textContent = plan ? 'Edit ' + plan.name : 'New plan';
+      errEl.style.display = 'none';
+      form.reset();
+      const idInput = form.querySelector('[name=id]');
+      idInput.disabled = !!plan;
+      if (plan) {
+        for (const k of ['id','name','tagline','description','price_cents','currency','billing_period','stripe_price_id','cta_type','cta_label','cta_url','sort_order']) {
+          const el = form.querySelector(`[name=${k}]`); if (el) el.value = plan[k] == null ? '' : plan[k];
+        }
+        form.querySelector('[name=highlight]').checked = !!plan.highlight;
+        form.querySelector('[name=is_public]').checked = !!plan.is_public;
+      }
+      modalBg.classList.add('show');
+    }
+    function closeModal() { modalBg.classList.remove('show'); editing = null; }
+
+    document.getElementById('newPlanBtn').addEventListener('click', () => openModal(null));
+    document.getElementById('modalCancel').addEventListener('click', closeModal);
+    modalBg.addEventListener('click', (e) => { if (e.target === modalBg) closeModal(); });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errEl.style.display = 'none';
+      const fd = new FormData(form);
+      const body = {
+        id: fd.get('id'),
+        name: fd.get('name'),
+        tagline: fd.get('tagline') || null,
+        description: fd.get('description') || null,
+        price_cents: parseInt(fd.get('price_cents') || '0', 10),
+        currency: (fd.get('currency') || 'EUR').toUpperCase(),
+        billing_period: fd.get('billing_period') || 'month',
+        stripe_price_id: fd.get('stripe_price_id') || null,
+        cta_type: fd.get('cta_type') || 'checkout',
+        cta_label: fd.get('cta_label') || null,
+        cta_url: fd.get('cta_url') || null,
+        sort_order: parseInt(fd.get('sort_order') || '100', 10),
+        highlight: !!fd.get('highlight'),
+        is_public: !!fd.get('is_public'),
+      };
+      try {
+        if (editing) {
+          delete body.id;
+          await api('/api/admin/plans/' + encodeURIComponent(editing.id), { method: 'PUT', body });
+          toast('Plan updated', 'success');
+        } else {
+          // Preserve existing features when creating: start with all open-source
+          // features included by default so admins don't begin with an empty plan.
+          body.features = features.filter(f => f.is_open_source).reduce((acc,f) => { acc[f.key]=true; return acc; }, {});
+          await api('/api/admin/plans', { method: 'POST', body });
+          toast('Plan created', 'success');
+        }
+        closeModal();
+        refresh();
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = 'block';
+      }
+    });
+
+    await refresh();
+  },
+});
+</script>
+</body>
+</html>

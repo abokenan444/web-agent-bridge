@@ -271,6 +271,8 @@ app.use('/api/noscript', apiLimiter, noscriptRoutes);
 app.use('/api/discovery', apiLimiter, discoveryRoutes);
 app.use('/api/providers', apiLimiter, providerRoutes);
 app.use('/api/governance', apiLimiter, governanceRoutes);
+app.use('/api/plans', apiLimiter, require('./routes/plans'));
+app.use('/api/admin/plans', apiLimiter, require('./routes/admin-plans'));
 // Also expose well-known discovery endpoints at the canonical root paths so
 // agents can find them without the /api/discovery prefix (RFC 8615).
 
@@ -422,7 +424,7 @@ app.get('/admin/snapshots', noCache, (req, res) => {
 });
 
 // ─── Admin sub-pages (each backed by real API endpoints in /api/admin/*) ──
-['users','sites','analytics','grants','payments','stripe','smtp','notifications','governance','discovery','trust','providers'].forEach((page) => {
+['users','sites','analytics','grants','payments','stripe','smtp','notifications','governance','discovery','trust','providers','plans'].forEach((page) => {
   app.get('/admin/' + page, noCache, (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'admin', page + '.html'));
   });

@@ -32,7 +32,20 @@ function getStripePrices() {
   };
 }
 
-async function createCheckoutSession({ userId, userEmail, siteId, tier }) {
+// Resolve a Stripe price id from either a plan id (DB) or a legacy tier name.
+// Order: DB plan.stripe_price_id → env STRIPE_PRICE_<UPPER> → platform_settings → null.
+function resolvePriceId(planOrTier) {
+  if (!planOrTier) return null;
+  try {
+    const plans = require('./plans');
+    const p = plans.getPlan(planOrTier);
+    if (p && p.stripe_price_id) return p.stripe_price_id;
+  } catch { /* DB layer not ready (tests) — fall through to legacy lookup */ }
+  const envKey = `STRIPE_PRICE_${String(planOrTier).toUpperCase()}`;
+  return process.env[envKey] || getPlatformSetting(`stripe_price_${planOrTier}`) || null;
+}
+
+async function createCheckoutSession({ userId, userEmail, siteId, tier, planId }) {
   const site = findSiteById.get(siteId);
   if (!site || site.user_id !== userId) {
     throw new Error('Site not found or access denied');
@@ -41,9 +54,9 @@ async function createCheckoutSession({ userId, userEmail, siteId, tier }) {
   const s = getStripe();
   if (!s) throw new Error('Stripe not configured');
 
-  const prices = getStripePrices();
-  const priceId = prices[tier];
-  if (!priceId) throw new Error(`No price configured for tier: ${tier}`);
+  const planRef = planId || tier;
+  const priceId = resolvePriceId(planRef);
+  if (!priceId) throw new Error(`No price configured for plan: ${planRef}`);
 
   // Get or create Stripe customer
   let customer = getStripeCustomer(userId);
@@ -60,7 +73,7 @@ async function createCheckoutSession({ userId, userEmail, siteId, tier }) {
     mode: 'subscription',
     payment_method_types: ['card'],
     line_items: [{ price: priceId, quantity: 1 }],
-    metadata: { wab_user_id: userId, wab_site_id: siteId, tier },
+    metadata: { wab_user_id: userId, wab_site_id: siteId, tier: planRef, plan_id: planRef },
     success_url: `${baseUrl}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}/dashboard?payment=cancelled`
   });

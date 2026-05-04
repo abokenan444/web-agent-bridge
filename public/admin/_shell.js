@@ -24,6 +24,7 @@
     { id: 'sites',        href: '/admin/sites',        label: '🌐 Sites' },
     { id: 'analytics',    href: '/admin/analytics',    label: '📈 Analytics' },
     { id: 'grants',       href: '/admin/grants',       label: '🎁 Free Grants' },
+    { id: 'plans',        href: '/admin/plans',        label: '📦 Plans' },
     { id: 'payments',     href: '/admin/payments',     label: '💳 Payments' },
     { id: 'stripe',       href: '/admin/stripe',       label: '🔧 Stripe' },
     { id: 'smtp',         href: '/admin/smtp',         label: '📧 SMTP' },
