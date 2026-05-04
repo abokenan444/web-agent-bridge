@@ -472,9 +472,11 @@ router.delete('/plugins/:pluginId', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════
 
 function getTierPrices() {
-  const plans = db.prepare('SELECT tier, price FROM plans').all();
   const prices = { free: 0, starter: 900, pro: 2900, enterprise: 9900 };
-  for (const p of plans) prices[p.tier] = p.price;
+  try {
+    const plans = db.prepare(`SELECT id AS tier, price_cents AS price FROM plans WHERE is_archived = 0`).all();
+    for (const p of plans) prices[p.tier] = p.price;
+  } catch (_) { /* fall back to defaults */ }
   return prices;
 }
 const TIER_PRICES = new Proxy({}, { get: function(_, tier) { return getTierPrices()[tier] || 0; } });

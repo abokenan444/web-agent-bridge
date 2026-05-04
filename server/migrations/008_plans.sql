@@ -6,8 +6,14 @@
 -- Backwards-compatible: legacy code paths that look up tiers by slug
 -- ('free' | 'starter' | 'pro' | 'enterprise') keep working — those slugs
 -- are seeded as plan ids below.
+--
+-- An older `plans` table (different schema: tier/price/etc.) may exist from
+-- a previous admin dashboard iteration. Its rows are pure default seeds with
+-- no FK references, so we drop it and recreate with the new schema.
 
-CREATE TABLE IF NOT EXISTS plans (
+DROP TABLE IF EXISTS plans;
+
+CREATE TABLE plans (
   id              TEXT PRIMARY KEY,            -- slug, lowercase, e.g. 'free' / 'pro' / 'business' / 'enterprise'
   name            TEXT NOT NULL,
   tagline         TEXT,
