@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "publisher": "webagentbridge",
   "license": "MIT",
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },

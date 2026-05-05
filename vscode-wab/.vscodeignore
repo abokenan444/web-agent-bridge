@@ -2,6 +2,7 @@ src/**
 !out/**
 node_modules/**
 .vscode-test/**
+scripts/**
 *.vsix
 tsconfig.json
 .gitignore
