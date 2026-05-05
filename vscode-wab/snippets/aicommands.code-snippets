@@ -1,0 +1,46 @@
+{
+  "AICommands.register (click)": {
+    "prefix": ["wab-click", "AICommands.click"],
+    "scope": "javascript,typescript,javascriptreact,typescriptreact,html",
+    "body": [
+      "AICommands.register({",
+      "  name: '${1:action_name}',",
+      "  trigger: 'click',",
+      "  selector: '${2:#button-id}',",
+      "  description: '${3:What this action does for the user}',",
+      "});"
+    ],
+    "description": "Register a click-trigger AICommand"
+  },
+  "AICommands.register (fill_and_submit)": {
+    "prefix": ["wab-form", "AICommands.form"],
+    "scope": "javascript,typescript,javascriptreact,typescriptreact,html",
+    "body": [
+      "AICommands.register({",
+      "  name: '${1:submit_form}',",
+      "  trigger: 'fill_and_submit',",
+      "  selector: '${2:form#main}',",
+      "  description: '${3:Fill the form fields and submit}',",
+      "  fields: [",
+      "    { name: '${4:field}', type: '${5|text,number,email,tel|}', required: ${6|true,false|} }",
+      "  ],",
+      "});"
+    ],
+    "description": "Register a fill+submit AICommand"
+  },
+  "AICommands.execute": {
+    "prefix": ["wab-execute"],
+    "scope": "javascript,typescript,javascriptreact,typescriptreact",
+    "body": ["await AICommands.execute('${1:action_name}', { $2 });"],
+    "description": "Execute a registered AICommand"
+  },
+  "WAB Bridge bootstrap": {
+    "prefix": ["wab-bootstrap"],
+    "scope": "html",
+    "body": [
+      "<script src=\"https://www.webagentbridge.com/v1/ai-agent-bridge.js\"",
+      "        data-wab-config='${1:{\"site\":\"example.com\"\\}}'></script>"
+    ],
+    "description": "Inject the WAB bridge script into HTML"
+  }
+}

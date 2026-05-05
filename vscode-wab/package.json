@@ -1,0 +1,203 @@
+{
+  "name": "wab",
+  "displayName": "WAB — Web Agent Bridge",
+  "description": "AI-Ready toolkit for VS Code: monitor, debug and generate AICommands for the Web Agent Bridge protocol (WAB).",
+  "version": "0.1.0",
+  "publisher": "webagentbridge",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Snippets",
+    "Linters",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "AI Agents",
+    "MCP",
+    "Web Automation",
+    "LLM Tool",
+    "WAB",
+    "Web Agent Bridge",
+    "AICommands",
+    "Copilot",
+    "agentic"
+  ],
+  "homepage": "https://www.webagentbridge.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abokenan444/web-agent-bridge.git",
+    "directory": "vscode-wab"
+  },
+  "bugs": {
+    "url": "https://github.com/abokenan444/web-agent-bridge/issues"
+  },
+  "activationEvents": [
+    "onStartupFinished",
+    "workspaceContains:**/web-agent-bridge-sdk/**",
+    "workspaceContains:**/ai-agent-bridge.js",
+    "workspaceContains:**/wab.config.json"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "wab.openMonitor",
+        "title": "WAB: Open Agent Monitor",
+        "category": "WAB"
+      },
+      {
+        "command": "wab.startBridge",
+        "title": "WAB: Start Agent Bridge (local)",
+        "category": "WAB"
+      },
+      {
+        "command": "wab.stopBridge",
+        "title": "WAB: Stop Agent Bridge",
+        "category": "WAB"
+      },
+      {
+        "command": "wab.generateSnippet",
+        "title": "WAB: Generate AICommand for Element…",
+        "category": "WAB"
+      },
+      {
+        "command": "wab.generateDnsRecord",
+        "title": "WAB: Generate DNS Records (.well-known)",
+        "category": "WAB"
+      },
+      {
+        "command": "wab.openEmbeddedBrowser",
+        "title": "WAB: Open Embedded Browser",
+        "category": "WAB"
+      },
+      {
+        "command": "wab.signIn",
+        "title": "WAB: Sign In to webagentbridge.com",
+        "category": "WAB"
+      },
+      {
+        "command": "wab.scaffoldStarter",
+        "title": "WAB: Scaffold Starter Kit in this workspace",
+        "category": "WAB"
+      }
+    ],
+    "configuration": {
+      "title": "Web Agent Bridge",
+      "properties": {
+        "wab.endpoint": {
+          "type": "string",
+          "default": "https://www.webagentbridge.com",
+          "description": "Base URL of your WAB control plane."
+        },
+        "wab.apiToken": {
+          "type": "string",
+          "default": "",
+          "description": "Optional API token for authenticated requests. Prefer 'WAB: Sign In' over storing it here.",
+          "scope": "machine-overridable"
+        },
+        "wab.bridgePort": {
+          "type": "number",
+          "default": 7999,
+          "description": "Local port the embedded bridge runner listens on."
+        },
+        "wab.autoMonitorOnDetect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically prompt to open the Monitor when WAB SDK is detected in the workspace."
+        },
+        "wab.intelliSense.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable IntelliSense + Code Actions for AICommands."
+        }
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "wab.generateSnippet",
+          "when": "resourceLangId == html || resourceLangId == javascriptreact || resourceLangId == typescriptreact || resourceLangId == vue || resourceLangId == svelte",
+          "group": "1_modification@99"
+        }
+      ],
+      "commandPalette": [
+        { "command": "wab.openMonitor" },
+        { "command": "wab.startBridge" },
+        { "command": "wab.stopBridge" },
+        { "command": "wab.generateSnippet" },
+        { "command": "wab.generateDnsRecord" },
+        { "command": "wab.openEmbeddedBrowser" },
+        { "command": "wab.signIn" },
+        { "command": "wab.scaffoldStarter" }
+      ]
+    },
+    "snippets": [
+      {
+        "language": "javascript",
+        "path": "./snippets/aicommands.code-snippets"
+      },
+      {
+        "language": "typescript",
+        "path": "./snippets/aicommands.code-snippets"
+      },
+      {
+        "language": "javascriptreact",
+        "path": "./snippets/aicommands.code-snippets"
+      },
+      {
+        "language": "typescriptreact",
+        "path": "./snippets/aicommands.code-snippets"
+      },
+      {
+        "language": "html",
+        "path": "./snippets/aicommands.code-snippets"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "wab",
+          "title": "Web Agent Bridge",
+          "icon": "media/sidebar.svg"
+        }
+      ]
+    },
+    "views": {
+      "wab": [
+        {
+          "id": "wab.actions",
+          "name": "Actions",
+          "type": "tree"
+        },
+        {
+          "id": "wab.eventLog",
+          "name": "Event Log",
+          "type": "tree"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package --no-dependencies",
+    "publish:vsce": "vsce publish --no-dependencies",
+    "publish:ovsx": "ovsx publish --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.4.0",
+    "@vscode/vsce": "^2.24.0",
+    "ovsx": "^0.9.0"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}
