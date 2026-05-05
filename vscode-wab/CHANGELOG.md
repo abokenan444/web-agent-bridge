@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 — 2026-05-05
+- Embedded Browser now shows a clear toolbar + warning banner.
+- External (non-localhost) URLs display a friendly explainer instead of a blank
+  iframe (production sites block embedding via X-Frame-Options / CSP
+  frame-ancestors). Banner exposes an "Open in external browser" action.
+
 ## 0.1.0 — 2026-05-05
 - Initial release.
 - Agent Monitor webview with live `/api/plans` integration.

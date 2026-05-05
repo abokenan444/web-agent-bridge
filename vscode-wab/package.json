@@ -2,7 +2,7 @@
   "name": "wab",
   "displayName": "WAB — Web Agent Bridge",
   "description": "AI-Ready toolkit for VS Code: monitor, debug and generate AICommands for the Web Agent Bridge protocol (WAB).",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "webagentbridge",
   "license": "MIT",
   "icon": "media/icon.png",
