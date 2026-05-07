@@ -14,6 +14,12 @@ The following components are licensed under the MIT License:
   • WAB Browser Extension (wab-extension/)
   • Framework Integrations (packages/react/, packages/vue/, packages/svelte/, packages/langchain/)
   • WAB Browser (wab-browser/)
+  • WAB VS Code Extension (vscode-wab/) — MIT, published on Marketplace + Open VSX
+  • WAB ShieldQR Reference Verifier (server/services/shieldqr.js, server/routes/shieldqr.js)
+        — open reference implementation of the DNS+Ed25519+SSL verification protocol
+  • WAB ShieldQR Public Scanner (public/shieldqr.html) — open browser-side QR scanner
+  • Signed Domain Trust Tooling (scripts/sign-wab-domain.js, public/.well-known/wab.json)
+        — open so any domain can self-sign and join the trust network
   • API Documentation (docs/)
   • Examples (examples/)
 
@@ -52,6 +58,12 @@ They run exclusively on the official WAB platform (webagentbridge.com):
   • Fairness Algorithm — Neutrality-weighted search ranking system
   • Trust Verifier — Server-side manifest verification engine
   • Affiliate Fraud Detection — Network fraud analysis algorithms
+  • ShieldQR Threat Intelligence — Phishing/malware/scam URL feeds and ML scoring
+        (NOT the verifier — only the threat-data + ML model are proprietary)
+  • Plans Pricing Engine (server/services/plans.js)
+        — DB schema is open; the live plan/feature catalog stored in production DB
+        is proprietary commercial data
+  • Domain Signing Private Keys (server/secrets/) — operational secrets, never published
 
 These components are protected by trade secret law. Unauthorized access,
 reverse engineering, or reproduction is prohibited.
