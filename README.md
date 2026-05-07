@@ -1,6 +1,6 @@
 <!-- coderlegion: https://coderlegion.com/user/WAB -->
 <div align="center">
-  <img src="https://raw.githubusercontent.com/abokenan444/web-agent-bridge/main/public/images/wab-logo-large.png" alt="Web Agent Bridge Logo" width="200" />
+  <img src="https://raw.githubusercontent.com/abokenan444/web-agent-bridge/master/public/images/wab-logo-large.png" alt="Web Agent Bridge Logo" width="220" />
   <h1>Web Agent Bridge (WAB)</h1>
   <p><b>The Open AI ↔ Web Protocol & Agent Platform</b></p>
   <p><i>robots.txt told bots what NOT to do. WAB tells AI agents what they CAN do.</i></p>

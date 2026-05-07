@@ -1,5 +1,9 @@
 <div dir="rtl" align="right">
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/abokenan444/web-agent-bridge/master/public/images/wab-logo-large.png" alt="Web Agent Bridge" width="220" />
+</p>
+
 # Web Agent Bridge (WAB) — جسر الوكيل الذكي
 
 [![CI](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/abokenan444/web-agent-bridge/actions/workflows/ci.yml)
