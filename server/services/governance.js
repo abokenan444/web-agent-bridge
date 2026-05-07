@@ -178,16 +178,27 @@ function recordSpend(agentId, resource, amount, currency = 'USD', ref = null) {
 }
 
 function bumpRate(agentId, resource) {
-  const minute = nowIso().slice(0, 16);  // YYYY-MM-DDTHH:MM
+  // Use a sliding 60-second window with 1-second buckets (epoch seconds as
+  // window_start). Legacy ISO-minute rows cast to a small integer (the year)
+  // and therefore never fall inside `nowSec - 60`, so they are ignored.
+  const nowSec = Math.floor(Date.now() / 1000);
   db.prepare(`
     INSERT INTO gov_rate (agent_id, resource, window_start, count)
     VALUES (?, ?, ?, 1)
     ON CONFLICT(agent_id, resource, window_start) DO UPDATE SET count = count + 1
-  `).run(agentId, resource, minute);
-  return db.prepare(`
-    SELECT count FROM gov_rate
-     WHERE agent_id = ? AND resource = ? AND window_start = ?
-  `).get(agentId, resource, minute)?.count || 0;
+  `).run(agentId, resource, String(nowSec));
+  // Garbage-collect rows older than 5 minutes for this (agent, resource).
+  db.prepare(`
+    DELETE FROM gov_rate
+     WHERE agent_id = ? AND resource = ?
+       AND CAST(window_start AS INTEGER) <= ?
+  `).run(agentId, resource, nowSec - 300);
+  const row = db.prepare(`
+    SELECT COALESCE(SUM(count), 0) AS c FROM gov_rate
+     WHERE agent_id = ? AND resource = ?
+       AND CAST(window_start AS INTEGER) > ?
+  `).get(agentId, resource, nowSec - 60);
+  return row?.c || 0;
 }
 
 // ───────────────────────────────────────── audit chain ────
