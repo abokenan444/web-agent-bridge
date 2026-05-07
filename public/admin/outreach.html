@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outreach Agent — WAB Admin</title>
+<link rel="icon" type="image/png" href="/images/wab-logo-32.png">
+<style>
+:root{--bg:#0a0e1a;--panel:#0f1626;--panel2:#131c30;--border:#1f2a44;--text:#e8eeff;--muted:#8a94b0;--accent:#7c5cff;--accent2:#22d3ee;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+header{padding:14px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px}
+header .brand{display:flex;align-items:center;gap:10px;font-weight:800}
+main{max-width:1280px;margin:0 auto;padding:24px 18px 80px}
+h1{font-size:24px;margin:0 0 6px}h2{font-size:16px;margin:18px 0 8px}
+.lede{color:var(--muted);margin:0 0 20px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px}
+textarea,input,select{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font:inherit;width:100%}
+textarea{min-height:120px;resize:vertical;font-family:'JetBrains Mono',monospace;font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0a0e1a;border:0;padding:10px 16px;border-radius:8px;font-weight:700;cursor:pointer;font:inherit}
+button.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+button.danger{background:linear-gradient(135deg,#ef4444,#f59e0b);color:#fff}
+button:disabled{opacity:.5;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:var(--panel2);border:1px solid var(--border);color:var(--muted)}
+.pill.pending{background:rgba(245,158,11,.12);color:#fcd34d;border-color:rgba(245,158,11,.3)}
+.pill.approved{background:rgba(124,92,255,.12);color:#c4b5fd;border-color:rgba(124,92,255,.3)}
+.pill.sent{background:rgba(34,197,94,.12);color:#86efac;border-color:rgba(34,197,94,.3)}
+.pill.failed{background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+.pill.suppressed,.pill.skipped{background:rgba(107,114,128,.18);color:#9ca3af}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px}
+.kpi .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.kpi .v{font-size:20px;font-weight:800;margin-top:4px}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;z-index:50;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:780px;width:100%;max-height:90vh;overflow:auto}
+.preview{background:#070b15;border:1px solid var(--border);border-radius:10px;padding:14px;max-height:340px;overflow:auto}
+.muted{color:var(--muted)}
+.warning{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);color:#fcd34d;padding:12px 14px;border-radius:10px;font-size:13px;margin-bottom:14px}
+.ok-banner{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);color:#86efac;padding:8px 14px;border-radius:10px;font-size:13px;margin:10px 0;display:none}
+.ok-banner.on{display:block}
+.actions a,.actions button{margin-right:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12px}
+@media (max-width:760px){th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><img src="/images/wab-logo-64.png" width="28" height="28" style="border-radius:6px"><span>WAB Admin · Outreach</span></div>
+  <div><a href="/admin" style="color:#22d3ee">← Back</a></div>
+</header>
+<main>
+  <h1>Outreach Agent</h1>
+  <p class="lede">Analyze sites, draft multilingual outreach, review, and send — with strict human approval.</p>
+
+  <div class="warning">
+    <b>⚠ Anti-spam policy:</b> Sending requires per-target approval. Each email contains an unsubscribe link. Hourly cap and 30-day per-recipient cooldown are enforced server-side. Use only for sites where outreach is legitimate (e.g., partners, leads, public business contacts).
+  </div>
+
+  <div class="card">
+    <h2>📊 Stats</h2>
+    <div class="kpis" id="kpis"></div>
+  </div>
+
+  <div class="card">
+    <h2>🔍 Scan + draft</h2>
+    <p class="muted">Paste up to 25 site URLs (one per line). The agent analyzes each, detects language, drafts a personalized email.</p>
+    <textarea id="scan-urls" placeholder="https://example.com&#10;https://shop.example.fr&#10;https://saas.example.de"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button id="scan-btn">Scan + draft</button>
+      <span id="scan-status" class="muted"></span>
+    </div>
+    <div id="scan-banner" class="ok-banner"></div>
+  </div>
+
+  <div class="card">
+    <h2>📋 Targets</h2>
+    <div class="row" style="margin-bottom:10px">
+      <select id="filter-status">
+        <option value="">All statuses</option>
+        <option value="pending">pending</option>
+        <option value="approved">approved</option>
+        <option value="sent">sent</option>
+        <option value="failed">failed</option>
+        <option value="suppressed">suppressed</option>
+        <option value="skipped">skipped</option>
+      </select>
+      <button class="ghost" id="refresh-btn">Refresh</button>
+      <span style="flex:1"></span>
+      <button class="danger" id="batch-btn" title="Send up to 10 approved drafts">Send approved batch (×10)</button>
+      <button class="ghost" id="dryrun-btn" title="Dry-run preview, no actual send">Dry-run batch</button>
+    </div>
+    <div id="batch-banner" class="ok-banner"></div>
+    <table id="tbl">
+      <thead><tr><th>ID</th><th>Host</th><th>Lang</th><th>Kind</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</main>
+
+<div class="modal-bg" id="modal"><div class="modal" id="modal-body"></div></div>
+
+<script>
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const TOKEN = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+if(!TOKEN){ alert('Admin token missing — please log in'); location.href = '/admin'; }
+
+async function api(path, opts={}){
+  const r = await fetch('/api/admin/outreach' + path, {
+    method: opts.method || 'GET',
+    headers: { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  let j; try{ j = await r.json(); } catch{ j = {}; }
+  if(!r.ok) throw new Error(j.error || ('HTTP '+r.status));
+  return j;
+}
+
+function pill(status){ return `<span class="pill ${status}">${status}</span>`; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function loadStats(){
+  try{
+    const j = await api('/stats');
+    const c = Object.fromEntries((j.counts||[]).map(x=>[x.status, x.n]));
+    const langs = (j.langs||[]).map(x=>`${x.lang}:${x.n}`).join(', ');
+    const items = [
+      ['Pending', c.pending||0],
+      ['Approved', c.approved||0],
+      ['Sent', c.sent||0],
+      ['Failed', c.failed||0],
+      ['Suppressed', (c.suppressed||0) + (c.skipped||0)],
+      ['Sent (1h)', `${j.sent_last_hour}/${j.hourly_cap}`],
+      ['Sent (24h)', j.sent_last_24h],
+      ['Languages', langs || '—']
+    ];
+    $('#kpis').innerHTML = items.map(([k,v])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  }catch(e){ console.warn('stats', e); }
+}
+
+async function loadList(){
+  const status = $('#filter-status').value;
+  const j = await api('/list' + (status ? '?status='+encodeURIComponent(status) : ''));
+  const tb = $('#tbl tbody');
+  tb.innerHTML = (j.items||[]).map(r => `
+    <tr>
+      <td>${r.id}</td>
+      <td><a href="${esc(r.site_url)}" target="_blank" rel="noopener" style="color:#22d3ee">${esc(r.host)}</a></td>
+      <td>${esc(r.detected_lang||'—')}</td>
+      <td>${esc(r.site_kind||'—')}</td>
+      <td>${esc(r.contact_email||'—')}</td>
+      <td>${pill(r.status)}</td>
+      <td class="actions">
+        <button class="ghost" data-act="view" data-id="${r.id}">View</button>
+        ${(r.status==='pending'||r.status==='approved') && r.contact_email ? `<button data-act="send" data-id="${r.id}">Send</button>` : ''}
+        ${r.status==='pending' && r.contact_email ? `<button class="ghost" data-act="approve" data-id="${r.id}">Approve</button>` : ''}
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" class="muted">No targets yet — scan some URLs above.</td></tr>';
+}
+
+async function viewOne(id){
+  const j = await api('/'+id);
+  const t = j.target;
+  $('#modal-body').innerHTML = `
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(t.host)} · ${pill(t.status)}</h2><button class="ghost" onclick="$('#modal').classList.remove('open')">✕</button></div>
+    <p class="muted" style="margin:6px 0 14px"><a href="${esc(t.site_url)}" target="_blank" rel="noopener" style="color:#22d3ee">${esc(t.site_url)}</a> · lang=<b>${esc(t.detected_lang)}</b> · kind=<b>${esc(t.site_kind)}</b> · email=<b>${esc(t.contact_email||'—')}</b></p>
+    <div class="row" style="margin-bottom:10px"><b>Subject:</b><div style="flex:1"><input id="m-subject" value="${esc(t.draft_subject||'')}"></div></div>
+    <h2>Preview</h2>
+    <div class="preview" id="m-preview"></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button class="ghost" id="m-save">Save edits</button>
+      ${t.contact_email && (t.status==='pending'||t.status==='approved') ? '<button id="m-send">Approve &amp; Send now</button>' : ''}
+    </div>
+  `;
+  // Inject HTML body safely (it's our own template + admin-edited)
+  const ifr = document.createElement('iframe');
+  ifr.style.cssText = 'width:100%;height:340px;border:0;background:#0a0e1a;border-radius:6px';
+  ifr.srcdoc = t.draft_body_html || '';
+  $('#m-preview').innerHTML = '';
+  $('#m-preview').appendChild(ifr);
+  $('#modal').classList.add('open');
+  const saveBtn = $('#m-save'); saveBtn.addEventListener('click', async () => {
+    saveBtn.disabled = true;
+    try { await api('/'+id, { method:'PUT', body: { draft_subject: $('#m-subject').value } }); saveBtn.textContent='Saved'; } catch(e){ alert('Save failed: '+e.message); } finally { setTimeout(()=>{saveBtn.disabled=false;saveBtn.textContent='Save edits'},900); }
+  });
+  const sendBtn = $('#m-send'); if(sendBtn){ sendBtn.addEventListener('click', async () => {
+    if(!confirm('Send this email to '+t.contact_email+'?')) return;
+    sendBtn.disabled = true; sendBtn.textContent='Sending…';
+    try { const r = await api('/'+id+'/send', { method:'POST' }); if(!r.ok) throw new Error(r.error||'failed'); $('#modal').classList.remove('open'); banner('#batch-banner', 'Sent to '+t.contact_email); refresh(); } catch(e){ alert('Send failed: '+e.message); sendBtn.disabled=false; sendBtn.textContent='Approve & Send now'; }
+  }); }
+}
+
+async function rowAction(act, id){
+  if(act==='view') return viewOne(id);
+  if(act==='approve'){ await api('/'+id+'/approve', { method:'POST' }); return refresh(); }
+  if(act==='send'){
+    if(!confirm('Send email for #'+id+'?')) return;
+    try{ const r = await api('/'+id+'/send', { method:'POST' }); if(!r.ok) throw new Error(r.error||'failed'); banner('#batch-banner','Sent #'+id); refresh(); }catch(e){ alert('Send failed: '+e.message); }
+  }
+}
+
+function banner(sel, msg){ const el = $(sel); el.textContent = msg; el.classList.add('on'); setTimeout(()=>el.classList.remove('on'), 3500); }
+
+async function scan(){
+  const urls = $('#scan-urls').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(!urls.length) return alert('Paste at least one URL');
+  $('#scan-btn').disabled = true; $('#scan-status').textContent = 'Analyzing…';
+  try{
+    const j = await api('/scan', { method:'POST', body: { urls } });
+    const ok = j.results.filter(r=>r.ok).length;
+    banner('#scan-banner', `Scanned ${j.count} URLs — ${ok} drafted, ${j.count-ok} failed.`);
+    $('#scan-urls').value = '';
+    refresh();
+  }catch(e){ alert('Scan failed: '+e.message); }
+  finally{ $('#scan-btn').disabled = false; $('#scan-status').textContent = ''; }
+}
+
+async function batch(dryRun){
+  if(!dryRun && !confirm('Send up to 10 approved emails now?')) return;
+  $('#batch-btn').disabled = true; $('#dryrun-btn').disabled = true;
+  try{
+    const j = await api('/send-batch', { method:'POST', body: { limit: 10, dryRun: !!dryRun } });
+    const ok = j.results.filter(r=>r.ok).length;
+    banner('#batch-banner', (dryRun?'[Dry-run] ':'') + `${ok}/${j.attempted} ${dryRun?'previewed':'sent'}.`);
+    refresh();
+  }catch(e){ alert('Batch failed: '+e.message); }
+  finally{ $('#batch-btn').disabled = false; $('#dryrun-btn').disabled = false; }
+}
+
+function refresh(){ loadStats(); loadList(); }
+$('#scan-btn').addEventListener('click', scan);
+$('#refresh-btn').addEventListener('click', refresh);
+$('#filter-status').addEventListener('change', loadList);
+$('#batch-btn').addEventListener('click', () => batch(false));
+$('#dryrun-btn').addEventListener('click', () => batch(true));
+$('#tbl').addEventListener('click', (e) => { const b = e.target.closest('button[data-act]'); if(!b) return; rowAction(b.dataset.act, b.dataset.id); });
+$('#modal').addEventListener('click', (e)=>{ if(e.target===$('#modal')) $('#modal').classList.remove('open'); });
+refresh();
+</script>
+</body>
+</html>

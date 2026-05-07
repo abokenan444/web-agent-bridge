@@ -286,6 +286,8 @@ app.use('/api/admin/shieldqr', apiLimiter, require('./routes/admin-shieldqr'));
 app.use('/api/admin/trust-monitor', apiLimiter, require('./routes/admin-trust-monitor'));
 app.use('/api/shieldqr', apiLimiter, require('./routes/shieldqr'));
 app.use('/api/adopt', apiLimiter, require('./routes/adopt'));
+app.use('/api/admin/outreach', apiLimiter, require('./routes/admin-outreach'));
+app.use('/', apiLimiter, require('./routes/unsubscribe'));
 // Also expose well-known discovery endpoints at the canonical root paths so
 // agents can find them without the /api/discovery prefix (RFC 8615).
 
@@ -443,7 +445,7 @@ app.get('/admin/snapshots', noCache, (req, res) => {
 });
 
 // ─── Admin sub-pages (each backed by real API endpoints in /api/admin/*) ──
-['users','sites','analytics','grants','payments','stripe','smtp','notifications','governance','discovery','trust','providers','plans','shieldqr','trust-monitor'].forEach((page) => {
+['users','sites','analytics','grants','payments','stripe','smtp','notifications','governance','discovery','trust','providers','plans','shieldqr','trust-monitor','outreach'].forEach((page) => {
   app.get('/admin/' + page, noCache, (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'admin', page + '.html'));
   });
