@@ -273,6 +273,7 @@ app.use('/api/providers', apiLimiter, providerRoutes);
 app.use('/api/governance', apiLimiter, governanceRoutes);
 app.use('/api/plans', apiLimiter, require('./routes/plans'));
 app.use('/api/admin/plans', apiLimiter, require('./routes/admin-plans'));
+app.use('/api/shieldqr', apiLimiter, require('./routes/shieldqr'));
 // Also expose well-known discovery endpoints at the canonical root paths so
 // agents can find them without the /api/discovery prefix (RFC 8615).
 
