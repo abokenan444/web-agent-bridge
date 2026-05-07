@@ -166,6 +166,35 @@ const templates = {
         </p>
       </div>
     `
+  }),
+
+  sslExpiringAlert: (data) => ({
+    subject: `[WAB Trust] SSL certificate for ${data.host} expires in ${data.daysLeft} days`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0e1a;color:#f0f4ff;padding:40px;border-radius:12px;">
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="font-size:40px;">🛡️</div>
+          <h1 style="color:#f59e0b;margin:10px 0;">SSL Expiry Warning</h1>
+        </div>
+        <p style="color:#94a3b8;">Hello,</p>
+        <p style="color:#94a3b8;line-height:1.7;">
+          The SSL certificate on <strong style="color:#f0f4ff;">${escapeHtml(data.host)}</strong> will expire in
+          <strong style="color:#f59e0b;">${data.daysLeft} days</strong> (on ${escapeHtml(data.validTo)}).
+        </p>
+        <div style="background:#1a2236;border-radius:8px;padding:18px;margin:18px 0;font-size:14px;">
+          <div><strong>Issuer:</strong> ${escapeHtml(data.issuer || 'unknown')}</div>
+          <div><strong>Fingerprint:</strong> <code style="font-size:11px;">${escapeHtml(data.fingerprint || '')}</code></div>
+        </div>
+        <p style="color:#94a3b8;line-height:1.7;">
+          If you use Let's Encrypt or another auto-renewal system, please verify it is working.
+          If renewal fails, agents that rely on the WAB trust layer will fall back to <em>signature-only</em> trust
+          and the public ShieldQR scanner will downgrade your domain to <strong>yellow</strong>.
+        </p>
+        <p style="color:#64748b;font-size:12px;text-align:center;margin-top:30px;">
+          &copy; ${new Date().getFullYear()} Web Agent Bridge — Extended Trust Layer
+        </p>
+      </div>
+    `
   })
 };
 

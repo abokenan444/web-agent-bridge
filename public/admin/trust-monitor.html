@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trust Monitor — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+  <style>
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:12px; margin:12px 0 22px; }
+    .stat-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px 16px; }
+    .stat-card .num { font-size:1.7rem; font-weight:800; color:#0f172a; }
+    .stat-card .lbl { color:#64748b; font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; }
+    .status-pill { padding:2px 8px; border-radius:6px; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+    .status-active   { background:#dcfce7; color:#166534; }
+    .status-expiring { background:#fef3c7; color:#92400e; }
+    .status-expired  { background:#fee2e2; color:#991b1b; }
+    .status-error    { background:#e2e8f0; color:#475569; }
+    table.tm { width:100%; border-collapse:collapse; background:#fff; }
+    table.tm th, table.tm td { padding:9px 10px; border-bottom:1px solid #f1f5f9; text-align:left; font-size:.88rem; }
+    table.tm th { background:#f8fafc; color:#475569; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; }
+    .fp { font-family: ui-monospace, Menlo, monospace; font-size:.75rem; color:#475569; word-break:break-all; max-width:260px; display:inline-block; }
+    .controls { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+    .controls input { padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size:.85rem; min-width:240px; }
+  </style>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, toast } = AdminShell;
+
+AdminShell.init({
+  page: 'trust-monitor',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>🔐 Trust Monitor</h1>
+        <p class="page-sub">Extended Trust Layer — live SSL health for every active site, certificate transparency log, and 7-day expiry alerts. <strong>Fallback Trust:</strong> if SSL is degraded but the WAB Ed25519 signature is still valid, ShieldQR keeps the verdict at <em>yellow</em> instead of red.</p>
+
+        <div id="stats" class="stat-grid"></div>
+
+        <div class="controls">
+          <input id="checkHost" placeholder="example.com">
+          <button class="btn btn-primary" id="checkBtn">Check host</button>
+          <button class="btn btn-secondary" id="sweepBtn">Run full sweep</button>
+          <button class="btn btn-secondary" id="reloadBtn">Reload</button>
+        </div>
+
+        <h2 style="margin:18px 0 8px;">Monitored hosts</h2>
+        <div class="card" style="padding:0;overflow-x:auto;">
+          <table class="tm">
+            <thead><tr>
+              <th>Host</th><th>Status</th><th>Days left</th><th>Issuer</th>
+              <th>Fingerprint (SHA-256)</th><th>Valid to</th><th>Last checked</th>
+            </tr></thead>
+            <tbody id="rows"><tr><td colspan="7" style="text-align:center;padding:24px;">Loading…</td></tr></tbody>
+          </table>
+        </div>
+
+        <h2 style="margin:24px 0 8px;">Certificate transparency log <span style="font-weight:400;color:#64748b;font-size:.85rem;">(last 100)</span></h2>
+        <div class="card" style="padding:0;overflow-x:auto;">
+          <table class="tm">
+            <thead><tr>
+              <th>Host</th><th>Fingerprint</th><th>Issuer</th><th>Valid from</th><th>Valid to</th><th>Observed</th><th>Source</th>
+            </tr></thead>
+            <tbody id="histRows"><tr><td colspan="7" style="text-align:center;padding:24px;">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    async function loadStats() {
+      try {
+        const s = await api('/api/admin/trust-monitor/stats');
+        const map = Object.fromEntries((s.byStatus || []).map((r) => [r.status, r.n]));
+        document.getElementById('stats').innerHTML = `
+          <div class="stat-card"><div class="lbl">Hosts monitored</div><div class="num">${s.total||0}</div></div>
+          <div class="stat-card"><div class="lbl">🟢 Active</div><div class="num">${map.active||0}</div></div>
+          <div class="stat-card"><div class="lbl">⚠️ Expiring</div><div class="num">${s.expiringSoon||0}</div></div>
+          <div class="stat-card"><div class="lbl">🛑 Expired</div><div class="num">${s.expired||0}</div></div>
+          <div class="stat-card"><div class="lbl">CT log entries</div><div class="num">${s.certHistory||0}</div></div>
+        `;
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadSites() {
+      const tbody = document.getElementById('rows');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;">Loading…</td></tr>';
+      try {
+        const r = await api('/api/admin/trust-monitor/sites');
+        if (!r.sites || r.sites.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#64748b;">No hosts monitored yet. Click <em>Run full sweep</em>.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = r.sites.map((row) => `
+          <tr>
+            <td><strong>${H(row.host)}</strong></td>
+            <td><span class="status-pill status-${H(row.status||'error')}">${H(row.status||'error')}</span></td>
+            <td>${row.days_until_expiry == null ? '—' : row.days_until_expiry}</td>
+            <td>${H(row.issuer||'—')}</td>
+            <td><span class="fp">${H(row.fingerprint_sha256||'—')}</span></td>
+            <td>${H(row.valid_to||'—')}</td>
+            <td>${H(row.last_checked_at||'—')}</td>
+          </tr>
+        `).join('');
+      } catch (e) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#b91c1c;">${H(e.message)}</td></tr>`; }
+    }
+
+    async function loadHistory() {
+      const tbody = document.getElementById('histRows');
+      try {
+        const r = await api('/api/admin/trust-monitor/history?limit=100');
+        if (!r.history || r.history.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#64748b;">No certificates logged yet.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = r.history.map((row) => `
+          <tr>
+            <td>${H(row.host)}</td>
+            <td><span class="fp">${H(row.fingerprint_sha256||'').slice(0,32)}…</span></td>
+            <td>${H(row.issuer||'—')}</td>
+            <td>${H(row.valid_from||'—')}</td>
+            <td>${H(row.valid_to||'—')}</td>
+            <td>${H(row.observed_at||'—')}</td>
+            <td>${H(row.source||'—')}</td>
+          </tr>
+        `).join('');
+      } catch (e) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#b91c1c;">${H(e.message)}</td></tr>`; }
+    }
+
+    document.getElementById('checkBtn').addEventListener('click', async () => {
+      const host = document.getElementById('checkHost').value.trim();
+      if (!host) return;
+      try {
+        const r = await api('/api/admin/trust-monitor/check', { method: 'POST', body: { host } });
+        toast(`Checked ${host}: ${r.status}`, 'success');
+        loadStats(); loadSites(); loadHistory();
+      } catch (e) { toast('Error: ' + e.message, 'error'); }
+    });
+    document.getElementById('sweepBtn').addEventListener('click', async () => {
+      document.getElementById('sweepBtn').disabled = true;
+      document.getElementById('sweepBtn').textContent = 'Sweeping…';
+      try {
+        const r = await api('/api/admin/trust-monitor/sweep', { method: 'POST' });
+        toast(`Swept ${r.count} hosts`, 'success');
+        loadStats(); loadSites(); loadHistory();
+      } catch (e) { toast('Error: ' + e.message, 'error'); }
+      finally {
+        document.getElementById('sweepBtn').disabled = false;
+        document.getElementById('sweepBtn').textContent = 'Run full sweep';
+      }
+    });
+    document.getElementById('reloadBtn').addEventListener('click', () => { loadStats(); loadSites(); loadHistory(); });
+    document.getElementById('checkHost').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('checkBtn').click();
+    });
+
+    await loadStats();
+    await loadSites();
+    await loadHistory();
+  },
+});
+</script>
+</body>
+</html>

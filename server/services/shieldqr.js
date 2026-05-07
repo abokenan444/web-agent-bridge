@@ -111,6 +111,18 @@ async function scan(input) {
     }
   }
 
+  // 4b. Extended Trust — Fallback mode.
+  // If SSL is degraded (expired / expiring / mismatch) BUT we have a
+  // cryptographically verified Ed25519 signature, surface a "partial trust"
+  // signal so the verdict stays yellow instead of crashing to red.
+  const sslDegraded = out.signals.some((s) =>
+    ['ssl_expired', 'ssl_expiring', 'ssl_thumbprint_mismatch'].includes(s.id));
+  if (sslDegraded && out.trust && out.trust.ok) {
+    out.signals.push({ id: 'fallback_trust', severity: 'good',
+      message: 'Partial trust — SSL is degraded but the WAB Ed25519 signature is valid' });
+    out.fallback_trust = true;
+  }
+
   // 5. Final level — combine signals
   const verdict = computeLevel(out.signals, !!out.trust?.ok);
   out.level = verdict.level;
@@ -293,13 +305,17 @@ function computeLevel(signals, signedOk) {
   }
   if (signedOk) { score = Math.max(score, 90); }
   score = Math.max(0, Math.min(100, score));
+  const fallback = signals.some((s) => s.id === 'fallback_trust');
   let level = 'yellow';
-  if (score >= 75 && signedOk) { level = 'green'; }
+  if (score >= 75 && signedOk && !fallback) { level = 'green'; }
   else if (score >= 65)        { level = 'yellow'; }
   else if (score < 35)         { level = 'red'; }
   else                          { level = 'yellow'; }
   // Hard-fail on any high-severity signal unless we have a verified signature
+  // (Extended Trust Layer: signature acts as fallback authority when SSL fails).
   if (signals.some((s) => s.severity === 'high') && !signedOk) { level = 'red'; }
+  // With signed fallback, never drop below yellow.
+  if (fallback && level === 'red') { level = 'yellow'; }
   return { level, score };
 }
 

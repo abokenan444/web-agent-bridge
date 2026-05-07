@@ -7,7 +7,8 @@
   "bin": {
     "web-agent-bridge": "./bin/cli.js",
     "wab": "./bin/cli.js",
-    "wab-agent": "./bin/cli.js"
+    "wab-agent": "./bin/cli.js",
+    "wab-init": "./bin/wab-init.js"
   },
   "scripts": {
     "start": "node server/index.js",

@@ -628,6 +628,8 @@ const { SafetyShieldClient } = require('./safety-shield');
 const { WABSafeMode, WABSafeModeError, POLICIES: WAB_SAFE_POLICIES } = require('./safe-mode');
 // Phase 20 — Agent Governance Layer (permissions + approval + audit + kill-switch)
 const { WABGovernance, WABGovernanceError } = require('./governance');
+// Zero-Config Adoption — Auto-Discovery fallback for sites without /.well-known/wab.json
+const autoDiscovery = require('./auto-discovery');
 
 module.exports = {
   WABAgent,
@@ -642,4 +644,6 @@ module.exports = {
   WAB_SAFE_POLICIES,
   WABGovernance,
   WABGovernanceError,
+  autoDiscovery,
+  discover: autoDiscovery.discover,
 };

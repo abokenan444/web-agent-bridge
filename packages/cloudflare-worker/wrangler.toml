@@ -1,0 +1,14 @@
+name = "wab-injector"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+[vars]
+WAB_SITE_NAME = "My Site"
+WAB_SITE_URL = "https://example.com"
+WAB_ACTIONS_JSON = "[]"
+# WAB_FALLBACK_ORIGIN = "https://origin.example.com"
+
+# Optional KV for storing a real wab.json:
+# [[kv_namespaces]]
+# binding = "WAB_KV"
+# id = "REPLACE_ME"

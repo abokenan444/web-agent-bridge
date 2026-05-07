@@ -283,6 +283,7 @@ app.use('/api/governance', apiLimiter, governanceRoutes);
 app.use('/api/plans', apiLimiter, require('./routes/plans'));
 app.use('/api/admin/plans', apiLimiter, require('./routes/admin-plans'));
 app.use('/api/admin/shieldqr', apiLimiter, require('./routes/admin-shieldqr'));
+app.use('/api/admin/trust-monitor', apiLimiter, require('./routes/admin-trust-monitor'));
 app.use('/api/shieldqr', apiLimiter, require('./routes/shieldqr'));
 // Also expose well-known discovery endpoints at the canonical root paths so
 // agents can find them without the /api/discovery prefix (RFC 8615).
@@ -438,7 +439,7 @@ app.get('/admin/snapshots', noCache, (req, res) => {
 });
 
 // ─── Admin sub-pages (each backed by real API endpoints in /api/admin/*) ──
-['users','sites','analytics','grants','payments','stripe','smtp','notifications','governance','discovery','trust','providers','plans','shieldqr'].forEach((page) => {
+['users','sites','analytics','grants','payments','stripe','smtp','notifications','governance','discovery','trust','providers','plans','shieldqr','trust-monitor'].forEach((page) => {
   app.get('/admin/' + page, noCache, (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'admin', page + '.html'));
   });
@@ -653,6 +654,9 @@ if (process.env.NODE_ENV !== 'test') {
 
   // Start Cluster Orchestrator
   cluster.start();
+
+  // Start the SSL Health Monitor cron (Extended Trust Layer).
+  try { require('./services/ssl-monitor').start(); } catch (e) { console.warn('[ssl-monitor] start failed:', e.message); }
 
   server.listen(PORT, () => {
     console.log(`\n  ╔══════════════════════════════════════════╗`);

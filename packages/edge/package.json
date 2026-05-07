@@ -1,0 +1,15 @@
+{
+  "name": "@wab/edge",
+  "version": "0.1.0",
+  "description": "Edge Function adapter for Vercel & Netlify — auto-injects /.well-known/wab.json without origin changes.",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "license": "MIT",
+  "author": "Web Agent Bridge <dev@webagentbridge.com>",
+  "homepage": "https://www.webagentbridge.com",
+  "keywords": ["wab", "vercel", "netlify", "edge", "middleware", "ai-agent"]
+}

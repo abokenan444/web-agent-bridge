@@ -1,0 +1,18 @@
+{
+  "name": "@wab/cloudflare-worker",
+  "version": "0.1.0",
+  "description": "Auto-injects /.well-known/wab.json via Cloudflare Workers — zero-config WAB adoption.",
+  "main": "src/index.js",
+  "type": "module",
+  "license": "MIT",
+  "author": "Web Agent Bridge <dev@webagentbridge.com>",
+  "homepage": "https://www.webagentbridge.com",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  },
+  "keywords": ["wab", "cloudflare", "worker", "wab.json", "ai-agent"]
+}
