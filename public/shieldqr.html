@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAB ShieldQR — Scan QR codes safely</title>
+  <meta name="description" content="Scan any QR code in your browser and instantly verify the destination with WAB ShieldQR — DNS trust, Ed25519 signatures, SSL inspection.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; margin:0; background:#0f172a; color:#e2e8f0; min-height:100vh; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 28px 18px 60px; }
+    h1 { font-size: 1.8rem; margin: 0 0 6px; display:flex; align-items:center; gap:10px; }
+    .sub { color:#94a3b8; margin: 0 0 22px; }
+    .card { background:#1e293b; border:1px solid #334155; border-radius:14px; padding:18px; margin-bottom:16px; }
+    #reader { width:100%; border-radius:10px; overflow:hidden; background:#000; }
+    #reader video { width:100%; max-height:60vh; }
+    .controls { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .btn { padding:10px 16px; border-radius:8px; border:none; font-weight:600; cursor:pointer; font-size:.95rem; }
+    .btn-primary { background:#6366f1; color:#fff; }
+    .btn-primary:hover { background:#4f46e5; }
+    .btn-secondary { background:#334155; color:#e2e8f0; }
+    .btn-danger { background:#dc2626; color:#fff; }
+    .btn-success { background:#16a34a; color:#fff; }
+    input[type=text] { flex:1; min-width:200px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#0f172a; color:#e2e8f0; font-size:.95rem; }
+    .verdict { padding:18px; border-radius:14px; border:2px solid; }
+    .verdict.green  { border-color:#16a34a; background:rgba(22,163,74,.08); }
+    .verdict.yellow { border-color:#ca8a04; background:rgba(202,138,4,.08); }
+    .verdict.red    { border-color:#dc2626; background:rgba(220,38,38,.08); }
+    .verdict h2 { margin:0 0 6px; font-size:1.4rem; }
+    .verdict .score { font-size:2.4rem; font-weight:800; }
+    .verdict .url { font-family: ui-monospace, Menlo, monospace; font-size:.85rem; word-break: break-all; color:#cbd5e1; margin: 6px 0 12px; }
+    .signals { margin-top:10px; }
+    .signal { padding:8px 10px; border-radius:8px; background:#0f172a; margin-bottom:6px; font-size:.85rem; display:flex; gap:8px; align-items:flex-start; }
+    .signal .sev { font-size:.7rem; font-weight:700; padding:1px 6px; border-radius:4px; text-transform:uppercase; flex-shrink:0; }
+    .sev-low    { background:#0ea5e9; color:#fff; }
+    .sev-medium { background:#ca8a04; color:#fff; }
+    .sev-high   { background:#dc2626; color:#fff; }
+    .meta { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:8px; margin-top:10px; font-size:.85rem; }
+    .meta div { background:#0f172a; padding:8px 10px; border-radius:8px; }
+    .meta .lbl { color:#94a3b8; font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; }
+    .hidden { display:none !important; }
+    .footer-note { color:#64748b; font-size:.8rem; text-align:center; margin-top:30px; }
+    a { color:#a5b4fc; }
+  </style>
+  <!-- html5-qrcode loader (CSP-allowed origin) -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <h1>🛡️ WAB ShieldQR</h1>
+  <p class="sub">Scan any QR code in your browser. We verify the destination with DNS trust records, Ed25519 signatures, and live SSL inspection — <strong>before</strong> you ever open the link.</p>
+
+  <div class="card">
+    <div id="reader"></div>
+    <div class="controls">
+      <button id="startCam" class="btn btn-primary">📷 Start camera</button>
+      <button id="stopCam"  class="btn btn-secondary hidden">⏹ Stop</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <strong>Or paste a URL manually:</strong>
+    <div class="controls" style="margin-top:8px;">
+      <input id="manualUrl" type="text" placeholder="https://example.com/...">
+      <button id="manualScan" class="btn btn-primary">Verify</button>
+    </div>
+  </div>
+
+  <div id="result" class="card hidden"></div>
+
+  <p class="footer-note">
+    Powered by <a href="/">Web Agent Bridge</a> · ShieldQR is open and free for everyone ·
+    <a href="/api/shieldqr/recent" target="_blank">Recent scans</a>
+  </p>
+</div>
+
+<script>
+(function () {
+  const el = (id) => document.getElementById(id);
+  const H = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  let scanner = null; let lastResult = null;
+
+  function startCamera() {
+    if (typeof Html5Qrcode === 'undefined') {
+      alert('QR library failed to load. Check your network or use the manual URL field.');
+      return;
+    }
+    el('startCam').classList.add('hidden');
+    el('stopCam').classList.remove('hidden');
+    scanner = new Html5Qrcode('reader');
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 260, height: 260 } },
+      (decodedText) => {
+        scanner.stop().catch(() => {});
+        el('startCam').classList.remove('hidden');
+        el('stopCam').classList.add('hidden');
+        verify(decodedText);
+      },
+      () => {} // ignore per-frame errors
+    ).catch((err) => {
+      alert('Camera error: ' + err);
+      el('startCam').classList.remove('hidden');
+      el('stopCam').classList.add('hidden');
+    });
+  }
+
+  function stopCamera() {
+    if (!scanner) return;
+    scanner.stop().catch(() => {}).finally(() => {
+      el('startCam').classList.remove('hidden');
+      el('stopCam').classList.add('hidden');
+      scanner = null;
+    });
+  }
+
+  async function verify(url) {
+    const result = el('result');
+    result.classList.remove('hidden');
+    result.innerHTML = '<div style="text-align:center;padding:20px;">⏳ Verifying <strong>' + H(url) + '</strong>…</div>';
+    try {
+      const r = await fetch('/api/shieldqr/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'scan failed');
+      lastResult = data;
+      renderVerdict(data, url);
+    } catch (err) {
+      result.innerHTML = '<div style="color:#fca5a5;text-align:center;padding:20px;">❌ ' + H(err.message) + '</div>';
+    }
+  }
+
+  function renderVerdict(d, url) {
+    const lvl = d.level || 'yellow';
+    const icon = { green: '✅', yellow: '⚠️', red: '🛑' }[lvl] || '⚠️';
+    const headline = { green: 'Safe — verified', yellow: 'Caution — incomplete trust', red: 'Dangerous — do not open' }[lvl];
+    const sslDays = d.ssl && d.ssl.days_until_expiry != null ? d.ssl.days_until_expiry : '—';
+    const trustOk = d.trust && d.trust.ok ? '✅ Signed' : '—';
+    const dnsOk   = d.dns && Array.isArray(d.dns.discovery) && d.dns.discovery.length ? '✅ Present' : '—';
+    const signals = (d.signals || []).map((s) => `
+      <div class="signal">
+        <span class="sev sev-${H(s.severity || 'low')}">${H(s.severity || 'low')}</span>
+        <div><strong>${H(s.id || '')}</strong> — ${H(s.message || '')}</div>
+      </div>
+    `).join('') || '<div class="signal"><span class="sev sev-low">ok</span><div>No signals raised.</div></div>';
+
+    const openBtn = lvl === 'green'
+      ? `<a class="btn btn-success" href="${H(url)}" target="_blank" rel="noopener noreferrer">Open destination →</a>`
+      : `<button class="btn btn-danger" data-action="forceOpen">Open anyway (risky)</button>`;
+
+    el('result').innerHTML = `
+      <div class="verdict ${H(lvl)}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+          <div>
+            <h2>${icon} ${H(headline)}</h2>
+            <div class="url">${H(url)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="score">${d.score ?? '—'}</div>
+            <div style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">score / 100</div>
+          </div>
+        </div>
+
+        <div class="meta">
+          <div><div class="lbl">Host</div>${H(d.host || '—')}</div>
+          <div><div class="lbl">DNS _wab</div>${dnsOk}</div>
+          <div><div class="lbl">Signed wab.json</div>${trustOk}</div>
+          <div><div class="lbl">SSL valid for</div>${sslDays} days</div>
+        </div>
+
+        <div class="signals">${signals}</div>
+
+        <div class="controls" style="margin-top:14px;">
+          ${openBtn}
+          <button class="btn btn-secondary" data-action="rescan">Scan another</button>
+          <button class="btn btn-danger" data-action="report">Report this URL</button>
+        </div>
+      </div>
+    `;
+
+    el('result').querySelector('[data-action="rescan"]').addEventListener('click', () => {
+      el('result').classList.add('hidden');
+      el('manualUrl').value = '';
+    });
+    const forceBtn = el('result').querySelector('[data-action="forceOpen"]');
+    if (forceBtn) {
+      forceBtn.addEventListener('click', () => {
+        if (confirm('This site has not been verified as safe. Open anyway?')) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+      });
+    }
+    el('result').querySelector('[data-action="report"]').addEventListener('click', () => reportUrl(url));
+  }
+
+  async function reportUrl(url) {
+    const reason = prompt('Why are you reporting this URL? (e.g. phishing, malware, scam)');
+    if (!reason || reason.trim().length < 4) return;
+    try {
+      const r = await fetch('/api/shieldqr/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, reason: reason.trim(), scan_id: lastResult && lastResult.scan_id }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'report failed');
+      alert('Thank you — your report has been submitted.');
+    } catch (err) {
+      alert('Report failed: ' + err.message);
+    }
+  }
+
+  el('startCam').addEventListener('click', startCamera);
+  el('stopCam').addEventListener('click', stopCamera);
+  el('manualScan').addEventListener('click', () => {
+    const u = el('manualUrl').value.trim();
+    if (u) verify(u);
+  });
+  el('manualUrl').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); el('manualScan').click(); }
+  });
+})();
+</script>
+</body>
+</html>

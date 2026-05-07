@@ -6,6 +6,10 @@ data-test/
 dist/
 *.tgz
 
+# WAB Trust signing keys (NEVER commit private keys)
+server/secrets/
+!server/secrets/.gitkeep
+
 # ═══════════════════════════════════════════════════════
 # CLOSED SOURCE — Proprietary (server-side only)
 # Detection Engine, Threat DB, WAB Score Model,

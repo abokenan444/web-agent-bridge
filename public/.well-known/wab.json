@@ -1,0 +1,21 @@
+{
+  "payload": {
+    "version": "wab1",
+    "type": "wab.trust",
+    "host": "www.webagentbridge.com",
+    "endpoint": "https://www.webagentbridge.com",
+    "issued_at": "2026-05-07T14:47:12.698Z",
+    "expires_at": "2027-05-07T14:47:12.709Z",
+    "capabilities": {
+      "discovery": true,
+      "shieldqr": true,
+      "governance": true,
+      "plans_api": "/api/plans",
+      "scan_api": "/api/shieldqr/scan"
+    },
+    "trust": {
+      "pk": "ed25519:sjxdiyuM+fnu2N6aLyk1VrDPkYgE5p0+pGb2sl3Y6hg="
+    }
+  },
+  "signature": "ed25519:HqcKsZoW5LkHmtYTD2VZqH41Vn5wmbmbhBM31ncF6OSgp76oSjoaMIHLONu1q4oN0e3DPZjsX8AmuZeucaWuDg=="
+}

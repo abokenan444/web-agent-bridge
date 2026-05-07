@@ -25,6 +25,7 @@
     { id: 'analytics',    href: '/admin/analytics',    label: '📈 Analytics' },
     { id: 'grants',       href: '/admin/grants',       label: '🎁 Free Grants' },
     { id: 'plans',        href: '/admin/plans',        label: '📦 Plans' },
+    { id: 'shieldqr',     href: '/admin/shieldqr',     label: '🛡️ ShieldQR' },
     { id: 'payments',     href: '/admin/payments',     label: '💳 Payments' },
     { id: 'stripe',       href: '/admin/stripe',       label: '🔧 Stripe' },
     { id: 'smtp',         href: '/admin/smtp',         label: '📧 SMTP' },

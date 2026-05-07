@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShieldQR — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+  <style>
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:12px; margin:12px 0 22px; }
+    .stat-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px 16px; }
+    .stat-card .num { font-size:1.7rem; font-weight:800; color:#0f172a; margin:2px 0; }
+    .stat-card .lbl { color:#64748b; font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; }
+    .level-pill { display:inline-block; padding:2px 10px; border-radius:999px; font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+    .level-green  { background:#dcfce7; color:#166534; }
+    .level-yellow { background:#fef9c3; color:#854d0e; }
+    .level-red    { background:#fee2e2; color:#991b1b; }
+    .status-pill  { padding:2px 8px; border-radius:6px; font-size:.7rem; font-weight:600; }
+    .status-open      { background:#fee2e2; color:#991b1b; }
+    .status-reviewing { background:#fef3c7; color:#92400e; }
+    .status-resolved  { background:#dcfce7; color:#166534; }
+    .status-rejected  { background:#e2e8f0; color:#475569; }
+    table.shield { width:100%; border-collapse:collapse; background:#fff; }
+    table.shield th, table.shield td { padding:9px 10px; border-bottom:1px solid #f1f5f9; text-align:left; font-size:.88rem; vertical-align:middle; }
+    table.shield th { background:#f8fafc; color:#475569; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; }
+    table.shield td.url { max-width:340px; word-break:break-all; font-family:ui-monospace,Menlo,monospace; font-size:.8rem; }
+    table.shield select { padding:4px 6px; border-radius:6px; border:1px solid #cbd5e1; }
+    .tabs { display:flex; gap:6px; margin:18px 0 10px; border-bottom:1px solid #e2e8f0; }
+    .tabs button { background:transparent; border:none; padding:9px 14px; cursor:pointer; font-weight:600; color:#64748b; border-bottom:2px solid transparent; }
+    .tabs button.active { color:#0f172a; border-bottom-color:#6366f1; }
+    .filters { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+    .filters select, .filters input { padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size:.85rem; }
+  </style>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, toast } = AdminShell;
+
+AdminShell.init({
+  page: 'shieldqr',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>🛡️ ShieldQR</h1>
+        <p class="page-sub">Moderate user-submitted reports of suspicious QR codes and review recent verification scans. Reports flow in from <code>/shieldqr</code> (public scanner) and the <code>/api/shieldqr/report</code> endpoint.</p>
+
+        <div id="stats" class="stat-grid"></div>
+
+        <div class="tabs">
+          <button data-tab="reports" class="active">Reports</button>
+          <button data-tab="scans">Recent scans</button>
+        </div>
+
+        <div id="tabReports">
+          <div class="filters">
+            <label>Status <select id="reportStatus">
+              <option value="open">open</option>
+              <option value="reviewing">reviewing</option>
+              <option value="resolved">resolved</option>
+              <option value="rejected">rejected</option>
+              <option value="">all</option>
+            </select></label>
+            <button class="btn btn-secondary" id="reloadReports">Reload</button>
+          </div>
+          <div class="card" style="padding:0;overflow-x:auto;">
+            <table class="shield">
+              <thead><tr>
+                <th>#</th><th>URL</th><th>Reason</th><th>Level</th><th>Score</th><th>Status</th><th>Created</th><th></th>
+              </tr></thead>
+              <tbody id="reportRows"><tr><td colspan="8" style="text-align:center;padding:24px;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="tabScans" style="display:none;">
+          <div class="filters">
+            <label>Host <input id="scanHost" placeholder="example.com"></label>
+            <label>Level <select id="scanLevel">
+              <option value="">any</option>
+              <option value="green">green</option>
+              <option value="yellow">yellow</option>
+              <option value="red">red</option>
+            </select></label>
+            <button class="btn btn-secondary" id="reloadScans">Reload</button>
+          </div>
+          <div class="card" style="padding:0;overflow-x:auto;">
+            <table class="shield">
+              <thead><tr>
+                <th>#</th><th>URL</th><th>Host</th><th>Level</th><th>Score</th><th>Trust</th><th>SSL</th><th>Created</th>
+              </tr></thead>
+              <tbody id="scanRows"><tr><td colspan="8" style="text-align:center;padding:24px;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // ── Tabs ──────────────────────────────────────────────────────────
+    document.querySelectorAll('.tabs button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tabs button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.getElementById('tabReports').style.display = tab === 'reports' ? '' : 'none';
+        document.getElementById('tabScans').style.display   = tab === 'scans'   ? '' : 'none';
+        if (tab === 'scans') loadScans();
+      });
+    });
+
+    // ── Stats ─────────────────────────────────────────────────────────
+    async function loadStats() {
+      try {
+        const s = await api('/api/admin/shieldqr/stats');
+        const lvl = Object.fromEntries((s.byLevel || []).map((r) => [r.level, r.n]));
+        const rep = Object.fromEntries((s.reportsByStatus || []).map((r) => [r.status, r.n]));
+        document.getElementById('stats').innerHTML = `
+          <div class="stat-card"><div class="lbl">Total scans</div><div class="num">${s.totalScans||0}</div></div>
+          <div class="stat-card"><div class="lbl">Last 24h</div><div class="num">${s.recent24h||0}</div></div>
+          <div class="stat-card"><div class="lbl">🟢 Green</div><div class="num">${lvl.green||0}</div></div>
+          <div class="stat-card"><div class="lbl">🟡 Yellow</div><div class="num">${lvl.yellow||0}</div></div>
+          <div class="stat-card"><div class="lbl">🔴 Red</div><div class="num">${lvl.red||0}</div></div>
+          <div class="stat-card"><div class="lbl">Open reports</div><div class="num">${rep.open||0}</div></div>
+        `;
+      } catch (err) { console.error(err); }
+    }
+
+    // ── Reports ───────────────────────────────────────────────────────
+    async function loadReports() {
+      const status = document.getElementById('reportStatus').value;
+      const url = '/api/admin/shieldqr/reports' + (status ? '?status=' + encodeURIComponent(status) : '');
+      const tbody = document.getElementById('reportRows');
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;">Loading…</td></tr>';
+      try {
+        const r = await api(url);
+        if (!r.reports || r.reports.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#64748b;">No reports.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = r.reports.map((row) => `
+          <tr data-id="${row.id}">
+            <td>${row.id}</td>
+            <td class="url">${H(row.url||'')}</td>
+            <td>${H(row.reason||'')}</td>
+            <td>${row.level ? `<span class="level-pill level-${H(row.level)}">${H(row.level)}</span>` : '—'}</td>
+            <td>${row.score ?? '—'}</td>
+            <td><span class="status-pill status-${H(row.status)}">${H(row.status)}</span></td>
+            <td>${H(row.created_at||'')}</td>
+            <td>
+              <select data-action="updateStatus" data-id="${row.id}">
+                ${['open','reviewing','resolved','rejected'].map((s) =>
+                  `<option value="${s}"${s===row.status?' selected':''}>${s}</option>`).join('')}
+              </select>
+            </td>
+          </tr>
+        `).join('');
+        tbody.querySelectorAll('select[data-action="updateStatus"]').forEach((sel) => {
+          sel.addEventListener('change', async () => {
+            const id = sel.dataset.id;
+            try {
+              await api('/api/admin/shieldqr/reports/' + id, { method: 'PUT', body: { status: sel.value } });
+              toast('Updated', 'success');
+              loadReports(); loadStats();
+            } catch (err) { toast('Error: ' + err.message, 'error'); }
+          });
+        });
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:#b91c1c;">${H(err.message)}</td></tr>`;
+      }
+    }
+
+    // ── Scans ─────────────────────────────────────────────────────────
+    async function loadScans() {
+      const host = document.getElementById('scanHost').value.trim();
+      const level = document.getElementById('scanLevel').value;
+      const qs = new URLSearchParams();
+      if (host) qs.set('host', host);
+      if (level) qs.set('level', level);
+      const tbody = document.getElementById('scanRows');
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;">Loading…</td></tr>';
+      try {
+        const r = await api('/api/admin/shieldqr/scans' + (qs.toString() ? '?' + qs : ''));
+        if (!r.scans || r.scans.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#64748b;">No scans.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = r.scans.map((row) => `
+          <tr>
+            <td>${row.id}</td>
+            <td class="url">${H(row.url||'')}</td>
+            <td>${H(row.host||'')}</td>
+            <td><span class="level-pill level-${H(row.level)}">${H(row.level)}</span></td>
+            <td>${row.score ?? '—'}</td>
+            <td>${row.trust_ok ? '✅' : '—'}</td>
+            <td>${row.ssl_ok ? '✅' : '—'}</td>
+            <td>${H(row.created_at||'')}</td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:#b91c1c;">${H(err.message)}</td></tr>`;
+      }
+    }
+
+    document.getElementById('reportStatus').addEventListener('change', loadReports);
+    document.getElementById('reloadReports').addEventListener('click', loadReports);
+    document.getElementById('reloadScans').addEventListener('click', loadScans);
+    document.getElementById('scanHost').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadScans(); });
+
+    await loadStats();
+    await loadReports();
+  },
+});
+</script>
+</body>
+</html>

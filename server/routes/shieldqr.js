@@ -35,8 +35,9 @@ router.post('/scan', scanLimiter, async (req, res) => {
   }
   try {
     const result = await shieldqr.scan(url);
+    let scanId = null;
     try {
-      db().prepare(`INSERT INTO shieldqr_scans (url, host, level, score, signals_json, trust_ok, ssl_ok, user_id, ip, user_agent)
+      const info = db().prepare(`INSERT INTO shieldqr_scans (url, host, level, score, signals_json, trust_ok, ssl_ok, user_id, ip, user_agent)
                     VALUES (?,?,?,?,?,?,?,?,?,?)`)
         .run(
           result.url || url,
@@ -50,8 +51,9 @@ router.post('/scan', scanLimiter, async (req, res) => {
           req.ip || null,
           (req.headers['user-agent'] || '').slice(0, 200),
         );
+      scanId = Number(info.lastInsertRowid);
     } catch (e) { /* table may not exist in some test contexts */ }
-    res.json(result);
+    res.json({ ...result, scan_id: scanId });
   } catch (e) {
     res.status(500).json({ error: e.message || 'scan failed' });
   }
@@ -60,11 +62,12 @@ router.post('/scan', scanLimiter, async (req, res) => {
 router.post('/report', reportLimiter, (req, res) => {
   const url = (req.body && req.body.url) || '';
   const reason = ((req.body && req.body.reason) || '').slice(0, 500);
+  const scanId = req.body && Number.isFinite(Number(req.body.scan_id)) ? Number(req.body.scan_id) : null;
   if (!url || typeof url !== 'string') { return res.status(400).json({ error: 'url required' }); }
   try {
-    const info = db().prepare(`INSERT INTO shieldqr_reports (url, reason, reporter_id, reporter_ip)
-                               VALUES (?,?,?,?)`)
-      .run(url, reason, (req.user && req.user.id) || null, req.ip || null);
+    const info = db().prepare(`INSERT INTO shieldqr_reports (scan_id, url, reason, reporter_id, reporter_ip)
+                               VALUES (?,?,?,?,?)`)
+      .run(scanId, url, reason, (req.user && req.user.id) || null, req.ip || null);
     res.json({ ok: true, id: info.lastInsertRowid });
   } catch (e) {
     res.status(500).json({ error: e.message });

@@ -70,8 +70,8 @@ app.use(
 );
 
 const scriptSrc = process.env.CSP_ALLOW_UNSAFE_INLINE === 'false'
-  ? ["'self'"]
-  : ["'self'", "'unsafe-inline'"];
+  ? ["'self'", 'https://unpkg.com', 'https://cdn.jsdelivr.net']
+  : ["'self'", "'unsafe-inline'", 'https://unpkg.com', 'https://cdn.jsdelivr.net'];
 const styleSrc = process.env.CSP_ALLOW_UNSAFE_INLINE === 'false'
   ? ["'self'"]
   : ["'self'", "'unsafe-inline'"];
@@ -248,6 +248,15 @@ const whitepaperHandler = (req, res) => {
 };
 app.get(['/whitepaper', '/whitepaper.html'], whitepaperHandler);
 
+// WAB Trust artifact (signed Ed25519 wab.json) — served explicitly because
+// express.static skips dotfile directories like /.well-known by default.
+app.get('/.well-known/wab.json', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.set('Access-Control-Allow-Origin', '*');
+  res.type('application/json');
+  res.sendFile(path.join(__dirname, '..', 'public', '.well-known', 'wab.json'));
+});
+
 app.use(express.static(path.join(__dirname, '..', 'public'), {
   setHeaders(res, filePath) {
     if (filePath.endsWith('.html')) {
@@ -273,6 +282,7 @@ app.use('/api/providers', apiLimiter, providerRoutes);
 app.use('/api/governance', apiLimiter, governanceRoutes);
 app.use('/api/plans', apiLimiter, require('./routes/plans'));
 app.use('/api/admin/plans', apiLimiter, require('./routes/admin-plans'));
+app.use('/api/admin/shieldqr', apiLimiter, require('./routes/admin-shieldqr'));
 app.use('/api/shieldqr', apiLimiter, require('./routes/shieldqr'));
 // Also expose well-known discovery endpoints at the canonical root paths so
 // agents can find them without the /api/discovery prefix (RFC 8615).
@@ -280,6 +290,9 @@ app.use('/api/shieldqr', apiLimiter, require('./routes/shieldqr'));
 // /activate — WAB DNS Discovery activation guide (bilingual)
 app.get('/activate', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'activate.html'));
+});
+app.get('/shieldqr', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'shieldqr.html'));
 });
 app.get('/activate-dns', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'activate.html'));
@@ -425,7 +438,7 @@ app.get('/admin/snapshots', noCache, (req, res) => {
 });
 
 // ─── Admin sub-pages (each backed by real API endpoints in /api/admin/*) ──
-['users','sites','analytics','grants','payments','stripe','smtp','notifications','governance','discovery','trust','providers','plans'].forEach((page) => {
+['users','sites','analytics','grants','payments','stripe','smtp','notifications','governance','discovery','trust','providers','plans','shieldqr'].forEach((page) => {
   app.get('/admin/' + page, noCache, (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'admin', page + '.html'));
   });
