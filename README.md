@@ -1,3 +1,4 @@
+<!-- coderlegion: https://coderlegion.com/user/WAB -->
 <div align="center">
   <img src="https://raw.githubusercontent.com/abokenan444/web-agent-bridge/main/public/images/wab-logo-large.png" alt="Web Agent Bridge Logo" width="200" />
   <h1>Web Agent Bridge (WAB)</h1>
@@ -8,17 +9,20 @@
   [![License: Open Core](https://img.shields.io/badge/License-Open_Core-blue.svg?style=flat-square)](LICENSE)
   [![One-Click DNS Discovery](https://img.shields.io/badge/DNS%20Discovery-One--Click-6366f1?style=flat-square&logo=dns&logoColor=white)](https://webagentbridge.com/activate)
   [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/NnbpJYEF)
+  [![CoderLegion](https://img.shields.io/badge/CoderLegion-WAB-0ea5e9?style=flat-square&logo=dev.to&logoColor=white)](https://coderlegion.com/user/WAB)
 
-  [![Tamper-Evident Audit](https://img.shields.io/badge/Audit-Tamper--Evident_HMAC_Chain-0ea5e9?style=flat-square&logo=keybase&logoColor=white)](#-governance-layer--enterprise-security--compliance)
-  [![Human-in-the-Loop Approvals](https://img.shields.io/badge/Approvals-Human--in--the--Loop-22c55e?style=flat-square&logo=checkmarx&logoColor=white)](#-governance-layer--enterprise-security--compliance)
-  [![Kill Switch](https://img.shields.io/badge/Kill_Switch-Per--Agent-ef4444?style=flat-square&logo=stopsign&logoColor=white)](#-governance-layer--enterprise-security--compliance)
-  [![Tests](https://img.shields.io/badge/Governance_Tests-26%2F26_passing-22c55e?style=flat-square&logo=jest&logoColor=white)](tests/governance.test.js)
+  [![ShieldQR Trust](https://img.shields.io/badge/ShieldQR-Ed25519_signed-22c55e?style=flat-square&logo=letsencrypt&logoColor=white)](#-shieldqr--extended-trust-layer)
+  [![SSL Monitor](https://img.shields.io/badge/SSL_Monitor-7--day_alerts-f59e0b?style=flat-square&logo=letsencrypt&logoColor=white)](#-shieldqr--extended-trust-layer)
+  [![Zero-Config Adoption](https://img.shields.io/badge/Adoption-Zero--Config-a855f7?style=flat-square&logo=vercel&logoColor=white)](#-zero-config-adoption-layer)
+  [![Tamper-Evident Audit](https://img.shields.io/badge/Audit-HMAC_Chain-0ea5e9?style=flat-square&logo=keybase&logoColor=white)](#-governance-layer--enterprise-security--compliance)
+  [![Tests](https://img.shields.io/badge/Tests-293%2F293_passing-22c55e?style=flat-square&logo=jest&logoColor=white)](tests)
 
   <br />
   <a href="https://webagentbridge.com"><strong>Website</strong></a> ·
   <a href="https://webagentbridge.com/docs"><strong>Documentation</strong></a> ·
   <a href="https://webagentbridge.com/whitepaper"><strong>Whitepaper</strong></a> ·
   <a href="https://webagentbridge.com/activate"><strong>DNS Discovery</strong></a> ·
+  <a href="https://coderlegion.com/user/WAB"><strong>CoderLegion</strong></a> ·
   <a href="README.ar.md"><strong>العربية</strong></a>
 </div>
 
@@ -40,7 +44,16 @@ Build reliable agents that work instantly on any WAB-enabled site. Stop writing 
 
 ## ⚡ Quick Start
 
-### 1. The Easiest Way: DNS Discovery (No Code)
+### 0. Zero-Config Initializer (30 seconds)
+The fastest path. Auto-detects your stack (Next.js, Nuxt, SvelteKit, Astro, Laravel, WordPress, static…) and scaffolds `/.well-known/wab.json` plus the DNS instructions for your provider:
+
+```bash
+npx wab-init
+# or non-interactive:
+npx wab-init --site=https://yourdomain.com --name="Your Site" --yes
+```
+
+### 1. DNS Discovery (No Code)
 Make your website instantly discoverable by AI agents by adding a single DNS TXT record. No code changes required.
 
 ```dns
@@ -62,7 +75,29 @@ initWAB({
 });
 ```
 
-### 3. The Agent Builder Way: Governance-First Agents
+### 3. The Edge Way: One-Click Edge Adoption
+No origin changes needed. Drop in a Cloudflare Worker, Vercel Middleware, or Netlify Edge Function and `/.well-known/wab.json` is served from the edge:
+
+```js
+// Vercel — middleware.ts
+import { handleRequest } from '@wab/edge';
+export const config = { matcher: ['/.well-known/wab.json'] };
+export default (req) => handleRequest(req, {
+  siteName: 'Acme', siteUrl: 'https://acme.com'
+});
+```
+
+Or for Next.js, wrap your config:
+
+```js
+// next.config.js
+const { withWAB } = require('@wab/next');
+module.exports = withWAB({}, {
+  siteName: 'Acme', siteUrl: 'https://acme.com',
+});
+```
+
+### 4. The Agent Builder Way: Governance-First Agents
 
 If you're building an AI agent that touches Stripe, Gmail, ClickUp, or any sensitive API, wrap every action in the **Governance Layer**. Permissions, human-in-the-loop approvals, tamper-evident audit, kill-switch and spend caps — server-enforced and one call away:
 
@@ -125,7 +160,69 @@ Full Arabic and English interface with auto-detection. The smart agent understan
 
 ---
 
-## 🛡️ Governance Layer — Enterprise Security & Compliance
+## � ShieldQR & Extended Trust Layer
+
+WAB ships an **end-to-end trust pipeline** that lets agents (and humans) verify a site is exactly who it claims to be — at the protocol level, not just the TLS level.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  /.well-known/wab.json   →  signed Ed25519 payload          │
+│        ▲                                                    │
+│  _wab.<host>  DNS TXT    →  pk + ssl_thumbprint + endpoint  │
+│        ▲                                                    │
+│  TLS certificate         →  fingerprint pinned in DNS       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| Capability | What it does |
+|---|---|
+| **🪪 Ed25519-signed `wab.json`** | Every capability document is signed; the public key is published in DNS (`pk=ed25519:…`). Agents detect tampering or impersonation. |
+| **🔐 SSL fingerprint pinning** | `ssl_thumbprint` (SHA-256) and `ssl_expires` are embedded in both `wab.json` and the DNS TXT record. Mismatch = automatic distrust. |
+| **🩺 SSL Health Monitor** | A 24h cron sweep tracks every site's certificate; sends an email alert **7 days** before expiry so renewal never surprises you. |
+| **📜 Certificate Transparency log** | A local CT log (`cert_history`) records every fingerprint observed per host — silent re-issuance is detectable. |
+| **🛟 Fallback Trust mode** | If TLS is degraded but the Ed25519 signature still verifies, ShieldQR returns `partial trust` instead of failing closed. Never blocks a legitimate site over a single moving part. |
+| **📱 ShieldQR Public Scanner** | `/shieldqr` lets users scan any QR code and instantly see if the destination is a verified WAB-trusted site (`green` / `yellow` / `red`). |
+| **🛠 Admin Trust Monitor** | `/admin/trust-monitor` — dashboard for monitored hosts, SSL status pills, CT log entries, and one-click re-verification. |
+
+**Sign your domain in one command:**
+```bash
+node scripts/sign-wab-domain.js
+# → writes signed /.well-known/wab.json + prints the DNS TXT record to publish
+```
+
+Verify any site: <https://www.webagentbridge.com/check?host=YOUR_HOST>
+
+---
+
+## 🚀 Zero-Config Adoption Layer
+
+Drop-in adoption for every popular stack — **no origin changes, no PHP, no `.htaccess` edits**.
+
+| Package | Use it for | Install |
+|---|---|---|
+| **`wab-init` CLI** | Auto-detect project (Next/Nuxt/SvelteKit/Astro/Laravel/WordPress/static) and scaffold `wab.json` + DNS instructions. | `npx wab-init` |
+| **`@wab/next`** | Next.js plugin: `withWAB(nextConfig, { siteName, siteUrl })` adds rewrites + headers for `/.well-known/wab.json`. App Router + Pages Router supported. | `npm i @wab/next` |
+| **`@wab/edge`** | Vercel Middleware & Netlify Edge Function — serve `wab.json` from the edge, configured by env vars. | `npm i @wab/edge` |
+| **`@wab/cloudflare-worker`** | Standalone Cloudflare Worker that injects `/.well-known/wab.json` from KV or env vars. Optional reverse-proxy origin. | `wrangler deploy` |
+| **SDK Auto-Discovery** | When a site has no `wab.json`, the SDK falls back through JSON-LD / Schema.org / OpenGraph / `sitemap.xml` / `robots.txt` and returns a **normalized capabilities envelope** so your agent still works. | `require('web-agent-bridge-sdk').discover(url)` |
+
+```js
+const { discover } = require('web-agent-bridge-sdk');
+
+const env = await discover('https://example.com');
+// env.source       → 'wab.json' | 'auto-discovery'
+// env.site         → { name, description, url }
+// env.actions      → [{ name, description, source }, …]
+// env.products     → [ schema.org/Product nodes … ]
+// env.sitemap      → [ url, … ]
+// env.trust.signed → boolean
+```
+
+The result: any agent can do something useful on **any** website on day one, even before the site formally adopts WAB.
+
+---
+
+## �🛡️ Governance Layer — Enterprise Security & Compliance
 
 The **WAB Governance Layer** sits *above* the protocol and turns any agent into a compliance-ready, auditable, kill-switch-controlled identity. It's the missing piece for agents that touch real money, mailboxes, or production systems.
 
@@ -148,7 +245,7 @@ The **WAB Governance Layer** sits *above* the protocol and turns any agent into 
 | **💰 Spend & Rate Limits** | Per-call `max_amount`, rolling 24h `daily_cap`, per-minute `per_call_rate`. |
 | **🕵️ Param Redaction** | `password`, `api_key`, `token`, `cookie`, `cvv`, `ssn` are automatically redacted before audit storage. |
 
-**Verified end-to-end** — [26/26 governance tests passing](tests/governance.test.js) covering security (10), operational (10) and SDK (6) scenarios.
+**Verified end-to-end** — [293/293 tests passing](tests) including 26 governance, 10 ShieldQR, 36 server, plus the full integration suite.
 
 Full demo: [`examples/governance-agent.js`](examples/governance-agent.js) · API surface: `/api/governance/*` · SDK: `WABGovernance` class.
 
@@ -160,10 +257,13 @@ WAB uses an **Open Core** dual-license model to ensure the protocol remains free
 
 | Component | License | Description |
 |-----------|---------|-------------|
-| **Core SDK & Protocol** | MIT | The fundamental building blocks, discovery protocol, and SDKs. |
+| **Core SDK & Protocol** | MIT | Discovery protocol, JS SDK, signing scripts, `wab-init` CLI. |
+| **ShieldQR Verifier** | MIT | Open Ed25519 verifier — anyone can validate signatures and SSL pins. |
+| **Adoption Packages** | MIT | `@wab/next`, `@wab/edge`, `@wab/cloudflare-worker`. |
 | **WordPress Plugin** | GPL-2.0 | Full integration for WordPress sites. |
-| **Engines (Firewall, Price, etc.)** | Proprietary (Free) | Advanced detection, scoring, and protection engines. |
-| **API Gateway & Pro Modules** | Commercial | Enterprise features, data marketplace, and advanced SLA. |
+| **Engines (Firewall, Price, OCR)** | Proprietary (Free) | Advanced detection, scoring, and protection engines. |
+| **ShieldQR Threat Intel** | Commercial | Curated impersonation-host blocklist + reputation feeds. |
+| **API Gateway & Pro Modules** | Commercial | Enterprise features, data marketplace, SLA. |
 
 ---
 
@@ -182,6 +282,16 @@ We welcome contributions from the community! Whether it's fixing a bug, improvin
 ## 📄 License
 
 This project is licensed under the terms described in the [LICENSE](LICENSE) file. The core protocol and SDKs are MIT licensed.
+
+---
+
+## 🌐 Community & Links
+
+- **Website**: <https://webagentbridge.com>
+- **Discord**: <https://discord.gg/NnbpJYEF>
+- **CoderLegion**: <https://coderlegion.com/user/WAB>
+- **Issues & PRs**: <https://github.com/abokenan444/web-agent-bridge/issues>
+- **npm**: <https://www.npmjs.com/package/web-agent-bridge>
 
 <div align="center">
   <i>© 2026 Web Agent Bridge. Built for the AI-first web.</i>
