@@ -198,12 +198,25 @@ async function discover(siteUrl, opts = {}) {
     if (wabRes.ok && wabRes.text) {
       try {
         const parsed = JSON.parse(wabRes.text);
+        // Support BOTH legacy flat shape AND signed envelope { payload, signature }.
+        const inner = parsed && parsed.payload ? parsed.payload : parsed;
+        const signed = !!(parsed && parsed.signature);
+        const actions = Array.isArray(inner.actions) ? inner.actions
+          : (inner.capabilities && typeof inner.capabilities === 'object')
+            ? Object.entries(inner.capabilities)
+                .filter(([, v]) => v === true || typeof v === 'string')
+                .map(([k, v]) => ({ name: k, description: typeof v === 'string' ? v : `capability: ${k}` }))
+            : [];
         return {
           ok: true,
           source: 'wab.json',
-          site: { name: parsed.site || parsed.name, description: parsed.description, url: baseUrl },
-          trust: { signed: !!parsed.sig, ...(parsed.trust || {}) },
-          actions: Array.isArray(parsed.actions) ? parsed.actions : [],
+          site: {
+            name: inner.site || inner.name || inner.host || baseUrl,
+            description: inner.description,
+            url: inner.endpoint || inner.url || baseUrl
+          },
+          trust: { signed, ...(inner.trust || {}) },
+          actions,
           products: [],
           sitemap: [],
           robots: null,

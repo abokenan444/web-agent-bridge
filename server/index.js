@@ -285,6 +285,7 @@ app.use('/api/admin/plans', apiLimiter, require('./routes/admin-plans'));
 app.use('/api/admin/shieldqr', apiLimiter, require('./routes/admin-shieldqr'));
 app.use('/api/admin/trust-monitor', apiLimiter, require('./routes/admin-trust-monitor'));
 app.use('/api/shieldqr', apiLimiter, require('./routes/shieldqr'));
+app.use('/api/adopt', apiLimiter, require('./routes/adopt'));
 // Also expose well-known discovery endpoints at the canonical root paths so
 // agents can find them without the /api/discovery prefix (RFC 8615).
 
@@ -327,6 +328,9 @@ app.get('/registrar-integrations', noCache, (req, res) => {
 });
 app.get('/adoption-metrics', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'adoption-metrics.html'));
+});
+app.get('/adopt', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'adopt.html'));
 });
 app.get('/wab-trust', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'wab-trust.html'));

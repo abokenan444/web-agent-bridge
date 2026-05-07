@@ -189,7 +189,28 @@ async function main() {
   siteUrl = siteUrl.replace(/\/+$/, '');
   const host = new URL(siteUrl).hostname;
 
-  const wab = buildWabJson({ siteUrl, name, description, projectType: detected.type });
+  // --auto-from <url>: ask the public Adoption Agent to draft the wab.json.
+  // The remote agent inspects metadata, sitemap, robots, OpenGraph, schema.org
+  // and TLS to produce a richer document than our local templates.
+  let wab;
+  if (ARG['auto-from'] || ARG.autoFrom) {
+    const sourceUrl = ARG['auto-from'] || ARG.autoFrom;
+    const endpoint = ARG.endpoint || 'https://www.webagentbridge.com';
+    console.log(`  → Asking Adoption Agent at ${endpoint} to inspect ${sourceUrl}…`);
+    try {
+      const r = await fetch(`${endpoint}/api/adopt/suggest?url=${encodeURIComponent(sourceUrl)}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'agent rejected');
+      wab = j.wab_json;
+      console.log(`  ✓ Agent suggested ${wab.actions.length} actions; stack=${j.stack && j.stack.type}; ssl_fp=${j.ssl ? 'yes' : 'no'}\n`);
+    } catch (e) {
+      console.error(`  ! Adoption Agent failed: ${e.message}. Falling back to local templates.`);
+    }
+  }
+  if (!wab) {
+    wab = buildWabJson({ siteUrl, name, description, projectType: detected.type });
+  }
 
   const pubDir = publicDirFor(detected.type, cwd);
   const wellKnownDir = path.join(cwd, pubDir, '.well-known');

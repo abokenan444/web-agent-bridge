@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent-Driven Adoption — Web Agent Bridge</title>
+<meta name="description" content="Drop in a URL; our adoption agent crafts a ready-to-deploy wab.json, DNS TXT record, and platform snippets in seconds.">
+<link rel="canonical" href="https://www.webagentbridge.com/adopt">
+<style>
+  :root{--bg:#0a0e1a;--panel:#0f1626;--panel2:#131c30;--border:#1f2a44;--text:#e8eeff;--muted:#8a94b0;--accent:#7c5cff;--accent2:#22d3ee;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+  a{color:var(--accent2)}
+  header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px}
+  header .brand{display:flex;align-items:center;gap:10px;font-weight:800}
+  header .brand .ic{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#0a0e1a;font-weight:900}
+  main{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:34px;margin:0 0 8px;letter-spacing:-.02em}
+  .lede{color:var(--muted);max-width:720px;margin:0 0 28px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px}
+  .card + .card{margin-top:18px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  input[type=url],input[type=text]{flex:1;min-width:260px;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:12px 14px;border-radius:10px;font:inherit;outline:none}
+  input[type=url]:focus,input[type=text]:focus{border-color:var(--accent)}
+  button.btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0a0e1a;border:0;padding:12px 18px;border-radius:10px;font-weight:700;cursor:pointer;font:inherit}
+  button.btn:disabled{opacity:.6;cursor:not-allowed}
+  button.ghost{background:transparent;border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer;font:inherit;font-size:13px}
+  button.ghost:hover{border-color:var(--accent)}
+  pre{background:#070b15;border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;font:13px/1.5 'JetBrains Mono',ui-monospace,monospace;color:#cfe7ff;max-height:520px}
+  .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--panel2);border:1px solid var(--border);color:var(--muted)}
+  .pill.ok{background:rgba(34,197,94,.12);color:#86efac;border-color:rgba(34,197,94,.3)}
+  .pill.warn{background:rgba(245,158,11,.12);color:#fcd34d;border-color:rgba(245,158,11,.3)}
+  .pill.err{background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .kv{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px}
+  .kv .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .kv .v{margin-top:4px;font-weight:600;word-break:break-all}
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:14px;flex-wrap:wrap}
+  .tabs button{background:transparent;border:0;color:var(--muted);padding:10px 14px;border-bottom:2px solid transparent;cursor:pointer;font:inherit;font-weight:600}
+  .tabs button.active{color:var(--text);border-bottom-color:var(--accent)}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+  .panel-head h3{margin:0;font-size:15px}
+  .muted{color:var(--muted)}
+  .hide{display:none}
+  .err-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:12px 14px;border-radius:10px}
+  .footnote{color:var(--muted);font-size:12px;margin-top:18px}
+  code.inline{background:var(--panel2);padding:2px 6px;border-radius:6px;border:1px solid var(--border);font:12px 'JetBrains Mono',monospace}
+  .links{margin-top:8px;display:flex;gap:14px;flex-wrap:wrap;font-size:13px}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#0a0e1a;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <a href="/" class="brand" style="text-decoration:none;color:inherit">
+    <div class="ic">⚡</div><div>Web Agent Bridge</div>
+  </a>
+  <div class="links">
+    <a href="/check">/check</a>
+    <a href="/docs">Docs</a>
+    <a href="/dashboard">Dashboard</a>
+  </div>
+</header>
+
+<main>
+  <h1>Agent-Driven Adoption</h1>
+  <p class="lede">Paste a public URL. Our adoption agent inspects the site (HTML, sitemap, robots, JSON-LD, TLS) and drafts a deployable <code class="inline">wab.json</code>, DNS TXT record, and platform snippets — all in one shot.</p>
+
+  <div class="card">
+    <form id="form" class="row">
+      <input id="url" type="url" placeholder="https://example.com" required autocomplete="off" autofocus>
+      <button class="btn" id="go" type="submit">Analyze</button>
+    </form>
+    <div class="footnote">Public sites only. The agent fetches HTML and TLS metadata; it never stores your data.</div>
+    <div id="error" class="err-box hide" style="margin-top:14px"></div>
+  </div>
+
+  <div id="results" class="hide">
+    <div class="card">
+      <div class="panel-head">
+        <h3>Detected</h3>
+        <span id="ok-pill" class="pill ok hide">analysis complete</span>
+      </div>
+      <div class="grid" id="kv"></div>
+    </div>
+
+    <div class="card">
+      <div class="panel-head">
+        <h3>Generated <code class="inline">wab.json</code></h3>
+        <div>
+          <button class="ghost" data-copy="#wabjson">Copy</button>
+          <button class="ghost" id="dl-btn">Download</button>
+        </div>
+      </div>
+      <pre id="wabjson"></pre>
+      <div class="footnote">Place this file at <code class="inline">/.well-known/wab.json</code> on your domain (or use a snippet below).</div>
+    </div>
+
+    <div class="card">
+      <div class="panel-head">
+        <h3>DNS TXT record</h3>
+        <button class="ghost" data-copy="#dns">Copy</button>
+      </div>
+      <div class="grid">
+        <div class="kv"><div class="k">Type</div><div class="v">TXT</div></div>
+        <div class="kv"><div class="k">Name / Host</div><div class="v" id="dns-name">_wab</div></div>
+        <div class="kv"><div class="k">TTL</div><div class="v">300</div></div>
+      </div>
+      <pre id="dns" style="margin-top:10px"></pre>
+      <div class="footnote">Add this record at your DNS provider (Cloudflare, Route53, GoDaddy, etc.) so AI agents can discover your endpoint without HTML.</div>
+    </div>
+
+    <div class="card">
+      <div class="panel-head"><h3>Deploy snippets</h3></div>
+      <div class="tabs" id="tabs"></div>
+      <pre id="snippet"></pre>
+      <div class="footnote" id="snippet-install"></div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    Powered by the open Web Agent Bridge protocol. CLI alternative:
+    <code class="inline">npx wab-init --auto-from https://example.com</code>
+  </div>
+</main>
+
+<script>
+const $ = (s)=>document.querySelector(s);
+const form = $('#form'), urlIn = $('#url'), btn = $('#go');
+const results = $('#results'), errBox = $('#error');
+let lastSnippets = {}, lastUrl = '';
+
+function setError(msg){ errBox.textContent = msg; errBox.classList.remove('hide'); results.classList.add('hide'); }
+function clearError(){ errBox.classList.add('hide'); errBox.textContent=''; }
+
+function copy(text){
+  navigator.clipboard.writeText(text).then(()=>{
+    // brief feedback
+  }).catch(()=>{});
+}
+document.addEventListener('click',(e)=>{
+  const t = e.target.closest('[data-copy]');
+  if(!t) return;
+  const sel = t.getAttribute('data-copy');
+  const el = document.querySelector(sel);
+  if(el) copy(el.textContent);
+  const orig = t.textContent; t.textContent='Copied!'; setTimeout(()=>t.textContent=orig,1100);
+});
+
+function renderKV(parent, items){
+  parent.innerHTML = items.map(([k,v])=>`<div class="kv"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+}
+
+function renderTabs(snippets){
+  const tabs = $('#tabs'); tabs.innerHTML='';
+  const keys = Object.keys(snippets).filter(k => k !== 'inline_wab_json' && typeof snippets[k] === 'object');
+  if(!keys.length){ $('#snippet').textContent=''; $('#snippet-install').textContent=''; return; }
+  keys.forEach((k,i)=>{
+    const b = document.createElement('button');
+    b.textContent = (snippets[k] && snippets[k].title) || k;
+    if(i===0) b.classList.add('active');
+    b.addEventListener('click',()=>{
+      tabs.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      showSnippet(k);
+    });
+    tabs.appendChild(b);
+  });
+  showSnippet(keys[0]);
+}
+function showSnippet(k){
+  const s = lastSnippets[k] || {};
+  const parts = [];
+  if(s.instructions) parts.push(s.instructions);
+  if(s.file) parts.push('// File: ' + s.file);
+  if(s.content) parts.push(s.content);
+  if(s.toml) parts.push('# netlify.toml\n' + s.toml);
+  if(s.env) parts.push('# wrangler.toml [vars]\n' + Object.entries(s.env).map(([k,v])=>`${k} = ${JSON.stringify(v)}`).join('\n'));
+  if(s.command) parts.push('$ ' + s.command);
+  $('#snippet').textContent = parts.join('\n\n') || JSON.stringify(s, null, 2);
+  $('#snippet-install').innerHTML = s.install ? `Install: <code class="inline">${s.install}</code>` : '';
+}
+
+form.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  clearError();
+  const url = urlIn.value.trim();
+  if(!url) return;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Analyzing…';
+  try{
+    const r = await fetch('/api/adopt/suggest?url='+encodeURIComponent(url));
+    const j = await r.json();
+    if(!r.ok || !j || j.error){ throw new Error((j && j.error) || ('HTTP '+r.status)); }
+    lastUrl = url;
+    lastSnippets = j.deploy || {};
+    const detected = [
+      ['Site', (j.wab_json && j.wab_json.site) || j.host || '—'],
+      ['Stack', (j.stack && j.stack.type) || 'unknown'],
+      ['Actions', String((j.wab_json && j.wab_json.actions ? j.wab_json.actions.length : 0))],
+      ['SSL fingerprint', j.ssl && j.ssl.fingerprint_sha256 ? (j.ssl.fingerprint_sha256.slice(0,32)+'…') : '—'],
+      ['Source', (j.env_summary && j.env_summary.source) || '—'],
+      ['Signals', (j.stack && j.stack.signals && j.stack.signals.length) ? j.stack.signals.join(', ') : '—']
+    ];
+    renderKV($('#kv'), detected);
+    $('#ok-pill').classList.remove('hide');
+    $('#wabjson').textContent = JSON.stringify(j.wab_json, null, 2);
+    $('#dns-name').textContent = (j.dns_txt && j.dns_txt.name) || '_wab';
+    $('#dns').textContent = (j.dns_txt && j.dns_txt.value) || '';
+    renderTabs(lastSnippets);
+    results.classList.remove('hide');
+  }catch(err){
+    setError('Could not analyze: '+(err.message||err));
+  }finally{
+    btn.disabled = false; btn.textContent='Analyze';
+  }
+});
+
+$('#dl-btn').addEventListener('click',()=>{
+  if(!lastUrl) return;
+  window.location = '/api/adopt/wab.json?url='+encodeURIComponent(lastUrl);
+});
+
+// auto-fill from ?url=
+const params = new URLSearchParams(location.search);
+if(params.get('url')){ urlIn.value = params.get('url'); form.requestSubmit(); }
+</script>
+</body>
+</html>
