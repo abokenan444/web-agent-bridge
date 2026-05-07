@@ -1,6 +1,6 @@
 /**
  * Pages Router handler factory: pages/api/wab/discovery.js
- *   const { createPagesHandler } = require('@wab/next/pages');
+ *   const { createPagesHandler } = require('@webagentbridge/next/pages');
  *   module.exports = createPagesHandler();
  */
 'use strict';

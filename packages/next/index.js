@@ -1,5 +1,5 @@
 /**
- * @wab/next — Next.js plugin for Web Agent Bridge.
+ * @webagentbridge/next — Next.js plugin for Web Agent Bridge.
  *
  * Wraps your Next.js config and:
  *   • Adds a rewrite from `/.well-known/wab.json` → `/api/wab/discovery`
@@ -7,7 +7,7 @@
  *     App Router (or a default export for the Pages Router).
  *
  * Usage (next.config.js):
- *   const { withWAB } = require('@wab/next');
+ *   const { withWAB } = require('@webagentbridge/next');
  *   module.exports = withWAB({
  *     // your existing next config
  *   }, {
@@ -19,14 +19,14 @@
  *   });
  *
  * Usage — App Router (app/api/wab/discovery/route.js):
- *   import { createDiscoveryRoute } from '@wab/next/route';
+ *   import { createDiscoveryRoute } from '@webagentbridge/next/route';
  *   export const GET = createDiscoveryRoute({
  *     siteName: 'Acme',
  *     siteUrl: 'https://acme.com'
  *   });
  *
  * Usage — Pages Router (pages/api/wab/discovery.js):
- *   const { createPagesHandler } = require('@wab/next/pages');
+ *   const { createPagesHandler } = require('@webagentbridge/next/pages');
  *   module.exports = createPagesHandler({
  *     siteName: 'Acme',
  *     siteUrl: 'https://acme.com'
@@ -44,7 +44,7 @@ function buildWabDoc(cfg) {
     site: cfg.siteName,
     url: cfg.siteUrl,
     generated_at: new Date().toISOString(),
-    generator: '@wab/next',
+    generator: '@webagentbridge/next',
     actions,
     trust: Object.assign({ signed: false, auto: true, source: 'next-plugin' }, cfg.trust || {}),
     ...(cfg.extra || {})
@@ -58,7 +58,7 @@ function buildWabDoc(cfg) {
  */
 function withWAB(nextConfig = {}, wabCfg = {}) {
   if (!wabCfg.siteName || !wabCfg.siteUrl) {
-    console.warn('[@wab/next] siteName and siteUrl are required for full configuration');
+    console.warn('[@webagentbridge/next] siteName and siteUrl are required for full configuration');
   }
 
   const userRewrites = nextConfig.rewrites;

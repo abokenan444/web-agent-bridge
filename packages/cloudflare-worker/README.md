@@ -1,4 +1,4 @@
-# @wab/cloudflare-worker
+# @webagentbridge/cloudflare-worker
 
 Zero-config Cloudflare Worker that injects `/.well-known/wab.json` for any
 site without you needing to deploy a static file to your origin.

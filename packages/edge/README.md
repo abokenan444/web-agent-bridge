@@ -1,4 +1,4 @@
-# @wab/edge
+# @webagentbridge/edge
 
 Drop-in edge function for **Vercel** and **Netlify** that serves
 `/.well-known/wab.json` from environment variables — no origin changes,
@@ -9,7 +9,7 @@ no static files committed.
 Copy `examples/vercel-middleware.js` → `middleware.ts` in your project root.
 
 ```bash
-npm install @wab/edge
+npm install @webagentbridge/edge
 ```
 
 Set env vars in the Vercel dashboard:
@@ -34,7 +34,7 @@ path = "/.well-known/wab-discovery"
 ## API
 
 ```js
-import { handleRequest, buildWabResponse, buildWabDoc } from '@wab/edge';
+import { handleRequest, buildWabResponse, buildWabDoc } from '@webagentbridge/edge';
 ```
 
 * `handleRequest(request, cfg)` — returns `Response` for the two well-known paths, `null` otherwise.

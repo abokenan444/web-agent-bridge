@@ -2,12 +2,12 @@
  * Vercel Edge Middleware example for WAB.
  *
  * 1. Copy this file to your repo as `middleware.ts` (or `middleware.js`) at the project root.
- * 2. `npm install @wab/edge`  (or vendor packages/edge into your repo)
+ * 2. `npm install @webagentbridge/edge`  (or vendor packages/edge into your repo)
  * 3. Set env vars WAB_SITE_NAME, WAB_SITE_URL.
  *
  * Docs: https://vercel.com/docs/functions/edge-middleware
  */
-import { handleRequest } from '@wab/edge';
+import { handleRequest } from '@webagentbridge/edge';
 
 export const config = {
   matcher: ['/.well-known/wab.json', '/.well-known/wab-discovery']

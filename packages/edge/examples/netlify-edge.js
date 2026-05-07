@@ -13,7 +13,7 @@
  *
  * Docs: https://docs.netlify.com/edge-functions/overview/
  */
-import { handleRequest } from '@wab/edge';
+import { handleRequest } from '@webagentbridge/edge';
 
 export default async (request, context) => {
   const env = context.env || {};

@@ -1,5 +1,5 @@
 /**
- * App Router route factory: import GET from '@wab/next/route'.
+ * App Router route factory: import GET from '@webagentbridge/next/route'.
  */
 'use strict';
 

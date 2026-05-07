@@ -80,7 +80,7 @@ No origin changes needed. Drop in a Cloudflare Worker, Vercel Middleware, or Net
 
 ```js
 // Vercel — middleware.ts
-import { handleRequest } from '@wab/edge';
+import { handleRequest } from '@webagentbridge/edge';
 export const config = { matcher: ['/.well-known/wab.json'] };
 export default (req) => handleRequest(req, {
   siteName: 'Acme', siteUrl: 'https://acme.com'
@@ -91,7 +91,7 @@ Or for Next.js, wrap your config:
 
 ```js
 // next.config.js
-const { withWAB } = require('@wab/next');
+const { withWAB } = require('@webagentbridge/next');
 module.exports = withWAB({}, {
   siteName: 'Acme', siteUrl: 'https://acme.com',
 });
@@ -201,9 +201,9 @@ Drop-in adoption for every popular stack — **no origin changes, no PHP, no `.h
 | Package | Use it for | Install |
 |---|---|---|
 | **`wab-init` CLI** | Auto-detect project (Next/Nuxt/SvelteKit/Astro/Laravel/WordPress/static) and scaffold `wab.json` + DNS instructions. | `npx wab-init` |
-| **`@wab/next`** | Next.js plugin: `withWAB(nextConfig, { siteName, siteUrl })` adds rewrites + headers for `/.well-known/wab.json`. App Router + Pages Router supported. | `npm i @wab/next` |
-| **`@wab/edge`** | Vercel Middleware & Netlify Edge Function — serve `wab.json` from the edge, configured by env vars. | `npm i @wab/edge` |
-| **`@wab/cloudflare-worker`** | Standalone Cloudflare Worker that injects `/.well-known/wab.json` from KV or env vars. Optional reverse-proxy origin. | `wrangler deploy` |
+| **`@webagentbridge/next`** | Next.js plugin: `withWAB(nextConfig, { siteName, siteUrl })` adds rewrites + headers for `/.well-known/wab.json`. App Router + Pages Router supported. | `npm i @webagentbridge/next` |
+| **`@webagentbridge/edge`** | Vercel Middleware & Netlify Edge Function — serve `wab.json` from the edge, configured by env vars. | `npm i @webagentbridge/edge` |
+| **`@webagentbridge/cloudflare-worker`** | Standalone Cloudflare Worker that injects `/.well-known/wab.json` from KV or env vars. Optional reverse-proxy origin. | `wrangler deploy` |
 | **SDK Auto-Discovery** | When a site has no `wab.json`, the SDK falls back through JSON-LD / Schema.org / OpenGraph / `sitemap.xml` / `robots.txt` and returns a **normalized capabilities envelope** so your agent still works. | `require('web-agent-bridge-sdk').discover(url)` |
 
 ```js
@@ -259,7 +259,7 @@ WAB uses an **Open Core** dual-license model to ensure the protocol remains free
 |-----------|---------|-------------|
 | **Core SDK & Protocol** | MIT | Discovery protocol, JS SDK, signing scripts, `wab-init` CLI. |
 | **ShieldQR Verifier** | MIT | Open Ed25519 verifier — anyone can validate signatures and SSL pins. |
-| **Adoption Packages** | MIT | `@wab/next`, `@wab/edge`, `@wab/cloudflare-worker`. |
+| **Adoption Packages** | MIT | `@webagentbridge/next`, `@webagentbridge/edge`, `@webagentbridge/cloudflare-worker`. |
 | **WordPress Plugin** | GPL-2.0 | Full integration for WordPress sites. |
 | **Engines (Firewall, Price, OCR)** | Proprietary (Free) | Advanced detection, scoring, and protection engines. |
 | **ShieldQR Threat Intel** | Commercial | Curated impersonation-host blocklist + reputation feeds. |

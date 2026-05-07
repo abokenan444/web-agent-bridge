@@ -1,5 +1,5 @@
 /**
- * @wab/cloudflare-worker
+ * @webagentbridge/cloudflare-worker
  *
  * Auto-injects /.well-known/wab.json on any site fronted by Cloudflare Workers.
  * Useful when you can't (or don't want to) deploy a static file to your origin.
@@ -77,7 +77,7 @@ function serveDiscoveryEcho(env, url) {
     host: url.hostname,
     well_known: `${url.protocol}//${url.hostname}/.well-known/wab.json`,
     dns_txt: `_wab.${url.hostname}`,
-    note: 'Served by @wab/cloudflare-worker'
+    note: 'Served by @webagentbridge/cloudflare-worker'
   }, 60);
 }
 

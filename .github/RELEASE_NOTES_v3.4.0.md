@@ -25,9 +25,9 @@ New files:
 Drop-in adoption for every popular stack — no origin changes, no `.htaccess` edits.
 
 - **`npx wab-init`** — auto-detects project type (Next.js / Nuxt / SvelteKit / Astro / Laravel / WordPress / static) and scaffolds `/.well-known/wab.json` with platform-specific DNS instructions.
-- **`@wab/next`** — Next.js plugin: `withWAB(nextConfig, { siteName, siteUrl })`. App Router + Pages Router handlers shipped.
-- **`@wab/edge`** — shared Vercel Middleware & Netlify Edge Function.
-- **`@wab/cloudflare-worker`** — Worker that serves `/.well-known/wab.json` from KV or env vars.
+- **`@webagentbridge/next`** — Next.js plugin: `withWAB(nextConfig, { siteName, siteUrl })`. App Router + Pages Router handlers shipped.
+- **`@webagentbridge/edge`** — shared Vercel Middleware & Netlify Edge Function.
+- **`@webagentbridge/cloudflare-worker`** — Worker that serves `/.well-known/wab.json` from KV or env vars.
 - **SDK Auto-Discovery** — `discover(url)` falls back through JSON-LD / Schema.org / OpenGraph / `sitemap.xml` / `robots.txt` and returns a normalized capabilities envelope so agents work even on un-adopted sites.
 
 New files:

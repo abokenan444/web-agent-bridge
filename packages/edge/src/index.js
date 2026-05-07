@@ -1,5 +1,5 @@
 /**
- * @wab/edge — Shared core for Vercel & Netlify Edge Functions.
+ * @webagentbridge/edge — Shared core for Vercel & Netlify Edge Functions.
  *
  * Builds a Response object containing /.well-known/wab.json from a config.
  * Re-export this from Vercel `middleware.ts` or Netlify `netlify/edge-functions/wab.js`.
@@ -44,7 +44,7 @@ export function buildWabDoc(cfg) {
     site: cfg.siteName,
     url: cfg.siteUrl,
     generated_at: new Date().toISOString(),
-    generator: '@wab/edge',
+    generator: '@webagentbridge/edge',
     actions,
     trust: Object.assign({ signed: false, auto: true, source: 'edge-function' }, cfg.trust || {}),
     ...(cfg.extra || {})
@@ -55,7 +55,7 @@ export function buildWabDoc(cfg) {
  * Standard handler that matches /.well-known/wab.json and 404s everything else.
  * Intended for use in Vercel middleware or Netlify edge handler:
  *
- *   import { handleRequest } from '@wab/edge';
+ *   import { handleRequest } from '@webagentbridge/edge';
  *   export default (req) => handleRequest(req, { siteName: 'Acme', siteUrl: 'https://acme.com' });
  */
 export function handleRequest(request, cfg) {
@@ -67,7 +67,7 @@ export function handleRequest(request, cfg) {
       host: url.hostname,
       well_known: `${url.protocol}//${url.hostname}/.well-known/wab.json`,
       dns_txt: `_wab.${url.hostname}`,
-      generator: '@wab/edge'
+      generator: '@webagentbridge/edge'
     }, null, 2), {
       status: 200,
       headers: { 'content-type': 'application/json; charset=utf-8' }

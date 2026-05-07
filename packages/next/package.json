@@ -1,7 +1,8 @@
 {
-  "name": "@wab/next",
+  "name": "@webagentbridge/next",
   "version": "0.1.0",
   "description": "Next.js plugin: zero-config /.well-known/wab.json via withWAB() and route handlers.",
+  "publishConfig": { "access": "public" },
   "main": "index.js",
   "license": "MIT",
   "author": "Web Agent Bridge <dev@webagentbridge.com>",

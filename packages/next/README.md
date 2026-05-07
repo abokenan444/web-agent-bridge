@@ -1,17 +1,17 @@
-# @wab/next
+# @webagentbridge/next
 
 Zero-config Next.js plugin for [Web Agent Bridge](https://www.webagentbridge.com).
 
 ## Install
 
 ```bash
-npm install @wab/next
+npm install @webagentbridge/next
 ```
 
 ## next.config.js
 
 ```js
-const { withWAB } = require('@wab/next');
+const { withWAB } = require('@webagentbridge/next');
 
 module.exports = withWAB({
   // your existing Next.js config
@@ -32,14 +32,14 @@ This adds:
 ## App Router — `app/api/wab/discovery/route.js`
 
 ```js
-import { createDiscoveryRoute } from '@wab/next/route';
+import { createDiscoveryRoute } from '@webagentbridge/next/route';
 export const GET = createDiscoveryRoute();
 ```
 
 ## Pages Router — `pages/api/wab/discovery.js`
 
 ```js
-const { createPagesHandler } = require('@wab/next/pages');
+const { createPagesHandler } = require('@webagentbridge/next/pages');
 module.exports = createPagesHandler();
 ```
 
