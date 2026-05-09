@@ -218,6 +218,60 @@
     html[dir="rtl"] .step-card {
       text-align: right;
     }
+    /* Diagnostic table */
+    .diag-row {
+      display:flex;align-items:flex-start;gap:12px;
+      padding:10px 12px;border-radius:8px;
+      background:rgba(15,23,42,0.6);border:1px solid rgba(99,102,241,0.12);
+      margin-bottom:8px;font-size:0.85rem;line-height:1.5;
+    }
+    .diag-pill {
+      flex:0 0 auto;width:22px;height:22px;border-radius:50%;
+      display:inline-flex;align-items:center;justify-content:center;
+      font-weight:700;font-size:0.78rem;color:#0a0e1a;margin-top:1px;
+    }
+    .diag-pill.pass { background:#34d399; }
+    .diag-pill.warn { background:#fbbf24; }
+    .diag-pill.fail { background:#f87171; }
+    .diag-pill.info { background:#60a5fa; }
+    .diag-body { flex:1;min-width:0; }
+    .diag-title { color:#e2e8f0;font-weight:600; }
+    .diag-detail { color:#94a3b8;font-size:0.8rem;margin-top:2px;word-break:break-word; }
+    .diag-fix { color:#fcd34d;font-size:0.8rem;margin-top:4px; }
+    .diag-summary {
+      display:flex;gap:14px;flex-wrap:wrap;
+      padding:10px 14px;margin-bottom:14px;border-radius:10px;
+      background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);
+      font-size:0.85rem;color:#cbd5e1;
+    }
+    /* Copy button */
+    .copy-btn {
+      padding:4px 12px;background:#1e293b;border:1px solid #334155;
+      border-radius:6px;color:#cbd5e1;font-size:0.75rem;cursor:pointer;
+      font-family:inherit;transition:all 0.15s;
+    }
+    .copy-btn:hover { background:#334155;color:#fff; }
+    .copy-btn.copied { background:#065f46;color:#a7f3d0;border-color:#10b981; }
+    /* Cloudflare callout */
+    .cf-callout {
+      background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(249,115,22,0.06));
+      border:1px solid rgba(245,158,11,0.3);
+      border-radius:12px;padding:18px 22px;margin-top:16px;
+      font-size:0.88rem;color:#fde68a;
+    }
+    .cf-callout strong { color:#fbbf24; }
+    .cf-callout ul { margin:8px 0 0;padding-inline-start:20px;color:#fde68a; }
+    .cf-callout li { margin-bottom:6px; }
+    /* TXT generator output */
+    .txt-gen-grid {
+      display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;
+      background:#0f172a;border:1px solid #1e293b;border-radius:10px;
+      padding:14px 18px;margin-top:12px;font-family:'JetBrains Mono',monospace;
+      font-size:0.82rem;
+    }
+    .txt-gen-grid .gk { color:#64748b; }
+    .txt-gen-grid .gv { color:#a5f3fc;word-break:break-all; }
+    html[dir="rtl"] .diag-row { text-align:right; }
   </style>
 </head>
 <body>
@@ -279,11 +333,28 @@
   <section class="steps-section" id="steps">
     <h2 data-i18n="steps_title">Step-by-Step Setup Guide</h2>
 
-    <!-- Step 1 -->
+    <!-- Step 1 — wab.json (was step 3, moved first because it's the prerequisite for the TXT) -->
     <div class="step-card">
       <div class="step-number">1</div>
-      <h3 data-i18n="step1_title">Log In to Your DNS Provider</h3>
-      <p data-i18n="step1_desc">Sign in to your domain registrar or DNS hosting dashboard. Common providers include Cloudflare, cPanel, GoDaddy, and Namecheap. Navigate to the DNS Management or DNS Records section.</p>
+      <h3 data-i18n="step1_title">Create your <code style="color:#a5f3fc">/.well-known/wab.json</code> file</h3>
+      <p data-i18n="step1_desc">This file lives on your web server and tells AI agents what your site can do. We'll generate one for you — paste your URL and click <strong>Generate</strong>. No data is stored.</p>
+
+      <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:18px;margin-top:12px;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <input id="genUrl" type="url" placeholder="https://yourdomain.com" style="flex:1;min-width:220px;padding:10px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#f0f4ff;font-size:0.9rem;outline:none;">
+          <button id="genBtn" style="padding:10px 22px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;font-size:0.9rem;" data-i18n="gen_btn">Generate wab.json</button>
+        </div>
+        <div id="genResult" style="margin-top:14px;display:none;"></div>
+      </div>
+
+      <p style="margin-top:14px;color:#94a3b8;font-size:0.85rem;" data-i18n="step1_path">Save the generated JSON at this exact path on your server: <code style="color:#a5f3fc">/.well-known/wab.json</code> — the URL must respond with <code style="color:#a5f3fc">Content-Type: application/json</code>.</p>
+    </div>
+
+    <!-- Step 2 — DNS provider (with Cloudflare callout) -->
+    <div class="step-card">
+      <div class="step-number">2</div>
+      <h3 data-i18n="step2_title">Open your DNS provider's control panel</h3>
+      <p data-i18n="step2_desc">Sign in to whoever hosts your DNS (often the same place where you bought your domain). Find the <strong>DNS</strong> or <strong>DNS Records</strong> page.</p>
       <div class="provider-tabs">
         <button class="provider-tab active" onclick="showProvider('cloudflare', this)">Cloudflare</button>
         <button class="provider-tab" onclick="showProvider('cpanel', this)">cPanel</button>
@@ -291,62 +362,63 @@
         <button class="provider-tab" onclick="showProvider('namecheap', this)">Namecheap</button>
       </div>
       <div id="prov-cloudflare" class="provider-content active">
-        <p style="color:#94a3b8;font-size:0.9rem;" data-i18n="prov_cloudflare">Go to <strong>dash.cloudflare.com</strong> → Select your domain → Click <strong>DNS</strong> in the top navigation → Click <strong>+ Add record</strong>.</p>
+        <p style="color:#94a3b8;font-size:0.9rem;" data-i18n="prov_cloudflare">Go to <strong>dash.cloudflare.com</strong> → select your domain → click <strong>DNS → Records</strong> in the side menu → click <strong>Add record</strong>.</p>
       </div>
       <div id="prov-cpanel" class="provider-content">
-        <p style="color:#94a3b8;font-size:0.9rem;" data-i18n="prov_cpanel">Log in to cPanel → Scroll to <strong>Domains</strong> section → Click <strong>Zone Editor</strong> → Click <strong>Manage</strong> next to your domain → Click <strong>+ Add Record</strong>.</p>
+        <p style="color:#94a3b8;font-size:0.9rem;" data-i18n="prov_cpanel">Log in to cPanel → in the <strong>Domains</strong> section open <strong>Zone Editor</strong> → click <strong>Manage</strong> next to your domain → click <strong>Add Record</strong> and choose <strong>TXT</strong>.</p>
       </div>
       <div id="prov-godaddy" class="provider-content">
-        <p style="color:#94a3b8;font-size:0.9rem;" data-i18n="prov_godaddy">Log in to <strong>godaddy.com</strong> → My Products → Click <strong>DNS</strong> next to your domain → Click <strong>Add New Record</strong>.</p>
+        <p style="color:#94a3b8;font-size:0.9rem;" data-i18n="prov_godaddy">Log in to <strong>godaddy.com</strong> → My Products → click <strong>DNS</strong> next to your domain → <strong>Add New Record</strong>.</p>
       </div>
       <div id="prov-namecheap" class="provider-content">
-        <p style="color:#94a3b8;font-size:0.9rem;" data-i18n="prov_namecheap">Log in to <strong>namecheap.com</strong> → Domain List → Click <strong>Manage</strong> → Click <strong>Advanced DNS</strong> tab → Click <strong>Add New Record</strong>.</p>
+        <p style="color:#94a3b8;font-size:0.9rem;" data-i18n="prov_namecheap">Log in to <strong>namecheap.com</strong> → Domain List → <strong>Manage</strong> → <strong>Advanced DNS</strong> tab → <strong>Add New Record</strong>.</p>
+      </div>
+
+      <div class="cf-callout">
+        <strong data-i18n="cf_title">⚠ Cloudflare-specific tips (read this if you use Cloudflare):</strong>
+        <ul>
+          <li data-i18n="cf_tip1"><strong>Page Rules / Cache Rules:</strong> add a rule for <code>*example.com/.well-known/*</code> with <strong>Cache Level: Bypass</strong>. Otherwise your wab.json updates can stay stale for hours.</li>
+          <li data-i18n="cf_tip2"><strong>Email Address Obfuscation:</strong> turn it <strong>OFF</strong> for the <code>/.well-known/</code> path (Scrape Shield → Email Obfuscation). It rewrites JSON content and breaks parsing.</li>
+          <li data-i18n="cf_tip3"><strong>Always Use HTTPS:</strong> keep it ON, but make sure your origin actually serves the file on HTTPS — otherwise Cloudflare returns a redirect loop.</li>
+          <li data-i18n="cf_tip4"><strong>The proxy (orange cloud) is fine for the website itself.</strong> The <code>_wab</code> TXT record has no proxy toggle (TXT records are always DNS-only).</li>
+        </ul>
       </div>
     </div>
 
-    <!-- Step 2 -->
-    <div class="step-card">
-      <div class="step-number">2</div>
-      <h3 data-i18n="step2_title">Add the TXT Record</h3>
-      <p data-i18n="step2_desc">Create a new DNS TXT record with exactly these values. Replace <code style="color:#a5f3fc">yourdomain.com</code> with your actual domain.</p>
-      <div class="code-block">
-        <span class="label">DNS TXT Record</span>
-        <span class="key">Type:</span>  <span class="val">TXT</span><br>
-        <span class="key">Name:</span>  <span class="val">_wab</span><br>
-        <span class="key">Value:</span> <span class="val">v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json</span><br>
-        <span class="key">TTL:</span>   <span class="val">Auto (3600)</span>
-      </div>
-    </div>
-
-    <!-- Step 3 -->
+    <!-- Step 3 — TXT record (interactive generator) -->
     <div class="step-card">
       <div class="step-number">3</div>
-      <h3 data-i18n="step3_title">Create the wab.json Capabilities File</h3>
-      <p data-i18n="step3_desc">Create the file <code style="color:#a5f3fc">/.well-known/wab.json</code> on your web server. This file describes your site's capabilities to AI agents.</p>
-      <div class="code-block">
-        <span class="label">/.well-known/wab.json</span>
-        {<br>
-        &nbsp;&nbsp;<span class="key">"version"</span>: <span class="val">"wab1"</span>,<br>
-        &nbsp;&nbsp;<span class="key">"name"</span>: <span class="val">"Your Site Name"</span>,<br>
-        &nbsp;&nbsp;<span class="key">"description"</span>: <span class="val">"What your site does"</span>,<br>
-        &nbsp;&nbsp;<span class="key">"endpoint"</span>: <span class="val">"https://yourdomain.com/.well-known/wab.json"</span>,<br>
-        &nbsp;&nbsp;<span class="key">"capabilities"</span>: [<span class="val">"browse"</span>, <span class="val">"api"</span>]<br>
-        }
+      <h3 data-i18n="step3_title">Add the <code style="color:#a5f3fc">_wab</code> TXT record</h3>
+      <p data-i18n="step3_desc">In the panel you just opened, create a new TXT record. Type your domain below and we'll fill in the exact values to copy/paste.</p>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+        <input id="txtGenDomain" type="text" placeholder="yourdomain.com" style="flex:1;min-width:220px;padding:10px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#f0f4ff;font-size:0.9rem;outline:none;">
       </div>
+
+      <div class="txt-gen-grid">
+        <span class="gk" data-i18n="txt_type">Type:</span>     <span class="gv">TXT</span> <span></span>
+        <span class="gk" data-i18n="txt_name">Name / Host:</span> <span class="gv" id="txtGenName">_wab</span> <button class="copy-btn" data-copy-target="txtGenName" data-i18n="copy">Copy</button>
+        <span class="gk" data-i18n="txt_value">Value / Content:</span> <span class="gv" id="txtGenValue">v=wab1; endpoint=https://yourdomain.com/.well-known/wab.json</span> <button class="copy-btn" data-copy-target="txtGenValue" data-i18n="copy">Copy</button>
+        <span class="gk" data-i18n="txt_ttl">TTL:</span>       <span class="gv">Auto (3600)</span> <span></span>
+      </div>
+
+      <p style="margin-top:14px;color:#94a3b8;font-size:0.85rem;" data-i18n="step3_propagate"><strong>Propagation time:</strong> usually 1–5 minutes. In rare cases up to 24 hours if your old record had a long TTL. Some panels prepend your domain automatically — if you see <code>_wab.yourdomain.com.yourdomain.com</code> after saving, change <strong>Name</strong> to just <code>_wab</code>.</p>
     </div>
 
-    <!-- Step 4 -->
+    <!-- Step 4 — Diagnostic verifier -->
     <div class="step-card">
       <div class="step-number">4</div>
-      <h3 data-i18n="step4_title">Verify Your Setup</h3>
-      <p data-i18n="step4_desc">DNS propagation takes a few minutes. Use the Live Verifier to confirm your record is active. The verifier queries DNS over HTTPS (DoH) — no data is sent to our servers.</p>
+      <h3 data-i18n="step4_title">Verify everything works</h3>
+      <p data-i18n="step4_desc">Run a full diagnostic. We check the TXT record across three public DNS resolvers, fetch your wab.json, validate its JSON, and warn about Cloudflare cache or wrong Content-Type headers. If something is off, we tell you exactly what to fix.</p>
       <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:20px;margin-top:12px;">
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
           <input id="activateDomain" type="text" placeholder="yourdomain.com" style="flex:1;min-width:200px;padding:10px 16px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#f0f4ff;font-size:0.9rem;outline:none;">
-          <button id="activateVerifyBtn" style="padding:10px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;font-size:0.9rem;" data-i18n="verify_btn">Verify Now</button>
+          <button id="activateVerifyBtn" style="padding:10px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;font-size:0.9rem;" data-i18n="verify_btn">Run Diagnostic</button>
         </div>
-        <div id="activateResult" style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:0.82rem;display:none;"></div>
+        <div id="activateStatus" style="margin-top:12px;color:#94a3b8;font-size:0.85rem;display:none;"></div>
+        <div id="activateResult" style="margin-top:14px;display:none;"></div>
       </div>
+      <p style="margin-top:12px;color:#64748b;font-size:0.8rem;" data-i18n="step4_note">If the very first check (<em>DNS TXT record at _wab</em>) fails, give DNS another 1–2 minutes and try again — propagation is the most common culprit.</p>
     </div>
   </section>
 
@@ -363,6 +435,6 @@
   </div>
 
   <script src="/js/auth-nav.js"></script>
-  <script src="/js/activate.js"></script>
+  <script src="/js/activate.js?v=3.4.1"></script>
 </body>
 </html>

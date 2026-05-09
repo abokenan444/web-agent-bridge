@@ -286,6 +286,7 @@ app.use('/api/admin/shieldqr', apiLimiter, require('./routes/admin-shieldqr'));
 app.use('/api/admin/trust-monitor', apiLimiter, require('./routes/admin-trust-monitor'));
 app.use('/api/shieldqr', apiLimiter, require('./routes/shieldqr'));
 app.use('/api/adopt', apiLimiter, require('./routes/adopt'));
+app.use('/api/diagnose', apiLimiter, require('./routes/diagnose'));
 app.use('/api/admin/outreach', apiLimiter, require('./routes/admin-outreach'));
 app.use('/', apiLimiter, require('./routes/unsubscribe'));
 // Also expose well-known discovery endpoints at the canonical root paths so
