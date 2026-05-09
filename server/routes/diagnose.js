@@ -38,7 +38,7 @@ function _fetchJson(urlStr, { timeoutMs = 5000, headers = {}, sniHost = null } =
       path: url.pathname + url.search,
       family: 4,
       servername: sniHost || url.hostname,
-      headers: { accept: 'application/dns-json, application/json', host: sniHost || url.hostname, ...headers },
+      headers: { accept: 'application/dns-json', host: sniHost || url.hostname, ...headers },
       timeout: timeoutMs, rejectUnauthorized: true
     }, (res) => {
       const chunks = []; let len = 0;
