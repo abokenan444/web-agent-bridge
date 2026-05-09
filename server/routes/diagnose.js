@@ -249,13 +249,13 @@ async function diagnose(domain) {
         const inner = parsed.payload || parsed;
         const missing = [];
         if (!inner.version) missing.push('version');
-        if (!inner.name && !inner.site) missing.push('name (or site)');
+        if (!inner.name && !inner.site && !inner.host) missing.push('name / site / host');
         if (!Array.isArray(inner.actions) && !inner.capabilities) missing.push('actions[] or capabilities{}');
         checks.push({
           id: 'wabjson_fields',
           title: 'Required fields present',
           status: missing.length === 0 ? 'pass' : 'warn',
-          detail: missing.length === 0 ? 'version + name + (actions or capabilities) all present' : 'Missing: ' + missing.join(', '),
+          detail: missing.length === 0 ? 'version + identity + (actions or capabilities) all present' : 'Missing: ' + missing.join(', '),
           fix: missing.length ? 'See https://www.webagentbridge.com/docs for the minimal schema.' : null
         });
 
