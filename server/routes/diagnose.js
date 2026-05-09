@@ -17,8 +17,7 @@ const router = express.Router();
 
 const DOH_RESOLVERS = [
   { name: 'cloudflare', url: 'https://1.1.1.1/dns-query', host: 'cloudflare-dns.com' },
-  { name: 'google',     url: 'https://dns.google/resolve' },
-  { name: 'quad9',      url: 'https://9.9.9.9:5053/dns-query', host: 'dns.quad9.net' }
+  { name: 'google',     url: 'https://dns.google/resolve' }
 ];
 
 function _sanitizeDomain(s) {
@@ -90,7 +89,8 @@ function _fetchText(urlStr, { timeoutMs = 6000, maxBytes = 256 * 1024, headers =
 }
 
 async function _queryDoH(resolver, name, type) {
-  const url = `${resolver.url}?name=${encodeURIComponent(name)}&type=${type}&do=1`;
+  // Note: omit `&do=1` — Cloudflare returns HTTP 400 for it; we still parse AD flag from the JSON response
+  const url = `${resolver.url}?name=${encodeURIComponent(name)}&type=${type}`;
   const r = await _fetchJson(url, { timeoutMs: 6000, sniHost: resolver.host || null });
   if (!r || !r.json) return { resolver: resolver.name, ok: false, error: 'no_response' };
   return {
