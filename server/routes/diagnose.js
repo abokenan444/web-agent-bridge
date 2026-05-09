@@ -16,9 +16,9 @@ const dns = require('node:dns').promises;
 const router = express.Router();
 
 const DOH_RESOLVERS = [
-  { name: 'cloudflare', url: 'https://cloudflare-dns.com/dns-query' },
+  { name: 'cloudflare', url: 'https://1.1.1.1/dns-query', host: 'cloudflare-dns.com' },
   { name: 'google',     url: 'https://dns.google/resolve' },
-  { name: 'quad9',      url: 'https://dns.quad9.net/dns-query' }
+  { name: 'quad9',      url: 'https://9.9.9.9:5053/dns-query', host: 'dns.quad9.net' }
 ];
 
 function _sanitizeDomain(s) {
@@ -30,14 +30,16 @@ function _sanitizeDomain(s) {
     .replace(/^www\./, '');
 }
 
-function _fetchJson(urlStr, { timeoutMs = 5000, headers = {} } = {}) {
+function _fetchJson(urlStr, { timeoutMs = 5000, headers = {}, sniHost = null } = {}) {
   return new Promise((resolve) => {
     let url; try { url = new URL(urlStr); } catch { return resolve(null); }
     const lib = url.protocol === 'http:' ? http : https;
     const req = lib.request({
       method: 'GET', host: url.hostname, port: url.port || (url.protocol === 'http:' ? 80 : 443),
       path: url.pathname + url.search,
-      headers: { accept: 'application/dns-json, application/json', ...headers },
+      family: 4,
+      servername: sniHost || url.hostname,
+      headers: { accept: 'application/dns-json, application/json', host: sniHost || url.hostname, ...headers },
       timeout: timeoutMs, rejectUnauthorized: true
     }, (res) => {
       const chunks = []; let len = 0;
@@ -89,7 +91,7 @@ function _fetchText(urlStr, { timeoutMs = 6000, maxBytes = 256 * 1024, headers =
 
 async function _queryDoH(resolver, name, type) {
   const url = `${resolver.url}?name=${encodeURIComponent(name)}&type=${type}&do=1`;
-  const r = await _fetchJson(url, { timeoutMs: 4500 });
+  const r = await _fetchJson(url, { timeoutMs: 6000, sniHost: resolver.host || null });
   if (!r || !r.json) return { resolver: resolver.name, ok: false, error: 'no_response' };
   return {
     resolver: resolver.name,
