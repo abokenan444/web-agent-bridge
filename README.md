@@ -12,6 +12,7 @@
   [![CoderLegion](https://img.shields.io/badge/CoderLegion-WAB-0ea5e9?style=flat-square&logo=dev.to&logoColor=white)](https://coderlegion.com/user/WAB)
 
   [![ShieldQR Trust](https://img.shields.io/badge/ShieldQR-Ed25519_signed-22c55e?style=flat-square&logo=letsencrypt&logoColor=white)](#-shieldqr--extended-trust-layer)
+  [![ShieldLink](https://img.shields.io/badge/ShieldLink-Verified_Links-22d3a3?style=flat-square&logo=keybase&logoColor=white)](#-shieldlink--verified-links-for-banks--brands--new)
   [![SSL Monitor](https://img.shields.io/badge/SSL_Monitor-7--day_alerts-f59e0b?style=flat-square&logo=letsencrypt&logoColor=white)](#-shieldqr--extended-trust-layer)
   [![Zero-Config Adoption](https://img.shields.io/badge/Adoption-Zero--Config-a855f7?style=flat-square&logo=vercel&logoColor=white)](#-zero-config-adoption-layer)
   [![Tamper-Evident Audit](https://img.shields.io/badge/Audit-HMAC_Chain-0ea5e9?style=flat-square&logo=keybase&logoColor=white)](#-governance-layer--enterprise-security--compliance)
@@ -194,7 +195,91 @@ Verify any site: <https://www.webagentbridge.com/check?host=YOUR_HOST>
 
 ---
 
-## 🚀 Zero-Config Adoption Layer
+## � ShieldLink — Verified Links for Banks & Brands ✨ NEW
+
+**The first cryptographically-signed, anti-phishing link layer for the open web.** Premium customers (banks, payment processors, telcos, ecommerce) sign every link they send. Anyone who clicks sees a Trust Preview before reaching the destination — no app install, no browser extension required.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Sender (verified brand)                                         │
+│    └── POST /api/customer/shieldlink/sites/:siteId/sign          │
+│          { target_url, amount, payee, expires_in_sec }           │
+│          → https://www.webagentbridge.com/l/<token>              │
+│                                                                  │
+│  Recipient (anyone with a browser)                               │
+│    └── opens link → Trust Preview verifies Ed25519 signature     │
+│        + DNS-anchored public key + brand status + reports        │
+│        → green / yellow / red verdict before redirect            │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+| Capability | What it does |
+|---|---|
+| **🛂 Identity = domain ownership** | Only the proven owner of `bank.example` (DNS TXT verified) can sign links carrying brand "Bank Example". No CA, no paperwork — DNS + DNSSEC are the trust root. |
+| **🪞 Lookalike-name protection** | Display names within Levenshtein distance ≤ 2 of an existing verified brand are auto-rejected. High-value targets (`mada`, `stcpay`, `paypal`, `visa`, …) are reserved by default. |
+| **✍️ Cryptographic signing** | Every link is signed with Ed25519 over a canonical JSON payload (target, amount, payee, expiry). Tampering invalidates the signature. |
+| **🎫 Trust Preview** | `/l/<token>` shows verified brand name, payee, amount, expiry, and a green/yellow/red verdict before redirect. Bilingual EN/AR with RTL. |
+| **🚨 Community reporting** | One-click phishing report from the preview page. Multiple open reports flip the verdict to red and trigger admin review. |
+| **🔁 Real-time revocation** | Customers revoke a single link or rotate signing keys from the dashboard — every future verification reflects it instantly. |
+| **🛠 Admin moderation** | `/admin/shieldlink` — brand verification queue, signed-link monitor, phishing-report triage, reserved-name management. |
+| **🧑‍💼 Customer dashboard** | `/dashboard/shieldlink` — apply for brand badge, sign links, view per-link analytics, revoke. |
+
+**Plan gating:** ShieldLink is included on the **Pro** ($99/mo) and **Enterprise** plans. Free / Starter users can still verify and report links sent to them.
+
+**Public landing:** <https://www.webagentbridge.com/shieldlink>
+
+---
+
+## 🧠 Advanced Features + ⚓ Truth Layer ✨ NEW (v3.6.0)
+
+Two new layers that turn WAB from a discovery protocol into a **collective intelligence platform** for AI agents. **10 features · 25 endpoints · live now.**
+
+### 🌐 Where to find them on the site
+
+| Page | URL | What it has |
+|------|-----|-------------|
+| **Advanced Features showcase** | <https://www.webagentbridge.com/wab-features> | Interactive live demos for the 6 Advanced Features (bilingual EN/AR) |
+| **Truth Layer showcase** | <https://www.webagentbridge.com/wab-truth> | Interactive live demos for the 4 Truth Layer features (bilingual EN/AR) |
+| **Landing page nav** | <https://www.webagentbridge.com/> | New links: 🧠 Advanced Features · ⚓ Truth Layer |
+
+### Layer 1 — WAB Advanced Features (6 modules)
+
+| # | Module | What it does | Key endpoints |
+|---|---|---|---|
+| 1 | 🏆 **Reputation Score** | Multi-factor 0–100 score per domain (DNS stability, trust history, latency, agent reports, consistency). Includes leaderboard + 30-day trend. | `GET /api/reputation/:domain` · `GET /api/reputation/leaderboard` |
+| 2 | 💾 **Memory Cache Layer** | Versioned manifest cache with `ETag` + conditional GET. 24h TTL. Batch validation up to 50 domains. | `GET /api/cache/manifest/:domain` · `POST /api/cache/validate` |
+| 3 | 🎯 **Intent-Aware Routing** | Sites declare intent schemas; agents send natural-language intent and get a matched action. Scoring: exact key (85), label (80), keyword (65), synonym (60). | `POST /api/intent/resolve` · `POST /api/intent/register` |
+| 4 | 🔒 **Privacy Budget** | Sites declare per-session data budgets (allowed/disallowed categories, max fields). GDPR / CCPA / LGPD compliance badges. | `GET /api/privacy/budget/:domain` · `POST /api/privacy/budget/check` |
+| 5 | 🧠 **Collective Intelligence** | Anonymized network-wide insights. Agent IDs hashed daily with rotating salt — no PII. | `POST /api/collective/report` · `GET /api/collective/insights/:domain` |
+| 6 | 📴 **Offline Mode + Sync** | Agents operate against cached manifests when offline, sync deltas (up to 30 domains) when back online. | `GET /api/offline/status/:domain` · `POST /api/offline/sync` |
+
+### Layer 2 — WAB Truth Layer (4 unified ideas)
+
+The Truth Layer solves the **LLM hallucination problem** and gives new agents instant access to collective knowledge.
+
+| # | Module | What it does | Key endpoints |
+|---|---|---|---|
+| 1 | 🧬 **Semantic Memory Network** | Anonymized observations per intent category (`booking`, `payment`, `search`, `auth`, `checkout`, `support`, `navigation`, `content`, `other`). Outputs success rate, avg + p95 latency, reliability score. | `POST /api/truth/memory/observe` · `GET /api/truth/memory/:domain` |
+| 2 | ⏳ **Temporal Trust** | Time-stability score. Classifies domains: 🌱 `new` → 📈 `emerging` → 🏛️ `established` → ⭐ `flagship`, or ⚠️ `suspect` on sudden structural changes / volatility / DNS failures. | `GET /api/truth/temporal/:domain` |
+| 3 | 🗺️ **Intent → Action Graph** | Sites publish per-intent `ActionGraph`s — flowcharts of nodes (`start`/`action`/`requirement`/`choice`/`outcome`) and edges. Agents send natural-language intent → receive structured execution graph. | `POST /api/truth/action/register` · `POST /api/truth/action/resolve` |
+| 4 | ⚓ **Reality Anchor** | Cross-site fact verification. Agents submit facts (`price`, `availability`, `rating`, `event`, `count`, `status`); verification returns weighted consensus (numeric: mean+median+stddev+confidence; categorical: vote+agreement). Weighted by source-domain reputation. | `POST /api/truth/reality/submit` · `GET /api/truth/reality/:fact_key` |
+| ★ | 🌐 **Unified Truth Profile** | One call returns reputation + semantic + temporal + action graphs + reality contributions for a domain. | `GET /api/truth/profile/:domain` |
+
+### 🛡️ Privacy & security guarantees
+
+- **Anonymization:** All agent identifiers are hashed with a **daily-rotating SHA-256 salt** before storage. No PII is ever persisted.
+- **Rate limiting:** 200 requests / 15 minutes on all `/api/*` routes.
+- **Validation:** Strict domain regex, allow-listed intent / observation / fact-type values, JSON body size limits 4–64 KB depending on endpoint.
+- **Universal scope:** Works for **all domain categories** — not just booking. Templates for common verticals are in `templates/`.
+
+### 📚 Full reference
+
+See the GitHub release for the complete 25-endpoint index, scoring algorithms, and DB schema:
+👉 [**Release v3.6.0 — Advanced Features + Truth Layer**](https://github.com/abokenan444/web-agent-bridge/releases/tag/v3.6.0)
+
+---
+
+## �🚀 Zero-Config Adoption Layer
 
 Drop-in adoption for every popular stack — **no origin changes, no PHP, no `.htaccess` edits**.
 
