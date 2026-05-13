@@ -278,13 +278,50 @@ app.use('/api/ads', apiLimiter, adsRoutes);
 app.use('/api/wab', wabApiRoutes);
 app.use('/api/noscript', apiLimiter, noscriptRoutes);
 app.use('/api/discovery', apiLimiter, discoveryRoutes);
+app.use('/api/activate', apiLimiter, require('./routes/activate'));
+
+// ── WAB Advanced Features v1.0 ──────────────────────────────────────────────
+const { reputationRouter, collectiveRouter } = require('./routes/reputation');
+const { intentRouter, privacyRouter }        = require('./routes/intent');
+const { cacheRouter, offlineRouter }         = require('./routes/wab-cache');
+app.use('/api/reputation', apiLimiter, reputationRouter);
+app.use('/api/collective', apiLimiter, collectiveRouter);
+app.use('/api/intent',     apiLimiter, intentRouter);
+app.use('/api/privacy',    apiLimiter, privacyRouter);
+app.use('/api/cache',      apiLimiter, cacheRouter);
+app.use('/api/offline',    apiLimiter, offlineRouter);
+
+// ── WAB Truth Layer v1.0 (Semantic Memory + Temporal Trust + Action Graphs + Reality Anchor) ──
+const { truthRouter } = require('./routes/truth-layer');
+app.use('/api/truth', apiLimiter, truthRouter);
+
+// ── WAB Ring 4 External Trust Verification (sovereign-agent trust API) ──
+const { ring4Router } = require('./routes/ring4');
+const { wabTrustMiddleware } = require('./middleware/wab-trust');
+app.use(wabTrustMiddleware);
+app.use('/api/ring4', apiLimiter, ring4Router);
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.use('/api/providers', apiLimiter, providerRoutes);
 app.use('/api/governance', apiLimiter, governanceRoutes);
 app.use('/api/plans', apiLimiter, require('./routes/plans'));
 app.use('/api/admin/plans', apiLimiter, require('./routes/admin-plans'));
 app.use('/api/admin/shieldqr', apiLimiter, require('./routes/admin-shieldqr'));
 app.use('/api/admin/trust-monitor', apiLimiter, require('./routes/admin-trust-monitor'));
+// Optional premium modules — mounted only when present (open-source repo
+// excludes the ShieldLink stack which is a paid feature).
+function mountOptional(prefix, modPath) {
+  try { app.use(prefix, apiLimiter, require(modPath)); }
+  catch (e) {
+    if (e.code === 'MODULE_NOT_FOUND' && e.message.includes(modPath)) {
+      console.log(`[optional] ${prefix} not mounted (${modPath} not present)`);
+    } else { throw e; }
+  }
+}
+mountOptional('/api/admin/shieldlink',   './routes/admin-shieldlink');
 app.use('/api/shieldqr', apiLimiter, require('./routes/shieldqr'));
+mountOptional('/api/shieldlink',         './routes/shieldlink');
+mountOptional('/api/customer/shieldlink','./routes/customer-shieldlink');
 app.use('/api/adopt', apiLimiter, require('./routes/adopt'));
 app.use('/api/diagnose', apiLimiter, require('./routes/diagnose'));
 app.use('/api/admin/outreach', apiLimiter, require('./routes/admin-outreach'));
@@ -296,8 +333,54 @@ app.use('/', apiLimiter, require('./routes/unsubscribe'));
 app.get('/activate', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'activate.html'));
 });
+
+// /one-click — interactive self-serve activation wizard (key-gen, sign, deploy via API)
+app.get(['/one-click', '/one-click.html', '/activate/one-click'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'one-click.html'));
+});
+
+// /wab-features — WAB Advanced Features showcase (Reputation, Cache, Intent, Privacy, Collective, Offline)
+app.get(['/wab-features', '/features'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'wab-features.html'));
+});
+// /wab-truth — WAB Truth Layer showcase (Semantic Memory + Temporal Trust + Action Graphs + Reality Anchor)
+app.get(['/wab-truth', '/truth'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'wab-truth.html'));
+});
+// /milestones — Partners & Milestones (VEXR Ultra × WAB Ring 4 integration)
+app.get(['/milestones', '/partners'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'milestones.html'));
+});
+// /ring4 — Ring 4 Trust Handshake protocol docs
+app.get(['/ring4', '/trust-handshake'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'ring4.html'));
+});
+// /refusals — Public refusal log (anonymized constitutional refusal stats)
+app.get('/refusals', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'refusals.html'));
+});
+// /.well-known/jwks.json — standard JWKS discovery for OIDC/JWT ecosystem
+app.get('/.well-known/jwks.json', (req, res) => {
+  try {
+    const { _internals } = require('./routes/ring4');
+    return res.json(_internals.buildJwks());
+  } catch (e) {
+    return res.status(503).json({ error: 'jwks_unavailable', detail: e.message });
+  }
+});
 app.get('/shieldqr', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'shieldqr.html'));
+});
+// ── ShieldLink landing + Trust Preview redirect ──
+app.get('/shieldlink', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'shieldlink.html'));
+});
+app.get('/l/:token', noCache, (req, res) => {
+  // Serve the Trust Preview page; the page calls /api/shieldlink/verify?token=
+  res.sendFile(path.join(__dirname, '..', 'public', 'l-preview.html'));
+});
+app.get('/dashboard/shieldlink', noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'dashboard-shieldlink.html'));
 });
 app.get('/activate-dns', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'activate.html'));
@@ -446,7 +529,7 @@ app.get('/admin/snapshots', noCache, (req, res) => {
 });
 
 // ─── Admin sub-pages (each backed by real API endpoints in /api/admin/*) ──
-['users','sites','analytics','grants','payments','stripe','smtp','notifications','governance','discovery','trust','providers','plans','shieldqr','trust-monitor','outreach'].forEach((page) => {
+['users','sites','analytics','grants','payments','stripe','smtp','notifications','governance','discovery','trust','providers','plans','shieldqr','shieldlink','trust-monitor','outreach'].forEach((page) => {
   app.get('/admin/' + page, noCache, (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'admin', page + '.html'));
   });
@@ -664,6 +747,9 @@ if (process.env.NODE_ENV !== 'test') {
 
   // Start the SSL Health Monitor cron (Extended Trust Layer).
   try { require('./services/ssl-monitor').start(); } catch (e) { console.warn('[ssl-monitor] start failed:', e.message); }
+
+  // Start the Certificate Transparency Monitor (opt-in via WAB_CT_MONITOR=true).
+  try { require('./services/ssl-ct-monitor').start(); } catch (e) { console.warn('[ct-monitor] start failed:', e.message); }
 
   server.listen(PORT, () => {
     console.log(`\n  ╔══════════════════════════════════════════╗`);
