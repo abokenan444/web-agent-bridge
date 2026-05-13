@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WAB Truth Layer — The Network's Shared Reality</title>
+<meta name="description" content="WAB Truth Layer: Semantic Memory Network + Temporal Trust + Intent-to-Action Bridge + Reality Anchor. The collective intelligence layer for AI agents.">
+<link rel="icon" href="/favicon.ico">
+<style>
+:root {
+  --bg:#0a0e1a; --card:#111827; --line:#1f2937; --text:#e5e7eb; --muted:#94a3b8;
+  --accent:#8b5cf6; --accent2:#6366f1; --ok:#10b981; --warn:#f59e0b; --err:#ef4444;
+}
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font:15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+[dir="rtl"] body { font-family: "Segoe UI", "Tahoma", "Cairo", system-ui, sans-serif; }
+a { color:var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 22px 80px; }
+header.hero { text-align:center; padding: 40px 0 30px; border-bottom:1px solid var(--line); margin-bottom: 36px; }
+header.hero h1 { margin:0 0 12px; font-size: clamp(28px, 4.4vw, 46px); letter-spacing:-.02em;
+  background: linear-gradient(135deg, #a78bfa 0%, #6366f1 60%, #06b6d4 100%);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color: transparent;
+}
+header.hero p { color: var(--muted); margin: 0 auto; max-width: 760px; font-size: 17px; }
+.lang-toggle { position: absolute; top: 18px; right: 18px; display:flex; gap:6px; }
+[dir="rtl"] .lang-toggle { right: auto; left: 18px; }
+.lang-toggle button { background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 12px; cursor:pointer; }
+.lang-toggle button.active { background:var(--accent); border-color:var(--accent); }
+.back-link { display:inline-block; margin-top: 14px; color: var(--muted); font-size: 14px; }
+
+.feature-grid { display:grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.feature-card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding: 22px; }
+.feature-card h2 { margin: 0 0 8px; font-size: 20px; display:flex; align-items:center; gap:10px; }
+.feature-card .lead { color: var(--muted); margin: 0 0 14px; font-size: 14px; }
+.feature-card .demo { background: #0b1220; border:1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 12px; }
+.feature-card label { display:block; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
+.feature-card input, .feature-card select, .feature-card textarea {
+  width:100%; background:#0a0e1a; border:1px solid var(--line); color:var(--text);
+  border-radius:8px; padding:8px 10px; font-size: 14px; font-family: inherit;
+}
+.feature-card textarea { font-family: ui-monospace, Menlo, monospace; font-size:12px; min-height: 84px; }
+.feature-card button.run {
+  margin-top: 10px; background:var(--accent); color:#fff; border:0; padding: 9px 16px; border-radius:8px; cursor:pointer; font-weight:600;
+}
+.feature-card button.run:hover { background:var(--accent2); }
+.feature-card pre.result {
+  background:#020617; border:1px solid var(--line); border-radius: 8px; padding: 12px; font-size: 12px;
+  overflow:auto; max-height: 280px; margin-top: 10px; color:#e5e7eb;
+}
+.badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600;
+  background:rgba(139,92,246,.15); color:#a78bfa; border:1px solid rgba(139,92,246,.3); }
+.badge.ok { background:rgba(16,185,129,.15); color:#34d399; border-color:rgba(16,185,129,.3); }
+.badge.warn { background:rgba(245,158,11,.15); color:#fbbf24; border-color:rgba(245,158,11,.3); }
+
+section.api-ref { margin-top: 50px; }
+section.api-ref h2 { font-size: 22px; margin-bottom: 16px; }
+table.api { width:100%; border-collapse: collapse; background:var(--card); border:1px solid var(--line); border-radius: 10px; overflow:hidden; }
+table.api th, table.api td { padding: 10px 14px; text-align:left; border-bottom:1px solid var(--line); font-size: 13px; }
+[dir="rtl"] table.api th, [dir="rtl"] table.api td { text-align:right; }
+table.api th { background:#0b1220; color:var(--muted); font-weight:600; }
+table.api code { font-size: 12px; color:#a78bfa; }
+.method-GET { color:#10b981; font-weight:600; }
+.method-POST { color:#f59e0b; font-weight:600; }
+
+.hero-cta { display:flex; gap:10px; justify-content:center; margin-top: 18px; flex-wrap:wrap; }
+.hero-cta a { padding: 10px 18px; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; }
+.hero-cta a.secondary { background:var(--card); border:1px solid var(--line); color: var(--text); }
+</style>
+</head>
+<body>
+<div class="lang-toggle">
+  <button id="btn-en" class="active" onclick="setLang('en')">EN</button>
+  <button id="btn-ar" onclick="setLang('ar')">ع</button>
+</div>
+
+<div class="wrap">
+<header class="hero">
+  <h1 data-i18n="title">WAB Truth Layer</h1>
+  <p data-i18n="subtitle">The collective intelligence layer for AI agents. Semantic Memory · Temporal Trust · Action Graphs · Reality Anchor.</p>
+  <div class="hero-cta">
+    <a href="/wab-features" data-i18n="cta_features">← WAB Advanced Features</a>
+    <a href="/" class="secondary" data-i18n="cta_home">Home</a>
+  </div>
+  <a class="back-link" href="/" data-i18n="back">← Back to home</a>
+</header>
+
+<div class="feature-grid">
+
+  <!-- 1. Semantic Memory -->
+  <div class="feature-card">
+    <h2>🧬 <span data-i18n="f1_title">Semantic Memory Network</span></h2>
+    <p class="lead" data-i18n="f1_lead">Anonymized observations agents share about how sites behave for each intent. New agents inherit collective knowledge — no PII.</p>
+    <div class="demo">
+      <label data-i18n="domain">Domain</label>
+      <input id="sm-domain" value="webagentbridge.com">
+      <label data-i18n="intent_category">Intent category</label>
+      <select id="sm-intent">
+        <option>booking</option><option>payment</option><option>search</option>
+        <option>auth</option><option selected>checkout</option><option>support</option>
+        <option>navigation</option><option>content</option><option>other</option>
+      </select>
+      <label data-i18n="observation">Observation</label>
+      <select id="sm-obs">
+        <option>fast</option><option>slow</option><option>reliable</option><option>flaky</option>
+        <option selected>success</option><option>failure</option><option>blocked</option><option>rate_limited</option>
+      </select>
+      <button class="run" onclick="smObserve()" data-i18n="btn_observe">Submit observation</button>
+      <button class="run" style="background:#0b1220;border:1px solid var(--line)" onclick="smRead()" data-i18n="btn_read">Read summary</button>
+      <pre class="result" id="sm-result">—</pre>
+    </div>
+  </div>
+
+  <!-- 2. Temporal Trust -->
+  <div class="feature-card">
+    <h2>⏳ <span data-i18n="f2_title">Temporal Trust</span></h2>
+    <p class="lead" data-i18n="f2_lead">Time-stability score. Detects fly-by-night domains, ranks established sites as <em>flagship</em>, flags volatility as <em>suspect</em>.</p>
+    <div class="demo">
+      <label data-i18n="domain">Domain</label>
+      <input id="tt-domain" value="webagentbridge.com">
+      <button class="run" onclick="ttRead()" data-i18n="btn_temporal">Get temporal trust</button>
+      <button class="run" style="background:#0b1220;border:1px solid var(--line)" onclick="ttSnapshot()" data-i18n="btn_snapshot">Record snapshot (demo)</button>
+      <pre class="result" id="tt-result">—</pre>
+    </div>
+  </div>
+
+  <!-- 3. Action Graphs -->
+  <div class="feature-card">
+    <h2>🗺️ <span data-i18n="f3_title">Intent → Action Graph</span></h2>
+    <p class="lead" data-i18n="f3_lead">Sites publish ActionGraphs per intent. Agents send a natural-language intent and receive a structured graph of nodes/edges to follow.</p>
+    <div class="demo">
+      <label data-i18n="domain">Domain</label>
+      <input id="ag-domain" value="webagentbridge.com">
+      <label data-i18n="intent_text">Intent text</label>
+      <input id="ag-intent" placeholder="e.g. activate WAB for my site" value="activate WAB on my site">
+      <button class="run" onclick="agResolve()" data-i18n="btn_resolve">Resolve intent</button>
+      <button class="run" style="background:#0b1220;border:1px solid var(--line)" onclick="agRegisterDemo()" data-i18n="btn_register_demo">Register demo graph</button>
+      <pre class="result" id="ag-result">—</pre>
+    </div>
+  </div>
+
+  <!-- 4. Reality Anchor -->
+  <div class="feature-card">
+    <h2>⚓ <span data-i18n="f4_title">Reality Anchor</span></h2>
+    <p class="lead" data-i18n="f4_lead">Agents cross-check facts (prices, availability, ratings) across the WAB network. Defeats LLM hallucination with multi-source consensus.</p>
+    <div class="demo">
+      <label data-i18n="fact_key">Fact key</label>
+      <input id="ra-key" value="demo:wab-price:annual-plan">
+      <label data-i18n="fact_type">Fact type</label>
+      <select id="ra-type">
+        <option selected>price</option><option>availability</option><option>rating</option>
+        <option>event</option><option>count</option><option>status</option>
+      </select>
+      <label data-i18n="value">Value (JSON)</label>
+      <textarea id="ra-value">{"amount":299,"currency":"USD"}</textarea>
+      <label data-i18n="domain">Source domain</label>
+      <input id="ra-domain" value="webagentbridge.com">
+      <button class="run" onclick="raSubmit()" data-i18n="btn_submit">Submit fact</button>
+      <button class="run" style="background:#0b1220;border:1px solid var(--line)" onclick="raVerify()" data-i18n="btn_verify">Verify consensus</button>
+      <pre class="result" id="ra-result">—</pre>
+    </div>
+  </div>
+
+  <!-- Unified profile -->
+  <div class="feature-card" style="grid-column: 1 / -1;">
+    <h2>🌐 <span data-i18n="f5_title">Unified Truth Profile</span></h2>
+    <p class="lead" data-i18n="f5_lead">Full Truth Layer view for a domain: reputation, semantic, temporal, action graphs, and reality contributions — in one call.</p>
+    <div class="demo">
+      <label data-i18n="domain">Domain</label>
+      <input id="pr-domain" value="webagentbridge.com">
+      <button class="run" onclick="prRead()" data-i18n="btn_profile">Get Truth Profile</button>
+      <pre class="result" id="pr-result">—</pre>
+    </div>
+  </div>
+
+</div>
+
+<section class="api-ref">
+  <h2 data-i18n="api_title">📘 API Reference</h2>
+  <table class="api">
+    <thead><tr><th>Method</th><th data-i18n="endpoint">Endpoint</th><th data-i18n="description">Description</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method-POST">POST</span></td><td><code>/api/truth/memory/observe</code></td><td data-i18n="ep1">Submit anonymized observation</td></tr>
+      <tr><td><span class="method-GET">GET</span></td><td><code>/api/truth/memory/:domain</code></td><td data-i18n="ep2">Semantic summary for domain</td></tr>
+      <tr><td><span class="method-GET">GET</span></td><td><code>/api/truth/memory/:domain/:intent</code></td><td data-i18n="ep3">Per-intent semantic summary</td></tr>
+      <tr><td><span class="method-GET">GET</span></td><td><code>/api/truth/temporal/:domain</code></td><td data-i18n="ep4">Temporal trust profile</td></tr>
+      <tr><td><span class="method-POST">POST</span></td><td><code>/api/truth/temporal/snapshot</code></td><td data-i18n="ep5">Record trust snapshot</td></tr>
+      <tr><td><span class="method-POST">POST</span></td><td><code>/api/truth/action/register</code></td><td data-i18n="ep6">Register an ActionGraph</td></tr>
+      <tr><td><span class="method-GET">GET</span></td><td><code>/api/truth/action/:domain/:intent</code></td><td data-i18n="ep7">Fetch an ActionGraph</td></tr>
+      <tr><td><span class="method-POST">POST</span></td><td><code>/api/truth/action/resolve</code></td><td data-i18n="ep8">Resolve intent text → graph</td></tr>
+      <tr><td><span class="method-POST">POST</span></td><td><code>/api/truth/reality/submit</code></td><td data-i18n="ep9">Submit an observed fact</td></tr>
+      <tr><td><span class="method-GET">GET</span></td><td><code>/api/truth/reality/:fact_key</code></td><td data-i18n="ep10">Verify a fact (consensus)</td></tr>
+      <tr><td><span class="method-POST">POST</span></td><td><code>/api/truth/reality/verify</code></td><td data-i18n="ep11">Bulk verify (up to 50 keys)</td></tr>
+      <tr><td><span class="method-GET">GET</span></td><td><code>/api/truth/profile/:domain</code></td><td data-i18n="ep12">Unified Truth profile</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</div>
+
+<script>
+const translations = {
+  en: {
+    title: "WAB Truth Layer",
+    subtitle: "The collective intelligence layer for AI agents. Semantic Memory · Temporal Trust · Action Graphs · Reality Anchor.",
+    back: "← Back to home", cta_features: "← WAB Advanced Features", cta_home: "Home",
+    f1_title: "Semantic Memory Network",
+    f1_lead: "Anonymized observations agents share about how sites behave for each intent. New agents inherit collective knowledge — no PII.",
+    f2_title: "Temporal Trust",
+    f2_lead: "Time-stability score. Detects fly-by-night domains, ranks established sites as flagship, flags volatility as suspect.",
+    f3_title: "Intent → Action Graph",
+    f3_lead: "Sites publish ActionGraphs per intent. Agents send a natural-language intent and receive a structured graph of nodes/edges.",
+    f4_title: "Reality Anchor",
+    f4_lead: "Agents cross-check facts across the WAB network. Defeats hallucination with multi-source consensus.",
+    f5_title: "Unified Truth Profile",
+    f5_lead: "Full Truth Layer view for a domain in one API call.",
+    domain: "Domain", intent_category: "Intent category", observation: "Observation",
+    intent_text: "Intent text", fact_key: "Fact key", fact_type: "Fact type", value: "Value (JSON)",
+    btn_observe: "Submit observation", btn_read: "Read summary",
+    btn_temporal: "Get temporal trust", btn_snapshot: "Record snapshot (demo)",
+    btn_resolve: "Resolve intent", btn_register_demo: "Register demo graph",
+    btn_submit: "Submit fact", btn_verify: "Verify consensus",
+    btn_profile: "Get Truth Profile",
+    api_title: "📘 API Reference", endpoint: "Endpoint", description: "Description",
+    ep1:"Submit anonymized observation", ep2:"Semantic summary for domain",
+    ep3:"Per-intent semantic summary", ep4:"Temporal trust profile",
+    ep5:"Record trust snapshot", ep6:"Register an ActionGraph",
+    ep7:"Fetch an ActionGraph", ep8:"Resolve intent text → graph",
+    ep9:"Submit an observed fact", ep10:"Verify a fact (consensus)",
+    ep11:"Bulk verify (up to 50 keys)", ep12:"Unified Truth profile",
+  },
+  ar: {
+    title: "طبقة الحقيقة WAB",
+    subtitle: "طبقة الذكاء الجماعي للوكلاء. ذاكرة دلالية · ثقة زمنية · رسوم الإجراءات · مرساة الواقع.",
+    back: "← العودة للرئيسية", cta_features: "← الميزات المتقدمة", cta_home: "الرئيسية",
+    f1_title: "شبكة الذاكرة الدلالية",
+    f1_lead: "ملاحظات مجهولة الهوية يشاركها الوكلاء عن سلوك المواقع لكل نية. الوكلاء الجدد يرثون المعرفة الجماعية — بدون بيانات شخصية.",
+    f2_title: "الثقة الزمنية",
+    f2_lead: "درجة الاستقرار عبر الزمن. تكشف المواقع المؤقتة، وتصنف المواقع الراسخة كـ flagship وتنبه على التقلب كـ suspect.",
+    f3_title: "النية → شجرة الإجراءات",
+    f3_lead: "المواقع تنشر ActionGraph لكل نية. الوكلاء يرسلون نية بلغة طبيعية ويستلمون شجرة منظمة من العقد والحواف.",
+    f4_title: "مرساة الواقع",
+    f4_lead: "الوكلاء يتحققون من الحقائق عبر شبكة WAB. تهزم الهلوسة باتفاق متعدد المصادر.",
+    f5_title: "ملف الحقيقة الموحّد",
+    f5_lead: "عرض كامل لطبقة الحقيقة لأي نطاق في طلب API واحد.",
+    domain: "النطاق", intent_category: "تصنيف النية", observation: "الملاحظة",
+    intent_text: "نص النية", fact_key: "مفتاح الحقيقة", fact_type: "نوع الحقيقة", value: "القيمة (JSON)",
+    btn_observe: "إرسال ملاحظة", btn_read: "قراءة الملخّص",
+    btn_temporal: "جلب الثقة الزمنية", btn_snapshot: "تسجيل لقطة (تجريبي)",
+    btn_resolve: "حلّ النية", btn_register_demo: "تسجيل رسم تجريبي",
+    btn_submit: "إرسال حقيقة", btn_verify: "التحقق من الإجماع",
+    btn_profile: "جلب ملف الحقيقة",
+    api_title: "📘 مرجع API", endpoint: "نقطة النهاية", description: "الوصف",
+    ep1:"إرسال ملاحظة مجهولة", ep2:"ملخّص دلالي للنطاق",
+    ep3:"ملخّص لنية محددة", ep4:"ملف الثقة الزمنية",
+    ep5:"تسجيل لقطة ثقة", ep6:"تسجيل ActionGraph",
+    ep7:"جلب ActionGraph", ep8:"حلّ نص النية ← شجرة",
+    ep9:"إرسال حقيقة مرصودة", ep10:"التحقق من الحقيقة (إجماع)",
+    ep11:"تحقق جماعي (50 مفتاح)", ep12:"ملف الحقيقة الموحّد",
+  }
+};
+
+function setLang(lang) {
+  const t = translations[lang]; if (!t) return;
+  document.documentElement.lang = lang;
+  document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n');
+    if (t[k]) el.textContent = t[k];
+  });
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-ar').classList.toggle('active', lang === 'ar');
+  try { localStorage.setItem('wab_lang', lang); } catch {}
+}
+try {
+  const stored = localStorage.getItem('wab_lang');
+  if (stored && translations[stored]) setLang(stored);
+} catch {}
+
+function show(id, data) {
+  document.getElementById(id).textContent = (typeof data === 'string') ? data : JSON.stringify(data, null, 2);
+}
+async function jfetch(url, opts) {
+  try {
+    const r = await fetch(url, opts);
+    const text = await r.text();
+    let data; try { data = JSON.parse(text); } catch { data = text; }
+    return { status: r.status, data };
+  } catch (e) { return { status: 0, data: { error: String(e.message || e) } }; }
+}
+
+async function smObserve() {
+  const body = {
+    domain: smDomain(), intent_category: document.getElementById('sm-intent').value,
+    observation: document.getElementById('sm-obs').value, latency_ms: 80 + Math.floor(Math.random() * 400),
+    success: Math.random() > 0.15, agent_id: 'demo-' + Math.random().toString(36).slice(2, 9)
+  };
+  const r = await jfetch('/api/truth/memory/observe', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  show('sm-result', r.data);
+}
+async function smRead() {
+  const r = await jfetch('/api/truth/memory/' + encodeURIComponent(smDomain()));
+  show('sm-result', r.data);
+}
+function smDomain() { return document.getElementById('sm-domain').value.trim(); }
+
+async function ttRead() {
+  const r = await jfetch('/api/truth/temporal/' + encodeURIComponent(document.getElementById('tt-domain').value.trim()));
+  show('tt-result', r.data);
+}
+async function ttSnapshot() {
+  const body = {
+    domain: document.getElementById('tt-domain').value.trim(),
+    score: 80 + Math.random()*20,
+    dns_stable: true,
+    manifest_hash: Math.random().toString(36).slice(2, 14),
+    observations: 1
+  };
+  const r = await jfetch('/api/truth/temporal/snapshot', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  show('tt-result', r.data);
+}
+
+async function agResolve() {
+  const body = { domain: document.getElementById('ag-domain').value.trim(), intent_text: document.getElementById('ag-intent').value };
+  const r = await jfetch('/api/truth/action/resolve', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  show('ag-result', r.data);
+}
+async function agRegisterDemo() {
+  const body = {
+    domain: document.getElementById('ag-domain').value.trim(),
+    intent_key: 'activate_wab',
+    graph: {
+      keywords: ['activate','setup','integrate','install'],
+      nodes: [
+        { id: 'start', type: 'start', label: 'Start' },
+        { id: 'verify', type: 'requirement', label: 'Verify domain ownership' },
+        { id: 'install', type: 'action', label: 'Install /wab-manifest.json' },
+        { id: 'test', type: 'action', label: 'Run /api/activate/check' },
+        { id: 'done', type: 'outcome', label: 'Activated' },
+      ],
+      edges: [
+        { from: 'start', to: 'verify' },
+        { from: 'verify', to: 'install' },
+        { from: 'install', to: 'test' },
+        { from: 'test', to: 'done' },
+      ]
+    }
+  };
+  const r = await jfetch('/api/truth/action/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  show('ag-result', r.data);
+}
+
+async function raSubmit() {
+  let value; try { value = JSON.parse(document.getElementById('ra-value').value); } catch { value = document.getElementById('ra-value').value; }
+  const body = {
+    fact_key: document.getElementById('ra-key').value.trim(),
+    fact_type: document.getElementById('ra-type').value,
+    domain: document.getElementById('ra-domain').value.trim(),
+    value, agent_id: 'demo-' + Math.random().toString(36).slice(2, 9)
+  };
+  const r = await jfetch('/api/truth/reality/submit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  show('ra-result', r.data);
+}
+async function raVerify() {
+  const r = await jfetch('/api/truth/reality/' + encodeURIComponent(document.getElementById('ra-key').value.trim()));
+  show('ra-result', r.data);
+}
+
+async function prRead() {
+  const r = await jfetch('/api/truth/profile/' + encodeURIComponent(document.getElementById('pr-domain').value.trim()));
+  show('pr-result', r.data);
+}
+</script>
+</body>
+</html>

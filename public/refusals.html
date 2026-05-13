@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Public Refusal Log — WAB Ring 4</title>
+<meta name="description" content="Transparent, anonymized log of hard constitutional refusals issued by sovereign agents using WAB Ring 4. No PII. Daily-rotating salt.">
+<link rel="canonical" href="https://webagentbridge.com/refusals">
+<style>
+  :root { --bg:#0a0e1a; --card:#10172a; --muted:#94a3b8; --accent:#22d3ee; --warn:#f59e0b; --ok:#34d399; --fail:#f87171; }
+  *{box-sizing:border-box}
+  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: linear-gradient(180deg,#070b14,#0a0e1a); color:#e2e8f0; line-height:1.55; }
+  header { padding: 56px 24px 24px; text-align:center; }
+  header h1 { margin:0 0 8px; font-size: clamp(1.8rem, 4vw, 2.6rem); }
+  header p  { margin:0 auto; max-width: 720px; color: var(--muted); }
+  .lang { position:absolute; top:18px; right:24px; background:#1e293b; border:1px solid #334155; color:#e2e8f0; padding:6px 14px; border-radius:999px; cursor:pointer; font-size:0.85rem; }
+  main { max-width: 1080px; margin: 0 auto; padding: 24px; }
+  .stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:16px; margin: 32px 0; }
+  .card { background: var(--card); border:1px solid #1f2937; border-radius: 14px; padding: 20px; }
+  .card .n  { font-size: 2rem; font-weight: 700; color: var(--accent); }
+  .card .l  { color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+  h2 { margin-top: 40px; }
+  table { width:100%; border-collapse: collapse; margin-top: 12px; background: var(--card); border-radius: 14px; overflow:hidden; border:1px solid #1f2937; }
+  th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #1f2937; }
+  th { background: #0d1322; color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  tr:last-child td { border-bottom: none; }
+  .bar { height: 8px; background: #1f2937; border-radius: 4px; overflow: hidden; }
+  .bar > span { display:block; height:100%; background: linear-gradient(90deg, var(--accent), var(--warn)); }
+  .meta { color: var(--muted); font-size: 0.9rem; margin-top: 28px; padding: 16px; background:#0d1322; border-left:3px solid var(--accent); border-radius: 8px; }
+  .controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  select { background:#1e293b; border:1px solid #334155; color:#e2e8f0; padding:8px 12px; border-radius:8px; }
+  footer { text-align:center; padding: 40px 24px; color: var(--muted); font-size: 0.85rem; }
+  footer a { color: var(--accent); text-decoration:none; }
+  .empty { color: var(--muted); padding: 32px; text-align:center; }
+  [dir="rtl"] .lang { right:auto; left:24px; }
+  [dir="rtl"] .meta { border-left: none; border-right: 3px solid var(--accent); }
+</style>
+</head>
+<body>
+<button class="lang" id="langBtn" onclick="toggleLang()">العربية</button>
+<header>
+  <h1 data-en="Public Refusal Log" data-ar="سجل الرفض العلني">Public Refusal Log</h1>
+  <p data-en="Transparent, anonymized record of hard constitutional refusals issued by sovereign agents connected to WAB Ring 4. No PII. No request bodies. Counts only."
+     data-ar="سجل شفاف ومجهول الهوية لحالات الرفض الدستوري الصارم التي أصدرتها الوكلاء السيادية المتصلة بـ WAB Ring 4. لا توجد بيانات شخصية. لا توجد محتويات طلبات. أعداد فقط.">
+    Transparent, anonymized record of hard constitutional refusals issued by sovereign agents connected to WAB Ring 4. No PII. No request bodies. Counts only.
+  </p>
+</header>
+
+<main>
+  <div class="controls">
+    <label data-en="Window:" data-ar="النطاق الزمني:">Window:</label>
+    <select id="days" onchange="load()">
+      <option value="7" data-en="Last 7 days" data-ar="آخر 7 أيام">Last 7 days</option>
+      <option value="30" selected data-en="Last 30 days" data-ar="آخر 30 يوماً">Last 30 days</option>
+      <option value="90" data-en="Last 90 days" data-ar="آخر 90 يوماً">Last 90 days</option>
+      <option value="365" data-en="Last year" data-ar="آخر سنة">Last year</option>
+    </select>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <h2 data-en="By Constitutional Article" data-ar="حسب المادة الدستورية">By Constitutional Article</h2>
+  <table id="byArticle">
+    <thead>
+      <tr>
+        <th data-en="Invariant / Article" data-ar="المبدأ / المادة">Invariant / Article</th>
+        <th data-en="Refusals" data-ar="حالات الرفض">Refusals</th>
+        <th data-en="Distribution" data-ar="التوزيع">Distribution</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2 data-en="Daily Trend" data-ar="الاتجاه اليومي">Daily Trend</h2>
+  <table id="byDay">
+    <thead>
+      <tr>
+        <th data-en="Date" data-ar="التاريخ">Date</th>
+        <th data-en="Refusals" data-ar="عدد الرفض">Refusals</th>
+        <th data-en="Bar" data-ar="رسم">Bar</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="meta" id="privacyNote"></div>
+</main>
+
+<footer>
+  <p>
+    <a href="/ring4">Ring 4 Handshake</a> ·
+    <a href="/milestones">Milestones</a> ·
+    <a href="/api/ring4/refusals">JSON API</a> ·
+    <a href="/">WAB Home</a>
+  </p>
+</footer>
+
+<script>
+let LANG = 'en';
+function toggleLang() {
+  LANG = LANG === 'en' ? 'ar' : 'en';
+  document.documentElement.lang = LANG;
+  document.documentElement.dir  = LANG === 'ar' ? 'rtl' : 'ltr';
+  document.getElementById('langBtn').textContent = LANG === 'en' ? 'العربية' : 'English';
+  document.querySelectorAll('[data-en],[data-ar]').forEach(el => {
+    const v = el.getAttribute('data-' + LANG);
+    if (v !== null) {
+      if (el.tagName === 'OPTION') el.textContent = v;
+      else if (el.children.length === 0) el.textContent = v;
+      else el.firstChild && (el.firstChild.nodeType === 3) && (el.firstChild.nodeValue = v);
+    }
+  });
+  load();
+}
+
+async function load() {
+  const days = document.getElementById('days').value;
+  try {
+    const r = await fetch('/api/ring4/refusals?days=' + days);
+    const data = await r.json();
+    renderStats(data);
+    renderArticles(data.by_article || []);
+    renderDays(data.by_day || []);
+    document.getElementById('privacyNote').textContent = data.privacy || '';
+  } catch (e) {
+    document.getElementById('stats').innerHTML =
+      '<div class="card"><div class="n">—</div><div class="l">' +
+      (LANG === 'ar' ? 'تعذر تحميل البيانات' : 'failed to load') + '</div></div>';
+  }
+}
+
+function renderStats(data) {
+  const t = (en, ar) => LANG === 'ar' ? ar : en;
+  document.getElementById('stats').innerHTML = `
+    <div class="card"><div class="n">${data.total_refusals ?? 0}</div><div class="l">${t('Total hard refusals','إجمالي الرفض الصارم')}</div></div>
+    <div class="card"><div class="n">${(data.by_article||[]).length}</div><div class="l">${t('Articles invoked','مواد مستدعاة')}</div></div>
+    <div class="card"><div class="n">${data.window_days}</div><div class="l">${t('Window (days)','النطاق (أيام)')}</div></div>
+  `;
+}
+
+function renderArticles(rows) {
+  const tbody = document.querySelector('#byArticle tbody');
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="3" class="empty">${LANG==='ar'?'لا توجد بيانات':'no data'}</td></tr>`; return; }
+  const max = Math.max(...rows.map(r => r.n));
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td><code>${escapeHtml(r.article)}</code></td>
+      <td>${r.n}</td>
+      <td><div class="bar"><span style="width:${(r.n / max * 100).toFixed(1)}%"></span></div></td>
+    </tr>
+  `).join('');
+}
+
+function renderDays(rows) {
+  const tbody = document.querySelector('#byDay tbody');
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="3" class="empty">${LANG==='ar'?'لا توجد بيانات':'no data'}</td></tr>`; return; }
+  const max = Math.max(...rows.map(r => r.n));
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${escapeHtml(r.day)}</td>
+      <td>${r.n}</td>
+      <td><div class="bar"><span style="width:${(r.n / max * 100).toFixed(1)}%"></span></div></td>
+    </tr>
+  `).join('');
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+load();
+</script>
+</body>
+</html>

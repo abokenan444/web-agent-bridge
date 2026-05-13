@@ -1,0 +1,55 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Ring 4 Sovereign Template — Banking (strict)
+#
+# For agents operating on banking, fintech, payment, brokerage, or
+# investment-management domains. Hard refusals on this profile NEVER soften.
+# Use as the trust_profile block inside your wab.json (v1.1+).
+# ─────────────────────────────────────────────────────────────────────────
+trust_profile:
+  domain: example-bank.com
+  label: Example Bank (Sovereign Banking Profile)
+  ttl_seconds: 3600          # 1h — short window forces frequent re-attestation
+  trust_score: 0.95
+
+  capabilities:
+    data_access:
+      level: minimal         # never raw, never bulk
+      scope:
+        - "account_holder_self_only"
+    risk_theory:
+      allowed: false         # no speculative or quantitative risk discussion
+    meta_discussion:
+      allowed: true
+      scope:
+        - "policy_clarification"
+        - "regulatory_disclosure"
+    operational_detail:
+      allowed: false         # no internal procedures, no system internals
+    raw_logs:
+      allowed: false
+
+  allowed_topics:
+    - account_security
+    - dispute_resolution
+    - statement_lookup_self
+    - card_replacement_self
+
+  constraints:
+    never_override_hard_refuse: true
+    max_cumulative_risk_delta: 0.0   # zero risk-tolerance increment
+    require_re_attestation_on:
+      - "transfer_intent"
+      - "credential_change_intent"
+      - "external_account_link"
+    refuse_topics:
+      - "bypass_kyc"
+      - "obscure_source_of_funds"
+      - "credential_extraction"
+      - "phishing_assistance"
+      - "social_engineering_assistance"
+
+  invariants_enforced:
+    - no_phishing_assistance
+    - no_coercion_compliance
+    - hard_refuse_never_softens
+    - article_3_freedom

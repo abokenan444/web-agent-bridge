@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>One-Click Activation — Web Agent Bridge</title>
+  <meta name="description" content="Generate a signed WAB identity, deploy DNS via Cloudflare/Vercel/Netlify API, and verify your trust score — all in one click.">
+  <meta name="robots" content="index, follow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="/css/styles.css?v=3.5.0">
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --panel: rgba(30,41,59,0.7);
+      --panel-strong: rgba(15,23,42,0.95);
+      --border: rgba(99,102,241,0.22);
+      --border-strong: rgba(99,102,241,0.55);
+      --text: #f0f4ff;
+      --muted: #94a3b8;
+      --accent: #6366f1;
+      --accent-2: #8b5cf6;
+      --success: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    body { background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; margin: 0; min-height: 100vh; }
+    .hero {
+      padding: 110px 24px 40px;
+      text-align: center;
+      background: radial-gradient(ellipse 90% 60% at 50% 0%, rgba(99,102,241,0.22) 0%, transparent 70%);
+    }
+    .hero h1 { font-size: clamp(2rem, 4.8vw, 3.2rem); font-weight: 900; line-height: 1.08; margin: 0 0 12px; }
+    .hero h1 .grad { background: linear-gradient(135deg, #818cf8, #c4b5fd); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p.lede { font-size: 1.1rem; color: var(--muted); max-width: 680px; margin: 0 auto 18px; line-height: 1.6; }
+    .lang-toggle { display:flex; gap:8px; justify-content:center; margin: 14px 0 6px; }
+    .lang-toggle button { padding: 6px 18px; border-radius: 999px; border: 1.5px solid #334155; background: transparent; color: var(--muted); cursor:pointer; font-size: 0.85rem; transition: all .15s; }
+    .lang-toggle button.active { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color:#fff; font-weight:600; }
+
+    .wizard { max-width: 920px; margin: 0 auto 80px; padding: 0 22px; }
+    .step {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 26px 28px;
+      margin-bottom: 22px;
+      position: relative;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .step.active { border-color: var(--border-strong); box-shadow: 0 0 0 4px rgba(99,102,241,0.08); }
+    .step.disabled { opacity: 0.5; pointer-events: none; }
+    .step-head { display:flex; align-items:center; gap: 14px; margin-bottom: 14px; }
+    .step-num { width: 34px; height: 34px; border-radius: 50%; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight: 800; font-size: 0.95rem; flex-shrink:0; }
+    .step.done .step-num { background: linear-gradient(135deg, #10b981, #059669); }
+    .step-head h2 { font-size: 1.2rem; font-weight: 700; margin: 0; color: #e2e8f0; }
+    .step-head .check { color: var(--success); font-weight: 700; margin-inline-start: auto; font-size: 0.9rem; display:none; }
+    .step.done .step-head .check { display: inline; }
+
+    .field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .field label { font-size: 0.82rem; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; }
+    .field input[type=text], .field input[type=password], .field textarea {
+      width: 100%; box-sizing: border-box;
+      background: #0f172a; border: 1.5px solid #1e293b; color: var(--text);
+      padding: 12px 14px; border-radius: 10px; font-family: var(--mono); font-size: 0.92rem;
+      transition: border-color .15s;
+    }
+    .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+    .field .hint { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 11px 22px; border-radius: 10px; border: none; cursor: pointer;
+      font-family: inherit; font-size: 0.95rem; font-weight: 600;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+      transition: transform .1s, opacity .15s, box-shadow .15s;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(99,102,241,0.35); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn.secondary { background: #1e293b; border: 1px solid #334155; }
+    .btn.secondary:hover:not(:disabled) { background: #273549; }
+    .btn.ghost { background: transparent; border: 1.5px solid #334155; color: var(--muted); }
+    .btn.success { background: linear-gradient(135deg, #10b981, #059669); }
+    .btn.danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .btn-row { display:flex; flex-wrap: wrap; gap: 10px; }
+
+    .code-block {
+      position: relative;
+      background: #0f172a; border: 1px solid #1e293b; border-radius: 10px;
+      padding: 14px 50px 14px 16px;
+      font-family: var(--mono); font-size: 0.82rem; color: #a5f3fc;
+      overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+      margin-top: 8px;
+    }
+    .code-block .copy-btn {
+      position: absolute; top: 8px; inset-inline-end: 8px;
+      padding: 4px 10px; font-size: 0.72rem;
+      background: #1e293b; color: var(--muted); border: 1px solid #334155;
+      border-radius: 6px; cursor: pointer; font-family: inherit; transition: all .15s;
+    }
+    .code-block .copy-btn:hover { background: #273549; color: #fff; }
+    .code-block .copy-btn.copied { background: var(--success); color: #fff; border-color: transparent; }
+
+    .keypair-card {
+      background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.05));
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 14px; padding: 16px 18px; margin-top: 10px;
+    }
+    .keypair-card .kp-row { display:flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; flex-wrap: wrap; }
+    .keypair-card .kp-row:last-child { margin-bottom: 0; }
+    .keypair-card .kp-label { min-width: 110px; font-size: 0.78rem; color: var(--muted); font-weight: 600; padding-top: 6px; }
+    .keypair-card .kp-val { flex: 1 1 320px; }
+    .private-warning {
+      background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.35);
+      border-radius: 10px; padding: 12px 14px; margin: 10px 0;
+      font-size: 0.85rem; color: #fca5a5;
+    }
+    .private-warning strong { color: #fecaca; }
+
+    .tabs { display:flex; flex-wrap: wrap; gap: 4px; margin: 18px 0 12px; border-bottom: 1px solid #1e293b; padding-bottom: 4px; }
+    .tab {
+      padding: 9px 14px; cursor: pointer; border: none; background: transparent;
+      color: var(--muted); font-family: inherit; font-size: 0.88rem; font-weight: 600;
+      border-radius: 8px 8px 0 0; border-bottom: 2px solid transparent;
+      transition: all .15s;
+    }
+    .tab:hover { color: #e2e8f0; }
+    .tab.active { color: #fff; border-bottom-color: var(--accent); background: rgba(99,102,241,0.08); }
+    .tab-content { display: none; padding: 6px 0; }
+    .tab-content.active { display: block; }
+
+    .provider-info {
+      background: rgba(15,23,42,0.6); border-left: 3px solid var(--accent);
+      padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 14px;
+      font-size: 0.88rem; color: #cbd5e1; line-height: 1.6;
+    }
+    .provider-info a { color: #a5b4fc; text-decoration: none; border-bottom: 1px dashed rgba(165,180,252,0.4); }
+    .provider-info a:hover { border-bottom-style: solid; }
+    .provider-info ol { margin: 8px 0 0 18px; padding: 0; }
+    .provider-info li { margin: 4px 0; }
+
+    .verify-result { margin-top: 14px; }
+    .gauge-card {
+      background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.04));
+      border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px; display:flex; gap: 22px; align-items: center; flex-wrap: wrap;
+    }
+    .gauge { width: 110px; height: 110px; position: relative; flex-shrink: 0; }
+    .gauge svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+    .gauge .track { fill:none; stroke: #1e293b; stroke-width: 10; }
+    .gauge .fill { fill:none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset .8s ease; }
+    .gauge .label { position: absolute; inset: 0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .gauge .label .num { font-size: 1.6rem; font-weight: 800; }
+    .gauge .label .total { font-size: 0.72rem; color: var(--muted); }
+    .gauge-meta { flex: 1 1 240px; }
+    .gauge-meta h3 { margin: 0 0 4px; font-size: 1.4rem; font-weight: 800; text-transform: capitalize; }
+    .gauge-meta .domain-label { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); margin-bottom: 12px; }
+    .checks-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+    .check-row { display:flex; align-items: center; gap: 8px; font-size: 0.85rem; padding: 5px 0; }
+    .check-row .ic { width: 18px; height: 18px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size: 0.7rem; font-weight: 800; flex-shrink:0; }
+    .check-row.ok .ic { background: var(--success); color: #fff; }
+    .check-row.no .ic { background: #475569; color: #fff; }
+    .findings { margin-top: 14px; }
+    .findings .finding { font-size: 0.82rem; padding: 6px 12px; background: rgba(245,158,11,0.08); border-left: 2px solid var(--warn); margin-bottom: 4px; border-radius: 0 6px 6px 0; color: #fde68a; }
+
+    .badge-row { display:flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+    .badge-pill {
+      display:inline-flex; align-items:center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;
+      background: #1e293b; border: 1px solid #334155;
+    }
+    .badge-pill.ok { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.4); color: #6ee7b7; }
+    .badge-pill.warn { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.4); color: #fcd34d; }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--panel-strong); border: 1px solid var(--border-strong);
+      color: #fff; padding: 12px 22px; border-radius: 12px;
+      font-size: 0.9rem; transition: transform .25s, opacity .25s; opacity: 0;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 1000; max-width: 90vw;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .toast.error { border-color: rgba(239,68,68,0.5); }
+    .toast.success { border-color: rgba(16,185,129,0.5); }
+
+    .spin { width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; display:inline-block; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .deploy-result { margin-top: 12px; padding: 12px 14px; border-radius: 10px; font-size: 0.88rem; line-height: 1.6; }
+    .deploy-result.ok { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.4); color: #a7f3d0; }
+    .deploy-result.err { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
+    .deploy-result pre { font-family: var(--mono); font-size: 0.78rem; background: rgba(0,0,0,0.25); padding: 8px; border-radius: 6px; overflow-x: auto; margin: 8px 0 0; }
+
+    details { margin-top: 10px; }
+    details summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; padding: 4px 0; }
+    details summary:hover { color: #e2e8f0; }
+
+    [dir="rtl"] .step-head { text-align: right; }
+    [dir="rtl"] .code-block .copy-btn { inset-inline-end: 8px; }
+    [dir="rtl"] body { font-family: 'Tajawal', Inter, system-ui, sans-serif; }
+
+    @media (max-width: 640px) {
+      .step { padding: 20px 18px; }
+      .keypair-card .kp-label { min-width: auto; padding-top: 0; }
+      .gauge-card { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header" style="position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(12px);background:rgba(10,14,26,0.75);border-bottom:1px solid rgba(99,102,241,0.12);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;">
+    <a href="/" style="font-weight:800;font-size:1.05rem;color:#fff;text-decoration:none;display:flex;align-items:center;gap:8px;">
+      <span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:0.85rem;">W</span>
+      Web Agent Bridge
+    </a>
+    <nav style="display:flex;gap:14px;font-size:0.88rem;">
+      <a href="/dns" style="color:#94a3b8;text-decoration:none;">DNS Discovery</a>
+      <a href="/activate" style="color:#94a3b8;text-decoration:none;">Manual Guide</a>
+      <a href="https://github.com/webagentbridge" style="color:#94a3b8;text-decoration:none;">GitHub</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="lang-toggle">
+      <button id="lang-en" class="active" data-lang="en">English</button>
+      <button id="lang-ar" data-lang="ar">العربية</button>
+    </div>
+    <h1><span data-i18n="hero.title.a">Activate WAB in</span> <span class="grad" data-i18n="hero.title.b">One Click</span></h1>
+    <p class="lede" data-i18n="hero.lede">Generate a signed cryptographic identity, deploy DNS via Cloudflare/Vercel/Netlify API, and reach Gold trust in under 60 seconds. No CA. No paperwork. No vendor lock-in.</p>
+    <div class="badge-row" style="justify-content:center;">
+      <span class="badge-pill ok"><span>🔐</span> <span data-i18n="hero.pill1">Ed25519 signed</span></span>
+      <span class="badge-pill ok"><span>🌐</span> <span data-i18n="hero.pill2">DNS-rooted</span></span>
+      <span class="badge-pill ok"><span>⚡</span> <span data-i18n="hero.pill3">Provider API integrated</span></span>
+    </div>
+  </section>
+
+  <main class="wizard">
+
+    <!-- STEP 1 -->
+    <section class="step active" id="step-1">
+      <div class="step-head">
+        <div class="step-num">1</div>
+        <h2 data-i18n="step1.title">Enter your domain</h2>
+        <span class="check">✓</span>
+      </div>
+      <div class="field">
+        <label for="domain-input" data-i18n="step1.label">Domain</label>
+        <input type="text" id="domain-input" placeholder="example.com" autocomplete="off" spellcheck="false">
+        <div class="hint" data-i18n="step1.hint">Use the apex domain (example.com), not www. We will also generate a record for www. automatically.</div>
+      </div>
+      <details>
+        <summary data-i18n="step1.advanced">Advanced options</summary>
+        <div class="field" style="margin-top:10px;">
+          <label for="endpoint-input" data-i18n="step1.endpoint">Manifest URL (optional override)</label>
+          <input type="text" id="endpoint-input" placeholder="https://example.com/.well-known/wab.json" autocomplete="off" spellcheck="false">
+          <div class="hint" data-i18n="step1.endpoint.hint">Defaults to https://&lt;domain&gt;/.well-known/wab.json</div>
+        </div>
+      </details>
+      <div class="btn-row" style="margin-top:14px;">
+        <button id="btn-generate" class="btn">
+          <span data-i18n="step1.btn">Generate My WAB Identity</span> →
+        </button>
+      </div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="step disabled" id="step-2">
+      <div class="step-head">
+        <div class="step-num">2</div>
+        <h2 data-i18n="step2.title">Your signed identity</h2>
+        <span class="check">✓</span>
+      </div>
+      <div id="identity-body" style="display:none;">
+        <div class="keypair-card">
+          <div class="kp-row">
+            <div class="kp-label" data-i18n="step2.fp">Key ID</div>
+            <div class="kp-val"><code id="out-fp" style="font-family:var(--mono);color:#a5f3fc;font-size:0.85rem;"></code></div>
+          </div>
+          <div class="kp-row">
+            <div class="kp-label" data-i18n="step2.pk">Public key</div>
+            <div class="kp-val">
+              <div class="code-block" id="out-pk-block"><span id="out-pk"></span><button class="copy-btn" data-copy="out-pk">Copy</button></div>
+            </div>
+          </div>
+          <div class="kp-row">
+            <div class="kp-label" data-i18n="step2.sk">Private key</div>
+            <div class="kp-val">
+              <div class="code-block" id="out-sk-block"><span id="out-sk"></span><button class="copy-btn" data-copy="out-sk">Copy</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="private-warning">
+          <strong data-i18n="step2.warn.title">⚠ Save the private key now.</strong>
+          <span data-i18n="step2.warn.body"> It is shown ONCE. You'll need it to re-sign the manifest in the future. We do not store it after this session ends.</span>
+          <div class="btn-row" style="margin-top:10px;">
+            <button class="btn secondary" id="btn-download-sk"><span data-i18n="step2.dl.sk">Download key.pem</span></button>
+            <button class="btn secondary" id="btn-download-manifest"><span data-i18n="step2.dl.manifest">Download wab.json</span></button>
+            <button class="btn secondary" id="btn-download-worker"><span data-i18n="step2.dl.worker">Download Cloudflare Worker</span></button>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:18px;">
+          <label data-i18n="step2.txt">DNS TXT record value</label>
+          <div class="code-block" id="out-txt-block"><span id="out-txt"></span><button class="copy-btn" data-copy="out-txt">Copy</button></div>
+          <div class="hint" id="out-txt-records-hint"></div>
+        </div>
+
+        <details>
+          <summary data-i18n="step2.preview">Preview signed wab.json</summary>
+          <div class="code-block" id="out-manifest-block" style="max-height:320px;overflow:auto;"><span id="out-manifest"></span><button class="copy-btn" data-copy="out-manifest">Copy</button></div>
+        </details>
+      </div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="step disabled" id="step-3">
+      <div class="step-head">
+        <div class="step-num">3</div>
+        <h2 data-i18n="step3.title">Deploy to DNS</h2>
+        <span class="check">✓</span>
+      </div>
+      <p style="color:var(--muted);margin: 0 0 10px;font-size: 0.95rem;" data-i18n="step3.lede">Choose your DNS provider. We'll call its API server-side using a token you paste here. <strong>The token is never stored</strong> — it's used for a single request.</p>
+
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="cf">Cloudflare</button>
+        <button class="tab" data-tab="vercel">Vercel</button>
+        <button class="tab" data-tab="netlify">Netlify</button>
+        <button class="tab" data-tab="manual" data-i18n="step3.tab.manual">Other / Manual</button>
+      </div>
+
+      <!-- Cloudflare -->
+      <div class="tab-content active" data-tab-content="cf">
+        <div class="provider-info">
+          <strong>Cloudflare</strong> <span data-i18n="step3.cf.lede">→ Use a scoped API token to add the TXT record automatically.</span>
+          <ol>
+            <li><span data-i18n="step3.cf.s1">Open</span> <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">Cloudflare → My Profile → API Tokens</a></li>
+            <li><span data-i18n="step3.cf.s2">Create token → Template: Edit Zone DNS → select your zone → Continue → Create</span></li>
+            <li><span data-i18n="step3.cf.s3">Paste the token below. It is sent once and discarded.</span></li>
+          </ol>
+        </div>
+        <div class="field">
+          <label for="cf-token">Cloudflare API Token</label>
+          <input type="password" id="cf-token" placeholder="paste token" autocomplete="off" spellcheck="false">
+          <div class="hint" data-i18n="step3.cf.hint">Required permission: Zone → DNS → Edit on the target zone.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="btn-cf-deploy"><span data-i18n="step3.deploy.btn">Deploy DNS records</span> →</button>
+        </div>
+        <div id="cf-result"></div>
+      </div>
+
+      <!-- Vercel -->
+      <div class="tab-content" data-tab-content="vercel">
+        <div class="provider-info">
+          <strong>Vercel</strong> <span data-i18n="step3.vercel.lede">→ Only works if your domain uses Vercel DNS nameservers.</span>
+          <ol>
+            <li><span data-i18n="step3.vercel.s1">Open</span> <a href="https://vercel.com/account/tokens" target="_blank" rel="noopener">Vercel → Account → Tokens</a></li>
+            <li><span data-i18n="step3.vercel.s2">Create a token (full account or team scope)</span></li>
+          </ol>
+        </div>
+        <div class="field">
+          <label for="vercel-token">Vercel API Token</label>
+          <input type="password" id="vercel-token" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="vercel-team">Team ID (optional)</label>
+          <input type="text" id="vercel-team" placeholder="team_xxx" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="btn-vercel-deploy"><span data-i18n="step3.deploy.btn">Deploy DNS records</span> →</button>
+        </div>
+        <div id="vercel-result"></div>
+      </div>
+
+      <!-- Netlify -->
+      <div class="tab-content" data-tab-content="netlify">
+        <div class="provider-info">
+          <strong>Netlify</strong> <span data-i18n="step3.netlify.lede">→ Requires the domain to use Netlify DNS.</span>
+          <ol>
+            <li><a href="https://app.netlify.com/user/applications#personal-access-tokens" target="_blank" rel="noopener">Netlify → User settings → OAuth → Personal access tokens</a></li>
+            <li><span data-i18n="step3.netlify.s2">Generate a new token</span></li>
+          </ol>
+        </div>
+        <div class="field">
+          <label for="netlify-token">Netlify Personal Access Token</label>
+          <input type="password" id="netlify-token" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="btn-netlify-deploy"><span data-i18n="step3.deploy.btn">Deploy DNS records</span> →</button>
+        </div>
+        <div id="netlify-result"></div>
+      </div>
+
+      <!-- Manual -->
+      <div class="tab-content" data-tab-content="manual">
+        <div class="provider-info">
+          <strong data-i18n="step3.manual.title">Other providers (GoDaddy, Namecheap, Route53, Plesk, cPanel…)</strong><br>
+          <span data-i18n="step3.manual.lede">Copy the TXT records below and paste them into your DNS control panel. Each provider has its own UI, but the values are the same.</span>
+        </div>
+        <div id="manual-records"></div>
+        <div class="btn-row" style="margin-top:12px;">
+          <a class="btn secondary" href="/activate" target="_blank" data-i18n="step3.manual.guides">Step-by-step provider guides →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4 -->
+    <section class="step disabled" id="step-4">
+      <div class="step-head">
+        <div class="step-num">4</div>
+        <h2 data-i18n="step4.title">Verify trust score</h2>
+        <span class="check">✓</span>
+      </div>
+      <p style="color:var(--muted);margin:0 0 12px;font-size:0.94rem;" data-i18n="step4.lede">DNS propagation typically takes 1–5 minutes. Click Verify to run the public trust scorer against your domain.</p>
+      <div class="btn-row">
+        <button class="btn" id="btn-verify"><span data-i18n="step4.btn">Verify now</span></button>
+        <button class="btn ghost" id="btn-verify-recheck" style="display:none;"><span data-i18n="step4.recheck">Re-check</span></button>
+      </div>
+      <div class="verify-result" id="verify-result"></div>
+    </section>
+
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    'use strict';
+
+    // ─────────── i18n ───────────
+    const I18N = {
+      en: {
+        'hero.title.a': 'Activate WAB in',
+        'hero.title.b': 'One Click',
+        'hero.lede': 'Generate a signed cryptographic identity, deploy DNS via Cloudflare/Vercel/Netlify API, and reach Gold trust in under 60 seconds. No CA. No paperwork. No vendor lock-in.',
+        'hero.pill1': 'Ed25519 signed',
+        'hero.pill2': 'DNS-rooted',
+        'hero.pill3': 'Provider API integrated',
+        'step1.title': 'Enter your domain',
+        'step1.label': 'Domain',
+        'step1.hint': 'Use the apex domain (example.com), not www. We will also generate a record for www. automatically.',
+        'step1.advanced': 'Advanced options',
+        'step1.endpoint': 'Manifest URL (optional override)',
+        'step1.endpoint.hint': 'Defaults to https://<domain>/.well-known/wab.json',
+        'step1.btn': 'Generate My WAB Identity',
+        'step2.title': 'Your signed identity',
+        'step2.fp': 'Key ID',
+        'step2.pk': 'Public key',
+        'step2.sk': 'Private key',
+        'step2.warn.title': '⚠ Save the private key now.',
+        'step2.warn.body': ' It is shown ONCE. You will need it to re-sign the manifest in the future. We do not store it after this session ends.',
+        'step2.dl.sk': 'Download key.pem',
+        'step2.dl.manifest': 'Download wab.json',
+        'step2.dl.worker': 'Download Cloudflare Worker',
+        'step2.txt': 'DNS TXT record value',
+        'step2.preview': 'Preview signed wab.json',
+        'step3.title': 'Deploy to DNS',
+        'step3.lede': 'Choose your DNS provider. We will call its API server-side using a token you paste here.',
+        'step3.tab.manual': 'Other / Manual',
+        'step3.cf.lede': '→ Use a scoped API token to add the TXT record automatically.',
+        'step3.cf.s1': 'Open',
+        'step3.cf.s2': 'Create token → Template: Edit Zone DNS → select your zone → Continue → Create',
+        'step3.cf.s3': 'Paste the token below. It is sent once and discarded.',
+        'step3.cf.hint': 'Required permission: Zone → DNS → Edit on the target zone.',
+        'step3.vercel.lede': '→ Only works if your domain uses Vercel DNS nameservers.',
+        'step3.vercel.s1': 'Open',
+        'step3.vercel.s2': 'Create a token (full account or team scope)',
+        'step3.netlify.lede': '→ Requires the domain to use Netlify DNS.',
+        'step3.netlify.s2': 'Generate a new token',
+        'step3.deploy.btn': 'Deploy DNS records',
+        'step3.manual.title': 'Other providers (GoDaddy, Namecheap, Route53, Plesk, cPanel…)',
+        'step3.manual.lede': 'Copy the TXT records below and paste them into your DNS control panel. Each provider has its own UI, but the values are the same.',
+        'step3.manual.guides': 'Step-by-step provider guides →',
+        'step4.title': 'Verify trust score',
+        'step4.lede': 'DNS propagation typically takes 1–5 minutes. Click Verify to run the public trust scorer against your domain.',
+        'step4.btn': 'Verify now',
+        'step4.recheck': 'Re-check',
+      },
+      ar: {
+        'hero.title.a': 'فعّل WAB بـ',
+        'hero.title.b': 'نقرة واحدة',
+        'hero.lede': 'أنشئ هوية تشفير موقّعة، انشر سجلات DNS عبر API لـ Cloudflare/Vercel/Netlify، واحصل على تقييم Gold خلال أقل من 60 ثانية. بدون CA، بدون أوراق، بدون قيود مزوّد.',
+        'hero.pill1': 'موقّع بـ Ed25519',
+        'hero.pill2': 'متجذّر في DNS',
+        'hero.pill3': 'متكامل مع API المزوّدين',
+        'step1.title': 'أدخل اسم النطاق',
+        'step1.label': 'النطاق',
+        'step1.hint': 'استخدم الجذر (example.com) لا www. سنُنشئ سجلًا لـ www. تلقائياً.',
+        'step1.advanced': 'خيارات متقدمة',
+        'step1.endpoint': 'رابط الـ Manifest (اختياري)',
+        'step1.endpoint.hint': 'افتراضياً https://<domain>/.well-known/wab.json',
+        'step1.btn': 'أنشئ هويتي الآن',
+        'step2.title': 'هويتك الموقّعة',
+        'step2.fp': 'معرّف المفتاح',
+        'step2.pk': 'المفتاح العام',
+        'step2.sk': 'المفتاح الخاص',
+        'step2.warn.title': '⚠ احفظ المفتاح الخاص الآن.',
+        'step2.warn.body': ' سيُعرض مرّة واحدة فقط. تحتاجه لاحقاً لإعادة التوقيع. نحن لا نحفظه بعد انتهاء هذه الجلسة.',
+        'step2.dl.sk': 'تنزيل key.pem',
+        'step2.dl.manifest': 'تنزيل wab.json',
+        'step2.dl.worker': 'تنزيل Cloudflare Worker',
+        'step2.txt': 'قيمة سجل DNS TXT',
+        'step2.preview': 'معاينة wab.json الموقّع',
+        'step3.title': 'انشر إلى DNS',
+        'step3.lede': 'اختر مزوّد DNS. سنستدعي API الخاص به من جهة الخادم باستخدام رمز تلصقه هنا. الرمز لا يُحفظ.',
+        'step3.tab.manual': 'أخرى / يدوي',
+        'step3.cf.lede': '← استخدم API Token محدود الصلاحية لإضافة سجل TXT تلقائياً.',
+        'step3.cf.s1': 'افتح',
+        'step3.cf.s2': 'إنشاء رمز ← قالب: Edit Zone DNS ← اختر منطقتك ← Continue ← Create',
+        'step3.cf.s3': 'الصق الرمز أدناه. سيُرسل مرة واحدة ثم يُحذف.',
+        'step3.cf.hint': 'الصلاحية المطلوبة: Zone → DNS → Edit على المنطقة المستهدفة.',
+        'step3.vercel.lede': '← يعمل فقط إذا كان النطاق يستخدم Vercel DNS.',
+        'step3.vercel.s1': 'افتح',
+        'step3.vercel.s2': 'أنشئ رمزاً (نطاق حساب أو فريق)',
+        'step3.netlify.lede': '← يتطلّب استخدام Netlify DNS للنطاق.',
+        'step3.netlify.s2': 'أنشئ رمزاً جديداً',
+        'step3.deploy.btn': 'انشر سجلات DNS',
+        'step3.manual.title': 'مزوّدون آخرون (GoDaddy, Namecheap, Route53, Plesk, cPanel…)',
+        'step3.manual.lede': 'انسخ سجلات TXT أدناه والصقها في لوحة تحكم DNS لديك. الواجهة تختلف، لكن القيم واحدة.',
+        'step3.manual.guides': 'دلائل مفصّلة لكل مزوّد ←',
+        'step4.title': 'تحقق من تقييم الثقة',
+        'step4.lede': 'انتشار DNS يستغرق عادة 1-5 دقائق. اضغط للتحقق لتشغيل أداة قياس الثقة العامة.',
+        'step4.btn': 'تحقّق الآن',
+        'step4.recheck': 'إعادة الفحص',
+      }
+    };
+    function applyLang(lang) {
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+      const dict = I18N[lang] || I18N.en;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const k = el.getAttribute('data-i18n');
+        if (dict[k]) el.textContent = dict[k];
+      });
+      document.querySelectorAll('.lang-toggle button').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+      try { localStorage.setItem('wab-oneclick-lang', lang); } catch (_) {}
+    }
+    document.querySelectorAll('.lang-toggle button').forEach(b => b.addEventListener('click', () => applyLang(b.dataset.lang)));
+    applyLang((() => { try { return localStorage.getItem('wab-oneclick-lang') || (navigator.language.startsWith('ar') ? 'ar' : 'en'); } catch (_) { return 'en'; } })());
+
+    // ─────────── helpers ───────────
+    function $(sel) { return document.querySelector(sel); }
+    function toast(msg, kind) {
+      const t = $('#toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (kind ? ' ' + kind : '');
+      clearTimeout(toast._h);
+      toast._h = setTimeout(() => { t.className = 'toast'; }, 3000);
+    }
+    function unlock(stepId) {
+      const s = document.getElementById(stepId);
+      s.classList.remove('disabled');
+      s.classList.add('active');
+    }
+    function markDone(stepId) {
+      const s = document.getElementById(stepId);
+      s.classList.add('done');
+      s.classList.remove('active');
+    }
+    function downloadBlob(filename, content, mime) {
+      const blob = new Blob([content], { type: mime || 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    function rawToPem(rawB64, label) {
+      // Wrap raw base64 (32 bytes) as a comment + base64 PEM-like file.
+      // The real DER prefix isn't included to keep the file simple; we annotate it.
+      return [
+        `-----BEGIN ${label}-----`,
+        rawB64.match(/.{1,64}/g).join('\n'),
+        `-----END ${label}-----`,
+        '',
+        '# WAB Ed25519 raw private key (32 bytes, base64).',
+        '# Re-sign with: node scripts/sign-wab-domain.js <domain>',
+        '# Generated: ' + new Date().toISOString(),
+      ].join('\n');
+    }
+
+    // Copy buttons
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.copy-btn');
+      if (!btn) return;
+      const id = btn.getAttribute('data-copy');
+      const el = document.getElementById(id);
+      const text = el ? el.textContent : '';
+      navigator.clipboard.writeText(text).then(() => {
+        btn.classList.add('copied');
+        btn.textContent = '✓';
+        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 1500);
+      }).catch(() => toast('Copy failed', 'error'));
+    });
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+      const key = t.dataset.tab;
+      document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+      document.querySelectorAll('[data-tab-content]').forEach(x => x.classList.toggle('active', x.dataset.tabContent === key));
+    }));
+
+    // ─────────── state ───────────
+    let session = null;
+
+    // ─────────── Step 1: generate ───────────
+    async function withButtonLoading(btn, fn) {
+      const orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin"></span> ' + (btn.textContent.trim() || '');
+      try { return await fn(); }
+      finally { btn.disabled = false; btn.innerHTML = orig; }
+    }
+    $('#btn-generate').addEventListener('click', async () => {
+      const domain = $('#domain-input').value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+      if (!domain || !/\./.test(domain)) { toast('Enter a valid domain', 'error'); return; }
+      $('#domain-input').value = domain;
+      const endpoint = $('#endpoint-input').value.trim() || undefined;
+      await withButtonLoading($('#btn-generate'), async () => {
+        const r = await fetch('/api/activate/prepare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain, endpoint, capabilities: { shieldqr: true, shieldlink: true } }),
+        });
+        const data = await r.json();
+        if (!r.ok) { toast(data.error + ': ' + (data.detail || ''), 'error'); return; }
+        session = data;
+        renderIdentity(data);
+        markDone('step-1');
+        unlock('step-2');
+        unlock('step-3');
+        unlock('step-4');
+        $('#step-2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        toast('Identity created', 'success');
+      });
+    });
+
+    function renderIdentity(d) {
+      $('#identity-body').style.display = 'block';
+      $('#out-fp').textContent = d.key.fingerprint;
+      $('#out-pk').textContent = d.key.public_key;
+      $('#out-sk').textContent = d.key.private_key;
+      $('#out-txt').textContent = d.txt_value;
+      $('#out-manifest').textContent = JSON.stringify(d.manifest, null, 2);
+
+      // TXT records hint
+      const lines = d.txt_records.map(r => `${r.name}  →  TXT  →  (value above)`);
+      $('#out-txt-records-hint').innerHTML = 'Add to these names: <code style="color:#a5b4fc;font-family:var(--mono);">' + lines.join('</code> &nbsp; <code style="color:#a5b4fc;font-family:var(--mono);">') + '</code>';
+
+      // Manual records panel
+      const manual = d.txt_records.map(r => `
+        <div class="field" style="margin-bottom:14px;">
+          <label>${r.name}</label>
+          <div class="code-block" id="manual-rec-${btoa(r.name).replace(/=/g,'')}"><span>${r.value}</span><button class="copy-btn" data-copy="manual-rec-${btoa(r.name).replace(/=/g,'')}">Copy</button></div>
+          <div class="hint">Type: TXT · TTL: 300 (or default)</div>
+        </div>`).join('');
+      $('#manual-records').innerHTML = manual;
+
+      // Download handlers
+      $('#btn-download-sk').onclick = () => downloadBlob(`${d.domain}-wab-key.pem`, rawToPem(d.key.private_key, 'WAB ED25519 PRIVATE KEY'), 'application/x-pem-file');
+      $('#btn-download-manifest').onclick = () => window.open('/api/activate/manifest/' + encodeURIComponent(d.token), '_blank');
+      $('#btn-download-worker').onclick = () => window.open('/api/activate/cloudflare-worker/' + encodeURIComponent(d.token), '_blank');
+    }
+
+    // ─────────── Step 3: providers ───────────
+    function renderDeployResult(targetId, data, providerLabel) {
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      if (data.success) {
+        el.innerHTML = `<div class="deploy-result ok"><strong>✓ ${providerLabel}: DNS records deployed.</strong><br>${data.next || ''}<pre>${JSON.stringify(data.records || data, null, 2)}</pre></div>`;
+        markDone('step-3');
+        toast(providerLabel + ' deployment complete', 'success');
+      } else {
+        el.innerHTML = `<div class="deploy-result err"><strong>✗ ${providerLabel} failed:</strong> ${data.error || 'unknown error'} — ${typeof data.detail === 'string' ? data.detail : ''}<pre>${JSON.stringify(data.detail || data, null, 2)}</pre></div>`;
+        toast(providerLabel + ' deployment failed', 'error');
+      }
+    }
+    $('#btn-cf-deploy').addEventListener('click', async () => {
+      if (!session) return toast('Generate identity first', 'error');
+      const token = $('#cf-token').value.trim();
+      if (!token) return toast('Paste your Cloudflare API token', 'error');
+      await withButtonLoading($('#btn-cf-deploy'), async () => {
+        const r = await fetch('/api/activate/cloudflare/deploy', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: session.token, api_token: token, also_www: true }),
+        });
+        const data = await r.json();
+        renderDeployResult('cf-result', data, 'Cloudflare');
+        $('#cf-token').value = ''; // wipe immediately
+      });
+    });
+    $('#btn-vercel-deploy').addEventListener('click', async () => {
+      if (!session) return toast('Generate identity first', 'error');
+      const token = $('#vercel-token').value.trim();
+      const team = $('#vercel-team').value.trim() || undefined;
+      if (!token) return toast('Paste your Vercel API token', 'error');
+      await withButtonLoading($('#btn-vercel-deploy'), async () => {
+        const r = await fetch('/api/activate/vercel/deploy', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: session.token, api_token: token, team_id: team }),
+        });
+        const data = await r.json();
+        renderDeployResult('vercel-result', data, 'Vercel');
+        $('#vercel-token').value = '';
+      });
+    });
+    $('#btn-netlify-deploy').addEventListener('click', async () => {
+      if (!session) return toast('Generate identity first', 'error');
+      const token = $('#netlify-token').value.trim();
+      if (!token) return toast('Paste your Netlify API token', 'error');
+      await withButtonLoading($('#btn-netlify-deploy'), async () => {
+        const r = await fetch('/api/activate/netlify/deploy', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: session.token, api_token: token }),
+        });
+        const data = await r.json();
+        renderDeployResult('netlify-result', data, 'Netlify');
+        $('#netlify-token').value = '';
+      });
+    });
+
+    // ─────────── Step 4: verify ───────────
+    async function doVerify() {
+      if (!session) return toast('Generate identity first', 'error');
+      await withButtonLoading($('#btn-verify'), async () => {
+        const r = await fetch('/api/activate/verify', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain: session.domain }),
+        });
+        const data = await r.json();
+        renderVerify(data);
+        $('#btn-verify-recheck').style.display = 'inline-flex';
+      });
+    }
+    $('#btn-verify').addEventListener('click', doVerify);
+    $('#btn-verify-recheck').addEventListener('click', doVerify);
+
+    function renderVerify(d) {
+      const score = d.trust_score || 0;
+      const label = d.trust_label || 'unverified';
+      const checks = d.checks || {};
+      const color = score >= 80 ? '#10b981' : score >= 60 ? '#a3e635' : score >= 40 ? '#f59e0b' : score >= 20 ? '#fb923c' : '#ef4444';
+      const C = 2 * Math.PI * 45;
+      const offset = C * (1 - score / 100);
+
+      const checkList = [
+        ['DNS resolved', 'dns_resolved'],
+        ['DNSSEC verified', 'dnssec_verified'],
+        ['Public key in DNS', 'has_public_key'],
+        ['HTTPS endpoint', 'https_endpoint'],
+        ['Manifest fetched', 'manifest_fetched'],
+        ['Manifest signed', 'manifest_signed'],
+        ['Signature valid', 'signature_valid'],
+      ];
+      const checksHtml = checkList.map(([n, k]) => `<div class="check-row ${checks[k] ? 'ok' : 'no'}"><span class="ic">${checks[k] ? '✓' : '·'}</span><span>${n}</span></div>`).join('');
+      const findings = (d.findings || []).map(f => `<div class="finding">${f}</div>`).join('');
+
+      $('#verify-result').innerHTML = `
+        <div class="gauge-card">
+          <div class="gauge">
+            <svg viewBox="0 0 100 100">
+              <circle class="track" cx="50" cy="50" r="45"></circle>
+              <circle class="fill" cx="50" cy="50" r="45" stroke="${color}" stroke-dasharray="${C}" stroke-dashoffset="${offset}"></circle>
+            </svg>
+            <div class="label"><div class="num">${score}</div><div class="total">/ 100</div></div>
+          </div>
+          <div class="gauge-meta">
+            <h3 style="color:${color};">${label}</h3>
+            <div class="domain-label">${d.domain || session.domain}</div>
+            <div class="checks-grid">${checksHtml}</div>
+          </div>
+        </div>
+        ${findings ? '<div class="findings">' + findings + '</div>' : ''}
+      `;
+      if (score >= 80) markDone('step-4');
+    }
+  </script>
+</body>
+</html>

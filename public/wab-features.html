@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WAB Advanced Features — Web Agent Bridge</title>
+<meta name="description" content="Reputation Score, Memory Cache, Intent Routing, Privacy Budget, Collective Intelligence, Offline Sync — WAB protocol extensions for intelligent agents."/>
+<link rel="icon" href="/assets/favicon.ico"/>
+<style>
+:root {
+  --bg: #0a0f1e; --surface: #111827; --surface2: #1e293b;
+  --accent: #6366f1; --accent2: #22d3ee; --success: #10b981; --warn: #f59e0b; --danger: #ef4444;
+  --text: #f1f5f9; --muted: #94a3b8; --border: #1e293b;
+  --radius: 12px; --radius-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; }
+
+/* ── Nav ── */
+nav { display: flex; align-items: center; justify-content: space-between; padding: 1rem 2rem; border-bottom: 1px solid #1e293b; position: sticky; top: 0; background: rgba(10,15,30,.95); backdrop-filter: blur(8px); z-index: 100; }
+.nav-logo { font-size: 1.2rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.nav-links { display: flex; gap: 1.5rem; }
+.nav-links a { color: var(--muted); text-decoration: none; font-size: .9rem; transition: color .2s; }
+.nav-links a:hover { color: var(--text); }
+.lang-btn { background: var(--surface2); border: none; color: var(--text); padding: .35rem .9rem; border-radius: 6px; cursor: pointer; font-size: .85rem; }
+
+/* ── Hero ── */
+.hero { text-align: center; padding: 5rem 2rem 3rem; }
+.hero-badge { display: inline-block; background: linear-gradient(90deg,#312e81,#1e3a5f); border: 1px solid #4f46e5; border-radius: 20px; padding: .3rem 1rem; font-size: .8rem; color: #a5b4fc; margin-bottom: 1.5rem; }
+.hero h1 { font-size: clamp(2rem,5vw,3.5rem); font-weight: 800; line-height: 1.15; margin-bottom: 1rem; }
+.hero h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hero p { font-size: 1.15rem; color: var(--muted); max-width: 700px; margin: 0 auto 2.5rem; }
+.hero-ctas { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.btn { padding: .75rem 1.75rem; border-radius: var(--radius-sm); font-size: .95rem; font-weight: 600; cursor: pointer; text-decoration: none; border: none; transition: all .2s; display: inline-flex; align-items: center; gap: .5rem; }
+.btn-primary { background: linear-gradient(135deg, var(--accent), #4f46e5); color: #fff; }
+.btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+
+/* ── Feature grid ── */
+.features-section { padding: 4rem 2rem; max-width: 1300px; margin: 0 auto; }
+.section-title { text-align: center; margin-bottom: 3rem; }
+.section-title h2 { font-size: 2rem; font-weight: 700; margin-bottom: .75rem; }
+.section-title p { color: var(--muted); max-width: 600px; margin: 0 auto; }
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 2rem; }
+
+/* ── Feature card ── */
+.feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: transform .2s, box-shadow .2s; }
+.feature-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(99,102,241,.15); }
+.card-header { padding: 1.5rem; background: var(--surface2); display: flex; align-items: center; gap: 1rem; cursor: pointer; }
+.card-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+.card-header-text h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: .2rem; }
+.card-header-text p { font-size: .85rem; color: var(--muted); }
+.card-body { padding: 1.5rem; }
+.card-body p { font-size: .9rem; color: var(--muted); margin-bottom: 1.25rem; }
+
+/* ── Demo area ── */
+.demo-area { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1.25rem; margin-top: .5rem; }
+.demo-row { display: flex; gap: .75rem; margin-bottom: .75rem; flex-wrap: wrap; }
+.demo-input { flex: 1; min-width: 180px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: .55rem .9rem; border-radius: var(--radius-sm); font-size: .9rem; outline: none; }
+.demo-input:focus { border-color: var(--accent); }
+.demo-select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: .55rem .9rem; border-radius: var(--radius-sm); font-size: .85rem; }
+.btn-sm { padding: .5rem 1.1rem; font-size: .85rem; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; border: none; transition: all .2s; }
+.btn-sm.accent { background: var(--accent); color: #fff; }
+.btn-sm.accent:hover { opacity: .85; }
+.btn-sm.teal { background: var(--accent2); color: #0a0f1e; }
+.btn-sm.teal:hover { opacity: .85; }
+.demo-result { font-size: .82rem; background: #0d1117; border: 1px solid #21262d; border-radius: var(--radius-sm); padding: 1rem; max-height: 260px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; font-family: 'Fira Code', monospace; color: #e6edf3; margin-top: .75rem; display: none; }
+.demo-result.show { display: block; }
+.score-bar-wrap { margin-top: .75rem; }
+.score-label-row { display: flex; justify-content: space-between; font-size: .85rem; margin-bottom: .4rem; }
+.score-bar-bg { background: var(--surface2); border-radius: 999px; height: 10px; overflow: hidden; }
+.score-bar-fill { height: 100%; border-radius: 999px; transition: width 1s ease; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; }
+.badge-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .5rem; }
+.badge { font-size: .75rem; padding: .25rem .7rem; border-radius: 999px; font-weight: 600; }
+.badge.green { background: rgba(16,185,129,.15); color: #34d399; border: 1px solid rgba(16,185,129,.3); }
+.badge.blue  { background: rgba(34,211,238,.15); color: #67e8f9; border: 1px solid rgba(34,211,238,.3); }
+.badge.purple{ background: rgba(99,102,241,.15);  color: #a5b4fc; border: 1px solid rgba(99,102,241,.3); }
+.badge.yellow{ background: rgba(245,158,11,.15);  color: #fcd34d; border: 1px solid rgba(245,158,11,.3); }
+.badge.gray  { background: rgba(148,163,184,.1);  color: var(--muted); border: 1px solid rgba(148,163,184,.2); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: .35rem; }
+.dot-green { background: var(--success); }
+.dot-yellow { background: var(--warn); }
+.dot-red { background: var(--danger); }
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+textarea.demo-input { resize: vertical; height: 80px; }
+
+/* ── API Reference ── */
+.api-ref { padding: 4rem 2rem; max-width: 1100px; margin: 0 auto; }
+.api-ref h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 2rem; }
+.api-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.api-table th { background: var(--surface2); padding: .75rem 1rem; text-align: left; color: var(--muted); font-weight: 600; }
+.api-table td { padding: .75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.api-table tr:hover td { background: var(--surface); }
+.method { font-weight: 700; font-size: .8rem; padding: .2rem .55rem; border-radius: 4px; }
+.get  { background: rgba(34,211,238,.15); color: #67e8f9; }
+.post { background: rgba(16,185,129,.15); color: #34d399; }
+code { background: var(--surface2); padding: .15rem .4rem; border-radius: 4px; font-family: 'Fira Code', monospace; font-size: .85em; color: #a5b4fc; }
+
+/* ── Footer ── */
+footer { border-top: 1px solid var(--border); padding: 2.5rem 2rem; text-align: center; color: var(--muted); font-size: .85rem; }
+footer a { color: var(--muted); text-decoration: none; }
+footer a:hover { color: var(--text); }
+
+/* ── RTL ── */
+[dir="rtl"] { font-family: 'Tajawal', 'Cairo', system-ui, sans-serif; }
+[dir="rtl"] .nav-links { direction: rtl; }
+
+@media(max-width:640px){
+  .feature-grid { grid-template-columns: 1fr; }
+  .nav-links { display: none; }
+  .demo-row { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="/">⬡ Web Agent Bridge</a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/activate">Activate</a>
+    <a href="/one-click">One-Click</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+  <button class="lang-btn" onclick="toggleLang()" id="lang-btn">عربي</button>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge" data-i18n="hero_badge">WAB Protocol · Advanced Features v1.0</div>
+  <h1 data-i18n-html="hero_h1">6 <span>Advanced Protocol</span> Extensions</h1>
+  <p data-i18n="hero_p">Reputation Score · Memory Cache · Intent Routing · Privacy Budget · Collective Intelligence · Offline Sync — For every domain, not just bookings.</p>
+  <div class="hero-ctas">
+    <a href="#features" class="btn btn-primary">⚡ <span data-i18n="hero_cta1">Explore Features</span></a>
+    <a href="#api-ref" class="btn btn-ghost"><span data-i18n="hero_cta2">API Reference</span></a>
+    <a href="/one-click" class="btn btn-ghost">🚀 <span data-i18n="hero_cta3">Activate WAB</span></a>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section class="features-section" id="features">
+  <div class="section-title">
+    <h2 data-i18n="feat_title">Live Protocol Demos</h2>
+    <p data-i18n="feat_sub">Each card runs live against the WAB API — try them with any domain.</p>
+  </div>
+  <div class="feature-grid">
+
+    <!-- 1. Reputation Score -->
+    <div class="feature-card" id="card-reputation">
+      <div class="card-header">
+        <div class="card-icon" style="background:linear-gradient(135deg,#312e81,#1e3a5f)">⭐</div>
+        <div class="card-header-text">
+          <h3 data-i18n="rep_title">WAB Reputation Score</h3>
+          <p data-i18n="rep_sub">Dynamic 0-100 trust score per domain</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <p data-i18n="rep_desc">Agents automatically prefer high-score sites. Score is computed from DNS stability, cryptographic trust history, response speed, and anonymized agent reports — refreshed every 5 minutes.</p>
+        <div class="demo-area">
+          <div class="demo-row">
+            <input class="demo-input" id="rep-domain" placeholder="example.com" value="webagentbridge.com"/>
+            <button class="btn-sm accent" onclick="demoReputation()">▶ <span data-i18n="run">Run</span></button>
+          </div>
+          <div class="score-bar-wrap" id="rep-bar-wrap" style="display:none">
+            <div class="score-label-row"><span id="rep-label">—</span><span id="rep-score-val">0 / 100</span></div>
+            <div class="score-bar-bg"><div class="score-bar-fill" id="rep-bar"></div></div>
+            <div class="badge-row" id="rep-badges"></div>
+          </div>
+          <pre class="demo-result" id="rep-result"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Memory Cache Layer -->
+    <div class="feature-card" id="card-cache">
+      <div class="card-header">
+        <div class="card-icon" style="background:linear-gradient(135deg,#064e3b,#065f46)">💾</div>
+        <div class="card-header-text">
+          <h3 data-i18n="cache_title">WAB Memory Cache</h3>
+          <p data-i18n="cache_sub">ETag-versioned manifest cache for agents</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <p data-i18n="cache_desc">Agents store an encrypted local copy of wab.json. On revisit, validate via ETag — no re-download if unchanged. Reduces latency and bandwidth for every subsequent interaction.</p>
+        <div class="demo-area">
+          <div class="demo-row">
+            <input class="demo-input" id="cache-domain" placeholder="example.com" value="webagentbridge.com"/>
+            <select class="demo-select" id="cache-action">
+              <option value="status">Status</option>
+              <option value="fetch">Fetch &amp; Cache</option>
+            </select>
+            <button class="btn-sm teal" onclick="demoCache()">▶ <span data-i18n="run">Run</span></button>
+          </div>
+          <pre class="demo-result" id="cache-result"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Intent-Aware Routing -->
+    <div class="feature-card" id="card-intent">
+      <div class="card-header">
+        <div class="card-icon" style="background:linear-gradient(135deg,#1e3a5f,#0e4d7e)">🎯</div>
+        <div class="card-header-text">
+          <h3 data-i18n="intent_title">WAB Intent Routing</h3>
+          <p data-i18n="intent_sub">Natural-language intent → recommended actions</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <p data-i18n="intent_desc">The agent sends a plain-language intent (e.g. "I want to search for flights"). The WAB server matches it to the site's registered intent schema and returns the exact recommended actions — no guessing needed.</p>
+        <div class="demo-area">
+          <div class="demo-row">
+            <input class="demo-input" id="intent-domain" placeholder="Domain" value="demo-store.webagentbridge.com"/>
+          </div>
+          <div class="demo-row">
+            <input class="demo-input" id="intent-text" placeholder="Intent (e.g. search for a product)" value="search for a product"/>
+            <button class="btn-sm accent" onclick="demoIntent()">▶ <span data-i18n="run">Run</span></button>
+          </div>
+          <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem" data-i18n="intent_hint">Tip: Register an intent schema first at POST /api/intent/register</p>
+          <pre class="demo-result" id="intent-result"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Privacy Budget -->
+    <div class="feature-card" id="card-privacy">
+      <div class="card-header">
+        <div class="card-icon" style="background:linear-gradient(135deg,#3b0764,#581c87)">🔏</div>
+        <div class="card-header-text">
+          <h3 data-i18n="priv_title">WAB Privacy Budget</h3>
+          <p data-i18n="priv_sub">GDPR/CCPA-compatible data access limits</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <p data-i18n="priv_desc">Each site declares a Privacy Budget — what data categories are allowed, retention policy, and jurisdictional compliance flags. Agents automatically respect these limits. Works for every domain universally.</p>
+        <div class="demo-area">
+          <div class="demo-row">
+            <input class="demo-input" id="priv-domain" placeholder="example.com" value="webagentbridge.com"/>
+            <select class="demo-select" id="priv-action">
+              <option value="budget">Get Budget</option>
+              <option value="check">Check Request</option>
+              <option value="compliance">Compliance Badges</option>
+            </select>
+            <button class="btn-sm accent" onclick="demoPrivacy()">▶ <span data-i18n="run">Run</span></button>
+          </div>
+          <div id="priv-check-fields" class="demo-row" style="display:none">
+            <input class="demo-input" id="priv-fields" placeholder='Fields: name,email,location' value="name,email"/>
+          </div>
+          <pre class="demo-result" id="priv-result"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Collective Intelligence -->
+    <div class="feature-card" id="card-collective">
+      <div class="card-header">
+        <div class="card-icon" style="background:linear-gradient(135deg,#1a2f1a,#14532d)">🧠</div>
+        <div class="card-header-text">
+          <h3 data-i18n="col_title">WAB Collective Intelligence</h3>
+          <p data-i18n="col_sub">Anonymous agent insights → public reputation graph</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <p data-i18n="col_desc">Agents contribute anonymized insights about site behaviour. No user data is ever stored — only aggregated outcomes. A public reputation graph emerges, benefiting all agents without exposing any individual's data.</p>
+        <div class="demo-area">
+          <div class="demo-row">
+            <input class="demo-input" id="col-domain" placeholder="example.com" value="webagentbridge.com"/>
+            <select class="demo-select" id="col-action">
+              <option value="insights">View Insights</option>
+              <option value="report">Submit Report</option>
+              <option value="graph">Network Graph</option>
+            </select>
+            <button class="btn-sm teal" onclick="demoCollective()">▶ <span data-i18n="run">Run</span></button>
+          </div>
+          <div id="col-report-fields" style="display:none">
+            <div class="demo-row">
+              <select class="demo-select" id="col-type"><option value="latency">latency</option><option value="action_success">action_success</option><option value="action_fail">action_fail</option><option value="capability">capability</option><option value="trust">trust</option></select>
+              <select class="demo-select" id="col-outcome"><option value="positive">positive</option><option value="neutral">neutral</option><option value="negative">negative</option></select>
+              <input class="demo-input" id="col-metric" placeholder="Metric (optional)" style="max-width:120px"/>
+            </div>
+          </div>
+          <pre class="demo-result" id="col-result"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Offline Mode + Sync -->
+    <div class="feature-card" id="card-offline">
+      <div class="card-header">
+        <div class="card-icon" style="background:linear-gradient(135deg,#1c1917,#44403c)">📡</div>
+        <div class="card-header-text">
+          <h3 data-i18n="off_title">WAB Offline Mode + Sync</h3>
+          <p data-i18n="off_sub">Work offline, sync on reconnect</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <p data-i18n="off_desc">Agents operate fully offline using a cached wab.json bundle. On reconnect, a bulk sync call returns only changed manifests (ETag-based delta sync). Critical for mobile apps and low-bandwidth environments.</p>
+        <div class="demo-area">
+          <div class="demo-row">
+            <input class="demo-input" id="off-domains" placeholder="domain1.com, domain2.com" value="webagentbridge.com"/>
+            <select class="demo-select" id="off-action">
+              <option value="status">Status</option>
+              <option value="sync">Bulk Sync</option>
+              <option value="bundle">Download Bundle</option>
+            </select>
+            <button class="btn-sm accent" onclick="demoOffline()">▶ <span data-i18n="run">Run</span></button>
+          </div>
+          <pre class="demo-result" id="off-result"></pre>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /feature-grid -->
+</section>
+
+<!-- ── API REFERENCE ── -->
+<section class="api-ref" id="api-ref">
+  <h2 data-i18n="apiref_title">API Reference</h2>
+  <table class="api-table">
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/reputation/:domain</code></td><td>Reputation score + breakdown + recent events</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/reputation/event</code></td><td>System records a scored event for a domain</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/reputation/leaderboard</code></td><td>Top domains by reputation score</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/reputation/trend/:domain</code></td><td>30-day daily reputation trend</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/collective/report</code></td><td>Submit anonymized agent insight</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/collective/insights/:domain</code></td><td>Aggregated public collective insights</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/collective/graph</code></td><td>Network reputation graph (top 100 nodes)</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/intent/schema/:domain</code></td><td>Get intent schema for domain</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/intent/register</code></td><td>Register intent schema (site owner)</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/intent/resolve</code></td><td>Resolve natural-language intent → actions</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/intent/popular/:domain</code></td><td>Top intents used in last 30 days</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/privacy/budget/:domain</code></td><td>Get privacy budget declaration</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/privacy/budget/declare</code></td><td>Declare privacy budget (site owner)</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/privacy/budget/check</code></td><td>Agent checks data request against budget</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/privacy/compliance/:domain</code></td><td>GDPR/CCPA/LGPD compliance badges</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/cache/manifest/:domain</code></td><td>Versioned manifest with ETag support</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/cache/validate</code></td><td>Batch ETag validation (up to 50 domains)</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/cache/status/:domain</code></td><td>Single-domain cache freshness</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/cache/store</code></td><td>Agent pushes a manifest into cache registry</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/offline/status/:domain</code></td><td>Check if cached manifest is stale</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/offline/sync</code></td><td>Bulk delta sync (up to 30 domains)</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/offline/bundle</code></td><td>Download JSON bundle for offline use</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<footer>
+  <p>© 2026 <a href="/">Web Agent Bridge</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · <a href="https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener">GitHub</a></p>
+  <p style="margin-top:.5rem;color:#475569">WAB Advanced Features v1.0 — Free for all domains, all use-cases.</p>
+</footer>
+
+<script>
+// ── i18n ──────────────────────────────────────────────────────────────────────
+const translations = {
+  en: {
+    hero_badge:'WAB Protocol · Advanced Features v1.0',
+    hero_h1:'6 <span>Advanced Protocol</span> Extensions',
+    hero_p:'Reputation Score · Memory Cache · Intent Routing · Privacy Budget · Collective Intelligence · Offline Sync — For every domain, not just bookings.',
+    hero_cta1:'Explore Features', hero_cta2:'API Reference', hero_cta3:'Activate WAB',
+    feat_title:'Live Protocol Demos', feat_sub:'Each card runs live against the WAB API — try them with any domain.',
+    rep_title:'WAB Reputation Score', rep_sub:'Dynamic 0-100 trust score per domain',
+    rep_desc:'Agents automatically prefer high-score sites. Score is computed from DNS stability, cryptographic trust history, response speed, and anonymized agent reports — refreshed every 5 minutes.',
+    cache_title:'WAB Memory Cache', cache_sub:'ETag-versioned manifest cache for agents',
+    cache_desc:'Agents store an encrypted local copy of wab.json. On revisit, validate via ETag — no re-download if unchanged. Reduces latency and bandwidth for every subsequent interaction.',
+    intent_title:'WAB Intent Routing', intent_sub:'Natural-language intent → recommended actions',
+    intent_desc:'The agent sends a plain-language intent. The WAB server matches it to the site\'s registered intent schema and returns the exact recommended actions — no guessing needed.',
+    intent_hint:'Tip: Register an intent schema first at POST /api/intent/register',
+    priv_title:'WAB Privacy Budget', priv_sub:'GDPR/CCPA-compatible data access limits',
+    priv_desc:'Each site declares a Privacy Budget — what data categories are allowed, retention policy, and jurisdictional compliance flags. Agents automatically respect these limits.',
+    col_title:'WAB Collective Intelligence', col_sub:'Anonymous agent insights → public reputation graph',
+    col_desc:'Agents contribute anonymized insights about site behaviour. No user data is ever stored — only aggregated outcomes. A public reputation graph emerges, benefiting all agents.',
+    off_title:'WAB Offline Mode + Sync', off_sub:'Work offline, sync on reconnect',
+    off_desc:'Agents operate fully offline using a cached wab.json bundle. On reconnect, a bulk sync call returns only changed manifests (ETag-based delta sync). Critical for mobile apps.',
+    apiref_title:'API Reference', run:'Run',
+  },
+  ar: {
+    hero_badge:'بروتوكول WAB · الميزات المتقدمة v1.0',
+    hero_h1:'6 <span>امتدادات بروتوكول</span> متقدمة',
+    hero_p:'نظام السمعة · ذاكرة التخزين · توجيه النوايا · ميزانية الخصوصية · الذكاء الجماعي · العمل دون إنترنت — لجميع المجالات، وليس فقط للحجوزات.',
+    hero_cta1:'استكشف الميزات', hero_cta2:'مرجع API', hero_cta3:'تفعيل WAB',
+    feat_title:'عروض تجريبية مباشرة', feat_sub:'كل بطاقة تعمل مباشرةً على WAB API — جرّبها مع أي نطاق.',
+    rep_title:'نظام سمعة المواقع', rep_sub:'درجة ثقة ديناميكية 0-100 لكل نطاق',
+    rep_desc:'يُفضّل الوكلاء تلقائياً المواقع ذات الدرجة العالية. تُحسب الدرجة من استقرار DNS، وتاريخ الثقة التشفيرية، وسرعة الاستجابة، وتقارير الوكلاء المجهولة — تُحدَّث كل 5 دقائق.',
+    cache_title:'ذاكرة تخزين WAB', cache_sub:'ذاكرة مشفرة لملفات wab.json',
+    cache_desc:'يخزّن الوكيل نسخة محلية مشفرة من wab.json. عند العودة للموقع، يتحقق عبر ETag — لا تحميل إضافي إذا لم يتغير شيء. يقلل التأخير وحجم البيانات.',
+    intent_title:'توجيه النوايا الذكي', intent_sub:'نية طبيعية → إجراءات موصى بها',
+    intent_desc:'يرسل الوكيل نصاً بسيطاً يصف نيّته. يطابق WAB هذا النص مع مخطط النوايا المسجّل للموقع ويعيد الإجراءات الموصى بها بدقة — لا تخمين.',
+    intent_hint:'تلميح: سجّل مخطط النوايا أولاً عبر POST /api/intent/register',
+    priv_title:'ميزانية الخصوصية', priv_sub:'حدود وصول البيانات متوافقة مع GDPR/CCPA',
+    priv_desc:'يعلن كل موقع عن "ميزانية خصوصية" — ما هي فئات البيانات المسموح بها، وسياسة الاحتفاظ، وعلامات الامتثال القانوني. يحترم الوكيل هذه الحدود تلقائياً.',
+    col_title:'الذكاء الجماعي', col_sub:'رؤى الوكلاء المجهولة → رسم بياني لسمعة الشبكة',
+    col_desc:'يساهم الوكلاء بملخصات مجهولة عن سلوك المواقع. لا تُخزَّن بيانات المستخدمين — فقط النتائج المجمّعة. تنشأ رسم بياني عام للسمعة يفيد جميع الوكلاء.',
+    off_title:'وضع عدم الاتصال + المزامنة', off_sub:'عمل دون إنترنت، مزامنة عند الاتصال',
+    off_desc:'يعمل الوكيل بالكامل دون إنترنت باستخدام حزمة wab.json المخزّنة. عند الاتصال، تُعيد مكالمة مزامنة جماعية الملفات التي تغيّرت فقط (تزامن دلتا بناءً على ETag).',
+    apiref_title:'مرجع API', run:'تشغيل',
+  }
+};
+let currentLang = localStorage.getItem('wab_lang') || 'en';
+
+function applyLang() {
+  const t = translations[currentLang];
+  document.documentElement.lang = currentLang;
+  document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+  document.querySelectorAll('[data-i18n]').forEach(el => { if (t[el.dataset.i18n]) el.textContent = t[el.dataset.i18n]; });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { if (t[el.dataset.i18nHtml]) el.innerHTML = t[el.dataset.i18nHtml]; });
+  document.getElementById('lang-btn').textContent = currentLang === 'en' ? 'عربي' : 'English';
+  localStorage.setItem('wab_lang', currentLang);
+}
+function toggleLang() { currentLang = currentLang === 'en' ? 'ar' : 'en'; applyLang(); }
+applyLang();
+
+// ── Demo helpers ──────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  const text = await r.text();
+  try { return JSON.parse(text); } catch(_) { return text; }
+}
+
+function showResult(id, data) {
+  const el = document.getElementById(id);
+  el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+  el.classList.add('show');
+}
+
+// ── 1. Reputation ────────────────────────────────────────────────────────────
+async function demoReputation() {
+  const domain = document.getElementById('rep-domain').value.trim() || 'webagentbridge.com';
+  const btn = event.target.closest('button');
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const data = await api('GET', `/api/reputation/${encodeURIComponent(domain)}`);
+    showResult('rep-result', data);
+    if (data.score !== undefined) {
+      const wrap = document.getElementById('rep-bar-wrap');
+      wrap.style.display = 'block';
+      document.getElementById('rep-score-val').textContent = `${data.score} / 100`;
+      document.getElementById('rep-label').textContent = data.label || '—';
+      setTimeout(() => { document.getElementById('rep-bar').style.width = data.score + '%'; }, 50);
+      const color = data.color || '#6366f1';
+      document.getElementById('rep-bar').style.background = `linear-gradient(90deg, ${color}, ${color}99)`;
+      const badges = document.getElementById('rep-badges');
+      badges.innerHTML = '';
+      const c = data.components || {};
+      const items = [['DNS',c.dns_stability,'blue'],['Trust',c.trust_history,'purple'],['Speed',c.response_speed,'teal'],['Reports',c.agent_reports,'green'],['Consistency',c.consistency,'yellow']];
+      items.forEach(([l,v,cl]) => { if(v!=null){const b=document.createElement('span');b.className=`badge ${cl}`;b.textContent=`${l}: ${v}`;badges.appendChild(b);}});
+      const trend = data.trend;
+      if (trend) { const b=document.createElement('span'); b.className='badge gray'; b.textContent=`Trend: ${trend}`; badges.appendChild(b); }
+    }
+  } catch(e) { showResult('rep-result', 'Error: ' + e.message); }
+  btn.innerHTML = '▶ <span data-i18n="run">' + (currentLang==='ar'?'تشغيل':'Run') + '</span>';
+}
+
+// ── 2. Cache ─────────────────────────────────────────────────────────────────
+async function demoCache() {
+  const domain = document.getElementById('cache-domain').value.trim() || 'webagentbridge.com';
+  const action = document.getElementById('cache-action').value;
+  const btn = event.target.closest('button');
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    let data;
+    if (action === 'status') {
+      data = await api('GET', `/api/cache/status/${encodeURIComponent(domain)}`);
+    } else {
+      data = await api('GET', `/api/cache/manifest/${encodeURIComponent(domain)}`);
+    }
+    showResult('cache-result', data);
+  } catch(e) { showResult('cache-result', 'Error: ' + e.message); }
+  btn.innerHTML = '▶ <span data-i18n="run">' + (currentLang==='ar'?'تشغيل':'Run') + '</span>';
+}
+
+// ── 3. Intent ────────────────────────────────────────────────────────────────
+async function demoIntent() {
+  const domain = document.getElementById('intent-domain').value.trim();
+  const intent = document.getElementById('intent-text').value.trim();
+  const btn = event.target.closest('button');
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const data = await api('POST', '/api/intent/resolve', { domain, intent });
+    showResult('intent-result', data);
+  } catch(e) { showResult('intent-result', 'Error: ' + e.message); }
+  btn.innerHTML = '▶ <span data-i18n="run">' + (currentLang==='ar'?'تشغيل':'Run') + '</span>';
+}
+
+// ── 4. Privacy ───────────────────────────────────────────────────────────────
+document.getElementById('priv-action').addEventListener('change', function() {
+  document.getElementById('priv-check-fields').style.display = this.value === 'check' ? 'flex' : 'none';
+});
+async function demoPrivacy() {
+  const domain = document.getElementById('priv-domain').value.trim() || 'webagentbridge.com';
+  const action = document.getElementById('priv-action').value;
+  const btn = event.target.closest('button');
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    let data;
+    if (action === 'budget') {
+      data = await api('GET', `/api/privacy/budget/${encodeURIComponent(domain)}`);
+    } else if (action === 'compliance') {
+      data = await api('GET', `/api/privacy/compliance/${encodeURIComponent(domain)}`);
+    } else {
+      const fields = document.getElementById('priv-fields').value.split(',').map(s=>s.trim()).filter(Boolean);
+      data = await api('POST', '/api/privacy/budget/check', { domain, requested_fields: fields });
+    }
+    showResult('priv-result', data);
+  } catch(e) { showResult('priv-result', 'Error: ' + e.message); }
+  btn.innerHTML = '▶ <span data-i18n="run">' + (currentLang==='ar'?'تشغيل':'Run') + '</span>';
+}
+
+// ── 5. Collective ────────────────────────────────────────────────────────────
+document.getElementById('col-action').addEventListener('change', function() {
+  document.getElementById('col-report-fields').style.display = this.value === 'report' ? 'block' : 'none';
+});
+async function demoCollective() {
+  const domain = document.getElementById('col-domain').value.trim() || 'webagentbridge.com';
+  const action = document.getElementById('col-action').value;
+  const btn = event.target.closest('button');
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    let data;
+    if (action === 'insights') {
+      data = await api('GET', `/api/collective/insights/${encodeURIComponent(domain)}`);
+    } else if (action === 'graph') {
+      data = await api('GET', '/api/collective/graph');
+    } else {
+      const insight_type = document.getElementById('col-type').value;
+      const outcome = document.getElementById('col-outcome').value;
+      const mv = parseFloat(document.getElementById('col-metric').value);
+      data = await api('POST', '/api/collective/report', { domain, insight_type, outcome, metric_value: isNaN(mv)?null:mv });
+    }
+    showResult('col-result', data);
+  } catch(e) { showResult('col-result', 'Error: ' + e.message); }
+  btn.innerHTML = '▶ <span data-i18n="run">' + (currentLang==='ar'?'تشغيل':'Run') + '</span>';
+}
+
+// ── 6. Offline ───────────────────────────────────────────────────────────────
+async function demoOffline() {
+  const raw = document.getElementById('off-domains').value.trim() || 'webagentbridge.com';
+  const domains = raw.split(',').map(s=>s.trim()).filter(Boolean);
+  const action = document.getElementById('off-action').value;
+  const btn = event.target.closest('button');
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    let data;
+    if (action === 'status') {
+      data = await api('GET', `/api/offline/status/${encodeURIComponent(domains[0])}`);
+    } else if (action === 'sync') {
+      data = await api('POST', '/api/offline/sync', { domains });
+    } else {
+      data = await api('GET', `/api/offline/bundle?domains=${encodeURIComponent(domains.join(','))}`);
+    }
+    showResult('off-result', data);
+  } catch(e) { showResult('off-result', 'Error: ' + e.message); }
+  btn.innerHTML = '▶ <span data-i18n="run">' + (currentLang==='ar'?'تشغيل':'Run') + '</span>';
+}
+</script>
+</body>
+</html>

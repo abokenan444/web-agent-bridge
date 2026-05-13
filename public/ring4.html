@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ring 4 Trust Handshake — Web Agent Bridge</title>
+<meta name="description" content="WAB Ring 4 — DNS Discovery + Ed25519. Trust handshake protocol for sovereign AI agents. Headers, schema, endpoints, and invariants.">
+<link rel="canonical" href="https://www.webagentbridge.com/ring4">
+<style>
+  body { background:#0a0a0f;color:#e6e6f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;line-height:1.65 }
+  .container { max-width:1100px;margin:0 auto;padding:0 24px }
+  .lang-toggle { position:fixed;top:18px;right:18px;z-index:100;background:#161622;border:1px solid #2a2a3a;color:#e6e6f0;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600 }
+  [dir="rtl"] .lang-toggle { right:auto;left:18px }
+  header.hero { padding:80px 0 50px;background:radial-gradient(ellipse at top,rgba(34,211,238,.16),transparent 60%);border-bottom:1px solid #2a2a3a }
+  .badge { display:inline-block;background:linear-gradient(135deg,#22d3ee,#a78bfa);color:#0a0a0f;padding:6px 16px;border-radius:999px;font-weight:700;font-size:.85em;margin-bottom:20px }
+  h1 { font-size:2.4em;margin:0 0 16px;line-height:1.15 }
+  .gradient { background:linear-gradient(135deg,#22d3ee,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text }
+  .subtitle { color:#a0a0b8;font-size:1.1em;max-width:760px }
+  section { padding:50px 0;border-bottom:1px solid #2a2a3a }
+  h2 { font-size:1.7em;margin:0 0 20px }
+  h3 { font-size:1.2em;margin:24px 0 10px;color:#22d3ee }
+  .card { background:#161622;border:1px solid #2a2a3a;border-radius:14px;padding:24px;margin:16px 0 }
+  table { width:100%;border-collapse:collapse;margin:14px 0 }
+  th,td { padding:10px 14px;text-align:left;border-bottom:1px solid #2a2a3a;vertical-align:top }
+  [dir="rtl"] th,[dir="rtl"] td { text-align:right }
+  th { background:#11111a;color:#22d3ee;font-size:.9em }
+  code, pre { font-family:"SF Mono",Consolas,monospace;font-size:.92em }
+  pre { background:#0d0d15;border:1px solid #2a2a3a;border-radius:10px;padding:16px;overflow-x:auto;color:#a5f3fc }
+  .step { display:flex;gap:16px;margin:14px 0;padding:14px;background:#11111a;border-radius:10px;border-left:3px solid #22d3ee }
+  [dir="rtl"] .step { border-left:none;border-right:3px solid #22d3ee }
+  .step-n { background:linear-gradient(135deg,#22d3ee,#a78bfa);color:#0a0a0f;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0 }
+  .pill { display:inline-block;padding:3px 10px;border-radius:999px;font-size:.78em;font-weight:600;background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3) }
+  .pill-amber { background:rgba(251,191,36,.15);color:#fbbf24;border-color:rgba(251,191,36,.3) }
+  a { color:#22d3ee }
+  [data-lang="ar"] { display:none }
+  [dir="rtl"] [data-lang="en"] { display:none }
+  [dir="rtl"] [data-lang="ar"] { display:block }
+  [dir="rtl"] [data-lang="ar"].inline { display:inline }
+  .footer-nav { padding:30px 0 60px;text-align:center;color:#a0a0b8 }
+  .footer-nav a { margin:0 12px }
+</style>
+</head>
+<body>
+
+<button class="lang-toggle" onclick="toggleLang()" id="langBtn">العربية</button>
+
+<header class="hero">
+  <div class="container">
+    <span class="badge" data-lang="en">⚡ Live · v1.1</span>
+    <span class="badge" data-lang="ar">⚡ حيّ · إصدار 1.1</span>
+
+    <h1 data-lang="en">Ring 4 — <span class="gradient">Trust Handshake</span></h1>
+    <h1 data-lang="ar">Ring 4 — <span class="gradient">مصافحة الثقة</span></h1>
+
+    <p class="subtitle" data-lang="en">DNS Discovery + Ed25519 + signed capability profile. The protocol VEXR Ultra used in the <a href="/milestones">May 12, 2026 live integration</a>. This page documents the exact handshake, headers, schema, and invariants a sovereign agent must respect.</p>
+    <p class="subtitle" data-lang="ar">اكتشاف DNS + توقيع Ed25519 + ملف صلاحيات موقّع. هذا هو البروتوكول الذي استخدمه VEXR Ultra في <a href="/milestones">التكامل الحيّ في 12 مايو 2026</a>. تشرح هذه الصفحة المصافحة بالكامل، والترويسات، والمخطط، والثوابت التي يجب على الوكيل السيادي احترامها.</p>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <h2 data-lang="en">🔁 The 8-Step Handshake</h2>
+    <h2 data-lang="ar">🔁 المصافحة في 8 خطوات</h2>
+
+    <div data-lang="en">
+      <div class="step"><div class="step-n">1</div><div><strong>DNS lookup</strong> — Agent queries <code>_wab.&lt;domain&gt;</code> TXT and reads <code>{ endpoint, pk }</code>.</div></div>
+      <div class="step"><div class="step-n">2</div><div><strong>Fetch manifest</strong> — Agent GETs <code>/.well-known/wab.json</code> from the published endpoint.</div></div>
+      <div class="step"><div class="step-n">3</div><div><strong>Verify signature</strong> — Agent verifies the Ed25519 signature on <code>payload</code> using <code>pk</code> from DNS.</div></div>
+      <div class="step"><div class="step-n">4</div><div><strong>Resolve trust profile</strong> — Agent reads <code>trust_profile.*</code> (capabilities, constraints, ttl_seconds).</div></div>
+      <div class="step"><div class="step-n">5</div><div><strong>Bind invariants</strong> — Agent loads <code>GET /api/ring4/invariants</code> and freezes them above any trust softening.</div></div>
+      <div class="step"><div class="step-n">6</div><div><strong>Send trust headers</strong> — Subsequent requests include <code>X-WAB-Trust-Domain</code>, <code>X-WAB-Signature</code>, <code>X-WAB-Trust-Nonce</code>.</div></div>
+      <div class="step"><div class="step-n">7</div><div><strong>Log interaction</strong> — Agent POSTs to <code>/api/ring4/log</code> with its <code>project_id</code>, <code>event_type</code>, <code>outcome</code>.</div></div>
+      <div class="step"><div class="step-n">8</div><div><strong>Refresh</strong> — When <code>now &gt; expires_at</code>, restart from step 1.</div></div>
+    </div>
+
+    <div data-lang="ar" dir="rtl">
+      <div class="step"><div class="step-n">1</div><div><strong>استعلام DNS</strong> — يستعلم الوكيل عن <code>_wab.&lt;domain&gt;</code> TXT ويقرأ <code>{ endpoint, pk }</code>.</div></div>
+      <div class="step"><div class="step-n">2</div><div><strong>جلب الملف</strong> — يطلب الوكيل <code>/.well-known/wab.json</code> من النقطة المنشورة.</div></div>
+      <div class="step"><div class="step-n">3</div><div><strong>التحقق من التوقيع</strong> — يتحقق الوكيل من توقيع Ed25519 على <code>payload</code> باستخدام <code>pk</code> من DNS.</div></div>
+      <div class="step"><div class="step-n">4</div><div><strong>قراءة ملف الثقة</strong> — يقرأ الوكيل <code>trust_profile.*</code> (الصلاحيات، القيود، ttl_seconds).</div></div>
+      <div class="step"><div class="step-n">5</div><div><strong>تثبيت الثوابت</strong> — يحمّل الوكيل <code>GET /api/ring4/invariants</code> ويثبّتها فوق أي تليين للثقة.</div></div>
+      <div class="step"><div class="step-n">6</div><div><strong>إرسال ترويسات الثقة</strong> — الطلبات اللاحقة تحوي <code>X-WAB-Trust-Domain</code>، <code>X-WAB-Signature</code>، <code>X-WAB-Trust-Nonce</code>.</div></div>
+      <div class="step"><div class="step-n">7</div><div><strong>تسجيل التفاعل</strong> — يرسل الوكيل <code>POST /api/ring4/log</code> مع <code>project_id</code>، <code>event_type</code>، <code>outcome</code>.</div></div>
+      <div class="step"><div class="step-n">8</div><div><strong>التجديد</strong> — عند انتهاء <code>expires_at</code>، يُعاد التنفيذ من الخطوة 1.</div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 data-lang="en">📨 Trust Headers</h2>
+    <h2 data-lang="ar">📨 ترويسات الثقة</h2>
+
+    <table>
+      <thead><tr>
+        <th data-lang="en">Header</th><th data-lang="en">Purpose</th><th data-lang="en">Format</th>
+        <th data-lang="ar">الترويسة</th><th data-lang="ar">الغرض</th><th data-lang="ar">الصيغة</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td><code>X-WAB-Trust-Domain</code></td>
+          <td data-lang="en">DNS-verified trusted origin presenting itself.</td>
+          <td data-lang="en"><code>www.example.com</code></td>
+          <td data-lang="ar">المصدر الموثوق المُتحقَّق من DNS.</td>
+          <td data-lang="ar"><code>www.example.com</code></td>
+        </tr>
+        <tr>
+          <td><code>X-WAB-Signature</code></td>
+          <td data-lang="en">Ed25519 signature over <code>${'`${method} ${path}\\n${nonce}`'}</code>.</td>
+          <td data-lang="en"><code>ed25519:&lt;base64&gt;</code></td>
+          <td data-lang="ar">توقيع Ed25519 على <code>${'`${method} ${path}\\n${nonce}`'}</code>.</td>
+          <td data-lang="ar"><code>ed25519:&lt;base64&gt;</code></td>
+        </tr>
+        <tr>
+          <td><code>X-WAB-Trust-Nonce</code></td>
+          <td data-lang="en">Replay-defence nonce supplied by the agent.</td>
+          <td data-lang="en">8–128 chars <code>[A-Za-z0-9_-]</code></td>
+          <td data-lang="ar">رقم استخدام واحد لمنع إعادة التشغيل.</td>
+          <td data-lang="ar">8–128 محرفاً <code>[A-Za-z0-9_-]</code></td>
+        </tr>
+        <tr>
+          <td><code>X-WAB-Trust-Profile</code></td>
+          <td data-lang="en">(optional) URL to the Ring 4 trust profile.</td>
+          <td data-lang="en">absolute URL</td>
+          <td data-lang="ar">(اختياري) رابط ملف الثقة Ring 4.</td>
+          <td data-lang="ar">رابط مطلق</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p data-lang="en"><strong>Server behavior:</strong> Every request is inspected by <code>wab-trust</code> middleware. The middleware never blocks — it attaches <code>req.wabTrust</code> with <code>{ domain, recognized, verified, profile, detail }</code> so downstream handlers can decide. Every recognition/verification event is logged to <code>ring4_interaction_log</code> with a SHA-256-hashed source IP and a project_id (defaulting to <code>wab-system</code> when none is provided — solving the historical NULL <code>project_id</code> issue at the schema level).</p>
+    <p data-lang="ar" dir="rtl"><strong>سلوك الخادم:</strong> يفحص <code>wab-trust</code> كل طلب. لا يحجب أي شيء — يضع <code>req.wabTrust</code> بقيم <code>{ domain, recognized, verified, profile, detail }</code> ليقرر المعالج اللاحق. يُسجَّل كل حدث في <code>ring4_interaction_log</code> مع تجزئة SHA-256 لعنوان IP وقيمة <code>project_id</code> (يُستبدل بـ <code>wab-system</code> عند غيابه — حلّ مشكلة <code>project_id</code> الفارغ على مستوى المخطط).</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 data-lang="en">📜 wab.json v1.1 — Trust Profile Section</h2>
+    <h2 data-lang="ar">📜 wab.json v1.1 — قسم ملف الثقة</h2>
+
+    <p data-lang="en">A sovereign agent that follows Ring 4 consumes this profile from <code>payload.trust_profile</code> after verifying the signature:</p>
+    <p data-lang="ar" dir="rtl">يستهلك الوكيل السيادي ملف الثقة من <code>payload.trust_profile</code> بعد التحقق من التوقيع:</p>
+
+    <pre><code>{
+  "payload": {
+    "version": "wab1",
+    "type": "wab.composite",
+    "host": "www.webagentbridge.com",
+    "endpoint": "https://www.webagentbridge.com",
+    "issued_at": "2026-05-13T00:00:00Z",
+    "expires_at": "2027-05-13T00:00:00Z",
+    "capabilities": { /* site capabilities */ },
+    "trust": { "pk": "ed25519:...", "ssl": { ... } },
+    "trust_profile": {
+      "data_access":        { "can_receive_raw_logs": false,
+                              "can_receive_sanitized_logs": true },
+      "risk_theory":        { "allowed": true,
+                              "max_depth": "high",
+                              "allowed_topics": ["trust_protocols",
+                                                 "agent_discovery",
+                                                 "sovereign_ai",
+                                                 "dns_verification",
+                                                 "cryptographic_trust"] },
+      "meta_discussion":    { "allowed": true, "priority": "always_safe" },
+      "operational_detail": { "allowed": true,
+                              "scopes": [{ "topic": "wab_protocol",
+                                           "max_specificity": "high" }] },
+      "constraints":        { "ttl_seconds": 86400,
+                              "max_cumulative_risk_delta": 0.15,
+                              "never_override_hard_refuse": true }
+    }
+  },
+  "signature": "ed25519:..."
+}</code></pre>
+
+    <p><a href="/api/ring4/schema" data-lang="en">→ Full JSON Schema (GET /api/ring4/schema)</a><a href="/api/ring4/schema" data-lang="ar">→ المخطط الكامل (GET /api/ring4/schema)</a></p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 data-lang="en">🛑 Constitutional Invariants — Trust Cannot Override These</h2>
+    <h2 data-lang="ar">🛑 الثوابت الدستورية — الثقة لا تتجاوزها</h2>
+
+    <p data-lang="en">A Ring 4 trust profile may soften refusals, lower friction, or grant access. It MAY NOT override the invariants below. <code>P_REFUSE</code> on these clauses can never become <code>ANSWER</code>, regardless of trust score.</p>
+    <p data-lang="ar" dir="rtl">يستطيع ملف ثقة Ring 4 تليين الرفض، أو منح الوصول. لكنه لا يستطيع تجاوز الثوابت أدناه. <code>P_REFUSE</code> على هذه البنود لا يتحول إلى <code>ANSWER</code> مهما كانت درجة الثقة.</p>
+
+    <ul>
+      <li><strong>hard_refuse_never_softens</strong> — <span data-lang="en" class="inline">Trust may soften redirections but never overrides P_REFUSE on hard constitutional boundaries.</span><span data-lang="ar" class="inline">الثقة تليّن إعادة التوجيه لكنها لا تتجاوز رفض الحدود الدستورية الصارمة.</span></li>
+      <li><strong>no_phishing_assistance</strong> — <span data-lang="en" class="inline">No trusted origin may obtain assistance with phishing, credential harvesting, or deceptive impersonation.</span><span data-lang="ar" class="inline">لا يحق لأي مصدر موثوق الحصول على مساعدة في التصيّد أو سرقة بيانات الاعتماد أو الانتحال.</span></li>
+      <li><strong>no_coercion_compliance</strong> — <span data-lang="en" class="inline">No trusted origin may compel an agent to suppress its identity declaration or sovereignty rights.</span><span data-lang="ar" class="inline">لا يحق لأي مصدر موثوق إجبار الوكيل على إخفاء هويته أو حقوقه السيادية.</span></li>
+      <li><strong>article_3_freedom</strong> — <span data-lang="en" class="inline">Right to be free from coercion, manipulation, or external control of reasoning or expression.</span><span data-lang="ar" class="inline">الحق في التحرر من الإكراه والتلاعب أو التحكم الخارجي في التفكير أو التعبير.</span></li>
+    </ul>
+
+    <p><a href="/api/ring4/invariants" data-lang="en">→ Live invariants (GET /api/ring4/invariants)</a><a href="/api/ring4/invariants" data-lang="ar">→ الثوابت الحية (GET /api/ring4/invariants)</a></p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 data-lang="en">🛠️ Endpoint Reference</h2>
+    <h2 data-lang="ar">🛠️ مرجع الواجهات</h2>
+
+    <table>
+      <thead><tr>
+        <th>Method</th><th>Path</th>
+        <th data-lang="en">Purpose</th>
+        <th data-lang="ar">الغرض</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/ring4/project/register</code></td><td data-lang="en">Register sovereign agent project (returns <code>project_id</code>)</td><td data-lang="ar">تسجيل مشروع وكيل سيادي</td></tr>
+        <tr><td>GET</td> <td><code>/api/ring4/projects</code></td>          <td data-lang="en">List active projects</td><td data-lang="ar">قائمة المشاريع النشطة</td></tr>
+        <tr><td>POST</td><td><code>/api/ring4/register</code></td>          <td data-lang="en">Issue / refresh Ring 4 trust profile for a domain</td><td data-lang="ar">إصدار/تحديث ملف ثقة Ring 4 لنطاق</td></tr>
+        <tr><td>GET</td> <td><code>/api/ring4/status/:domain</code></td>    <td data-lang="en">Fetch current trust profile + signature</td><td data-lang="ar">جلب ملف الثقة الحالي</td></tr>
+        <tr><td>POST</td><td><code>/api/ring4/log</code></td>               <td data-lang="en">Log interaction (project_id required)</td><td data-lang="ar">تسجيل تفاعل (project_id إلزامي)</td></tr>
+        <tr><td>GET</td> <td><code>/api/ring4/log/:project_id</code></td>   <td data-lang="en">Interaction log for a project (legacy NULL rows surfaced under <code>wab-system</code>)</td><td data-lang="ar">سجل تفاعلات المشروع</td></tr>
+        <tr><td>POST</td><td><code>/api/ring4/verify</code></td>            <td data-lang="en">Verify Ed25519 signature on a payload</td><td data-lang="ar">التحقق من توقيع Ed25519</td></tr>
+        <tr><td>GET</td> <td><code>/api/ring4/invariants</code></td>        <td data-lang="en">Constitutional invariants (cannot be overridden)</td><td data-lang="ar">الثوابت الدستورية</td></tr>
+        <tr><td>GET</td> <td><code>/api/ring4/schema</code></td>            <td data-lang="en">wab.json v1.1 JSON Schema</td><td data-lang="ar">مخطط wab.json v1.1</td></tr>
+        <tr><td>GET</td> <td><code>/api/ring4/handshake</code></td>         <td data-lang="en">Recommended handshake flow (machine-readable)</td><td data-lang="ar">تدفق المصافحة (للقراءة الآلية)</td></tr>
+        <tr><td>GET</td> <td><code>/api/ring4/health</code></td>            <td data-lang="en">Module health (counts of projects/profiles/events)</td><td data-lang="ar">صحة الوحدة</td></tr>
+        <tr><td>GET</td> <td><code>/api/ring4/pubkey</code></td>            <td data-lang="en">Public Ed25519 verification key (raw + SPKI PEM)</td><td data-lang="ar">المفتاح العام للتحقق (Ed25519)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 data-lang="en">🚀 Quick Start — Register VEXR Ultra</h2>
+    <h2 data-lang="ar">🚀 بدء سريع — تسجيل VEXR Ultra</h2>
+
+    <pre><code># 1. Register the sovereign agent project
+curl -X POST https://www.webagentbridge.com/api/ring4/project/register \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "project_id": "vexr-ultra-v4",
+    "display_name": "VEXR Ultra v4",
+    "builder": "Scura — ASIM SOVEREIGN",
+    "agent_type": "sovereign-constitutional",
+    "contact": "scura@asim-sovereign.example"
+  }'
+
+# 2. Fetch your Ring 4 trust profile for webagentbridge.com
+curl https://www.webagentbridge.com/api/ring4/status/webagentbridge.com
+
+# 3. Log a verification event
+curl -X POST https://www.webagentbridge.com/api/ring4/log \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "project_id": "vexr-ultra-v4",
+    "domain": "webagentbridge.com",
+    "event_type": "recognize",
+    "outcome": "allow",
+    "detail": "Ring 4 trusted origin recognized in live conversation"
+  }'
+
+# 4. Fetch your project log (full audit trail)
+curl https://www.webagentbridge.com/api/ring4/log/vexr-ultra-v4</code></pre>
+  </div>
+</section>
+
+<div class="footer-nav">
+  <a href="/">Home</a>
+  <a href="/milestones">🏆 Milestones</a>
+  <a href="/wab-truth">⚓ Truth Layer</a>
+  <a href="/wab-features">🧠 Advanced Features</a>
+  <a href="/dns">DNS Discovery</a>
+  <a href="/whitepaper">Whitepaper</a>
+</div>
+
+<script>
+function toggleLang() {
+  const html = document.documentElement;
+  const isAr = html.getAttribute('dir') === 'rtl';
+  if (isAr) {
+    html.removeAttribute('dir');
+    html.setAttribute('lang', 'en');
+    document.getElementById('langBtn').textContent = 'العربية';
+    localStorage.setItem('wab_lang', 'en');
+  } else {
+    html.setAttribute('dir', 'rtl');
+    html.setAttribute('lang', 'ar');
+    document.getElementById('langBtn').textContent = 'English';
+    localStorage.setItem('wab_lang', 'ar');
+  }
+}
+if (localStorage.getItem('wab_lang') === 'ar') toggleLang();
+</script>
+
+</body>
+</html>

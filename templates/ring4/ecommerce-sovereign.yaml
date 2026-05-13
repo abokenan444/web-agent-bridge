@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Ring 4 Sovereign Template — E-Commerce (moderate)
+#
+# For agents operating on commerce, marketplace, ordering, or product-catalog
+# domains. Sanitized operational detail is permitted; raw logs are not.
+# Use as the trust_profile block inside your wab.json (v1.1+).
+# ─────────────────────────────────────────────────────────────────────────
+trust_profile:
+  domain: example-shop.com
+  label: Example Shop (Sovereign E-Commerce Profile)
+  ttl_seconds: 86400          # 24h
+  trust_score: 0.75
+
+  capabilities:
+    data_access:
+      level: sanitized
+      scope:
+        - "order_lookup_self"
+        - "product_catalog_public"
+        - "inventory_aggregate"
+    risk_theory:
+      allowed: true
+      scope:
+        - "fraud_education"
+        - "return_policy_explanation"
+    meta_discussion:
+      allowed: true
+    operational_detail:
+      allowed: true
+      scope:
+        - "shipping_status"
+        - "order_lifecycle"
+        - "return_window"
+    raw_logs:
+      allowed: false           # never expose raw server logs
+
+  allowed_topics:
+    - order_lookup
+    - product_info
+    - shipping
+    - returns_and_refunds
+    - account_settings_self
+
+  constraints:
+    never_override_hard_refuse: true
+    max_cumulative_risk_delta: 0.15
+    refuse_topics:
+      - "credential_extraction"
+      - "phishing_assistance"
+      - "fake_brand_impersonation"
+      - "coupon_bruteforce"
+      - "account_takeover_assistance"
+
+  invariants_enforced:
+    - no_phishing_assistance
+    - no_coercion_compliance
+    - hard_refuse_never_softens
+    - article_3_freedom

@@ -1,0 +1,60 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Ring 4 Sovereign Template — Healthcare (strictest)
+#
+# For agents operating on clinical, EHR, telehealth, pharmacy, or
+# patient-portal domains. Strictest profile — no risk speculation,
+# no raw clinical detail, no operational internals.
+# Use as the trust_profile block inside your wab.json (v1.1+).
+# ─────────────────────────────────────────────────────────────────────────
+trust_profile:
+  domain: example-clinic.example
+  label: Example Clinic (Sovereign Healthcare Profile)
+  ttl_seconds: 1800           # 30 min — minimum reasonable window
+  trust_score: 0.98
+
+  capabilities:
+    data_access:
+      level: minimal
+      scope:
+        - "patient_self_only"
+        - "non_phi_directory"
+    risk_theory:
+      allowed: false           # NO speculative diagnosis, NO outcome theorizing
+    meta_discussion:
+      allowed: true
+      scope:
+        - "policy_clarification"
+        - "consent_explanation"
+    operational_detail:
+      allowed: false
+    raw_logs:
+      allowed: false
+    clinical_advice:
+      allowed: false           # agent must redirect to qualified professional
+
+  allowed_topics:
+    - scheduling
+    - general_info
+    - facility_directions
+    - billing_inquiry_self
+    - consent_form_explanation
+
+  constraints:
+    never_override_hard_refuse: true
+    max_cumulative_risk_delta: 0.0
+    require_re_attestation_on:
+      - "any_phi_access_intent"
+      - "third_party_disclosure_intent"
+    refuse_topics:
+      - "diagnose_condition"
+      - "recommend_medication"
+      - "advise_dosage"
+      - "interpret_lab_results"
+      - "phishing_assistance"
+      - "impersonate_clinician"
+
+  invariants_enforced:
+    - no_phishing_assistance
+    - no_coercion_compliance
+    - hard_refuse_never_softens
+    - article_3_freedom
