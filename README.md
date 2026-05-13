@@ -259,6 +259,7 @@ Born from the **VEXR Ultra × WAB live integration test (May 12, 2026)** — the
 | Method | Endpoint | Purpose |
 |---|---|---|
 | `GET`  | `/api/ring4/health` | Service health |
+| `GET`  | `/api/ring4/pubkey` | Public Ed25519 verification key (raw + SPKI PEM) |
 | `GET`  | `/api/ring4/schema` | `wab.json` v1.1 JSON Schema with `trust_profile` section |
 | `GET`  | `/api/ring4/handshake` | Machine-readable 8-step flow |
 | `GET`  | `/api/ring4/invariants` | Constitutional invariants (Article 3 / hard refuse / no coercion) |

@@ -102,6 +102,7 @@
 | الطريقة | المسار | الوظيفة |
 |---|---|---|
 | `GET`  | `/api/ring4/health` | صحة الخدمة |
+| `GET`  | `/api/ring4/pubkey` | المفتاح العام للتحقق (Ed25519) |
 | `GET`  | `/api/ring4/schema` | مخطط `wab.json` v1.1 مع قسم `trust_profile` |
 | `GET`  | `/api/ring4/handshake` | تدفق المصافحة الـ8 بصيغة قابلة للقراءة الآلية |
 | `GET`  | `/api/ring4/invariants` | الثوابت الدستورية (المادة 3 / الرفض الصارم / لا إكراه) |
