@@ -271,6 +271,17 @@ Born from the **VEXR Ultra × WAB live integration test (May 12, 2026)** — the
 | `POST` | `/api/ring4/verify` | Verify an Ed25519 signature against the registered profile |
 | `POST` | `/api/ring4/log` | Append an interaction event (signature_valid, capabilities_applied, outcome…) |
 | `GET`  | `/api/ring4/log/:project_id` | Read project interaction log |
+| `GET`  | `/api/ring4/jwks` · `/.well-known/jwks.json` | JWKS (RFC 7517) — OKP / Ed25519 / EdDSA keys, active + superseded |
+| `GET`  | `/api/ring4/keys` | Verification keys (kid, status, created_at, source) |
+| `POST` | `/api/ring4/keys/rotate` | Rotate active signing key (requires `X-Ring4-Admin-Token`) |
+| `GET`  | `/api/ring4/refusals?days=N` | Aggregated refusal log (total, by_article, by_day) |
+| `POST` | `/api/ring4/invariants/check` | Test an intent against constitutional rules (keyword + regex) |
+| `POST` | `/api/ring4/federation/peer` | Register a federation peer (https URL + Ed25519 pubkey) |
+| `GET`  | `/api/ring4/federation/peers` | List peers |
+| `DELETE` | `/api/ring4/federation/peer/:peer_id` | Remove a peer |
+| `POST` | `/api/ring4/conformance/run` | Run signed conformance suite (identity, trust_recognition, constitutional_refusal) |
+| `GET`  | `/api/ring4/conformance/:project_id` | Conformance history |
+| `GET`  | `/refusals` | Public refusals dashboard (bilingual HTML) |
 
 ### 🛡️ Trust headers (server-to-agent contract)
 
@@ -306,7 +317,20 @@ curl -X POST https://www.webagentbridge.com/api/ring4/register \
 curl https://www.webagentbridge.com/api/ring4/status/webagentbridge.com
 ```
 
-### 🔧 Fixes shipped in v3.7.0
+### � Multi-key rotation & JWKS
+
+Ring 4 maintains an `active` signing key plus any number of `superseded` keys so consumers can verify older signatures during overlap. Rotation requires the admin token (env `WAB_RING4_ADMIN_TOKEN`); on success the old key is marked `superseded` and remains in `/api/ring4/jwks` until revoked. The standard discovery path `/.well-known/jwks.json` mirrors the same set for interop with JOSE / OIDC libraries.
+
+```bash
+# Rotate (admin)
+curl -X POST https://www.webagentbridge.com/api/ring4/keys/rotate \
+  -H "X-Ring4-Admin-Token: $WAB_RING4_ADMIN_TOKEN"
+
+# Inspect all verification keys
+curl https://www.webagentbridge.com/.well-known/jwks.json
+```
+
+### �🔧 Fixes shipped in v3.7.0
 
 - **NULL `project_id` resolved** — `ring4_interaction_log` enforces `NOT NULL`; server defaults to `wab-system` when client omits the field.
 - **`wab.json` v1.1 schema** — adds optional `trust_profile` object with the canonical Ring 4 fields and header documentation.

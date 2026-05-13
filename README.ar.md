@@ -114,6 +114,17 @@
 | `POST` | `/api/ring4/verify` | التحقق من توقيع Ed25519 |
 | `POST` | `/api/ring4/log` | إضافة حدث تفاعل |
 | `GET`  | `/api/ring4/log/:project_id` | قراءة سجل تفاعلات المشروع |
+| `GET`  | `/api/ring4/jwks` · `/.well-known/jwks.json` | JWKS (RFC 7517) — مفاتيح OKP/Ed25519/EdDSA الفعالة والمتقاعدة |
+| `GET`  | `/api/ring4/keys` | مفاتيح التحقق (kid ، الحالة ، تاريخ الإنشاء ، المصدر) |
+| `POST` | `/api/ring4/keys/rotate` | تدوير المفتاح الفعّال (يتطلب `X-Ring4-Admin-Token`) |
+| `GET`  | `/api/ring4/refusals?days=N` | سجل الرفض المجمّع (الإجمالي ، حسب المادة ، حسب اليوم) |
+| `POST` | `/api/ring4/invariants/check` | اختبار نيّة مقابل الثوابت الدستورية |
+| `POST` | `/api/ring4/federation/peer` | تسجيل عقدة اتحاد (رابط https + مفتاح Ed25519) |
+| `GET`  | `/api/ring4/federation/peers` | قائمة عقد الاتحاد |
+| `DELETE` | `/api/ring4/federation/peer/:peer_id` | حذف عقدة |
+| `POST` | `/api/ring4/conformance/run` | تشغيل مجموعة اختبارات المطابقة الموقّعة |
+| `GET`  | `/api/ring4/conformance/:project_id` | سجل المطابقة |
+| `GET`  | `/refusals` | لوحة الرفض العامة (HTML ثنائي اللغة) |
 
 ### 🛡️ ترويسات الثقة (عقد بين الخادم والوكيل)
 
@@ -149,7 +160,20 @@ curl -X POST https://www.webagentbridge.com/api/ring4/register \
 curl https://www.webagentbridge.com/api/ring4/status/webagentbridge.com
 ```
 
-### 🔧 الإصلاحات في v3.7.0
+### � تدوير المفاتيح وJWKS
+
+Ring 4 يحتفظ بمفتاح توقيع `active` إلى جانب أي عدد من المفاتيح `superseded` ليتمكّن المستهلكون من التحقّق من التوقيعات الأقدم في فترة التداخل. التدوير يتطلّب رمز المسؤول (`WAB_RING4_ADMIN_TOKEN`)؛ وعند النجاح يُوسم المفتاح القديم بـ `superseded` ويبقى في `/api/ring4/jwks` حتّى إبطاله. المسار القياسي `/.well-known/jwks.json` يعكس نفس المجموعة ليعمل مع مكتبات JOSE / OIDC.
+
+```bash
+# تدوير (مسؤول)
+curl -X POST https://www.webagentbridge.com/api/ring4/keys/rotate \
+  -H "X-Ring4-Admin-Token: $WAB_RING4_ADMIN_TOKEN"
+
+# عرض كل مفاتيح التحقق
+curl https://www.webagentbridge.com/.well-known/jwks.json
+```
+
+### �🔧 الإصلاحات في v3.7.0
 
 - **حل مشكلة `project_id` الفارغ** — جدول `ring4_interaction_log` يفرض الآن `NOT NULL`؛ الخادم يعتمد `wab-system` افتراضياً.
 - **مخطط `wab.json` v1.1** — يضيف كائن `trust_profile` اختياري مع الحقول الرسمية وتوثيق الترويسات.
