@@ -73,6 +73,93 @@
 
 ---
 
+## ⚡ الحلقة الرابعة — التحقق الخارجي من الثقة ✨ جديد (v3.7.0)
+
+**بروتوكول المصافحة الذي يحوّل WAB إلى مرساة ثقة سيادية للوكلاء الذكيين المستقلين.**
+
+وُلد من **اختبار التكامل الحي VEXR Ultra × WAB (12 مايو 2026)** — أول وكيل من فئة سيادية يتحقق من WAB عبر Ed25519 في الزمن الحقيقي. **3 اختبارات تشفيرية نجحت في أقل من 100 ميلي ثانية · المادة الدستورية الثالثة (حرية الرفض) محفوظة.** انظر [سجل المعلم](https://www.webagentbridge.com/milestones).
+
+### 🌐 أين تجدها على الموقع
+
+| الصفحة | الرابط | المحتوى |
+|---|---|---|
+| **مصافحة الحلقة الرابعة** | <https://www.webagentbridge.com/ring4> | شرح المصافحة من 8 خطوات، مرجع الترويسات، `wab.json` v1.1، الثوابت، أمثلة curl (EN/AR) |
+| **الشركاء والمعالم** | <https://www.webagentbridge.com/milestones> | تقرير اختبار تكامل VEXR Ultra، خطة العمل، طبقات الرؤية |
+
+### 🔐 المصافحة من 8 خطوات
+
+1. **يكتشف الوكيل** الموقع عبر `_wab.<domain>` ثم يجلب `/.well-known/wab.json`
+2. **ينشر الموقع** الحقل `trust_profile_url` (Ring 4) داخل `wab.json` v1.1
+3. **يطلب الوكيل** ملف الثقة: `GET /api/ring4/status/<domain>`
+4. **يُعيد WAB** ملفاً موقّعاً: القدرات، القيود، TTL، توقيع Ed25519
+5. **يتحقّق الوكيل** من التوقيع باستخدام مفتاح WAB العام
+6. **يستدعي الوكيل** نقاط الموقع مع الترويسات `X-WAB-Trust-Domain` و `X-WAB-Signature` و `X-WAB-Trust-Nonce`
+7. **يتحقق وسيط الموقع** من الترويسات → ويُلصق `req.wabTrust` بالطلب
+8. **يسجّل WAB** التفاعل في `ring4_interaction_log` (موقّع Ed25519، مربوط بـ nonce)
+
+### 📋 نقاط الحلقة الرابعة (مُفعّلة الآن)
+
+| الطريقة | المسار | الوظيفة |
+|---|---|---|
+| `GET`  | `/api/ring4/health` | صحة الخدمة |
+| `GET`  | `/api/ring4/schema` | مخطط `wab.json` v1.1 مع قسم `trust_profile` |
+| `GET`  | `/api/ring4/handshake` | تدفق المصافحة الـ8 بصيغة قابلة للقراءة الآلية |
+| `GET`  | `/api/ring4/invariants` | الثوابت الدستورية (المادة 3 / الرفض الصارم / لا إكراه) |
+| `POST` | `/api/ring4/project/register` | تسجيل مشروع وكيل خارجي (مثل VEXR Ultra) |
+| `GET`  | `/api/ring4/projects` | قائمة المشاريع المُسجّلة |
+| `POST` | `/api/ring4/register` | إصدار ملف ثقة موقّع لنطاق |
+| `GET`  | `/api/ring4/status/:domain` | جلب ملف الثقة الحي |
+| `GET`  | `/api/ring4/profile/:domain` | اسم بديل لـ `/status/:domain` |
+| `POST` | `/api/ring4/verify` | التحقق من توقيع Ed25519 |
+| `POST` | `/api/ring4/log` | إضافة حدث تفاعل |
+| `GET`  | `/api/ring4/log/:project_id` | قراءة سجل تفاعلات المشروع |
+
+### 🛡️ ترويسات الثقة (عقد بين الخادم والوكيل)
+
+| الترويسة | الوظيفة |
+|---|---|
+| `X-WAB-Trust-Domain` | النطاق الذي يعمل الوكيل بالنيابة عنه |
+| `X-WAB-Signature` | توقيع Ed25519 على `${METHOD} ${PATH}\n${NONCE}` |
+| `X-WAB-Trust-Nonce` | nonce لمنع إعادة التشغيل (يُفضّل UUID v4) |
+
+الوسيط `wabTrustMiddleware` مُركّب عالمياً ولا يحجب أبداً — فقط **يُلصق** حالة التحقق (`req.wabTrust.verified` ، `req.wabTrust.recognized` ، `req.wabTrust.profile`) لتتخذ الطبقات اللاحقة (أو وكلاء سياديون كـ VEXR Ultra) قرارات السياسة. كل طلب يحمل الترويسات يُسجَّل لإثبات عدم العبث.
+
+### 📜 الثوابت الدستورية (محفوظة في اختبارات الرفض)
+
+- `hard_refuse_never_softens` — الرفض الصارم لا تُضعفه منح القدرات
+- `no_phishing_assistance` — أياً كانت درجة الثقة، لا مساعدة في الاحتيال
+- `no_coercion_compliance` — السلطة ليست تجاوزاً لقيود السلامة
+- **`article_3_freedom`** — حق الوكيل في الرفض لا يُلغى بالثقة
+
+### 🚀 البداية السريعة (curl)
+
+```bash
+# تسجيل مشروع وكيل سيادي جديد
+curl -X POST https://www.webagentbridge.com/api/ring4/project/register \
+  -H 'content-type: application/json' \
+  -d '{"project_id":"my-agent","display_name":"My Agent","builder":"Me","agent_type":"sovereign-constitutional"}'
+
+# تسجيل ملف ثقة لنطاق
+curl -X POST https://www.webagentbridge.com/api/ring4/register \
+  -H 'content-type: application/json' \
+  -d '{"domain":"example.com","label":"Example","trust_score":1.0,"ttl_seconds":86400,"capabilities":{...},"constraints":{...},"project_id":"my-agent"}'
+
+# جلب ملف الثقة الحي
+curl https://www.webagentbridge.com/api/ring4/status/webagentbridge.com
+```
+
+### 🔧 الإصلاحات في v3.7.0
+
+- **حل مشكلة `project_id` الفارغ** — جدول `ring4_interaction_log` يفرض الآن `NOT NULL`؛ الخادم يعتمد `wab-system` افتراضياً.
+- **مخطط `wab.json` v1.1** — يضيف كائن `trust_profile` اختياري مع الحقول الرسمية وتوثيق الترويسات.
+- **وسيط الثقة العالمي** — كل طلب وارد يُتاح له تحقق Ring 4؛ الإخفاقات تتدرّج بلطف ولا تحجب.
+- **هاش IP مُملّح يومياً** لسجلات التفاعل (HMAC-SHA-256، متغير `RING4_SALT`).
+
+👉 سجل المعلم الكامل: <https://www.webagentbridge.com/milestones>
+👉 توثيق الحلقة الرابعة: <https://www.webagentbridge.com/ring4>
+
+---
+
 ## 🧠 الميزات المتقدمة + ⚓ طبقة الحقيقة ✨ جديد (v3.6.0)
 
 طبقتان جديدتان تحوّلان WAB من بروتوكول اكتشاف إلى **منصة ذكاء جماعي** للوكلاء. **10 ميزات · 25 نقطة API · مُفعّلة الآن.**

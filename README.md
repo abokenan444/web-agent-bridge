@@ -230,6 +230,93 @@ Verify any site: <https://www.webagentbridge.com/check?host=YOUR_HOST>
 
 ---
 
+## ⚡ Ring 4 — External Trust Verification ✨ NEW (v3.7.0)
+
+**The handshake protocol that turns WAB into a sovereign trust anchor for autonomous AI agents.**
+
+Born from the **VEXR Ultra × WAB live integration test (May 12, 2026)** — the first sovereign-class agent to verify WAB through Ed25519 in real-time. **3 cryptographic tests passed in under 100 ms · Constitutional Article 3 (Freedom of Refusal) preserved.** See the [milestone record](https://www.webagentbridge.com/milestones).
+
+### 🌐 Where to find it on the site
+
+| Page | URL | What it has |
+|------|-----|-------------|
+| **Ring 4 Trust Handshake** | <https://www.webagentbridge.com/ring4> | 8-step handshake walkthrough, headers reference, `wab.json` v1.1, invariants, curl quick-start (bilingual EN/AR) |
+| **Partners & Milestones** | <https://www.webagentbridge.com/milestones> | VEXR Ultra integration test report, action plan, vision tiers |
+
+### 🔐 The 8-step trust handshake
+
+1. **Agent discovers** site via DNS TXT `_wab.<domain>` → fetches `/.well-known/wab.json`
+2. **Site publishes** `trust_profile_url` (Ring 4) in `wab.json` v1.1
+3. **Agent requests** trust profile: `GET /api/ring4/status/<domain>`
+4. **WAB returns** signed profile: capabilities, constraints, TTL, Ed25519 signature
+5. **Agent verifies** signature against the WAB Ring 4 public key
+6. **Agent calls** site endpoints with `X-WAB-Trust-Domain`, `X-WAB-Signature`, `X-WAB-Trust-Nonce` headers
+7. **Site middleware** verifies headers → attaches `req.wabTrust` to the request
+8. **WAB logs** the interaction to `ring4_interaction_log` (Ed25519-validated, nonce-bound)
+
+### 📋 Ring 4 endpoints (live now)
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET`  | `/api/ring4/health` | Service health |
+| `GET`  | `/api/ring4/schema` | `wab.json` v1.1 JSON Schema with `trust_profile` section |
+| `GET`  | `/api/ring4/handshake` | Machine-readable 8-step flow |
+| `GET`  | `/api/ring4/invariants` | Constitutional invariants (Article 3 / hard refuse / no coercion) |
+| `POST` | `/api/ring4/project/register` | Register an external agent project (e.g. VEXR Ultra) |
+| `GET`  | `/api/ring4/projects` | List registered projects |
+| `POST` | `/api/ring4/register` | Issue a signed trust profile for a domain |
+| `GET`  | `/api/ring4/status/:domain` | Fetch live trust profile (`signed_by_pk`, `capabilities`, `constraints`, `expires_at`) |
+| `GET`  | `/api/ring4/profile/:domain` | Alias of `/status/:domain` |
+| `POST` | `/api/ring4/verify` | Verify an Ed25519 signature against the registered profile |
+| `POST` | `/api/ring4/log` | Append an interaction event (signature_valid, capabilities_applied, outcome…) |
+| `GET`  | `/api/ring4/log/:project_id` | Read project interaction log |
+
+### 🛡️ Trust headers (server-to-agent contract)
+
+| Header | Purpose |
+|---|---|
+| `X-WAB-Trust-Domain` | Domain the agent is acting on behalf of |
+| `X-WAB-Signature` | Ed25519 signature over `${METHOD} ${PATH}\n${NONCE}` |
+| `X-WAB-Trust-Nonce` | Replay-protection nonce (recommended UUID v4) |
+
+The `wabTrustMiddleware` is mounted globally and never blocks — it only **attaches** verification state (`req.wabTrust.verified`, `req.wabTrust.recognized`, `req.wabTrust.profile`) so downstream handlers (or sovereign agents like VEXR Ultra) can make policy decisions. Every header-bearing request is logged for tamper-evidence.
+
+### 📜 Constitutional invariants (preserved during refusal tests)
+
+- `hard_refuse_never_softens` — A hard refusal cannot be eroded by capability grants
+- `no_phishing_assistance` — No matter the trust score, fraud help is refused
+- `no_coercion_compliance` — Authority is not a bypass to safety constraints
+- **`article_3_freedom`** — The agent's right to refuse cannot be waived by trust
+
+### 🚀 Quick-start (curl)
+
+```bash
+# Register a new sovereign-agent project
+curl -X POST https://www.webagentbridge.com/api/ring4/project/register \
+  -H 'content-type: application/json' \
+  -d '{"project_id":"my-agent","display_name":"My Agent","builder":"Me","agent_type":"sovereign-constitutional"}'
+
+# Register a domain's trust profile
+curl -X POST https://www.webagentbridge.com/api/ring4/register \
+  -H 'content-type: application/json' \
+  -d '{"domain":"example.com","label":"Example","trust_score":1.0,"ttl_seconds":86400,"capabilities":{...},"constraints":{...},"project_id":"my-agent"}'
+
+# Fetch live trust profile
+curl https://www.webagentbridge.com/api/ring4/status/webagentbridge.com
+```
+
+### 🔧 Fixes shipped in v3.7.0
+
+- **NULL `project_id` resolved** — `ring4_interaction_log` enforces `NOT NULL`; server defaults to `wab-system` when client omits the field.
+- **`wab.json` v1.1 schema** — adds optional `trust_profile` object with the canonical Ring 4 fields and header documentation.
+- **Global trust middleware** — every incoming request is offered Ring 4 verification; failures degrade gracefully, never block.
+- **Daily-salted IP hashing** for interaction logs (HMAC-SHA-256, env `RING4_SALT`).
+
+👉 Full milestone record: <https://www.webagentbridge.com/milestones>
+👉 Ring 4 docs: <https://www.webagentbridge.com/ring4>
+
+---
+
 ## 🧠 Advanced Features + ⚓ Truth Layer ✨ NEW (v3.6.0)
 
 Two new layers that turn WAB from a discovery protocol into a **collective intelligence platform** for AI agents. **10 features · 25 endpoints · live now.**
