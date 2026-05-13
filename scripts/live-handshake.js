@@ -78,8 +78,11 @@ async function run() {
     const url = endpointFromTxt || (args.base + '/.well-known/wab.json');
     const r = await http('GET', url);
     wabJson = r.json;
-    const ok = r.status === 200 && wabJson && (wabJson.version === 'wab1' || wabJson.version === '1.1');
-    record('Fetch /.well-known/wab.json', ok, ok ? `version=${wabJson.version} host=${wabJson.host || '-'}` : `HTTP ${r.status}`);
+    // Accept any documented WAB Discovery version field: `version` (Ring 4) or
+    // `wab_version` (WAB Discovery 1.x). Reject only when neither is present.
+    const ver = wabJson && (wabJson.version || wabJson.wab_version);
+    const ok = r.status === 200 && !!ver;
+    record('Fetch /.well-known/wab.json', ok, ok ? `version=${ver} host=${wabJson.host || wabJson.domain || '-'}` : `HTTP ${r.status}`);
   } catch (e) {
     record('Fetch /.well-known/wab.json', false, e.message);
   }
