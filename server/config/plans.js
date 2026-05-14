@@ -82,6 +82,7 @@ const PLANS = {
       visionAnalysis: false,
       swarmExecution: false,
       agentMemory: false,
+      shieldlink: false,
     },
   },
 
@@ -143,6 +144,7 @@ const PLANS = {
       exploitShield: false,
       visionAnalysis: false,
       swarmExecution: false,
+      shieldlink: false,
     },
   },
 
@@ -188,6 +190,7 @@ const PLANS = {
       swarmExecution: true,
       auditLog: true,
       customDomain: true,
+      shieldlink: true,
 
       // Enterprise only
       enterpriseSecurity: false,
@@ -228,6 +231,7 @@ const PLANS = {
       hostedRuntime: true, marketplace: true, certification: true,
       trafficIntelligence: true, exploitShield: true, visionAnalysis: true,
       swarmExecution: true, auditLog: true, customDomain: true,
+      shieldlink: true,
 
       // Enterprise exclusive
       enterpriseSecurity: true,

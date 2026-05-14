@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Verifying link… · WAB ShieldLink</title>
+<style>
+  :root {
+    --green:#0a9d58; --yellow:#f4a90b; --red:#dc2626; --bg:#f7f8fb; --card:#fff;
+    --text:#1f2933; --muted:#6b7280; --border:#e5e7eb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:var(--card);border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.08);width:100%;max-width:560px;overflow:hidden;border:1px solid var(--border)}
+  .banner{padding:24px;color:#fff;display:flex;gap:14px;align-items:center;font-weight:600;font-size:18px}
+  .banner.green{background:var(--green)}
+  .banner.yellow{background:var(--yellow);color:#1f2933}
+  .banner.red{background:var(--red)}
+  .icon{width:32px;height:32px;flex:0 0 32px}
+  .body{padding:24px}
+  h1{margin:0 0 4px;font-size:22px}
+  .domain{color:var(--muted);font-size:14px;margin-bottom:18px;display:flex;align-items:center;gap:6px}
+  .badge{display:inline-block;background:#e8f5ee;color:var(--green);font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;margin-left:6px}
+  .row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+  .row:last-child{border-bottom:none}
+  .row .k{color:var(--muted)}
+  .row .v{font-weight:500;text-align:right;word-break:break-all;max-width:60%}
+  .reasons{margin:18px 0;padding:12px;border-radius:8px;background:#fff7e6;color:#92400e;font-size:13px;border:1px solid #fde68a}
+  .reasons.red{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+  .actions{display:flex;gap:10px;margin-top:22px}
+  button,a.btn{flex:1;padding:13px;border-radius:8px;border:none;cursor:pointer;font-size:15px;font-weight:600;text-align:center;text-decoration:none;display:inline-block}
+  .btn-go{background:var(--green);color:#fff}
+  .btn-go.disabled,.btn-go[aria-disabled="true"]{background:#9ca3af;pointer-events:none}
+  .btn-cancel{background:#f3f4f6;color:var(--text)}
+  .btn-report{background:transparent;color:var(--red);border:1px solid var(--red)}
+  .footer{text-align:center;font-size:12px;color:var(--muted);padding:14px;border-top:1px solid var(--border);background:#fafbfc}
+  .footer a{color:var(--muted)}
+  .spinner{width:18px;height:18px;border:2px solid #fff5;border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .hide{display:none}
+  details{margin-top:14px}
+  details summary{cursor:pointer;color:var(--muted);font-size:13px}
+  pre{background:#f3f4f6;padding:10px;border-radius:6px;font-size:12px;overflow-x:auto}
+  .lang-switch{position:absolute;top:14px;right:18px;font-size:13px;color:var(--muted)}
+  .lang-switch a{color:var(--muted);margin-left:8px;cursor:pointer}
+  [dir="rtl"] .lang-switch{right:auto;left:18px}
+  [dir="rtl"] .lang-switch a{margin-left:0;margin-right:8px}
+  [dir="rtl"] .row .v{text-align:left}
+</style>
+</head>
+<body>
+  <div class="lang-switch"><a id="lang-en">EN</a><a id="lang-ar">عربي</a></div>
+  <div class="card" id="card">
+    <div class="banner yellow" id="banner">
+      <span class="spinner" aria-hidden="true"></span>
+      <span id="banner-text" data-en="Verifying link…" data-ar="جاري التحقق من الرابط…">Verifying link…</span>
+    </div>
+    <div class="body" id="body">
+      <p style="color:var(--muted);font-size:14px;margin:0">
+        <span data-en="WAB ShieldLink is verifying the digital signature on this link before sending you to its destination."
+              data-ar="ShieldLink من WAB يتحقق من التوقيع الرقمي لهذا الرابط قبل توجيهك إلى وجهته.">
+          WAB ShieldLink is verifying the digital signature on this link before sending you to its destination.
+        </span>
+      </p>
+    </div>
+    <div class="footer">
+      <span data-en="Protected by" data-ar="محمي بواسطة">Protected by</span>
+      <a href="/shieldlink" target="_blank" rel="noopener">WAB ShieldLink</a>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const token = location.pathname.replace(/^\/l\//, '').split('?')[0].split('#')[0];
+  const html = document.documentElement;
+  const body = document.getElementById('body');
+  const banner = document.getElementById('banner');
+  const bannerText = document.getElementById('banner-text');
+
+  function setLang(lang){
+    html.setAttribute('lang', lang);
+    html.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+    document.querySelectorAll('[data-en]').forEach(el => {
+      el.textContent = el.getAttribute('data-' + lang) || el.getAttribute('data-en');
+    });
+  }
+  document.getElementById('lang-en').onclick = () => setLang('en');
+  document.getElementById('lang-ar').onclick = () => setLang('ar');
+  if ((navigator.language || '').startsWith('ar')) setLang('ar');
+
+  const REASON_LABELS = {
+    en:{
+      unknown_token:'Token not found',
+      revoked:'Issuer revoked this link',
+      expired:'Link has expired',
+      brand_unverified:'Brand identity is still pending review',
+      brand_suspended:'Brand has been suspended',
+      brand_rejected:'Brand verification was rejected',
+      target_off_brand_domain:'Destination is on a different domain than the brand',
+      many_reports:'Multiple users reported this link',
+      has_reports:'Has been reported by users',
+      signing_key_unknown:'Signing key is unknown',
+      payload_parse_error:'Signed payload is malformed'
+    },
+    ar:{
+      unknown_token:'رمز الرابط غير موجود',
+      revoked:'الجهة المصدّرة ألغت هذا الرابط',
+      expired:'انتهت صلاحية الرابط',
+      brand_unverified:'هوية الجهة لا تزال قيد المراجعة',
+      brand_suspended:'تم تعليق الجهة',
+      brand_rejected:'تم رفض توثيق الجهة',
+      target_off_brand_domain:'الوجهة على نطاق مختلف عن نطاق الجهة',
+      many_reports:'تم الإبلاغ عن هذا الرابط من عدة مستخدمين',
+      has_reports:'تم الإبلاغ عن هذا الرابط',
+      signing_key_unknown:'مفتاح التوقيع غير معروف',
+      payload_parse_error:'حمل التوقيع غير صالح'
+    }
+  };
+  function reasonText(r){
+    const lang = html.getAttribute('lang') === 'ar' ? 'ar' : 'en';
+    const base = r.split(':')[0];
+    return REASON_LABELS[lang][base] || r;
+  }
+
+  function moneyFmt(cents, currency){
+    if (cents == null) return null;
+    try { return new Intl.NumberFormat(undefined, { style:'currency', currency: currency || 'USD' }).format(cents/100); }
+    catch { return (cents/100) + ' ' + (currency||''); }
+  }
+
+  function render(data){
+    const lang = html.getAttribute('lang') === 'ar' ? 'ar' : 'en';
+    const isAr = lang === 'ar';
+    const level = data.level || 'red';
+    banner.classList.remove('green','yellow','red');
+    banner.classList.add(level);
+    banner.querySelector('.spinner') && banner.querySelector('.spinner').remove();
+
+    const titles = {
+      green:{en:'✓ Verified link from a known sender', ar:'✓ رابط موثّق من جهة معروفة'},
+      yellow:{en:'⚠ Caution — open with care', ar:'⚠ تنبيه — افتح بحذر'},
+      red:{en:'✕ Untrusted or unsafe link', ar:'✕ رابط غير موثوق أو غير آمن'}
+    };
+    bannerText.textContent = titles[level][lang];
+
+    if (!data.ok) {
+      body.innerHTML = '<div class="reasons red">'+ (data.reasons||['unknown_token']).map(reasonText).join(' · ') +'</div>'+
+        '<div class="actions"><a class="btn btn-cancel" href="/">'+
+        (isAr?'العودة':'Go back')+'</a></div>';
+      return;
+    }
+
+    const brand = data.brand || {};
+    const link = data.link || {};
+    const amount = moneyFmt(link.amount_cents, link.currency);
+    const verifiedBadge = brand.verified_badge ? '<span class="badge">'+(isAr?'موثّق':'Verified')+'</span>' : '';
+    const reasonsBlock = (data.reasons||[]).length
+      ? '<div class="reasons '+(level==='red'?'red':'')+'">'+ data.reasons.map(reasonText).join(' · ') +'</div>'
+      : '';
+
+    const rows = [];
+    rows.push(['Brand','الجهة', (brand.display_name||'—') + verifiedBadge]);
+    rows.push(['Brand domain','نطاق الجهة', brand.domain || '—']);
+    if (link.payee_name) rows.push(['Payee','المستفيد', link.payee_name]);
+    if (amount) rows.push(['Amount','المبلغ', amount]);
+    if (link.reference) rows.push(['Reference','المرجع', link.reference]);
+    rows.push(['Destination','الوجهة', link.target_url || '—']);
+    if (link.expires_at) rows.push(['Expires','تنتهي', new Date(link.expires_at).toLocaleString()]);
+    rows.push(['Purpose','الغرض', link.purpose||'—']);
+
+    const rowsHtml = rows.map(([en,ar,v]) =>
+      '<div class="row"><span class="k">'+(isAr?ar:en)+'</span><span class="v">'+escapeHtml(v)+'</span></div>'
+    ).join('');
+
+    const goLabel = isAr ? 'متابعة إلى الوجهة' : 'Continue to destination';
+    const cancelLabel = isAr ? 'إلغاء' : 'Cancel';
+    const reportLabel = isAr ? 'الإبلاغ كاحتيال' : 'Report as phishing';
+
+    const goDisabled = level === 'red';
+    body.innerHTML = `
+      <h1>${escapeHtml(brand.display_name||'')}</h1>
+      <div class="domain">${escapeHtml(brand.domain||'')} ${verifiedBadge}</div>
+      ${reasonsBlock}
+      <div>${rowsHtml}</div>
+      <div class="actions">
+        <a id="go" class="btn btn-go ${goDisabled?'disabled':''}" ${goDisabled?'aria-disabled="true"':''} href="${escapeAttr(link.target_url||'#')}">${goLabel}</a>
+        <a class="btn btn-cancel" href="/" id="cancel">${cancelLabel}</a>
+      </div>
+      <div class="actions"><button class="btn-report" id="report">${reportLabel}</button></div>
+      <details><summary>${isAr?'تفاصيل تقنية':'Technical details'}</summary>
+        <pre>${escapeHtml(JSON.stringify({
+          signature_valid:data.signature_valid, level:data.level, reasons:data.reasons,
+          brand_status:brand.status, link_status:link.status, target_host:link.target_host,
+          target_host_matches_brand:link.target_host_matches_brand
+        }, null, 2))}</pre>
+      </details>
+    `;
+
+    document.getElementById('go').addEventListener('click', e => {
+      if (goDisabled) { e.preventDefault(); return; }
+      sendEvent('confirm');
+    });
+    document.getElementById('cancel').addEventListener('click', () => sendEvent('cancel'));
+    document.getElementById('report').addEventListener('click', () => {
+      const reason = prompt(isAr?'سبب الإبلاغ (اختياري):':'Why are you reporting this link? (optional)') || '';
+      fetch('/api/shieldlink/report', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ token, reason })
+      }).then(()=>alert(isAr?'تم استلام البلاغ. شكراً لك.':'Report received. Thank you.'));
+    });
+  }
+
+  function sendEvent(ev){
+    try {
+      navigator.sendBeacon('/api/shieldlink/event',
+        new Blob([JSON.stringify({token, event:ev})], {type:'application/json'}));
+    } catch {
+      fetch('/api/shieldlink/event', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({token, event:ev}), keepalive:true});
+    }
+  }
+
+  function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function escapeAttr(s){ return escapeHtml(s); }
+
+  if (!token || !/^[A-Za-z0-9_-]{8,64}$/.test(token)) {
+    render({ ok:false, reasons:['unknown_token'] });
+    return;
+  }
+
+  fetch('/api/shieldlink/verify?token=' + encodeURIComponent(token))
+    .then(r => r.json().then(d => ({status:r.status, data:d})))
+    .then(({status, data}) => {
+      sendEvent('open');
+      if (status === 404) { render({ ok:false, reasons:['unknown_token'] }); return; }
+      render(data);
+    })
+    .catch(() => render({ ok:false, reasons:['unknown_token'] }));
+})();
+</script>
+</body>
+</html>

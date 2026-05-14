@@ -18,6 +18,9 @@
     .status-expiring { background:#fef3c7; color:#92400e; }
     .status-expired  { background:#fee2e2; color:#991b1b; }
     .status-error    { background:#e2e8f0; color:#475569; }
+    .ct-pending      { background:#fef3c7; color:#92400e; }
+    .ct-ok           { background:#dcfce7; color:#166534; }
+    .ct-off          { background:#e2e8f0; color:#475569; }
     table.tm { width:100%; border-collapse:collapse; background:#fff; }
     table.tm th, table.tm td { padding:9px 10px; border-bottom:1px solid #f1f5f9; text-align:left; font-size:.88rem; }
     table.tm th { background:#f8fafc; color:#475569; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; }
@@ -36,7 +39,7 @@ AdminShell.init({
     root.innerHTML = `
       <div class="admin-page">
         <h1>🔐 Trust Monitor</h1>
-        <p class="page-sub">Extended Trust Layer — live SSL health for every active site, certificate transparency log, and 7-day expiry alerts. <strong>Fallback Trust:</strong> if SSL is degraded but the WAB Ed25519 signature is still valid, ShieldQR keeps the verdict at <em>yellow</em> instead of red.</p>
+        <p class="page-sub">Extended Trust Layer — live SSL health for every active site, <strong>Certificate Transparency monitor</strong> (auto-detects new certs from <code>crt.sh</code> every 6h), and 7-day expiry alerts. <strong>Fallback Trust:</strong> if SSL is degraded but the WAB Ed25519 signature is still valid, ShieldQR keeps the verdict at <em>yellow</em> instead of red. Set <code>WAB_CT_MONITOR=true</code> to enable the cron, and <code>WAB_AUTO_RESIGN=true</code> to re-sign <code>wab.json</code> automatically when a new cert is observed.</p>
 
         <div id="stats" class="stat-grid"></div>
 
@@ -44,6 +47,7 @@ AdminShell.init({
           <input id="checkHost" placeholder="example.com">
           <button class="btn btn-primary" id="checkBtn">Check host</button>
           <button class="btn btn-secondary" id="sweepBtn">Run full sweep</button>
+          <button class="btn btn-secondary" id="ctSweepBtn" title="Scan public CT logs (crt.sh) for new certs">🔍 CT log sweep</button>
           <button class="btn btn-secondary" id="reloadBtn">Reload</button>
         </div>
 
@@ -53,8 +57,9 @@ AdminShell.init({
             <thead><tr>
               <th>Host</th><th>Status</th><th>Days left</th><th>Issuer</th>
               <th>Fingerprint (SHA-256)</th><th>Valid to</th><th>Last checked</th>
+              <th>CT Status</th>
             </tr></thead>
-            <tbody id="rows"><tr><td colspan="7" style="text-align:center;padding:24px;">Loading…</td></tr></tbody>
+            <tbody id="rows"><tr><td colspan="8" style="text-align:center;padding:24px;">Loading…</td></tr></tbody>
           </table>
         </div>
 
@@ -80,20 +85,34 @@ AdminShell.init({
           <div class="stat-card"><div class="lbl">⚠️ Expiring</div><div class="num">${s.expiringSoon||0}</div></div>
           <div class="stat-card"><div class="lbl">🛑 Expired</div><div class="num">${s.expired||0}</div></div>
           <div class="stat-card"><div class="lbl">CT log entries</div><div class="num">${s.certHistory||0}</div></div>
+          <div class="stat-card" style="border-color:${s.pendingResign? '#f59e0b':'#e2e8f0'};"><div class="lbl">🔑 Pending re-sign</div><div class="num" style="color:${s.pendingResign? '#92400e':'#0f172a'};">${s.pendingResign||0}</div></div>
+          <div class="stat-card"><div class="lbl">CT monitor</div><div class="num" style="font-size:1rem;">${s.ctMonitorEnv? '✅ ON':'⚪ OFF'}${s.autoResignEnv? ' · auto':''}</div></div>
         `;
       } catch (e) { console.error(e); }
     }
 
     async function loadSites() {
       const tbody = document.getElementById('rows');
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;">Loading…</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;">Loading…</td></tr>';
       try {
         const r = await api('/api/admin/trust-monitor/sites');
         if (!r.sites || r.sites.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#64748b;">No hosts monitored yet. Click <em>Run full sweep</em>.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#64748b;">No hosts monitored yet. Click <em>Run full sweep</em>.</td></tr>';
           return;
         }
-        tbody.innerHTML = r.sites.map((row) => `
+        tbody.innerHTML = r.sites.map((row) => {
+          let ctCell;
+          if (!row.ct_monitor_enabled) {
+            ctCell = `<span class="status-pill ct-off">off</span>
+                      <button class="btn btn-secondary btn-xs" data-ct-toggle="${H(row.host)}" data-enable="1" style="margin-left:6px;font-size:.7rem;">enable</button>`;
+          } else if (row.ct_pending_resign) {
+            ctCell = `<span class="status-pill ct-pending">⚠️ re-sign needed</span>
+                      <button class="btn btn-secondary btn-xs" data-ct-clear="${H(row.host)}" style="margin-left:6px;font-size:.7rem;">mark resolved</button>`;
+          } else {
+            ctCell = `<span class="status-pill ct-ok">✓ synced</span>`;
+          }
+          ctCell += `<br><small style="color:#64748b;">${H(row.ct_last_checked||'never')}</small>`;
+          return `
           <tr>
             <td><strong>${H(row.host)}</strong></td>
             <td><span class="status-pill status-${H(row.status||'error')}">${H(row.status||'error')}</span></td>
@@ -102,9 +121,26 @@ AdminShell.init({
             <td><span class="fp">${H(row.fingerprint_sha256||'—')}</span></td>
             <td>${H(row.valid_to||'—')}</td>
             <td>${H(row.last_checked_at||'—')}</td>
-          </tr>
-        `).join('');
-      } catch (e) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#b91c1c;">${H(e.message)}</td></tr>`; }
+            <td>${ctCell}</td>
+          </tr>`;
+        }).join('');
+        // wire row buttons
+        tbody.querySelectorAll('[data-ct-clear]').forEach((b) => {
+          b.addEventListener('click', async () => {
+            const host = b.getAttribute('data-ct-clear');
+            try { await api('/api/admin/trust-monitor/ct-clear', { method: 'POST', body: { host } }); toast('Cleared', 'success'); loadStats(); loadSites(); }
+            catch (e) { toast('Error: '+e.message, 'error'); }
+          });
+        });
+        tbody.querySelectorAll('[data-ct-toggle]').forEach((b) => {
+          b.addEventListener('click', async () => {
+            const host = b.getAttribute('data-ct-toggle');
+            const enabled = b.getAttribute('data-enable') === '1';
+            try { await api('/api/admin/trust-monitor/ct-toggle', { method: 'POST', body: { host, enabled } }); toast('Updated', 'success'); loadSites(); }
+            catch (e) { toast('Error: '+e.message, 'error'); }
+          });
+        });
+      } catch (e) { tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:#b91c1c;">${H(e.message)}</td></tr>`; }
     }
 
     async function loadHistory() {
@@ -150,6 +186,17 @@ AdminShell.init({
         document.getElementById('sweepBtn').disabled = false;
         document.getElementById('sweepBtn').textContent = 'Run full sweep';
       }
+    });
+    document.getElementById('ctSweepBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('ctSweepBtn');
+      btn.disabled = true; btn.textContent = 'Scanning CT logs…';
+      try {
+        const r = await api('/api/admin/trust-monitor/ct-sweep', { method: 'POST' });
+        const changed = (r.results || []).filter((x) => x.changed).length;
+        toast(`CT scan: ${r.count||0} hosts, ${changed} new cert(s)`, 'success');
+        loadStats(); loadSites(); loadHistory();
+      } catch (e) { toast('Error: ' + e.message, 'error'); }
+      finally { btn.disabled = false; btn.textContent = '🔍 CT log sweep'; }
     });
     document.getElementById('reloadBtn').addEventListener('click', () => { loadStats(); loadSites(); loadHistory(); });
     document.getElementById('checkHost').addEventListener('keydown', (e) => {

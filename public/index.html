@@ -34,31 +34,59 @@
         <img src="/images/wab-logo-64.png" alt="WAB" class="brand-icon" width="32" height="32" style="width:32px;height:32px;border-radius:8px;display:block">
         <span>WAB</span>
       </a>
-      <ul class="navbar-links">
-        <li><a href="#features">Features</a></li>
-        <li><a href="#governance">Governance</a></li>
-        <li><a href="#packages">Packages</a></li>
-        <li><a href="#integrations">Integrations</a></li>
-        <li><a href="#how-it-works">How It Works</a></li>
-        <li><a href="#pricing">Pricing</a></li>
-        <li><a href="#v2-features">v2.0</a></li>
-        <li><a href="#agent-mesh">Agent Mesh</a></li>
-        <li><a href="#agent-workspace">Workspace</a></li>
-        <li><a href="/demo">Demo</a></li>
-        <li><a href="/integrations">Integrations</a></li>
-        <li><a href="#latest-additions">What's New</a></li>
-        <li><a href="/dns">AI Discovery</a></li>
-        <li><a href="/one-click" style="color:#a5b4fc;font-weight:600;">⚡ One-Click <sup style="font-size:0.6em;color:#ef4444;">NEW</sup></a></li>
-        <li><a href="/wab-features" style="color:#22d3ee;font-weight:600;">🧠 Advanced Features <sup style="font-size:0.6em;color:#ef4444;">NEW</sup></a></li>
-        <li><a href="/wab-truth" style="color:#a78bfa;font-weight:600;">⚓ Truth Layer <sup style="font-size:0.6em;color:#ef4444;">NEW</sup></a></li>
-        <li><a href="/milestones" style="color:#fbbf24;font-weight:600;">🏆 Milestones <sup style="font-size:0.6em;color:#ef4444;">NEW</sup></a></li>
-        <li><a href="/ring4" style="color:#22d3ee;font-weight:600;">⚡ Ring 4 <sup style="font-size:0.6em;color:#ef4444;">NEW</sup></a></li>
-        <li><a href="/phone-shield">Phone Shield</a></li>
-        <li><a href="/shieldlink" style="color:#10b981;font-weight:600;">🔗 ShieldLink <sup style="font-size:0.6em;color:#ef4444;">NEW</sup></a></li>
-        <li><a href="/growth">Growth Suite</a></li>
-        <li><a href="/api">API</a></li>
-        <li><a href="/docs">Docs</a></li>
-        <li><a href="/whitepaper">Whitepaper</a></li>
+      <ul class="navbar-links" id="navbarLinks">
+        <li class="nav-dropdown">
+          <button class="nav-trigger" type="button" aria-haspopup="true" aria-expanded="false">Product <span class="nav-caret" aria-hidden="true">▾</span></button>
+          <div class="nav-menu" role="menu">
+            <a href="#features" role="menuitem"><strong>Features</strong><span>Core protocol &amp; SDKs</span></a>
+            <a href="#how-it-works" role="menuitem"><strong>How It Works</strong><span>Architecture in 4 steps</span></a>
+            <a href="#packages" role="menuitem"><strong>Packages</strong><span>npm · React · Vue · Svelte</span></a>
+            <a href="#v2-features" role="menuitem"><strong>v2.0</strong><span>Latest protocol release</span></a>
+            <a href="/docs" role="menuitem"><strong>Docs</strong><span>Full documentation</span></a>
+          </div>
+        </li>
+        <li class="nav-dropdown">
+          <button class="nav-trigger" type="button" aria-haspopup="true" aria-expanded="false">Trust &amp; Safety <span class="nav-caret" aria-hidden="true">▾</span></button>
+          <div class="nav-menu" role="menu">
+            <a href="/ring4" role="menuitem"><strong>⚡ Ring 4</strong><span>9-step trust handshake</span></a>
+            <a href="/phone-shield" role="menuitem"><strong>📱 Phone Shield</strong><span>Cross-device trust</span></a>
+            <a href="/shieldlink" role="menuitem"><strong>🔗 ShieldLink</strong><span>Verified anti-phishing links</span></a>
+            <a href="/wab-truth" role="menuitem"><strong>⚓ Truth Layer</strong><span>Anti-hallucination signals</span></a>
+            <a href="/wab-features" role="menuitem"><strong>🧠 Advanced Features</strong><span>Reputation · Privacy · Cache</span></a>
+            <a href="#governance" role="menuitem"><strong>Governance</strong><span>HMAC audit chain</span></a>
+          </div>
+        </li>
+        <li class="nav-dropdown">
+          <button class="nav-trigger" type="button" aria-haspopup="true" aria-expanded="false">Workspaces <span class="nav-caret" aria-hidden="true">▾</span></button>
+          <div class="nav-menu" role="menu">
+            <a href="/workspace" role="menuitem"><strong>🤖 Agent Workspace</strong><span>4-panel premium UI</span></a>
+            <a href="#agent-mesh" role="menuitem"><strong>🕸️ Agent Mesh</strong><span>Private agent networks</span></a>
+            <a href="/one-click" role="menuitem"><strong>⚡ One-Click Activation</strong><span>30-second setup</span></a>
+            <a href="/demo" role="menuitem"><strong>🎮 Live Demo</strong><span>Try it in your browser</span></a>
+          </div>
+        </li>
+        <li class="nav-dropdown">
+          <button class="nav-trigger" type="button" aria-haspopup="true" aria-expanded="false">Commercial <span class="nav-caret" aria-hidden="true">▾</span></button>
+          <div class="nav-menu" role="menu">
+            <a href="/partners" role="menuitem"><strong>🤝 Partner Program</strong><span>Basic · Verified · Premium</span></a>
+            <a href="/trust-graph-api" role="menuitem"><strong>📊 Trust Graph API</strong><span>Free · Pro · Enterprise tiers</span></a>
+            <a href="/governance" role="menuitem"><strong>🏛️ Governance SaaS</strong><span>EU AI Act audit trail</span></a>
+            <a href="/enterprise-mesh" role="menuitem"><strong>🕸️ Enterprise Mesh</strong><span>Self-hosted · air-gappable</span></a>
+            <a href="#pricing" role="menuitem"><strong>💳 Pricing</strong><span>All plans &amp; SLA</span></a>
+          </div>
+        </li>
+        <li class="nav-dropdown">
+          <button class="nav-trigger" type="button" aria-haspopup="true" aria-expanded="false">Developers <span class="nav-caret" aria-hidden="true">▾</span></button>
+          <div class="nav-menu" role="menu">
+            <a href="/api" role="menuitem"><strong>API Reference</strong><span>OpenAPI 3.0</span></a>
+            <a href="/whitepaper" role="menuitem"><strong>Whitepaper</strong><span>Protocol &amp; design</span></a>
+            <a href="/integrations" role="menuitem"><strong>Integrations</strong><span>WordPress · Shopify · Next.js</span></a>
+            <a href="/dns" role="menuitem"><strong>AI Discovery (DNS)</strong><span>Zero-code adoption</span></a>
+            <a href="/milestones" role="menuitem"><strong>🏆 Milestones</strong><span>Release history</span></a>
+            <a href="#latest-additions" role="menuitem"><strong>What's New</strong><span>Latest additions</span></a>
+            <a href="/growth" role="menuitem"><strong>Growth Suite</strong><span>Site-owner tools</span></a>
+          </div>
+        </li>
       </ul>
       <div class="navbar-actions">
         <a href="/login" class="btn btn-ghost" data-wab-auth="guest">Sign In</a>

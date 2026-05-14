@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ShieldLink — WAB Dashboard</title>
+<link rel="stylesheet" href="/css/styles.css">
+<style>
+  body{background:#f7f8fb;color:#1f2933;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;margin:0}
+  .topbar{background:#0b1220;color:#fff;padding:14px 24px;display:flex;justify-content:space-between;align-items:center}
+  .topbar a{color:#fff;text-decoration:none;font-weight:600}
+  .topbar nav a{color:#94a3b8;margin-left:18px;font-weight:500;font-size:14px}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 20px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin:16px 0}
+  h1{margin:0 0 4px}
+  .sub{color:#6b7280;margin:0 0 18px}
+  label{display:block;font-weight:600;font-size:13px;margin:10px 0 4px;color:#334155}
+  input,select,textarea{width:100%;padding:9px 11px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;font-family:inherit;background:#fff}
+  textarea{min-height:60px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .btn{background:#0a9d58;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-weight:600;cursor:pointer;font-size:14px}
+  .btn:disabled{background:#9ca3af;cursor:not-allowed}
+  .btn-secondary{background:#f3f4f6;color:#1f2933}
+  .btn-danger{background:#dc2626}
+  .btn-sm{padding:4px 10px;font-size:12px}
+  .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .pill-pending{background:#fef9c3;color:#854d0e}
+  .pill-verified{background:#dcfce7;color:#166534}
+  .pill-rejected{background:#e2e8f0;color:#475569}
+  .pill-suspended{background:#fee2e2;color:#991b1b}
+  .pill-active{background:#dcfce7;color:#166534}
+  .pill-revoked{background:#fee2e2;color:#991b1b}
+  .pill-expired{background:#e2e8f0;color:#475569}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid #f1f5f9}
+  th{font-size:12px;color:#475569;text-transform:uppercase}
+  .empty{text-align:center;padding:30px;color:#9ca3af}
+  .alert{padding:10px 14px;border-radius:8px;margin:10px 0;font-size:14px}
+  .alert-warn{background:#fff7e6;color:#92400e;border:1px solid #fde68a}
+  .alert-err{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+  .alert-ok{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#f1f5f9;padding:2px 6px;border-radius:4px}
+  .url-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-family:ui-monospace,Menlo,monospace;font-size:13px;word-break:break-all;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  @media(max-width:640px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/dashboard.html">← WAB Dashboard</a>
+  <nav><a href="/shieldlink" target="_blank">About ShieldLink</a><a href="/pricing.html">Pricing</a></nav>
+</div>
+<div class="wrap">
+  <h1>🔗 ShieldLink — Verified Links</h1>
+  <p class="sub">Sign anti-phishing links for one of your sites. End-users see a Trust Preview before reaching the destination.</p>
+
+  <div class="card">
+    <label>Site</label>
+    <select id="siteSel"><option>Loading…</option></select>
+    <div id="planAlert"></div>
+    <div id="brandPanel"></div>
+  </div>
+
+  <div class="card" id="signCard" style="display:none;">
+    <h3 style="margin:0 0 8px">Sign a new link</h3>
+    <div class="row">
+      <div>
+        <label>Purpose</label>
+        <select id="purpose"><option value="payment">payment</option><option value="invoice">invoice</option><option value="login">login</option><option value="generic">generic</option></select>
+      </div>
+      <div>
+        <label>Expires in (hours)</label>
+        <input type="number" id="ttlHours" value="24" min="1" max="720">
+      </div>
+    </div>
+    <label>Destination URL</label>
+    <input type="url" id="targetUrl" placeholder="https://your-site.example/pay/abc">
+    <div class="row">
+      <div>
+        <label>Amount (in minor units, e.g. cents/halalas)</label>
+        <input type="number" id="amount" placeholder="24000">
+      </div>
+      <div>
+        <label>Currency (ISO)</label>
+        <input id="currency" placeholder="SAR" maxlength="3">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Payee name (shown to user)</label>
+        <input id="payee" placeholder="ACME LLC">
+      </div>
+      <div>
+        <label>Reference / invoice ID</label>
+        <input id="reference" placeholder="INV-2024-001">
+      </div>
+    </div>
+    <p style="margin-top:14px"><button class="btn" id="signBtn">Sign &amp; create link</button></p>
+    <div id="signResult"></div>
+  </div>
+
+  <div class="card" id="linksCard" style="display:none;">
+    <h3 style="margin:0 0 8px">Recent links</h3>
+    <table id="linksTable"><thead><tr><th>Token</th><th>Purpose</th><th>Amount</th><th>Status</th><th>Expires</th><th></th></tr></thead><tbody></tbody></table>
+  </div>
+</div>
+
+<script>
+(function(){
+  const token = localStorage.getItem('wab_token');
+  if (!token) { location.href = '/login.html?next=' + encodeURIComponent(location.pathname); return; }
+  const H = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const moneyFmt = (c, cur) => c==null ? '—' : (function(){try{return new Intl.NumberFormat(undefined,{style:'currency',currency:cur||'USD'}).format(c/100)}catch{return (c/100)+' '+(cur||'')}})();
+
+  async function api(url, opts = {}) {
+    const r = await fetch(url, {
+      method: opts.method || 'GET',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token, ...(opts.headers||{}) },
+      body: opts.body || null,
+    });
+    let data = null;
+    try { data = await r.json(); } catch {}
+    if (!r.ok) {
+      const err = new Error((data && (data.error || data.message)) || ('HTTP '+r.status));
+      err.status = r.status; err.data = data || {};
+      throw err;
+    }
+    return data;
+  }
+
+  let currentSiteId = null;
+  let currentBrand = null;
+
+  // ── Load sites ──────────────────────────────────────────────────
+  async function loadSites() {
+    try {
+      const data = await api('/api/sites');
+      const sel = document.getElementById('siteSel');
+      const sites = (data.sites || data || []);
+      if (!sites.length) { sel.innerHTML = '<option>No sites — create one first</option>'; return; }
+      sel.innerHTML = sites.map(s => `<option value="${s.id}" data-tier="${s.tier}" data-domain="${H(s.domain)}">${H(s.name||s.domain)} · ${H(s.domain)} · ${s.tier}</option>`).join('');
+      sel.addEventListener('change', () => onSite(sel.value));
+      onSite(sel.value);
+    } catch (e) {
+      document.getElementById('siteSel').outerHTML = '<div class="alert alert-err">Failed to load sites: '+H(e.message)+'</div>';
+    }
+  }
+
+  async function onSite(siteId) {
+    currentSiteId = siteId;
+    const opt = document.querySelector(`#siteSel option[value="${siteId}"]`);
+    const tier = opt && opt.dataset.tier;
+    const domain = opt && opt.dataset.domain;
+    document.getElementById('planAlert').innerHTML = '';
+    document.getElementById('brandPanel').innerHTML = '';
+    document.getElementById('signCard').style.display = 'none';
+    document.getElementById('linksCard').style.display = 'none';
+
+    if (tier !== 'pro' && tier !== 'enterprise') {
+      document.getElementById('planAlert').innerHTML =
+        `<div class="alert alert-warn">ShieldLink requires the <b>Pro</b> or <b>Enterprise</b> plan. This site is on <b>${H(tier||'free')}</b>. <a href="/dashboard.html#billing">Upgrade →</a></div>`;
+      return;
+    }
+
+    try {
+      const r = await api('/api/customer/shieldlink/sites/'+siteId+'/brand');
+      currentBrand = r.brand;
+      renderBrand(r.brand, domain);
+      if (r.brand.status === 'verified') {
+        document.getElementById('signCard').style.display = '';
+        document.getElementById('linksCard').style.display = '';
+        loadLinks();
+      }
+    } catch (e) {
+      if (e.status === 404) { renderBrandForm(domain); return; }
+      document.getElementById('brandPanel').innerHTML = '<div class="alert alert-err">'+H(e.message)+'</div>';
+    }
+  }
+
+  function renderBrand(brand, domain) {
+    const note = {
+      pending: 'Your verification request is in the review queue. Approval is usually within 1–2 business days.',
+      verified: 'Your brand is verified. You can sign links below.',
+      rejected: 'Your brand request was rejected. Contact support to appeal.',
+      suspended: 'Your brand has been suspended. Contact support immediately.',
+    }[brand.status] || '';
+    document.getElementById('brandPanel').innerHTML = `
+      <div style="margin-top:16px">
+        <div><b>Brand:</b> ${H(brand.display_name)} <span class="pill pill-${H(brand.status)}">${H(brand.status)}</span></div>
+        <div style="color:#64748b;margin-top:4px">Domain: <code>${H(brand.domain)}</code> · Submitted: ${H(brand.created_at)}</div>
+        <div class="alert ${brand.status==='verified'?'alert-ok':brand.status==='pending'?'alert-warn':'alert-err'}" style="margin-top:10px">${H(note)}</div>
+      </div>
+    `;
+  }
+
+  function renderBrandForm(domain) {
+    document.getElementById('brandPanel').innerHTML = `
+      <div style="margin-top:16px">
+        <div class="alert alert-warn">No verified brand yet for <code>${H(domain)}</code>. Submit a brand request to start signing links.</div>
+        <label>Display name (the name end-users will see)</label>
+        <input id="bDisplay" placeholder="Bank Example">
+        <div class="row">
+          <div><label>Category</label>
+            <select id="bCategory"><option value="">—</option><option>bank</option><option>payments</option><option>gov</option><option>ecommerce</option><option>other</option></select>
+          </div>
+          <div><label>Country (ISO 2-letter)</label><input id="bCountry" maxlength="2" placeholder="SA"></div>
+        </div>
+        <p style="margin-top:14px"><button class="btn" id="submitBrand">Submit for verification</button></p>
+        <div id="brandSubmitResult"></div>
+      </div>
+    `;
+    document.getElementById('submitBrand').addEventListener('click', submitBrand);
+  }
+
+  async function submitBrand() {
+    const display = document.getElementById('bDisplay').value.trim();
+    const cat = document.getElementById('bCategory').value || null;
+    const country = document.getElementById('bCountry').value.trim().toUpperCase() || null;
+    if (!display) return;
+    const res = document.getElementById('brandSubmitResult');
+    res.innerHTML = '';
+    try {
+      // Pre-check similarity
+      const sim = await api('/api/customer/shieldlink/sites/'+currentSiteId+'/brand/check', { method:'POST', body: JSON.stringify({display_name: display}) });
+      if (!sim.ok) {
+        res.innerHTML = '<div class="alert alert-err">Display name rejected: '+H(sim.reason)+(sim.similarTo?' (similar to '+H(sim.similarTo.display_name)+' at '+H(sim.similarTo.domain)+')':'')+(sim.reservedAs?' (reserved name: '+H(sim.reservedAs)+')':'')+'</div>';
+        return;
+      }
+      const r = await api('/api/customer/shieldlink/sites/'+currentSiteId+'/brand', {
+        method:'POST',
+        body: JSON.stringify({display_name: display, category: cat, country}),
+      });
+      res.innerHTML = '<div class="alert alert-ok">Submitted. Awaiting admin review (id: '+r.brand_id+').</div>';
+      setTimeout(() => onSite(currentSiteId), 700);
+    } catch (e) {
+      res.innerHTML = '<div class="alert alert-err">'+H(e.data && (e.data.error || e.data.reason) || e.message)+'</div>';
+    }
+  }
+
+  // ── Sign ────────────────────────────────────────────────────────
+  document.getElementById('signBtn').addEventListener('click', async () => {
+    const out = document.getElementById('signResult'); out.innerHTML = '';
+    const body = {
+      purpose: document.getElementById('purpose').value,
+      target_url: document.getElementById('targetUrl').value.trim(),
+      amount_cents: document.getElementById('amount').value ? parseInt(document.getElementById('amount').value, 10) : null,
+      currency: document.getElementById('currency').value.trim().toUpperCase() || null,
+      payee_name: document.getElementById('payee').value.trim() || null,
+      reference: document.getElementById('reference').value.trim() || null,
+      expires_in_sec: Math.max(60, parseInt(document.getElementById('ttlHours').value, 10) * 3600),
+    };
+    if (!body.target_url) { out.innerHTML = '<div class="alert alert-err">Destination URL required</div>'; return; }
+    try {
+      const r = await api('/api/customer/shieldlink/sites/'+currentSiteId+'/sign', { method:'POST', body: JSON.stringify(body) });
+      out.innerHTML = `
+        <div class="alert alert-ok" style="margin-top:14px">Link created. Share this URL — recipients will see the Trust Preview before being redirected:</div>
+        <div class="url-box">
+          <span id="newUrl">${H(r.url)}</span>
+          <button class="btn btn-sm btn-secondary" onclick="navigator.clipboard.writeText('${H(r.url)}').then(()=>this.textContent='Copied!')">Copy</button>
+        </div>
+        <p style="font-size:13px;color:#64748b;margin:8px 0 0">Expires: ${H(r.expires_at)} · Token: <code>${H(r.token)}</code> · Key: <code>${H(r.key_id)}</code></p>
+      `;
+      loadLinks();
+    } catch (e) { out.innerHTML = '<div class="alert alert-err">'+H((e.data && e.data.error) || e.message)+'</div>'; }
+  });
+
+  // ── Links list ──────────────────────────────────────────────────
+  async function loadLinks() {
+    const tbody = document.querySelector('#linksTable tbody');
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Loading…</td></tr>';
+    try {
+      const r = await api('/api/customer/shieldlink/sites/'+currentSiteId+'/links?limit=50');
+      if (!r.links.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No links yet.</td></tr>'; return; }
+      tbody.innerHTML = r.links.map(l => `
+        <tr>
+          <td><code>${H(l.token)}</code> <a href="/l/${encodeURIComponent(l.token)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">Open</a></td>
+          <td>${H(l.purpose)}</td>
+          <td>${H(moneyFmt(l.amount_cents, l.currency))}</td>
+          <td><span class="pill pill-${H(l.status)}">${H(l.status)}</span></td>
+          <td>${H(l.expires_at)}</td>
+          <td>${l.status==='active'?'<button class="btn btn-sm btn-danger" data-revoke="'+l.id+'">Revoke</button>':''}</td>
+        </tr>
+      `).join('');
+      tbody.querySelectorAll('button[data-revoke]').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('Revoke this link? Anyone opening it will see "revoked".')) return;
+        await api('/api/customer/shieldlink/sites/'+currentSiteId+'/links/'+b.dataset.revoke+'/revoke', { method:'POST', body: JSON.stringify({}) });
+        loadLinks();
+      }));
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">'+H(e.message)+'</td></tr>'; }
+  }
+
+  loadSites();
+})();
+</script>
+</body>
+</html>

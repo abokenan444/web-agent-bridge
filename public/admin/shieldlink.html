@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShieldLink — WAB Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/admin/_shell.css">
+  <script src="/admin/_shell.js"></script>
+  <style>
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:12px 0 22px}
+    .stat-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px}
+    .stat-card .num{font-size:1.6rem;font-weight:800;color:#0f172a;margin:2px 0}
+    .stat-card .lbl{color:#64748b;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
+    .tabs{display:flex;gap:6px;margin:18px 0 10px;border-bottom:1px solid #e2e8f0;flex-wrap:wrap}
+    .tabs button{background:transparent;border:none;padding:9px 14px;cursor:pointer;font-weight:600;color:#64748b;border-bottom:2px solid transparent}
+    .tabs button.active{color:#0f172a;border-bottom-color:#6366f1}
+    table.shield{width:100%;border-collapse:collapse;background:#fff}
+    table.shield th,table.shield td{padding:9px 10px;border-bottom:1px solid #f1f5f9;text-align:left;font-size:.86rem;vertical-align:middle}
+    table.shield th{background:#f8fafc;color:#475569;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+    table.shield td.url{max-width:340px;word-break:break-all;font-family:ui-monospace,Menlo,monospace;font-size:.78rem}
+    .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+    .pill-pending{background:#fef9c3;color:#854d0e}
+    .pill-verified{background:#dcfce7;color:#166534}
+    .pill-rejected{background:#e2e8f0;color:#475569}
+    .pill-suspended{background:#fee2e2;color:#991b1b}
+    .pill-active{background:#dcfce7;color:#166534}
+    .pill-revoked{background:#fee2e2;color:#991b1b}
+    .pill-expired{background:#e2e8f0;color:#475569}
+    .filters{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+    .filters select,.filters input{padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;font-size:.85rem}
+    .row-actions{display:flex;gap:6px}
+    .row-actions button{font-size:.75rem;padding:4px 8px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;cursor:pointer}
+    .row-actions button.danger{border-color:#fca5a5;color:#991b1b}
+    .row-actions button.primary{border-color:#22c55e;color:#15803d}
+    dialog{border:none;border-radius:12px;padding:0;max-width:560px;width:90%}
+    dialog::backdrop{background:rgba(15,23,42,.55)}
+    dialog .head{padding:14px 20px;border-bottom:1px solid #e2e8f0;font-weight:700}
+    dialog .body{padding:20px;font-size:.9rem}
+    dialog .body label{display:block;margin:8px 0 4px;font-weight:600;font-size:.82rem}
+    dialog .body textarea,dialog .body input,dialog .body select{width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem}
+    dialog .foot{padding:14px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px}
+  </style>
+</head>
+<body>
+<script>
+const { api, escapeHtml: H, toast } = AdminShell;
+
+AdminShell.init({
+  page: 'shieldlink',
+  mount: async (root) => {
+    root.innerHTML = `
+      <div class="admin-page">
+        <h1>🔗 ShieldLink — Verified Links</h1>
+        <p class="page-sub">Review brand verification requests, monitor signed links from premium customers, and triage phishing reports. Customers gain access on the <strong>Pro</strong> and <strong>Enterprise</strong> plans.</p>
+
+        <div id="stats" class="stat-grid"></div>
+
+        <div class="tabs">
+          <button data-tab="brands" class="active">Brand requests</button>
+          <button data-tab="links">Signed links</button>
+          <button data-tab="reports">Reports</button>
+          <button data-tab="holds">Reserved names</button>
+        </div>
+
+        <div id="tabBrands">
+          <div class="filters">
+            <label>Status <select id="brandStatus">
+              <option value="pending">pending</option>
+              <option value="verified">verified</option>
+              <option value="rejected">rejected</option>
+              <option value="suspended">suspended</option>
+              <option value="">all</option>
+            </select></label>
+            <button class="btn btn-secondary" id="reloadBrands">Reload</button>
+          </div>
+          <div class="card" style="padding:0;overflow-x:auto;">
+            <table class="shield">
+              <thead><tr><th>#</th><th>Domain</th><th>Display name</th><th>Category</th><th>Status</th><th>Submitted</th><th></th></tr></thead>
+              <tbody id="brandRows"><tr><td colspan="7" style="text-align:center;padding:24px;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="tabLinks" style="display:none;">
+          <div class="filters">
+            <label>Status <select id="linkStatus">
+              <option value="">any</option>
+              <option value="active">active</option>
+              <option value="revoked">revoked</option>
+              <option value="expired">expired</option>
+            </select></label>
+            <label>Domain <input id="linkDomain" placeholder="bank.example"></label>
+            <button class="btn btn-secondary" id="reloadLinks">Reload</button>
+          </div>
+          <div class="card" style="padding:0;overflow-x:auto;">
+            <table class="shield">
+              <thead><tr><th>Token</th><th>Brand</th><th>Purpose</th><th class="url">Target</th><th>Amount</th><th>Status</th><th>Expires</th><th></th></tr></thead>
+              <tbody id="linkRows"><tr><td colspan="8" style="text-align:center;padding:24px;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="tabReports" style="display:none;">
+          <div class="filters">
+            <label>Status <select id="reportStatus">
+              <option value="open">open</option>
+              <option value="reviewing">reviewing</option>
+              <option value="resolved">resolved</option>
+              <option value="rejected">rejected</option>
+              <option value="">all</option>
+            </select></label>
+            <button class="btn btn-secondary" id="reloadReports">Reload</button>
+          </div>
+          <div class="card" style="padding:0;overflow-x:auto;">
+            <table class="shield">
+              <thead><tr><th>#</th><th class="url">URL</th><th>Reason</th><th>Status</th><th>Created</th><th></th></tr></thead>
+              <tbody id="reportRows"><tr><td colspan="6" style="text-align:center;padding:24px;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="tabHolds" style="display:none;">
+          <div class="filters">
+            <input id="holdPattern" placeholder="reserved-name (e.g. mada)">
+            <input id="holdReason" placeholder="Reason / context">
+            <button class="btn" id="addHold">Add hold</button>
+            <button class="btn btn-secondary" id="reloadHolds">Reload</button>
+          </div>
+          <div class="card" style="padding:0;overflow-x:auto;">
+            <table class="shield">
+              <thead><tr><th>#</th><th>Pattern</th><th>Kind</th><th>Reason</th><th>Created</th><th></th></tr></thead>
+              <tbody id="holdRows"><tr><td colspan="6" style="text-align:center;padding:24px;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <dialog id="brandDlg">
+          <div class="head" id="dlgHead">Review brand</div>
+          <div class="body">
+            <div id="dlgBody"></div>
+            <label>Decision</label>
+            <select id="dlgDecision">
+              <option value="verified">verified</option>
+              <option value="rejected">rejected</option>
+              <option value="suspended">suspended</option>
+              <option value="pending">pending (return to queue)</option>
+            </select>
+            <label>Internal notes</label>
+            <textarea id="dlgNotes" rows="3" placeholder="Why this decision?"></textarea>
+          </div>
+          <div class="foot">
+            <button class="btn btn-secondary" id="dlgCancel">Cancel</button>
+            <button class="btn" id="dlgSave">Save</button>
+          </div>
+        </dialog>
+      </div>
+    `;
+
+    // ── Tabs ─────────────────────────────────────────────────────────
+    document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      ['Brands','Links','Reports','Holds'].forEach(t => {
+        document.getElementById('tab'+t).style.display = b.dataset.tab === t.toLowerCase() ? '' : 'none';
+      });
+    }));
+
+    // ── Stats ────────────────────────────────────────────────────────
+    async function loadStats() {
+      try {
+        const s = await api('/api/admin/shieldlink/stats');
+        const num = (arr, key) => (arr||[]).reduce((acc,x) => acc + (x[key]||x.n||0), 0);
+        const brand = (arr, st) => ((arr||[]).find(x => x.status === st) || {n:0}).n;
+        const reportOpen = brand(s.reports, 'open');
+        const linksActive = brand(s.links, 'active');
+        document.getElementById('stats').innerHTML = `
+          <div class="stat-card"><div class="lbl">Total signed links</div><div class="num">${s.totalLinks||0}</div></div>
+          <div class="stat-card"><div class="lbl">Active links</div><div class="num">${linksActive}</div></div>
+          <div class="stat-card"><div class="lbl">Pending brands</div><div class="num">${brand(s.brands,'pending')}</div></div>
+          <div class="stat-card"><div class="lbl">Verified brands</div><div class="num">${brand(s.brands,'verified')}</div></div>
+          <div class="stat-card"><div class="lbl">Open reports</div><div class="num">${reportOpen}</div></div>
+        `;
+      } catch (e) { console.warn('stats failed', e); }
+    }
+
+    // ── Brands ───────────────────────────────────────────────────────
+    async function loadBrands() {
+      const status = document.getElementById('brandStatus').value;
+      const tbody = document.getElementById('brandRows');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;">Loading…</td></tr>';
+      try {
+        const r = await api('/api/admin/shieldlink/brands' + (status ? '?status='+status : ''));
+        if (!r.brands.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#64748b;">No brands.</td></tr>'; return; }
+        tbody.innerHTML = r.brands.map(b => `
+          <tr>
+            <td>${b.id}</td>
+            <td><code>${H(b.domain)}</code></td>
+            <td>${H(b.display_name)}</td>
+            <td>${H(b.category||'—')}</td>
+            <td><span class="pill pill-${H(b.status)}">${H(b.status)}</span></td>
+            <td>${H(b.created_at)}</td>
+            <td><div class="row-actions"><button class="primary" data-review="${b.id}">Review</button></div></td>
+          </tr>
+        `).join('');
+        tbody.querySelectorAll('button[data-review]').forEach(btn =>
+          btn.addEventListener('click', () => openReview(r.brands.find(x => x.id == btn.dataset.review))));
+      } catch (e) { tbody.innerHTML = '<tr><td colspan="7" style="color:#dc2626">'+H(e.message)+'</td></tr>'; }
+    }
+
+    function openReview(b) {
+      const dlg = document.getElementById('brandDlg');
+      document.getElementById('dlgHead').textContent = 'Review brand: ' + b.display_name;
+      document.getElementById('dlgBody').innerHTML = `
+        <div><b>Domain:</b> <code>${H(b.domain)}</code></div>
+        <div><b>Display name:</b> ${H(b.display_name)} <small style="color:#64748b">(normalized: ${H(b.display_name_normalized||'')})</small></div>
+        <div><b>Category:</b> ${H(b.category||'—')} · <b>Country:</b> ${H(b.country||'—')}</div>
+        <div><b>Submitted:</b> ${H(b.created_at)}</div>
+        <div style="color:#92400e;font-size:.82rem;margin-top:8px">Verify the domain actually belongs to this brand (DNS TXT trust record + WHOIS) before approving.</div>
+      `;
+      document.getElementById('dlgDecision').value = b.status === 'pending' ? 'verified' : b.status;
+      document.getElementById('dlgNotes').value = b.notes || '';
+      dlg.showModal();
+      document.getElementById('dlgSave').onclick = async () => {
+        try {
+          await api('/api/admin/shieldlink/brands/' + b.id, {
+            method:'PUT',
+            body: JSON.stringify({
+              decision: document.getElementById('dlgDecision').value,
+              notes: document.getElementById('dlgNotes').value || null,
+            }),
+          });
+          toast('Brand updated');
+          dlg.close();
+          loadBrands(); loadStats();
+        } catch (e) { toast('Failed: ' + e.message); }
+      };
+    }
+    document.getElementById('dlgCancel').addEventListener('click', () => document.getElementById('brandDlg').close());
+
+    document.getElementById('reloadBrands').addEventListener('click', loadBrands);
+    document.getElementById('brandStatus').addEventListener('change', loadBrands);
+
+    // ── Links ────────────────────────────────────────────────────────
+    function moneyFmt(c, cur){ if (c==null) return '—'; try{return new Intl.NumberFormat(undefined,{style:'currency',currency:cur||'USD'}).format(c/100)}catch{return (c/100)+' '+(cur||'')} }
+    async function loadLinks() {
+      const tbody = document.getElementById('linkRows');
+      const status = document.getElementById('linkStatus').value;
+      const domain = document.getElementById('linkDomain').value.trim();
+      const q = new URLSearchParams();
+      if (status) q.set('status', status);
+      if (domain) q.set('domain', domain);
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;">Loading…</td></tr>';
+      try {
+        const r = await api('/api/admin/shieldlink/links' + (q.toString() ? '?'+q : ''));
+        if (!r.links.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#64748b;">No links.</td></tr>'; return; }
+        tbody.innerHTML = r.links.map(l => `
+          <tr>
+            <td><code>${H(l.token)}</code></td>
+            <td>${H(l.display_name||'')}<br><small style="color:#64748b">${H(l.domain||'')}</small></td>
+            <td>${H(l.purpose)}</td>
+            <td class="url">${H(l.target_url)}</td>
+            <td>${moneyFmt(l.amount_cents, l.currency)}</td>
+            <td><span class="pill pill-${H(l.status)}">${H(l.status)}</span></td>
+            <td>${H(l.expires_at)}</td>
+            <td><div class="row-actions">${l.status==='active'?'<button class="danger" data-suspend="'+l.id+'">Suspend</button>':''}<a class="row-actions" target="_blank" rel="noopener" href="/l/${encodeURIComponent(l.token)}"><button>Preview</button></a></div></td>
+          </tr>
+        `).join('');
+        tbody.querySelectorAll('button[data-suspend]').forEach(btn =>
+          btn.addEventListener('click', async () => {
+            if (!confirm('Suspend this link?')) return;
+            const reason = prompt('Reason (logged):') || 'admin_suspended';
+            await api('/api/admin/shieldlink/links/'+btn.dataset.suspend+'/suspend', { method:'POST', body: JSON.stringify({reason}) });
+            toast('Suspended'); loadLinks(); loadStats();
+          }));
+      } catch (e) { tbody.innerHTML = '<tr><td colspan="8" style="color:#dc2626">'+H(e.message)+'</td></tr>'; }
+    }
+    document.getElementById('reloadLinks').addEventListener('click', loadLinks);
+    document.getElementById('linkStatus').addEventListener('change', loadLinks);
+
+    // ── Reports ──────────────────────────────────────────────────────
+    async function loadReports() {
+      const tbody = document.getElementById('reportRows');
+      const status = document.getElementById('reportStatus').value;
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;">Loading…</td></tr>';
+      try {
+        const r = await api('/api/admin/shieldlink/reports' + (status ? '?status='+status : ''));
+        if (!r.reports.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#64748b;">No reports.</td></tr>'; return; }
+        tbody.innerHTML = r.reports.map(rp => `
+          <tr>
+            <td>${rp.id}</td>
+            <td class="url">${H(rp.url)}</td>
+            <td>${H(rp.reason||'—')}</td>
+            <td>
+              <select data-status="${rp.id}">
+                ${['open','reviewing','resolved','rejected'].map(s => `<option value="${s}" ${rp.status===s?'selected':''}>${s}</option>`).join('')}
+              </select>
+            </td>
+            <td>${H(rp.created_at)}</td>
+            <td><button data-save="${rp.id}">Save</button></td>
+          </tr>
+        `).join('');
+        tbody.querySelectorAll('button[data-save]').forEach(btn => btn.addEventListener('click', async () => {
+          const id = btn.dataset.save;
+          const status = tbody.querySelector(`select[data-status="${id}"]`).value;
+          await api('/api/admin/shieldlink/reports/'+id, { method:'PUT', body: JSON.stringify({status}) });
+          toast('Updated'); loadReports();
+        }));
+      } catch (e) { tbody.innerHTML = '<tr><td colspan="6" style="color:#dc2626">'+H(e.message)+'</td></tr>'; }
+    }
+    document.getElementById('reloadReports').addEventListener('click', loadReports);
+    document.getElementById('reportStatus').addEventListener('change', loadReports);
+
+    // ── Holds (reserved names) ───────────────────────────────────────
+    async function loadHolds() {
+      const tbody = document.getElementById('holdRows');
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;">Loading…</td></tr>';
+      try {
+        const r = await api('/api/admin/shieldlink/holds');
+        if (!r.holds.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#64748b;">No holds.</td></tr>'; return; }
+        tbody.innerHTML = r.holds.map(h => `
+          <tr>
+            <td>${h.id}</td><td><code>${H(h.pattern)}</code></td><td>${H(h.pattern_kind)}</td>
+            <td>${H(h.reason||'—')}</td><td>${H(h.created_at)}</td>
+            <td><button class="row-actions" data-del="${h.id}">Delete</button></td>
+          </tr>
+        `).join('');
+        tbody.querySelectorAll('button[data-del]').forEach(btn => btn.addEventListener('click', async () => {
+          if (!confirm('Remove this hold? Names matching it will become claimable.')) return;
+          await api('/api/admin/shieldlink/holds/'+btn.dataset.del, { method:'DELETE' });
+          toast('Removed'); loadHolds();
+        }));
+      } catch (e) { tbody.innerHTML = '<tr><td colspan="6" style="color:#dc2626">'+H(e.message)+'</td></tr>'; }
+    }
+    document.getElementById('reloadHolds').addEventListener('click', loadHolds);
+    document.getElementById('addHold').addEventListener('click', async () => {
+      const pattern = document.getElementById('holdPattern').value.trim();
+      const reason = document.getElementById('holdReason').value.trim();
+      if (!pattern) { toast('Pattern required'); return; }
+      await api('/api/admin/shieldlink/holds', { method:'POST', body: JSON.stringify({pattern, reason}) });
+      document.getElementById('holdPattern').value = '';
+      document.getElementById('holdReason').value = '';
+      toast('Added'); loadHolds();
+    });
+
+    // initial load
+    loadStats(); loadBrands(); loadLinks(); loadReports(); loadHolds();
+  }
+});
+</script>
+</body>
+</html>

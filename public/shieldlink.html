@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>WAB ShieldLink — Verified Links for Banks &amp; Brands</title>
+<meta name="description" content="Sender-signed, anti-phishing links from verified brands. Cryptographically signed, DNS-anchored, no install required for end users." />
+<meta property="og:title" content="WAB ShieldLink — Verified Links" />
+<meta property="og:description" content="Anti-phishing verified links for banks, payment processors, and businesses. Anyone can verify; no app install required." />
+<meta property="og:url" content="https://www.webagentbridge.com/shieldlink" />
+<link rel="canonical" href="https://www.webagentbridge.com/shieldlink" />
+<style>
+  :root{--bg:#0b1220;--fg:#fff;--muted:#94a3b8;--card:#111a2e;--border:#1f2a44;--accent:#22d3a3;--warn:#f59e0b;--bad:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--fg);line-height:1.6}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px}
+  header{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
+  header a.logo{color:#fff;text-decoration:none;font-weight:700;font-size:18px}
+  nav a{color:var(--muted);margin-left:20px;text-decoration:none;font-size:14px}
+  nav a:hover{color:#fff}
+  [dir="rtl"] nav a{margin-left:0;margin-right:20px}
+  .hero{padding:60px 0 40px;text-align:center}
+  .pill{display:inline-block;background:rgba(34,211,163,.15);color:var(--accent);padding:6px 14px;border-radius:99px;font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+  h1{font-size:44px;line-height:1.15;margin:18px 0 16px}
+  .lede{color:var(--muted);font-size:18px;max-width:720px;margin:0 auto 26px}
+  .cta{display:inline-block;background:var(--accent);color:#0b1220;font-weight:700;padding:14px 28px;border-radius:8px;text-decoration:none;margin:6px}
+  .cta.ghost{background:transparent;color:#fff;border:1px solid var(--border)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:42px 0}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+  .card h3{margin:0 0 8px;font-size:18px}
+  .card p{color:var(--muted);font-size:14px;margin:0}
+  .demo{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin:28px 0}
+  .demo h2{margin:0 0 14px}
+  .preview{display:flex;gap:16px;flex-wrap:wrap}
+  .preview .col{flex:1;min-width:220px;background:#0f1730;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .preview .head{padding:12px;color:#fff;font-weight:600;font-size:14px}
+  .preview .head.ok{background:#0a9d58}
+  .preview .head.warn{background:#f59e0b;color:#1f2933}
+  .preview .head.bad{background:#dc2626}
+  .preview ul{margin:0;padding:14px 18px;color:var(--muted);font-size:13px}
+  .preview li{margin:4px 0}
+  section{padding:36px 0;border-top:1px solid var(--border)}
+  h2{font-size:28px;margin:0 0 14px}
+  .steps{counter-reset:step;list-style:none;padding:0}
+  .steps li{padding:14px 0 14px 56px;position:relative;color:var(--muted)}
+  .steps li::before{counter-increment:step;content:counter(step);position:absolute;left:0;top:14px;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#0b1220;font-weight:700;display:flex;align-items:center;justify-content:center}
+  [dir="rtl"] .steps li{padding:14px 56px 14px 0}
+  [dir="rtl"] .steps li::before{left:auto;right:0}
+  .steps li b{color:#fff;display:block;margin-bottom:2px}
+  table{width:100%;border-collapse:collapse;margin:20px 0;font-size:14px}
+  th,td{text-align:left;padding:12px;border-bottom:1px solid var(--border)}
+  th{color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:.4px}
+  [dir="rtl"] th,[dir="rtl"] td{text-align:right}
+  .price{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+  .plan{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px}
+  .plan.pro{border-color:var(--accent)}
+  .plan h3{margin:0 0 4px}
+  .plan .p{font-size:32px;font-weight:700;margin:6px 0 12px}
+  .plan ul{padding-left:18px;color:var(--muted);font-size:14px;margin:0}
+  [dir="rtl"] .plan ul{padding-left:0;padding-right:18px}
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:36px 0;border-top:1px solid var(--border)}
+  .lang{cursor:pointer;color:var(--muted);text-decoration:none}
+  .lang:hover{color:#fff}
+  @media(max-width:640px){h1{font-size:32px}.hero{padding:36px 0 24px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="logo" href="/">Web Agent Bridge</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/pricing.html" data-en="Pricing" data-ar="الأسعار">Pricing</a>
+      <a href="/dashboard.html" data-en="Dashboard" data-ar="لوحة التحكم">Dashboard</a>
+      <a class="lang" id="lang-toggle">عربي</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <span class="pill" data-en="WAB ShieldLink · New" data-ar="شيلد لينك · جديد">WAB ShieldLink · New</span>
+    <h1 data-en="Verified links from real banks &amp; brands."
+        data-ar="روابط موثّقة من البنوك والعلامات الحقيقية.">
+      Verified links from real banks &amp; brands.
+    </h1>
+    <p class="lede" data-en="Stop phishing at the link layer. Banks, payment processors, telcos, and businesses sign every link they send. Anyone who clicks sees a Trust Preview before reaching the destination. No install. No browser extension. Just better trust on the open web."
+       data-ar="أوقف التصيّد عند طبقة الرابط. البنوك ومزوّدو الدفع والشركات يوقّعون كل رابط يرسلونه، وعند فتحه يظهر لأي مستخدم معاينة موثوقة قبل الوصول إلى الوجهة. بدون أي تطبيق أو إضافة متصفح.">
+      Stop phishing at the link layer. Banks, payment processors, telcos, and businesses sign every link they send. Anyone who clicks sees a Trust Preview before reaching the destination. No install. No browser extension.
+    </p>
+    <a class="cta" href="/register.html" data-en="Get verified — start free" data-ar="ابدأ التوثيق — مجاناً">Get verified — start free</a>
+    <a class="cta ghost" href="#how" data-en="How it works" data-ar="كيف يعمل">How it works</a>
+  </div>
+
+  <div class="demo">
+    <h2 data-en="What end-users see" data-ar="ما يراه المستخدم">What end-users see</h2>
+    <p style="color:var(--muted);margin:0 0 16px" data-en="Every signed link opens a Trust Preview before redirecting. Recipients see the real brand, the real amount, and the real expiry — verified by Ed25519 signature."
+       data-ar="كل رابط موقّع يفتح معاينة موثوقة قبل إعادة التوجيه. يرى المستخدم اسم الجهة الحقيقية والمبلغ ومدة الصلاحية، مُتحقَّق منها بتوقيع Ed25519.">
+    </p>
+    <div class="preview">
+      <div class="col"><div class="head ok">✓ <span data-en="Verified — Bank Example" data-ar="موثّق — بنك مثال">Verified — Bank Example</span></div>
+        <ul>
+          <li><b data-en="Brand:" data-ar="الجهة:">Brand:</b> Bank Example <span style="color:var(--accent)">●</span></li>
+          <li><b data-en="Payee:" data-ar="المستفيد:">Payee:</b> ACME LLC</li>
+          <li><b data-en="Amount:" data-ar="المبلغ:">Amount:</b> 240.00 SAR</li>
+          <li><b data-en="Domain match:" data-ar="مطابقة النطاق:">Domain match:</b> ✓</li>
+          <li><b data-en="Signature:" data-ar="التوقيع:">Signature:</b> ✓ Ed25519</li>
+        </ul>
+      </div>
+      <div class="col"><div class="head warn">⚠ <span data-en="Caution — pending review" data-ar="تنبيه — قيد المراجعة">Caution — pending review</span></div>
+        <ul>
+          <li><b data-en="Brand:" data-ar="الجهة:">Brand:</b> NewMerchant</li>
+          <li><b data-en="Status:" data-ar="الحالة:">Status:</b> brand_unverified</li>
+          <li><b data-en="Signature:" data-ar="التوقيع:">Signature:</b> ✓</li>
+        </ul>
+      </div>
+      <div class="col"><div class="head bad">✕ <span data-en="Blocked — phishing" data-ar="محظور — تصيّد">Blocked — phishing</span></div>
+        <ul>
+          <li><b data-en="Reason:" data-ar="السبب:">Reason:</b> revoked · many_reports</li>
+          <li><b data-en="Signature:" data-ar="التوقيع:">Signature:</b> ✕</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <section id="how">
+    <h2 data-en="How it works" data-ar="كيف يعمل">How it works</h2>
+    <ol class="steps">
+      <li><b data-en="Verify your domain (DNS TXT)" data-ar="وثّق نطاقك عبر سجل DNS TXT">Verify your domain (DNS TXT)</b>
+        <span data-en="Add the WAB trust record to your DNS — the same root every modern protocol uses (no CA required)."
+              data-ar="أضف سجل ثقة WAB إلى DNS الخاص بك — نفس الأساس الذي تستخدمه البروتوكولات الحديثة (بدون مرجع تصديق).">
+        </span>
+      </li>
+      <li><b data-en="Apply for a Verified Brand badge" data-ar="قدّم طلب شارة الجهة الموثّقة">Apply for a Verified Brand badge</b>
+        <span data-en="Submit your display name. Lookalikes (Levenshtein distance ≤ 2) are auto-rejected, and reserved names like 'mada' or 'paypal' require admin review."
+              data-ar="أدخل اسم الجهة. الأسماء المتشابهة (مسافة Levenshtein ≤ 2) تُرفض تلقائياً، والأسماء المحجوزة مثل 'مدى' أو 'PayPal' تتطلب مراجعة الإدارة.">
+        </span>
+      </li>
+      <li><b data-en="Sign every link you send" data-ar="وقّع كل رابط ترسله">Sign every link you send</b>
+        <span data-en="Call POST /api/customer/shieldlink/sites/:siteId/sign with the destination, amount, payee, and expiry. Get back a short link like https://www.webagentbridge.com/l/abc123."
+              data-ar="استدعِ POST /api/customer/shieldlink/sites/:siteId/sign بالوجهة والمبلغ والمستفيد ومدة الصلاحية، لتحصل على رابط قصير مثل https://www.webagentbridge.com/l/abc123.">
+        </span>
+      </li>
+      <li><b data-en="Anyone verifies — no app needed" data-ar="أي شخص يتحقق — بدون تطبيق">Anyone verifies — no app needed</b>
+        <span data-en="When the recipient opens the link, the Trust Preview verifies the Ed25519 signature, fetches your DNS-anchored public key, and shows a green / yellow / red verdict before redirect."
+              data-ar="عند فتح المستلم للرابط، تتحقق المعاينة الموثوقة من التوقيع، وتجلب المفتاح العام من DNS، ثم تعرض حكماً أخضر/أصفر/أحمر قبل التحويل.">
+        </span>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2 data-en="Why it stops phishing" data-ar="لماذا يوقف التصيّد">Why it stops phishing</h2>
+    <div class="grid">
+      <div class="card"><h3 data-en="Identity = domain ownership" data-ar="الهوية = ملكية النطاق">Identity = domain ownership</h3>
+        <p data-en="Only the proven owner of bank.example can sign links carrying the brand 'Bank Example'. No CA, no manual paperwork — DNS + DNSSEC are the trust root."
+           data-ar="فقط المالك الموثّق لـ bank.example يستطيع توقيع روابط تحمل اسم 'Bank Example'. لا حاجة لمرجع تصديق ولا أوراق — DNS وDNSSEC هما جذر الثقة.">
+        </p></div>
+      <div class="card"><h3 data-en="Lookalike protection" data-ar="حماية من الأسماء المتشابهة">Lookalike protection</h3>
+        <p data-en="The registry rejects any display name within Levenshtein distance 2 of an existing verified brand, plus a reserved-name list for high-value targets (banks, payment networks)."
+           data-ar="السجل يرفض أي اسم بمسافة Levenshtein ≤ 2 من جهة موثّقة قائمة، إضافة لقائمة أسماء محجوزة للأهداف عالية القيمة (البنوك وشبكات الدفع).">
+        </p></div>
+      <div class="card"><h3 data-en="Cryptographic, not cosmetic" data-ar="تشفير، وليس مجرد شكل">Cryptographic, not cosmetic</h3>
+        <p data-en="Every link is signed with Ed25519. Tampering invalidates the signature. The Trust Preview won't show green unless the math checks out."
+           data-ar="كل رابط موقّع بـ Ed25519. أي تعديل يُبطل التوقيع، ولن تظهر المعاينة باللون الأخضر إلا إذا تحققت الرياضيات.">
+        </p></div>
+      <div class="card"><h3 data-en="Community reports" data-ar="بلاغات المجتمع">Community reports</h3>
+        <p data-en="Recipients can report a link in one tap. Multiple open reports flip the verdict to red and trigger admin review automatically."
+           data-ar="يمكن للمستلم الإبلاغ عن أي رابط بضغطة واحدة. تعدد البلاغات يحوّل الحكم إلى الأحمر ويفعّل المراجعة تلقائياً.">
+        </p></div>
+      <div class="card"><h3 data-en="Revocable in real time" data-ar="قابل للإلغاء فوراً">Revocable in real time</h3>
+        <p data-en="If a campaign goes wrong, revoke a single link or rotate your signing key from the dashboard — every future verification reflects it instantly."
+           data-ar="إذا حدث خطأ في حملة ما، يمكنك إلغاء رابط واحد أو تدوير مفتاح التوقيع من لوحة التحكم — كل تحقق لاحق ينعكس فوراً.">
+        </p></div>
+      <div class="card"><h3 data-en="Zero install for end users" data-ar="بدون تثبيت لدى المستخدم">Zero install for end users</h3>
+        <p data-en="Anyone with a browser benefits. The sender pays for verification; the recipient just clicks."
+           data-ar="أي مستخدم لديه متصفح يستفيد. المرسل يدفع مقابل التوثيق، والمستلم يضغط فقط.">
+        </p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-en="API" data-ar="واجهة البرمجة">API</h2>
+    <table>
+      <thead><tr>
+        <th data-en="Endpoint" data-ar="نقطة النهاية">Endpoint</th>
+        <th data-en="Auth" data-ar="المصادقة">Auth</th>
+        <th data-en="Purpose" data-ar="الغرض">Purpose</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><code>POST /api/customer/shieldlink/sites/:siteId/brand</code></td><td>User</td><td data-en="Apply for verified brand" data-ar="طلب جهة موثّقة">Apply for verified brand</td></tr>
+        <tr><td><code>POST /api/customer/shieldlink/sites/:siteId/sign</code></td><td>User · Pro+</td><td data-en="Sign a link" data-ar="توقيع رابط">Sign a link</td></tr>
+        <tr><td><code>GET /api/customer/shieldlink/sites/:siteId/links</code></td><td>User · Pro+</td><td data-en="List signed links" data-ar="قائمة الروابط الموقّعة">List signed links</td></tr>
+        <tr><td><code>POST /api/customer/shieldlink/sites/:siteId/links/:id/revoke</code></td><td>User · Pro+</td><td data-en="Revoke a link" data-ar="إلغاء رابط">Revoke a link</td></tr>
+        <tr><td><code>GET /api/shieldlink/verify?token=…</code></td><td data-en="Public" data-ar="عام">Public</td><td data-en="Verify a token (used by Trust Preview)" data-ar="التحقق من رمز رابط">Verify a token</td></tr>
+        <tr><td><code>POST /api/shieldlink/report</code></td><td data-en="Public" data-ar="عام">Public</td><td data-en="Report a phishing link" data-ar="الإبلاغ عن رابط تصيّد">Report a phishing link</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2 data-en="Pricing" data-ar="الأسعار">Pricing</h2>
+    <div class="price">
+      <div class="plan"><h3>Free / Starter</h3><div class="p" data-en="Not included" data-ar="غير متاح">Not included</div>
+        <ul><li data-en="Verify links others sent" data-ar="التحقق من روابط الآخرين">Verify links others sent</li><li data-en="Submit phishing reports" data-ar="إرسال البلاغات">Submit phishing reports</li></ul>
+      </div>
+      <div class="plan pro"><h3>Pro · $99/mo</h3><div class="p">✓</div>
+        <ul>
+          <li data-en="Verified Brand badge (after review)" data-ar="شارة الجهة الموثّقة (بعد المراجعة)">Verified Brand badge (after review)</li>
+          <li data-en="Sign unlimited links" data-ar="توقيع روابط غير محدودة">Sign unlimited links</li>
+          <li data-en="Revocation + key rotation" data-ar="إلغاء + تدوير المفاتيح">Revocation + key rotation</li>
+          <li data-en="Per-link analytics" data-ar="تحليلات لكل رابط">Per-link analytics</li>
+        </ul>
+      </div>
+      <div class="plan"><h3>Enterprise</h3><div class="p" data-en="Custom" data-ar="مخصّص">Custom</div>
+        <ul>
+          <li data-en="Everything in Pro" data-ar="كل ما في Pro">Everything in Pro</li>
+          <li data-en="Custom domain for /l/ links" data-ar="نطاق مخصّص لروابط /l/">Custom domain for /l/ links</li>
+          <li data-en="BYOK signing keys, on-prem option" data-ar="مفاتيح خاصة بك أو نشر داخلي">BYOK signing keys, on-prem option</li>
+          <li data-en="Priority brand review &amp; SLA" data-ar="مراجعة فورية واتفاقية مستوى خدمة">Priority review &amp; SLA</li>
+        </ul>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:24px"><a class="cta" href="/register.html" data-en="Start with Pro" data-ar="ابدأ بخطة Pro">Start with Pro</a></p>
+  </section>
+
+  <footer>
+    <p>© Web Agent Bridge · <a href="/" style="color:var(--muted)">webagentbridge.com</a></p>
+  </footer>
+</div>
+<script>
+  (function(){
+    const html = document.documentElement;
+    const btn = document.getElementById('lang-toggle');
+    function set(lang){
+      html.setAttribute('lang', lang);
+      html.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+      document.querySelectorAll('[data-en]').forEach(el => el.textContent = el.getAttribute('data-' + lang) || el.getAttribute('data-en'));
+      btn.textContent = lang === 'ar' ? 'English' : 'عربي';
+    }
+    btn.onclick = () => set(html.getAttribute('lang') === 'ar' ? 'en' : 'ar');
+    if ((navigator.language||'').startsWith('ar')) set('ar');
+  })();
+</script>
+</body>
+</html>

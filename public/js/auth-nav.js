@@ -49,12 +49,64 @@
         btn.textContent = '☰';
       }
     });
-    // Close menu when a nav link is clicked
+    // Close menu when a leaf nav link is clicked (but not when expanding a dropdown)
     links.querySelectorAll('a').forEach(function (a) {
       a.addEventListener('click', function () {
         links.classList.remove('active');
+        // Also collapse any open dropdowns
+        links.querySelectorAll('.nav-dropdown.open').forEach(function (d) {
+          d.classList.remove('open');
+          var t = d.querySelector('.nav-trigger');
+          if (t) t.setAttribute('aria-expanded', 'false');
+        });
         btn.textContent = '☰';
       });
+    });
+
+    // ─── Dropdown triggers (works on desktop click + mobile tap) ───
+    var triggers = links.querySelectorAll('.nav-trigger');
+    triggers.forEach(function (trigger) {
+      trigger.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var parent = trigger.closest('.nav-dropdown');
+        if (!parent) return;
+        var wasOpen = parent.classList.contains('open');
+        // Close siblings
+        links.querySelectorAll('.nav-dropdown.open').forEach(function (d) {
+          if (d !== parent) {
+            d.classList.remove('open');
+            var t = d.querySelector('.nav-trigger');
+            if (t) t.setAttribute('aria-expanded', 'false');
+          }
+        });
+        parent.classList.toggle('open', !wasOpen);
+        trigger.setAttribute('aria-expanded', String(!wasOpen));
+      });
+    });
+
+    // Close dropdowns on outside click (desktop) or Escape
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.nav-dropdown')) {
+        links.querySelectorAll('.nav-dropdown.open').forEach(function (d) {
+          d.classList.remove('open');
+          var t = d.querySelector('.nav-trigger');
+          if (t) t.setAttribute('aria-expanded', 'false');
+        });
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        links.querySelectorAll('.nav-dropdown.open').forEach(function (d) {
+          d.classList.remove('open');
+          var t = d.querySelector('.nav-trigger');
+          if (t) t.setAttribute('aria-expanded', 'false');
+        });
+        if (links.classList.contains('active')) {
+          links.classList.remove('active');
+          btn.textContent = '☰';
+        }
+      }
     });
   }
   if (document.readyState === 'loading') {

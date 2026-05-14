@@ -26,6 +26,7 @@
     { id: 'grants',       href: '/admin/grants',       label: '🎁 Free Grants' },
     { id: 'plans',        href: '/admin/plans',        label: '📦 Plans' },
     { id: 'shieldqr',     href: '/admin/shieldqr',     label: '🛡️ ShieldQR' },
+    { id: 'shieldlink',   href: '/admin/shieldlink',   label: '🔗 ShieldLink' },
     { id: 'trust-monitor',href: '/admin/trust-monitor',label: '🔐 Trust Monitor' },
     { id: 'payments',     href: '/admin/payments',     label: '💳 Payments' },
     { id: 'stripe',       href: '/admin/stripe',       label: '🔧 Stripe' },
