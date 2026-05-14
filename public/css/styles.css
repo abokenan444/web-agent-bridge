@@ -216,6 +216,7 @@ h4 { font-size: 1.2rem; }
 }
 
 .nav-menu {
+  display: none;
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
@@ -228,19 +229,30 @@ h4 { font-size: 1.2rem; }
   padding: 8px;
   box-shadow: 0 24px 48px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.2);
   opacity: 0;
-  visibility: hidden;
   transform: translateY(-6px);
-  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms;
+  transition: opacity 160ms ease, transform 160ms ease;
   z-index: 1000;
 }
 
 .nav-dropdown:hover > .nav-menu,
 .nav-dropdown.open > .nav-menu,
 .nav-dropdown:focus-within > .nav-menu {
+  display: block;
   opacity: 1;
-  visibility: visible;
   transform: translateY(0);
 }
+
+/* Invisible hover bridge so cursor can travel from trigger to menu without gap */
+.nav-dropdown::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 12px;
+  display: none;
+}
+.nav-dropdown:hover::after { display: block; }
 
 .nav-menu a {
   display: flex;
@@ -1361,9 +1373,9 @@ tr:hover td { background: rgba(59,130,246,0.03); }
 
   /* Mobile: dropdown becomes inline accordion (no float) */
   .navbar-links.active .nav-menu {
+    display: none;
     position: static;
     opacity: 1;
-    visibility: visible;
     transform: none;
     box-shadow: none;
     background: rgba(255,255,255,0.02);
@@ -1371,18 +1383,17 @@ tr:hover td { background: rgba(59,130,246,0.03); }
     border-radius: 10px;
     padding: 4px 6px 8px 22px;
     margin: 0 0 6px;
-    display: none;
     min-width: 0;
   }
-  .navbar-links.active .nav-dropdown.open > .nav-menu { display: block; }
-  /* On mobile, do NOT auto-open on hover */
+  /* On mobile, do NOT auto-open on hover — only on .open */
   .navbar-links.active .nav-dropdown:hover > .nav-menu,
   .navbar-links.active .nav-dropdown:focus-within > .nav-menu {
-    opacity: 0; visibility: hidden;
+    display: none;
   }
   .navbar-links.active .nav-dropdown.open > .nav-menu {
-    opacity: 1; visibility: visible;
+    display: block;
   }
+  .navbar-links.active .nav-dropdown::after { display: none !important; }
   .navbar-links.active .nav-menu a {
     padding: 10px 12px;
     border-radius: 8px;
