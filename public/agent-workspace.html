@@ -61,30 +61,40 @@
       <div class="aws-plans-grid">
         <div class="aws-plan-card" onclick="selectPlan('free')">
           <div class="aws-plan-name" data-i18n="plan_free">مجاني</div>
-          <div class="aws-plan-price">$0 <span data-i18n="plan_per_month">/شهر</span></div>
+          <div class="aws-plan-price">€0 <span data-i18n="plan_per_month">/شهر</span></div>
           <ul class="aws-plan-features">
-            <li data-i18n="plan_free_f1">5 مهام يومياً</li>
-            <li data-i18n="plan_free_f2">بحث أساسي</li>
-            <li data-i18n="plan_free_f3">نتائج محدودة</li>
+            <li data-i18n="plan_free_f1">3 وكلاء · 50 مهمة يومياً</li>
+            <li data-i18n="plan_free_f2">بروتوكول WAP + SDK مفتوح المصدر</li>
+            <li data-i18n="plan_free_f3">20 طلب/دقيقة · 50 ميجابايت</li>
           </ul>
         </div>
         <div class="aws-plan-card recommended" onclick="selectPlan('pro')">
           <div class="aws-plan-name" style="color:#8b5cf6">Pro ⭐</div>
-          <div class="aws-plan-price">$29 <span data-i18n="plan_per_month">/شهر</span></div>
+          <div class="aws-plan-price">€10 <span data-i18n="plan_per_month">/شهر</span></div>
           <ul class="aws-plan-features">
-            <li data-i18n="plan_pro_f1">مهام غير محدودة</li>
-            <li data-i18n="plan_pro_f2">تفاوض متقدم</li>
-            <li data-i18n="plan_pro_f3">وكيل يُتمم الصفقات</li>
-            <li data-i18n="plan_pro_f4">أولوية في الدعم</li>
+            <li data-i18n="plan_pro_f1">25 وكيلاً · 2000 مهمة يومياً</li>
+            <li data-i18n="plan_pro_f2">Workspace + محرك إعادة التشغيل</li>
+            <li data-i18n="plan_pro_f3">تحليلات متقدمة + استخراج البيانات</li>
+            <li data-i18n="plan_pro_f4">120 طلب/دقيقة · دعم بريد إلكتروني</li>
+          </ul>
+        </div>
+        <div class="aws-plan-card" onclick="selectPlan('business')">
+          <div class="aws-plan-name">Business</div>
+          <div class="aws-plan-price">€29 <span data-i18n="plan_per_month">/شهر</span></div>
+          <ul class="aws-plan-features">
+            <li data-i18n="plan_biz_f1">100 وكيل · 20,000 مهمة يومياً</li>
+            <li data-i18n="plan_biz_f2">Hosted runtime + Marketplace</li>
+            <li data-i18n="plan_biz_f3">رؤية حاسوبية + Swarm + سجلات تدقيق</li>
+            <li data-i18n="plan_biz_f4">300 طلب/دقيقة · دعم أولوية</li>
           </ul>
         </div>
         <div class="aws-plan-card" onclick="selectPlan('enterprise')">
           <div class="aws-plan-name">Enterprise</div>
-          <div class="aws-plan-price">$99 <span data-i18n="plan_per_month">/شهر</span></div>
+          <div class="aws-plan-price" data-i18n="plan_custom">مخصص</div>
           <ul class="aws-plan-features">
-            <li data-i18n="plan_ent_f1">كل ميزات Pro</li>
-            <li data-i18n="plan_ent_f2">API مخصص</li>
-            <li data-i18n="plan_ent_f3">فريق متعدد</li>
+            <li data-i18n="plan_ent_f1">كل ميزات Business</li>
+            <li data-i18n="plan_ent_f2">بنية تحتية مخصصة + SSO</li>
+            <li data-i18n="plan_ent_f3">SLA تعاقدي · موارد غير محدودة</li>
             <li data-i18n="plan_ent_f4">دعم مخصص 24/7</li>
           </ul>
         </div>
