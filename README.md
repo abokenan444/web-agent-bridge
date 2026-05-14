@@ -476,7 +476,64 @@ We welcome contributions from the community! Whether it's fixing a bug, improvin
 
 ---
 
-## 📄 License
+## � Commercial Foundations ✨ NEW (v3.8.0)
+
+Four production-grade monetization pillars on top of the open protocol. All built **safe, scoped, and admin-gated** — no embedded billing logic in routes, only marketing copy in the public pages.
+
+### 1. 🤝 Certified Partner Program — `/partners`
+
+Three-tier directory for verified vendors and integrators. Basic tier auto-approves when Ring 4 handshake score ≥ 8.
+
+| Tier | Price | Auto-approve | Badge |
+|------|-------|--------------|-------|
+| **Basic** | Free | ✅ (with Ring 4 ≥ 8) | Emerald SVG |
+| **Verified** | €499 / yr | Manual review | Sky SVG |
+| **Premium** | €2.9k–€9.9k / yr | Manual review | Violet SVG |
+
+**Endpoints:** `POST /api/partners/apply` · `GET /api/partners` · `GET /api/partners/:partner_id` · `GET /api/partners/badge/:slug.svg` · admin: `GET /api/partners/admin/applications` · `POST /api/partners/admin/approve`
+
+### 2. 📊 Trust Graph API Tiers — `/trust-graph-api`
+
+Tiered access to reputation, truth and Ring 4 endpoints. Anonymous traffic gets 200 req/month + 10 rpm by default.
+
+| Tier | Price | Quota | Rate | Extra Scopes |
+|------|-------|-------|------|--------------|
+| **Free** | €0 | 1k / month | 30 rpm | `trust:read` |
+| **Pro** | €10 / mo | 100k / month | 120 rpm | `+trust:history`, `+reputation:read` |
+| **Enterprise** | Contact us | 5M / month | 600 rpm | `+governance:write`, `+sla:priority` |
+
+**Endpoints:** `POST /api/keys/issue` (self-serve Free) · `GET /api/keys/me` · `POST /api/keys/revoke` · admin: `POST /api/keys/admin/upgrade` · `GET /api/keys/admin/list`. Response headers: `X-WAB-Tier`, `X-WAB-Quota-Used`, `X-WAB-Quota-Limit`.
+
+### 3. 🏛️ Governance SaaS MVP — `/governance`
+
+Tamper-evident audit workspaces for AI-Act / GDPR compliance. NDJSON export per EU AI Act Article 12.
+
+| Plan | Price | Seats | Retention | Events / mo |
+|------|-------|-------|-----------|-------------|
+| **Team** | €99 / mo | 5 | 90 days | 100k |
+| **Business** | €499 / mo | 25 | 365 days | 2M |
+| **Enterprise** | €2.5k+ / mo | 500 | 7 years | 1B |
+
+**Endpoints:** admin: `POST /api/governance-saas/workspaces` · members: `GET /workspaces/:id` · `POST /workspaces/:id/members` · `POST /workspaces/:id/events` (requires API key with `governance:write` scope) · `GET /workspaces/:id/events` · `GET /workspaces/:id/export` (NDJSON stream).
+
+### 4. 🕸️ Enterprise Mesh License Verification — `/enterprise-mesh`
+
+Offline-capable self-hosted license verification with JWKS-style key rotation. Signing service is premium / off-repo.
+
+**Endpoints:** `POST /api/enterprise-mesh/verify` · `GET /api/enterprise-mesh/jwks` · `POST /api/enterprise-mesh/heartbeat` · admin: `POST /api/enterprise-mesh/admin/register` · `POST /api/enterprise-mesh/admin/revoke`. Tokens use Ed25519 detached signatures with `kid` rotation via `WAB_LICENSE_PUBLIC_KEYS` env (JSON of `{kid → PEM | raw-b64u}`).
+
+### Security & Safety
+
+- All admin endpoints gated by `X-Admin-Token` against `WAB_*_ADMIN_TOKEN` env (503 when not configured).
+- API keys stored only as SHA-256 hashes; secret format `wabk_<keyId>_<random>` returned exactly once.
+- Workspace tokens use HMAC-SHA256 with constant-time comparison.
+- In-process sliding-window rate buckets (60 s). Quota tracked daily via UPSERT into `wab_api_usage`.
+- IP addresses hashed with `IP_HASH_SALT` before storage.
+- 25 dedicated tests in `tests/commercial-foundations.test.js`; total suite now 428 / 428 passing.
+
+---
+
+
 
 This project is licensed under the terms described in the [LICENSE](LICENSE) file. The core protocol and SDKs are MIT licensed.
 

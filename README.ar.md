@@ -1496,6 +1496,65 @@ const out = await shield.safeExecute('deleteUser', { id: 42 });
 
 ---
 
+---
+
+## 💼 الأسس التجارية ✨ جديد (v3.8.0)
+
+أربع ركائز إنتاجية للتمويل فوق البروتوكول المفتوح. كلها مبنية **بأمان، مع نطاقات محددة، وبوّابات إدارية** — لا يوجد منطق فوترة داخل المسارات، فقط نصوص تسويقية في الصفحات العامة.
+
+### 1. 🤝 برنامج الشركاء المعتمدين — `/partners`
+
+دليل بثلاث طبقات للشركاء والمتكاملين. الطبقة الأساسية تُعتمد تلقائيًا عند بلوغ درجة Ring 4 ≥ 8.
+
+| الطبقة | السعر | اعتماد تلقائي | الشارة |
+|--------|------|----------------|--------|
+| **Basic** | مجاني | ✅ (Ring 4 ≥ 8) | SVG زمردي |
+| **Verified** | 499 € / سنة | مراجعة يدوية | SVG سماوي |
+| **Premium** | 2.9k–9.9k € / سنة | مراجعة يدوية | SVG بنفسجي |
+
+**نقاط النهاية:** `POST /api/partners/apply` · `GET /api/partners` · `GET /api/partners/:partner_id` · `GET /api/partners/badge/:slug.svg` · إدارية: `GET /api/partners/admin/applications` · `POST /api/partners/admin/approve`
+
+### 2. 📊 طبقات Trust Graph API — `/trust-graph-api`
+
+وصول مُتدرّج لنقاط نهاية السمعة والحقيقة و Ring 4. الزوار المجهولون يحصلون على 200 طلب/شهر + 10 طلب/دقيقة افتراضيًا.
+
+| الطبقة | السعر | الحصة | المعدّل | نطاقات إضافية |
+|--------|------|------|--------|----------------|
+| **Free** | 0 € | 1k / شهر | 30 طلب/د | `trust:read` |
+| **Pro** | 10 € / شهر | 100k / شهر | 120 طلب/د | `+trust:history`, `+reputation:read` |
+| **Enterprise** | تواصل معنا | 5M / شهر | 600 طلب/د | `+governance:write`, `+sla:priority` |
+
+**نقاط النهاية:** `POST /api/keys/issue` (إصدار ذاتي للطبقة المجانية) · `GET /api/keys/me` · `POST /api/keys/revoke` · إدارية: `POST /api/keys/admin/upgrade` · `GET /api/keys/admin/list`. ترويسات الاستجابة: `X-WAB-Tier`, `X-WAB-Quota-Used`, `X-WAB-Quota-Limit`.
+
+### 3. 🏛️ خدمة Governance SaaS — `/governance`
+
+مساحات عمل تدقيق مقاومة للعبث للامتثال لقانون الذكاء الاصطناعي الأوروبي و GDPR. تصدير NDJSON وفق المادة 12 من قانون الذكاء الاصطناعي الأوروبي.
+
+| الخطة | السعر | المقاعد | فترة الاحتفاظ | الأحداث / شهر |
+|------|------|---------|---------------|----------------|
+| **Team** | 99 € / شهر | 5 | 90 يومًا | 100k |
+| **Business** | 499 € / شهر | 25 | 365 يومًا | 2M |
+| **Enterprise** | 2.5k+ € / شهر | 500 | 7 سنوات | 1B |
+
+**نقاط النهاية:** إدارية: `POST /api/governance-saas/workspaces` · للأعضاء: `GET /workspaces/:id` · `POST /workspaces/:id/members` · `POST /workspaces/:id/events` (يتطلب مفتاح API بنطاق `governance:write`) · `GET /workspaces/:id/events` · `GET /workspaces/:id/export` (بثّ NDJSON).
+
+### 4. 🕸️ التحقق من ترخيص شبكة المؤسسات — `/enterprise-mesh`
+
+تحقّق ترخيص مستضاف ذاتيًا بقدرات عمل دون اتصال مع تدوير مفاتيح بنمط JWKS. خدمة التوقيع مدفوعة / خارج المستودع.
+
+**نقاط النهاية:** `POST /api/enterprise-mesh/verify` · `GET /api/enterprise-mesh/jwks` · `POST /api/enterprise-mesh/heartbeat` · إدارية: `POST /api/enterprise-mesh/admin/register` · `POST /api/enterprise-mesh/admin/revoke`. تستخدم التوكنات توقيع Ed25519 منفصل مع تدوير `kid` عبر متغيّر البيئة `WAB_LICENSE_PUBLIC_KEYS` (JSON بصيغة `{kid → PEM | raw-b64u}`).
+
+### الأمان والسلامة
+
+- جميع نقاط الإدارة محميّة بـ `X-Admin-Token` ضدّ متغيّرات `WAB_*_ADMIN_TOKEN` (503 عند عدم التهيئة).
+- مفاتيح API تُخزَّن فقط كهاش SHA-256؛ صيغة السرّ `wabk_<keyId>_<random>` تُعاد مرّة واحدة فقط.
+- توكنات مساحة العمل تستخدم HMAC-SHA256 مع مقارنة بزمن ثابت.
+- نوافذ تحكم بالمعدّل منزلقة داخل العملية (60 ث). تتبّع الحصة يوميًا عبر UPSERT في `wab_api_usage`.
+- عناوين IP تُهاش بواسطة `IP_HASH_SALT` قبل التخزين.
+- 25 اختبار مخصّص في `tests/commercial-foundations.test.js`؛ مجموع اختبارات الحزمة الآن 428 / 428 ناجحة.
+
+---
+
 ## 📄 الرخصة
 
 MIT — مجاني للاستخدام والتعديل والتوزيع.

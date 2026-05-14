@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trust Graph API — Web Agent Bridge</title>
+<meta name="description" content="وصول برمجي لـ WAB Trust Graph: درجات ثقة زمنية، ملفات وكلاء موقَّعة، سجلّات رفض. طبقات Free / Pro / Enterprise.">
+<link rel="canonical" href="https://www.webagentbridge.com/trust-graph-api.ar.html">
+<style>
+  :root { --bg:#0b1020; --fg:#e7ebf3; --mute:#aab3c5; --card:#121a33; --line:#1f2a4d; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.75 "Cairo","Segoe UI",Tahoma,sans-serif}
+  a{color:#7dd3fc}.wrap{max-width:1120px;margin:0 auto;padding:32px 20px}
+  h1{font-size:32px;margin:0 0 8px}.sub{color:var(--mute);margin:0 0 28px}
+  pre{background:#0a1230;border:1px solid var(--line);border-radius:8px;padding:14px;overflow:auto;font-size:13.5px;direction:ltr;text-align:left}
+  code{background:#0a1230;padding:1px 6px;border-radius:4px;direction:ltr;display:inline-block}
+  .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin:18px 0 36px}
+  .tier{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .tier h3{margin:0 0 6px}.tier .p{font-size:26px;font-weight:700;margin:6px 0}
+  .tier ul{margin:10px 18px 0 0;padding:0}
+  table{width:100%;border-collapse:collapse;margin:16px 0}
+  th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:right}
+  th{color:var(--mute);font-weight:600;font-size:13px}
+  form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin:20px 0}
+  input{width:100%;padding:10px;background:#0f1731;color:var(--fg);border:1px solid var(--line);border-radius:8px;font:inherit;margin:6px 0 0;direction:ltr;text-align:right}
+  label{display:block;font-size:13px;color:var(--mute);margin-top:10px}
+  button{margin-top:14px;padding:11px 18px;background:#0ea5e9;color:#fff;border:0;border-radius:8px;font-weight:700;cursor:pointer}
+  .ok{color:#10b981}.err{color:#ef4444}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0 0 6px"><a href="/">← Web Agent Bridge</a> · <a href="/trust-graph-api">English</a></p>
+  <h1>Trust Graph API</h1>
+  <p class="sub">وصول برمجي لرسم الثقة العام لـ WAB: ملفات وكلاء موقَّعة، درجات ثقة زمنية، سجلّات رفض.</p>
+
+  <div class="tiers">
+    <div class="tier"><h3>Free</h3><div class="p">0 €</div>
+      <ul><li>100 طلب / يوم · 30 طلب/د</li><li>قراءة درجات الثقة</li><li>وصول مجهول مسموح به (بدون مفتاح) بـ 10 طلب/د</li></ul></div>
+    <div class="tier"><h3>Pro</h3><div class="p">10 € / شهر</div>
+      <ul><li>100 000 طلب / شهر · 120 طلب/د</li><li>تاريخ 30 يومًا</li><li>قراءة السمعة</li><li>دعم بالبريد</li></ul></div>
+    <div class="tier"><h3>Enterprise</h3><div class="p">مبيعات</div>
+      <ul><li>5+ مليون طلب / شهر</li><li>تاريخ كامل · SLA · سجلّ تدقيق</li><li>نطاق Governance write</li><li>دعم متخصّص</li></ul></div>
+  </div>
+
+  <h2>احصل على مفتاح مجاني (بنقرة واحدة)</h2>
+  <form id="issueForm">
+    <label>بريدك الإلكتروني</label><input name="email" type="email" required>
+    <label>اسمك (اختياري)</label><input name="name" maxlength="80">
+    <button>إصدار مفتاح مجاني</button>
+    <p id="issueOut"></p>
+  </form>
+
+  <h2>نقاط النهاية</h2>
+  <table>
+    <thead><tr><th>الطريقة</th><th>المسار</th><th>النطاق</th><th>الوصف</th></tr></thead>
+    <tbody>
+      <tr><td>GET</td><td><code>/api/reputation/score/:domain</code></td><td>trust:read</td><td>درجة ثقة زمنية</td></tr>
+      <tr><td>GET</td><td><code>/api/ring4/status/:domain</code></td><td>trust:read</td><td>ملف Ring 4 موقَّع</td></tr>
+      <tr><td>GET</td><td><code>/api/truth/temporal/:domain</code></td><td>trust:history</td><td>ثقة زمنية سلسلية (Pro+)</td></tr>
+      <tr><td>POST</td><td><code>/api/keys/issue</code></td><td>—</td><td>إصدار ذاتي لمفتاح Free</td></tr>
+      <tr><td>GET</td><td><code>/api/keys/me</code></td><td>X-API-Key</td><td>الحصة والاستخدام</td></tr>
+      <tr><td>POST</td><td><code>/api/keys/revoke</code></td><td>X-API-Key</td><td>إلغاء من المالك</td></tr>
+    </tbody>
+  </table>
+
+  <h2>بدء سريع</h2>
+<pre><code>curl -H "X-API-Key: $WAB_KEY" \
+     https://www.webagentbridge.com/api/reputation/score/example.com
+
+# الاستجابة تتضمّن:   X-WAB-Tier: pro
+#                      X-WAB-Quota-Used: 1234
+#                      X-WAB-Quota-Limit: 100000</code></pre>
+
+  <p style="margin-top:30px;color:var(--mute)">الوصول المجهول يعمل بدون مفتاح (10 طلب/د، حسب IP). Pro و Enterprise يفتحان العمق التاريخي ونطاق <code>governance:write</code>.</p>
+</div>
+<script>
+document.getElementById('issueForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  const r = await fetch('/api/keys/issue', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const j = await r.json().catch(()=>({}));
+  const out = document.getElementById('issueOut');
+  if (r.ok && j.ok) {
+    out.innerHTML = '<span class="ok">✓ تمّ إصدار المفتاح. انسخه الآن — لن يُعرض مرّة أخرى.</span><pre><code>' + j.api_key + '</code></pre>';
+  } else {
+    out.innerHTML = '<span class="err">✗ ' + (j.error || ('HTTP ' + r.status)) + '</span>';
+  }
+});
+</script>
+</body>
+</html>

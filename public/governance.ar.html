@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Governance SaaS — سجلّ تدقيق قانون الذكاء الاصطناعي الأوروبي | Web Agent Bridge</title>
+<meta name="description" content="سجلّ تدقيق متعدّد المستأجرين للوكلاء السياديين. التقاط حالات الرفض والاعتماد والتجاوزات وقرارات السياسات. تصدير متوافق مع المادة 12 من قانون الذكاء الاصطناعي الأوروبي.">
+<link rel="canonical" href="https://www.webagentbridge.com/governance.ar.html">
+<style>
+  :root { --bg:#0b1020; --fg:#e7ebf3; --mute:#aab3c5; --card:#121a33; --line:#1f2a4d; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.75 "Cairo","Segoe UI",Tahoma,sans-serif}
+  a{color:#7dd3fc}.wrap{max-width:1120px;margin:0 auto;padding:32px 20px}
+  h1{font-size:32px;margin:0 0 8px}.sub{color:var(--mute);margin:0 0 28px}
+  pre{background:#0a1230;border:1px solid var(--line);border-radius:8px;padding:14px;overflow:auto;font-size:13.5px;direction:ltr;text-align:left}
+  code{background:#0a1230;padding:1px 6px;border-radius:4px;direction:ltr;display:inline-block}
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:18px 0 36px}
+  .plan{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .plan h3{margin:0 0 6px}.plan .p{font-size:26px;font-weight:700;margin:6px 0}
+  .plan ul{margin:10px 18px 0 0;padding:0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:18px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h4{margin:0 0 6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0 0 6px"><a href="/">← Web Agent Bridge</a> · <a href="/governance">English</a></p>
+  <h1>Governance SaaS</h1>
+  <p class="sub">سجلّ تدقيق موقَّع للإلحاق فقط (append-only) للوكلاء السياديين. كل رفض، كل تجاوز، كل حدث سياسة — يُلتقط، يُستعلَم، ويُصدَّر للامتثال.</p>
+
+  <div class="grid">
+    <div class="card"><h4>سجلّ أحداث للإلحاق فقط</h4><p>كل قرار يتّخذه وكيلك مقابل مادّة دستورية يُسجَّل. أي عبث يكسر السلسلة.</p></div>
+    <div class="card"><h4>المادة 12 من قانون الذكاء الاصطناعي الأوروبي</h4><p>تصدير JSONL بنقرة واحدة مُصمَّم لاستيعاب المدقّقين. نوافذ احتفاظ لكلّ مساحة عمل من 90 يومًا إلى 7 سنوات.</p></div>
+    <div class="card"><h4>متعدّد المستأجرين بالتصميم</h4><p>مساحات عمل بوصول حسب الدور (مالك، مدير، مراجع، مشاهد). ربط مفاتيح API لكلّ مستأجر يمنع الكتابة المتقاطعة.</p></div>
+    <div class="card"><h4>تحليلات الرفض</h4><p>صفّ حسب نوع الحدث، المادّة، الشدّة، الوكيل المصدر. شاهد أيّ الحواجز يفعَّل أكثر ولماذا.</p></div>
+  </div>
+
+  <h2>الخطط</h2>
+  <div class="plans">
+    <div class="plan"><h3>Team</h3><div class="p">99 € / شهر</div>
+      <ul><li>5 مقاعد · احتفاظ 90 يومًا</li><li>100 000 حدث / شهر</li><li>تصدير JSONL</li><li>دعم بالبريد</li></ul></div>
+    <div class="plan"><h3>Business</h3><div class="p">499 € / شهر</div>
+      <ul><li>25 مقعدًا · احتفاظ 365 يومًا</li><li>2 مليون حدث / شهر</li><li>لوحات تحكّم مخصّصة</li><li>دعم بأولوية</li></ul></div>
+    <div class="plan"><h3>Enterprise</h3><div class="p">من 2 500 € / شهر</div>
+      <ul><li>مقاعد غير محدودة · احتفاظ 7 سنوات</li><li>DPA + SCC + تثبيت إقليمي</li><li>عنقود مساحة عمل متخصّص</li><li>SLA + مهندس تأهيل</li></ul></div>
+  </div>
+
+  <h2>إدخال الأحداث</h2>
+<pre><code>curl -X POST https://www.webagentbridge.com/api/governance-saas/workspaces/$WS/events \
+  -H "X-API-Key: $WAB_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "shopping-agent-v3",
+    "event_type": "refusal",
+    "severity": "medium",
+    "subject": "user:1234 / merchant:example.com",
+    "article": "constitutional.privacy.v1#3",
+    "outcome": "refused",
+    "detail": "رفض الإفصاح عن طريقة الدفع دون إعادة تأكيد المستخدم."
+  }'</code></pre>
+
+  <h2>التصدير (جاهز للمدقّقين)</h2>
+<pre><code>curl -H "X-Workspace-Token: $WS_TOKEN" \
+     https://www.webagentbridge.com/api/governance-saas/workspaces/$WS/export \
+     &gt; audit-trail.jsonl</code></pre>
+
+  <p style="margin-top:30px;color:var(--mute)">لفتح مساحة عمل، تواصل مع <a href="mailto:governance@webagentbridge.com">governance@webagentbridge.com</a> أو شغّل API الإدارة بـ <code>X-Admin-Token</code>.</p>
+</div>
+</body>
+</html>

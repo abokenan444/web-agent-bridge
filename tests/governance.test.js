@@ -44,8 +44,10 @@ process.env.JWT_SECRET_ADMIN = 'test-admin-secret-for-testing';
 process.env.WAB_GOV_AUDIT_SECRET = 'gov-test-audit-secret';
 
 const TEST_DATA_DIR = path.join(__dirname, '..', 'data-test');
-if (fs.existsSync(TEST_DATA_DIR)) {
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+try {
+  if (fs.existsSync(TEST_DATA_DIR)) fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+} catch (e) {
+  if (e.code !== 'EBUSY' && e.code !== 'EPERM') throw e;
 }
 
 const app = require('../server/index');

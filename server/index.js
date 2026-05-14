@@ -284,6 +284,10 @@ app.use('/api/activate', apiLimiter, require('./routes/activate'));
 const { reputationRouter, collectiveRouter } = require('./routes/reputation');
 const { intentRouter, privacyRouter }        = require('./routes/intent');
 const { cacheRouter, offlineRouter }         = require('./routes/wab-cache');
+// Trust Graph tier gate — tags & meters anonymous + keyed traffic.
+// Mounted BEFORE the routers so it sees their requests.
+const { apiTierMiddleware } = require('./middleware/api-tier');
+app.use(['/api/reputation', '/api/truth', '/api/ring4/status'], apiTierMiddleware);
 app.use('/api/reputation', apiLimiter, reputationRouter);
 app.use('/api/collective', apiLimiter, collectiveRouter);
 app.use('/api/intent',     apiLimiter, intentRouter);
@@ -300,6 +304,13 @@ const { ring4Router } = require('./routes/ring4');
 const { wabTrustMiddleware } = require('./middleware/wab-trust');
 app.use(wabTrustMiddleware);
 app.use('/api/ring4', apiLimiter, ring4Router);
+
+// ── WAB Commercial Foundations v3.8.0 (Partners · Trust Graph API · Governance SaaS · Enterprise Mesh) ──
+app.use('/api/partners',         apiLimiter, require('./routes/partners'));
+app.use('/api/keys',             apiLimiter, require('./routes/api-keys'));
+app.use('/api/governance-saas',  apiLimiter, require('./routes/governance-saas'));
+app.use('/api/enterprise-mesh',  apiLimiter, require('./routes/enterprise-mesh'));
+// Trust Graph tier gate is mounted earlier (before /api/reputation et al.)
 // ─────────────────────────────────────────────────────────────────────────────
 
 app.use('/api/providers', apiLimiter, providerRoutes);
@@ -348,8 +359,24 @@ app.get(['/wab-truth', '/truth'], noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'wab-truth.html'));
 });
 // /milestones — Partners & Milestones (VEXR Ultra × WAB Ring 4 integration)
-app.get(['/milestones', '/partners'], noCache, (req, res) => {
+app.get(['/milestones'], noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'milestones.html'));
+});
+// /partners — Certified Partner Program (3 tiers · self-serve)
+app.get(['/partners', '/partners.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'partners.html'));
+});
+// /trust-graph-api — Trust Graph API docs & self-serve key issuance
+app.get(['/trust-graph-api', '/trust-graph-api.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'trust-graph-api.html'));
+});
+// /governance — Governance SaaS landing (EU AI Act audit trail)
+app.get(['/governance', '/governance.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'governance.html'));
+});
+// /enterprise-mesh — Self-hosted Enterprise Mesh contact
+app.get(['/enterprise-mesh', '/enterprise-mesh.html', '/enterprise'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'enterprise-mesh.html'));
 });
 // /ring4 — Ring 4 Trust Handshake protocol docs
 app.get(['/ring4', '/trust-handshake'], noCache, (req, res) => {

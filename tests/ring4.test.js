@@ -41,10 +41,12 @@ process.env.WAB_RING4_PRIVATE_KEY_PEM = TEST_KEYPAIR.privateKey
 const TEST_PUB_SPKI = TEST_KEYPAIR.publicKey.export({ format: 'der', type: 'spki' });
 const TEST_PUB_RAW_B64 = TEST_PUB_SPKI.subarray(TEST_PUB_SPKI.length - 32).toString('base64');
 
-// Clean test data dir
+// Clean test data dir (tolerate EBUSY on Windows when another suite holds the DB)
 const TEST_DATA_DIR = path.join(__dirname, '..', 'data-test');
-if (fs.existsSync(TEST_DATA_DIR)) {
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+try {
+  if (fs.existsSync(TEST_DATA_DIR)) fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+} catch (e) {
+  if (e.code !== 'EBUSY' && e.code !== 'EPERM') throw e;
 }
 
 const app = require('../server/index');

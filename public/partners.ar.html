@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>برنامج الشركاء المعتمدين — Web Agent Bridge</title>
+<meta name="description" content="برنامج شركاء بثلاث طبقات: Basic (مجاني)، Verified (499€/سنة)، Premium (مبيعات). شارة ثقة قابلة للتضمين، دليل عام، تحقّق Ring 4.">
+<link rel="canonical" href="https://www.webagentbridge.com/partners.ar.html">
+<style>
+  :root { --bg:#0b1020; --fg:#e7ebf3; --mute:#aab3c5; --card:#121a33; --line:#1f2a4d;
+          --basic:#10b981; --verified:#0ea5e9; --premium:#7c3aed; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 "Cairo","Segoe UI",Tahoma,sans-serif}
+  a{color:#7dd3fc}.wrap{max-width:1120px;margin:0 auto;padding:32px 20px}
+  header h1{font-size:32px;margin:0 0 8px}.sub{color:var(--mute);margin:0 0 28px}
+  .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin:24px 0 36px}
+  .tier{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;position:relative}
+  .tier h3{margin:0 0 6px;font-size:20px}.tier .p{font-size:26px;font-weight:700;margin:6px 0}
+  .tier ul{margin:14px 18px 0 0;padding:0}.tier li{margin:4px 0;color:#cdd6e8}
+  .tier .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.5px;color:#fff}
+  .b-basic{background:var(--basic)}.b-verified{background:var(--verified)}.b-premium{background:var(--premium)}
+  form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin:0 0 40px}
+  form h2{margin:0 0 14px}
+  label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:10px;background:#0f1731;color:var(--fg);border:1px solid var(--line);border-radius:8px;font:inherit;direction:ltr;text-align:right}
+  button{margin-top:14px;padding:11px 18px;background:#0ea5e9;color:#fff;border:0;border-radius:8px;font-weight:700;cursor:pointer}
+  .ok{color:#10b981}.err{color:#ef4444}.muted{color:var(--mute)}
+  footer{margin-top:48px;color:var(--mute);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+  code{direction:ltr;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0 0 6px"><a href="/">← Web Agent Bridge</a> · <a href="/partners">English</a></p>
+  <header>
+    <h1>برنامج الشركاء المعتمدين WAB</h1>
+    <p class="sub">انضمّ إلى الدليل العام للشركات الجاهزة للوكلاء السياديين. ثلاث طبقات، معايير شفّافة، شارات قابلة للتحقّق آليًا.</p>
+  </header>
+
+  <section class="tiers">
+    <div class="tier"><span class="badge b-basic">Basic</span>
+      <h3>WAB متوافق</h3>
+      <div class="p">0 € / سنة</div>
+      <p class="muted">إصدار ذاتي. اعتماد تلقائي عند اجتياز مصافحة Ring 4 ذات الـ9 خطوات.</p>
+      <ul>
+        <li>مدرَج في دليل الشركاء العام</li>
+        <li>شارة SVG قابلة للتضمين</li>
+        <li>ملف ثقة موقّع Ring 4</li>
+        <li>دعم مجتمعي</li>
+      </ul>
+    </div>
+    <div class="tier"><span class="badge b-verified">Verified</span>
+      <h3>WAB موثَّق</h3>
+      <div class="p">499 € / سنة</div>
+      <p class="muted">مراجعة يدوية (≤72 ساعة). تدقيق شامل لتكامل الجسر.</p>
+      <ul>
+        <li>كل ما في Basic</li>
+        <li>شارة موثّقة (علامة زرقاء)</li>
+        <li>ترتيب أعلى في البحث</li>
+        <li>قناة دعم مباشرة</li>
+        <li>مراجعة تكامل سنوية</li>
+      </ul>
+    </div>
+    <div class="tier"><span class="badge b-premium">Premium</span>
+      <h3>شريك WAB معتمد</h3>
+      <div class="p">من 2 900 € / سنة</div>
+      <p class="muted">بقيادة المبيعات. تسويق مشترك، SLA، مهندس متخصّص.</p>
+      <ul>
+        <li>كل ما في Verified</li>
+        <li>تسويق مشترك ودراسة حالة</li>
+        <li>SLA بنسبة 99.9% على Trust Graph API</li>
+        <li>مهندس حلول متخصّص</li>
+        <li>الشعار على webagentbridge.com</li>
+      </ul>
+    </div>
+  </section>
+
+  <form id="applyForm">
+    <h2>قدّم طلبك الآن</h2>
+    <p class="muted">طلبات Basic تُعالَج تلقائيًا. Verified و Premium تتطلّب مراجعة يدوية.</p>
+    <label>الاسم التجاري للشركة</label>
+    <input name="display_name" required maxlength="120">
+    <label>النطاق (الذي يشغّل Ring 4)</label>
+    <input name="domain" required placeholder="example.com">
+    <label>بريد التواصل</label>
+    <input name="contact_email" type="email" required>
+    <label>اسم جهة الاتصال</label>
+    <input name="contact_name" maxlength="120">
+    <label>الدولة (ISO-2)</label>
+    <input name="country" maxlength="2" placeholder="TN">
+    <label>الفئة</label>
+    <select name="category">
+      <option value="bank">bank</option><option value="fintech">fintech</option>
+      <option value="ecommerce">ecommerce</option><option value="messaging">messaging</option>
+      <option value="healthcare">healthcare</option><option value="government">government</option>
+      <option value="media">media</option><option value="saas">saas</option>
+      <option value="telecom">telecom</option><option value="other" selected>other</option>
+    </select>
+    <label>الموقع (https://…)</label>
+    <input name="website" type="url" maxlength="200">
+    <label>الطبقة المطلوبة</label>
+    <select name="requested_tier">
+      <option value="basic" selected>Basic — 0 €</option>
+      <option value="verified">Verified — 499 €/سنة</option>
+      <option value="premium">Premium — من 2 900 €/سنة</option>
+    </select>
+    <label>حالة الاستخدام (فقرة قصيرة)</label>
+    <textarea name="use_case" rows="3" maxlength="1000"></textarea>
+    <label>درجة المصافحة (شغّل <code>scripts/live-handshake.js</code> وألصق 0–9)</label>
+    <input name="handshake_score" type="number" min="0" max="9" value="0">
+    <button type="submit">إرسال الطلب</button>
+    <p id="result" style="margin-top:12px"></p>
+  </form>
+
+  <footer>
+    <p>API: <code>POST /api/partners/apply</code> · الدليل: <code>GET /api/partners</code> · الشارة: <code>GET /api/partners/badge/&lt;slug&gt;.svg</code></p>
+  </footer>
+</div>
+<script>
+document.getElementById('applyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  body.handshake_score = parseInt(body.handshake_score, 10) || 0;
+  const r = await fetch('/api/partners/apply', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const j = await r.json().catch(() => ({}));
+  const el = document.getElementById('result');
+  if (r.ok && j.ok) {
+    if (j.auto_approved) {
+      el.innerHTML = '<span class="ok">✓ تمّ الاعتماد تلقائيًا.</span> معرّف الشريك: <code>' + j.partner_id +
+        '</code> · <a href="/api/partners/' + j.partner_id + '">JSON الملف</a> · ' +
+        '<img alt="badge" src="/api/partners/badge/' + j.partner_id + '.svg" style="vertical-align:middle">';
+    } else {
+      el.innerHTML = '<span class="ok">✓ تمّ استلام الطلب.</span> معرّف الطلب: <code>' + j.application_id + '</code>. المدّة المتوقّعة: ' +
+        (j.next_steps?.eta_hours || 168) + ' ساعة.';
+    }
+  } else {
+    el.innerHTML = '<span class="err">✗ ' + (j.error || ('HTTP ' + r.status)) + '</span>';
+  }
+});
+</script>
+</body>
+</html>

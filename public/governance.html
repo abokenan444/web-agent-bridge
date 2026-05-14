@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Governance SaaS — EU AI Act Audit Trail | Web Agent Bridge</title>
+<meta name="description" content="Multi-tenant audit log for sovereign AI agents. Capture refusals, approvals, overrides, and policy decisions. EU AI Act Article 12 compliant exports.">
+<link rel="canonical" href="https://www.webagentbridge.com/governance">
+<style>
+  :root { --bg:#0b1020; --fg:#e7ebf3; --mute:#aab3c5; --card:#121a33; --line:#1f2a4d; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 Inter,system-ui,sans-serif}
+  a{color:#7dd3fc}.wrap{max-width:1120px;margin:0 auto;padding:32px 20px}
+  h1{font-size:34px;margin:0 0 8px}.sub{color:var(--mute);margin:0 0 28px}
+  pre{background:#0a1230;border:1px solid var(--line);border-radius:8px;padding:14px;overflow:auto;font-size:13.5px}
+  code{background:#0a1230;padding:1px 6px;border-radius:4px}
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:18px 0 36px}
+  .plan{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .plan h3{margin:0 0 6px}.plan .p{font-size:28px;font-weight:700;margin:6px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:18px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h4{margin:0 0 6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0 0 6px"><a href="/">← Web Agent Bridge</a> · <a href="/governance.ar.html">العربية</a></p>
+  <h1>Governance SaaS</h1>
+  <p class="sub">An append-only, signed audit trail for sovereign AI agents. Every refusal, every override, every policy event — captured, queryable, exportable for compliance.</p>
+
+  <div class="grid">
+    <div class="card"><h4>Append-only event log</h4><p>Every decision your agent makes against a constitutional article is recorded. Tampering would break the chain.</p></div>
+    <div class="card"><h4>EU AI Act Article 12</h4><p>One-click JSONL export designed for auditor ingestion. Per-workspace retention windows from 90 days to 7 years.</p></div>
+    <div class="card"><h4>Multi-tenant by design</h4><p>Workspaces with role-based access (owner, admin, reviewer, viewer). Per-tenant API key bindings prevent cross-writes.</p></div>
+    <div class="card"><h4>Refusal analytics</h4><p>Filter by event type, article, severity, source agent. See which guardrails fire most often and why.</p></div>
+  </div>
+
+  <h2>Plans</h2>
+  <div class="plans">
+    <div class="plan"><h3>Team</h3><div class="p">€99 / mo</div>
+      <ul><li>5 seats · 90-day retention</li><li>100 000 events / month</li><li>JSONL export</li><li>Email support</li></ul></div>
+    <div class="plan"><h3>Business</h3><div class="p">€499 / mo</div>
+      <ul><li>25 seats · 365-day retention</li><li>2 M events / month</li><li>Custom dashboards</li><li>Priority support</li></ul></div>
+    <div class="plan"><h3>Enterprise</h3><div class="p">From €2 500 / mo</div>
+      <ul><li>Unlimited seats · 7-year retention</li><li>DPA + SCC + region pinning</li><li>Dedicated workspace cluster</li><li>SLA + onboarding engineer</li></ul></div>
+  </div>
+
+  <h2>Ingesting events</h2>
+<pre><code>curl -X POST https://www.webagentbridge.com/api/governance-saas/workspaces/$WS/events \
+  -H "X-API-Key: $WAB_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "shopping-agent-v3",
+    "event_type": "refusal",
+    "severity": "medium",
+    "subject": "user:1234 / merchant:example.com",
+    "article": "constitutional.privacy.v1#3",
+    "outcome": "refused",
+    "detail": "Refused to disclose payment method without user re-confirmation."
+  }'</code></pre>
+
+  <h2>Exporting (auditor-ready)</h2>
+<pre><code>curl -H "X-Workspace-Token: $WS_TOKEN" \
+     https://www.webagentbridge.com/api/governance-saas/workspaces/$WS/export \
+     &gt; audit-trail.jsonl</code></pre>
+
+  <p style="margin-top:30px;color:var(--mute)">To open a workspace, contact <a href="mailto:governance@webagentbridge.com">governance@webagentbridge.com</a> or run the admin API with <code>X-Admin-Token</code>.</p>
+</div>
+</body>
+</html>

@@ -7,10 +7,12 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret-key-for-testing';
 process.env.JWT_SECRET_ADMIN = 'test-admin-secret-for-testing';
 
-// Clean test DB before run
+// Clean test DB before run (tolerate EBUSY on Windows when another suite holds the DB)
 const TEST_DATA_DIR = path.join(__dirname, '..', 'data-test');
-if (fs.existsSync(TEST_DATA_DIR)) {
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+try {
+  if (fs.existsSync(TEST_DATA_DIR)) fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+} catch (e) {
+  if (e.code !== 'EBUSY' && e.code !== 'EPERM') throw e;
 }
 
 const app = require('../server/index');

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WAB Certified Partner Program — Web Agent Bridge</title>
+<meta name="description" content="Three-tier partner program: Basic (free), Verified (€499/yr), Premium (sales). Embeddable trust badge, public directory, Ring 4 verification.">
+<link rel="canonical" href="https://www.webagentbridge.com/partners">
+<style>
+  :root { --bg:#0b1020; --fg:#e7ebf3; --mute:#aab3c5; --card:#121a33; --line:#1f2a4d;
+          --basic:#10b981; --verified:#0ea5e9; --premium:#7c3aed; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 Inter,system-ui,sans-serif}
+  a{color:#7dd3fc}.wrap{max-width:1120px;margin:0 auto;padding:32px 20px}
+  header h1{font-size:34px;margin:0 0 8px}.sub{color:var(--mute);margin:0 0 28px}
+  .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin:24px 0 36px}
+  .tier{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;position:relative}
+  .tier h3{margin:0 0 6px;font-size:20px}.tier .p{font-size:28px;font-weight:700;margin:6px 0}
+  .tier ul{margin:14px 0 0;padding:0 0 0 18px}.tier li{margin:4px 0;color:#cdd6e8}
+  .tier .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#fff}
+  .b-basic{background:var(--basic)}.b-verified{background:var(--verified)}.b-premium{background:var(--premium)}
+  form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin:0 0 40px}
+  form h2{margin:0 0 14px}
+  label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:10px;background:#0f1731;color:var(--fg);border:1px solid var(--line);border-radius:8px;font:inherit}
+  button{margin-top:14px;padding:11px 18px;background:#0ea5e9;color:#fff;border:0;border-radius:8px;font-weight:700;cursor:pointer}
+  .ok{color:#10b981}.err{color:#ef4444}.muted{color:var(--mute)}
+  footer{margin-top:48px;color:var(--mute);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0 0 6px"><a href="/">← Web Agent Bridge</a> · <a href="/partners.ar.html">العربية</a></p>
+  <header>
+    <h1>WAB Certified Partner Program</h1>
+    <p class="sub">Join the public directory of sovereign-agent-ready businesses. Three tiers, transparent criteria, machine-verifiable badges.</p>
+  </header>
+
+  <section class="tiers">
+    <div class="tier"><span class="badge b-basic">Basic</span>
+      <h3>WAB Compatible</h3>
+      <div class="p">€0 / year</div>
+      <p class="muted">Self-serve. Auto-approved when your domain passes the 9-step Ring 4 handshake.</p>
+      <ul>
+        <li>Listed in public partner directory</li>
+        <li>Embeddable SVG badge</li>
+        <li>Ring 4 signed trust profile</li>
+        <li>Community support</li>
+      </ul>
+    </div>
+    <div class="tier"><span class="badge b-verified">Verified</span>
+      <h3>WAB Verified</h3>
+      <div class="p">€499 / year</div>
+      <p class="muted">Manual review (≤72h). Bridge integration audited end-to-end.</p>
+      <ul>
+        <li>Everything in Basic</li>
+        <li>Verified badge (blue checkmark)</li>
+        <li>Higher search ranking</li>
+        <li>Direct support channel</li>
+        <li>Annual integration review</li>
+      </ul>
+    </div>
+    <div class="tier"><span class="badge b-premium">Premium</span>
+      <h3>WAB Certified Partner</h3>
+      <div class="p">from €2 900 / year</div>
+      <p class="muted">Sales-led. Co-marketing, SLA, dedicated engineer.</p>
+      <ul>
+        <li>Everything in Verified</li>
+        <li>Co-marketing &amp; case study</li>
+        <li>99.9% SLA on Trust Graph API</li>
+        <li>Dedicated solution engineer</li>
+        <li>Logo on webagentbridge.com</li>
+      </ul>
+    </div>
+  </section>
+
+  <form id="applyForm">
+    <h2>Apply now</h2>
+    <p class="muted">Free / Basic applications are processed automatically. Verified &amp; Premium require manual review.</p>
+    <label>Company / brand display name</label>
+    <input name="display_name" required maxlength="120">
+    <label>Domain (the one running Ring 4)</label>
+    <input name="domain" required placeholder="example.com">
+    <label>Contact email</label>
+    <input name="contact_email" type="email" required>
+    <label>Contact name</label>
+    <input name="contact_name" maxlength="120">
+    <label>Country (ISO-2)</label>
+    <input name="country" maxlength="2" placeholder="TN">
+    <label>Category</label>
+    <select name="category">
+      <option>bank</option><option>fintech</option><option>ecommerce</option>
+      <option>messaging</option><option>healthcare</option><option>government</option>
+      <option>media</option><option>saas</option><option>telecom</option>
+      <option selected>other</option>
+    </select>
+    <label>Website (https://…)</label>
+    <input name="website" type="url" maxlength="200">
+    <label>Requested tier</label>
+    <select name="requested_tier">
+      <option value="basic" selected>Basic — €0</option>
+      <option value="verified">Verified — €499/yr</option>
+      <option value="premium">Premium — from €2 900/yr</option>
+    </select>
+    <label>Use case (a short paragraph)</label>
+    <textarea name="use_case" rows="3" maxlength="1000"></textarea>
+    <label>Handshake score (run <code>scripts/live-handshake.js</code>, paste 0–9)</label>
+    <input name="handshake_score" type="number" min="0" max="9" value="0">
+    <button type="submit">Submit application</button>
+    <p id="result" style="margin-top:12px"></p>
+  </form>
+
+  <footer>
+    <p>API: <code>POST /api/partners/apply</code> · Directory: <code>GET /api/partners</code> · Badge: <code>GET /api/partners/badge/&lt;slug&gt;.svg</code></p>
+  </footer>
+</div>
+<script>
+document.getElementById('applyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  body.handshake_score = parseInt(body.handshake_score, 10) || 0;
+  const r = await fetch('/api/partners/apply', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const j = await r.json().catch(() => ({}));
+  const el = document.getElementById('result');
+  if (r.ok && j.ok) {
+    if (j.auto_approved) {
+      el.innerHTML = '<span class="ok">✓ Approved automatically.</span> Partner ID: <code>' + j.partner_id +
+        '</code> · <a href="/api/partners/' + j.partner_id + '">profile JSON</a> · ' +
+        '<img alt="badge" src="/api/partners/badge/' + j.partner_id + '.svg" style="vertical-align:middle">';
+    } else {
+      el.innerHTML = '<span class="ok">✓ Application received.</span> Application ID: <code>' + j.application_id + '</code>. ETA: ' +
+        (j.next_steps?.eta_hours || 168) + 'h.';
+    }
+  } else {
+    el.innerHTML = '<span class="err">✗ ' + (j.error || ('HTTP ' + r.status)) + '</span>';
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Enterprise Mesh — WAB المستضاف ذاتيًا | Web Agent Bridge</title>
+<meta name="description" content="عنقود WAB مستضاف ذاتيًا قابل للعمل دون اتصال بترخيص موقَّع. بنيتك التحتية، سيادة بيانات كاملة، مواد دستورية مخصّصة.">
+<link rel="canonical" href="https://www.webagentbridge.com/enterprise-mesh.ar.html">
+<style>
+  :root { --bg:#0b1020; --fg:#e7ebf3; --mute:#aab3c5; --card:#121a33; --line:#1f2a4d; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.75 "Cairo","Segoe UI",Tahoma,sans-serif}
+  a{color:#7dd3fc}.wrap{max-width:1080px;margin:0 auto;padding:32px 20px}
+  h1{font-size:32px;margin:0 0 8px}.sub{color:var(--mute);margin:0 0 28px}
+  pre{background:#0a1230;border:1px solid var(--line);border-radius:8px;padding:14px;overflow:auto;font-size:13.5px;direction:ltr;text-align:left}
+  code{background:#0a1230;padding:1px 6px;border-radius:4px;direction:ltr;display:inline-block}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 36px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h4{margin:0 0 6px}
+  form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin:20px 0}
+  input,textarea,select{width:100%;padding:10px;background:#0f1731;color:var(--fg);border:1px solid var(--line);border-radius:8px;font:inherit;direction:ltr;text-align:right}
+  label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+  button{margin-top:14px;padding:11px 18px;background:#7c3aed;color:#fff;border:0;border-radius:8px;font-weight:700;cursor:pointer}
+  .ok{color:#10b981}.err{color:#ef4444}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0 0 6px"><a href="/">← Web Agent Bridge</a> · <a href="/enterprise-mesh">English</a></p>
+  <h1>Enterprise Mesh</h1>
+  <p class="sub">Web Agent Bridge مستضاف ذاتيًا، قابل اختياريًا للعمل في بيئة معزولة. شغّل بنية الوكلاء السياديين على معدّاتك الخاصّة. ترخيص موقَّع وقابل للتحقّق.</p>
+
+  <div class="grid">
+    <div class="card"><h4>سيادة البيانات</h4><p>وكلاؤك، سجلّات رفضك، رسم ثقتك — لا تغادر محيطك أبدًا. حتى تحقّق Ring 4 يمكن تهيئته للعمل دون اتصال أوّلًا.</p></div>
+    <div class="card"><h4>قابلية العزل التام</h4><p>التراخيص عبارة عن توكنات Ed25519 قصيرة العمر. النبضة (Heartbeat) اختيارية؛ مهلة عمل دون اتصال 30 يومًا افتراضيًا.</p></div>
+    <div class="card"><h4>دساتير مخصّصة</h4><p>اشحن موادّك الدستورية الخاصّة، موقَّعة بمفاتيحك الخاصّة. مسارات تجاوز داخلية فقط مدعومة.</p></div>
+    <div class="card"><h4>عنقود من العناقيد</h4><p>اتّحاد عدّة شبكات. تتحقّق إحداها من توقيعات الأخرى دون مشاركة البيانات.</p></div>
+  </div>
+
+  <h2>التحقّق من ترخيص</h2>
+<pre><code>curl -X POST https://www.webagentbridge.com/api/enterprise-mesh/verify \
+  -H "Content-Type: application/json" \
+  -d '{"token":"&lt;payload&gt;.&lt;signature&gt;.&lt;kid&gt;"}'
+
+# →  { "valid": true, "license_id": "lic_…", "org": "Acme", "tier": "enterprise-airgap",
+#      "seats": 50, "features": ["mesh","custom-articles"], "expires_at": 1796812800 }</code></pre>
+
+  <h2>تواصل مع المبيعات</h2>
+  <form id="contact">
+    <label>المؤسّسة</label><input name="org" required>
+    <label>بريد التواصل</label><input name="email" type="email" required>
+    <label>عدد العقد المتوقّع</label><input name="nodes" type="number" min="1" placeholder="مثلاً 25">
+    <label>هل العزل التام مطلوب؟</label>
+    <select name="airgap"><option value="no">لا، متّصل مع نبضة</option><option value="yes">نعم، معزول كليًا</option></select>
+    <label>ملاحظات</label><textarea name="notes" rows="3" maxlength="1000"></textarea>
+    <button>طلب عرض سعر</button>
+    <p id="contactOut"></p>
+  </form>
+
+  <p style="margin-top:30px;color:var(--mute)">أو راسل <a href="mailto:enterprise@webagentbridge.com">enterprise@webagentbridge.com</a> مباشرة.</p>
+</div>
+<script>
+document.getElementById('contact').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  body.display_name = body.org;
+  body.domain = (body.email.split('@')[1] || 'unknown.example').toLowerCase();
+  body.contact_email = body.email;
+  body.requested_tier = 'premium';
+  body.category = 'other';
+  body.use_case = 'استفسار Enterprise Mesh — nodes=' + body.nodes + ' · airgap=' + body.airgap + '\n' + (body.notes||'');
+  const r = await fetch('/api/partners/apply', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const j = await r.json().catch(()=>({}));
+  const out = document.getElementById('contactOut');
+  if (r.ok && j.ok) out.innerHTML = '<span class="ok">✓ تمّ الاستلام. سيتواصل معك فريقنا خلال يوم عمل واحد.</span>';
+  else out.innerHTML = '<span class="err">✗ ' + (j.error || ('HTTP ' + r.status)) + '</span>';
+});
+</script>
+</body>
+</html>
