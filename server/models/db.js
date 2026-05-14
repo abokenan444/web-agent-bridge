@@ -35,7 +35,7 @@ db.exec(`
     domain TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
-    tier TEXT DEFAULT 'free' CHECK(tier IN ('free','starter','pro','enterprise')),
+    tier TEXT DEFAULT 'free' CHECK(tier IN ('free','starter','pro','business','enterprise')),
     license_key TEXT UNIQUE NOT NULL,
     api_key TEXT UNIQUE,
     config TEXT DEFAULT '{}',
@@ -61,7 +61,7 @@ db.exec(`
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     site_id TEXT NOT NULL,
-    tier TEXT NOT NULL CHECK(tier IN ('free','starter','pro','enterprise')),
+    tier TEXT NOT NULL CHECK(tier IN ('free','starter','pro','business','enterprise')),
     status TEXT DEFAULT 'active' CHECK(status IN ('active','cancelled','expired','trial')),
     started_at TEXT DEFAULT (datetime('now')),
     expires_at TEXT,
@@ -87,7 +87,7 @@ db.exec(`
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     site_id TEXT,
-    granted_tier TEXT NOT NULL CHECK(granted_tier IN ('starter','pro','enterprise')),
+    granted_tier TEXT NOT NULL CHECK(granted_tier IN ('starter','pro','business','enterprise')),
     reason TEXT,
     granted_by TEXT NOT NULL,
     granted_at TEXT DEFAULT (datetime('now')),
@@ -111,7 +111,7 @@ db.exec(`
     site_id TEXT NOT NULL,
     stripe_subscription_id TEXT UNIQUE,
     stripe_price_id TEXT,
-    tier TEXT NOT NULL CHECK(tier IN ('starter','pro','enterprise')),
+    tier TEXT NOT NULL CHECK(tier IN ('starter','pro','business','enterprise')),
     status TEXT DEFAULT 'active' CHECK(status IN ('active','cancelled','past_due','trialing','incomplete')),
     current_period_start TEXT,
     current_period_end TEXT,
@@ -568,7 +568,7 @@ function adminUpdateSite(siteId, updates) {
   let tier = site.tier;
   let active = site.active;
   if (updates.tier !== undefined) {
-    if (!['free', 'starter', 'pro', 'enterprise'].includes(updates.tier)) return false;
+    if (!['free', 'starter', 'pro', 'business', 'enterprise'].includes(updates.tier)) return false;
     tier = updates.tier;
   }
   if (updates.active !== undefined) {

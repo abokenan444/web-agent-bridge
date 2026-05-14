@@ -18,7 +18,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS workspace_subscriptions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    plan TEXT NOT NULL DEFAULT 'free' CHECK(plan IN ('free','starter','pro','enterprise')),
+    plan TEXT NOT NULL DEFAULT 'free' CHECK(plan IN ('free','starter','pro','business','enterprise')),
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','cancelled','expired','suspended')),
     tasks_today INTEGER DEFAULT 0,
     tasks_total INTEGER DEFAULT 0,

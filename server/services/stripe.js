@@ -28,6 +28,7 @@ function getStripePrices() {
   return {
     starter: process.env.STRIPE_PRICE_STARTER || getPlatformSetting('stripe_price_starter'),
     pro: process.env.STRIPE_PRICE_PRO || getPlatformSetting('stripe_price_pro'),
+    business: process.env.STRIPE_PRICE_BUSINESS || getPlatformSetting('stripe_price_business'),
     enterprise: process.env.STRIPE_PRICE_ENTERPRISE || getPlatformSetting('stripe_price_enterprise')
   };
 }

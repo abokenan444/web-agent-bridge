@@ -199,6 +199,47 @@ const PLANS = {
     },
   },
 
+  // 'business' is the canonical paid mid-tier (matches plans table 008_plans.sql).
+  // Aliased to the same shape as 'pro' so existing feature gates keep working
+  // when a customer subscribes via the Stripe 'business' price.
+  business: {
+    id: 'business',
+    name: 'Business',
+    price: 29,
+    interval: 'month',
+    stripePrice: process.env.STRIPE_PRICE_BUSINESS,
+    description: 'All paid features, ready for scale',
+    limits: {
+      agents: 100,
+      tasksPerDay: 20000,
+      executionsPerDay: 50000,
+      sessions: 250,
+      maxConcurrency: 40,
+      replayRecordings: 5000,
+      computeMinutesPerDay: 600,
+      storageMB: 10000,
+      webhooks: 50,
+      customAgents: 50,
+      apiCallsPerMinute: 300,
+    },
+    features: {
+      protocol: true, sdk: true, browserExecution: true, adapters: true,
+      registryRead: true, agentRegistration: true, basicAuth: true,
+      discovery: true, capabilityNegotiation: true, semanticActions: true,
+      communityTemplates: true,
+      workspace: true, advancedOrchestration: true, observability: true,
+      failureAnalysis: true, replayEngine: true, llmInference: true,
+      advancedAnalytics: true, dataExtraction: true, agentMemory: true,
+      hostedRuntime: true, marketplace: true, certification: true,
+      trafficIntelligence: true, exploitShield: true, visionAnalysis: true,
+      swarmExecution: true, auditLog: true, customDomain: true,
+      shieldlink: true,
+      enterpriseSecurity: false,
+      prioritySupport: false,
+      sla: false,
+    },
+  },
+
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
@@ -340,7 +381,7 @@ function listPlans(includeEnterprise = true) {
 }
 
 function getUpgradePath(currentTier) {
-  const order = ['free', 'starter', 'pro', 'enterprise'];
+  const order = ['free', 'starter', 'pro', 'business', 'enterprise'];
   const idx = order.indexOf(currentTier);
   if (idx === -1 || idx >= order.length - 1) return null;
   return PLANS[order[idx + 1]];

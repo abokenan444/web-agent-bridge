@@ -377,7 +377,7 @@
     function renderOverview() {
       document.getElementById('statSites').textContent = sites.length;
       const topTier = sites.reduce((best, s) => {
-        const order = { enterprise: 4, pro: 3, starter: 2, free: 1 };
+        const order = { enterprise: 5, business: 4, pro: 3, starter: 2, free: 1 };
         return (order[s.tier] || 0) > (order[best] || 0) ? s.tier : best;
       }, 'free');
       document.getElementById('statTier').textContent = topTier.charAt(0).toUpperCase() + topTier.slice(1);
@@ -657,7 +657,7 @@
         const sData = await sRes.json();
         const mySites = sData.sites || [];
         const topTier = mySites.reduce((best, s) => {
-          const order = { enterprise: 4, pro: 3, starter: 2, free: 1 };
+          const order = { enterprise: 5, business: 4, pro: 3, starter: 2, free: 1 };
           return (order[s.tier] || 0) > (order[best] || 0) ? s.tier : best;
         }, 'free');
         document.getElementById('billingPlan').textContent = topTier.charAt(0).toUpperCase() + topTier.slice(1);

@@ -556,7 +556,8 @@ router.get('/revenue/tier-breakdown', (req, res) => {
         WHEN 'free' THEN 1
         WHEN 'starter' THEN 2
         WHEN 'pro' THEN 3
-        WHEN 'enterprise' THEN 4
+        WHEN 'business' THEN 4
+        WHEN 'enterprise' THEN 5
       END
     `).all();
 

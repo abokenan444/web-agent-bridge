@@ -78,7 +78,7 @@ router.put('/sites/:id/config', authenticateToken, (req, res) => {
 
 router.put('/sites/:id/tier', authenticateToken, (req, res) => {
   const { tier } = req.body;
-  if (!['free', 'starter', 'pro', 'enterprise'].includes(tier)) {
+  if (!['free', 'starter', 'pro', 'business', 'enterprise'].includes(tier)) {
     return res.status(400).json({ error: 'Invalid tier' });
   }
 

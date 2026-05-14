@@ -33,7 +33,7 @@ async function initDB() {
       domain TEXT NOT NULL,
       name TEXT NOT NULL,
       description TEXT,
-      tier TEXT DEFAULT 'free' CHECK(tier IN ('free','starter','pro','enterprise')),
+      tier TEXT DEFAULT 'free' CHECK(tier IN ('free','starter','pro','business','enterprise')),
       license_key TEXT UNIQUE NOT NULL,
       api_key TEXT UNIQUE,
       config JSONB DEFAULT '{}',
@@ -57,7 +57,7 @@ async function initDB() {
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       site_id TEXT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
-      tier TEXT NOT NULL CHECK(tier IN ('free','starter','pro','enterprise')),
+      tier TEXT NOT NULL CHECK(tier IN ('free','starter','pro','business','enterprise')),
       status TEXT DEFAULT 'active' CHECK(status IN ('active','cancelled','expired','trial')),
       started_at TIMESTAMPTZ DEFAULT NOW(),
       expires_at TIMESTAMPTZ

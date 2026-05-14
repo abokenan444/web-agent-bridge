@@ -84,7 +84,7 @@ router.get('/users/:id', authenticateAdmin, (req, res) => {
 
 router.put('/users/:id/tier', authenticateAdmin, (req, res) => {
   const { tier, siteId } = req.body;
-  if (!['free', 'starter', 'pro', 'enterprise'].includes(tier)) {
+  if (!['free', 'starter', 'pro', 'business', 'enterprise'].includes(tier)) {
     return res.status(400).json({ error: 'Invalid tier' });
   }
   adminUpdateUserTier(req.params.id, siteId, tier);
@@ -141,7 +141,7 @@ router.get('/grants', authenticateAdmin, (req, res) => {
 router.post('/grants', authenticateAdmin, (req, res) => {
   const { userId, siteId, tier, reason, expiresAt } = req.body;
   if (!userId || !tier) return res.status(400).json({ error: 'userId and tier required' });
-  if (!['starter', 'pro', 'enterprise'].includes(tier)) return res.status(400).json({ error: 'Invalid tier' });
+  if (!['starter', 'pro', 'business', 'enterprise'].includes(tier)) return res.status(400).json({ error: 'Invalid tier' });
 
   const grant = grantFreeTier({ userId, siteId, tier, reason, grantedBy: req.admin.id, expiresAt });
 
@@ -183,13 +183,14 @@ router.get('/stripe/config', authenticateAdmin, (req, res) => {
 });
 
 router.put('/stripe/config', authenticateAdmin, (req, res) => {
-  const { secretKey, publishableKey, webhookSecret, priceStarter, pricePro, priceEnterprise } = req.body;
+  const { secretKey, publishableKey, webhookSecret, priceStarter, pricePro, priceBusiness, priceEnterprise } = req.body;
 
   if (secretKey) setPlatformSetting('stripe_secret_key', secretKey);
   if (publishableKey) setPlatformSetting('stripe_publishable_key', publishableKey);
   if (webhookSecret) setPlatformSetting('stripe_webhook_secret', webhookSecret);
   if (priceStarter) setPlatformSetting('stripe_price_starter', priceStarter);
   if (pricePro) setPlatformSetting('stripe_price_pro', pricePro);
+  if (priceBusiness) setPlatformSetting('stripe_price_business', priceBusiness);
   if (priceEnterprise) setPlatformSetting('stripe_price_enterprise', priceEnterprise);
 
   res.json({ success: true });
