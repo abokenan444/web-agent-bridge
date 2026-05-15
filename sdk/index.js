@@ -630,6 +630,8 @@ const { WABSafeMode, WABSafeModeError, POLICIES: WAB_SAFE_POLICIES } = require('
 const { WABGovernance, WABGovernanceError } = require('./governance');
 // Zero-Config Adoption — Auto-Discovery fallback for sites without /.well-known/wab.json
 const autoDiscovery = require('./auto-discovery');
+// Agent Transaction Primitive (v3.9.0) — intent → authorization → execution → receipt.
+const { ATPClient, ATPError } = require('./atp');
 
 module.exports = {
   WABAgent,
@@ -646,4 +648,6 @@ module.exports = {
   WABGovernanceError,
   autoDiscovery,
   discover: autoDiscovery.discover,
+  ATPClient,
+  ATPError,
 };

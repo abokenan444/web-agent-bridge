@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent Transaction Primitive (ATP) · Web Agent Bridge</title>
+  <meta name="description" content="The first-class primitive for trusted agent execution: signed intent contracts, idempotent transactions, and cryptographically verifiable receipts." />
+  <link rel="stylesheet" href="/css/main.css" />
+  <style>
+    :root { --bg:#0a0e14; --fg:#e6edf3; --muted:#8b949e; --accent:#7ee787; --line:#30363d; --card:#161b22; }
+    body { background:var(--bg); color:var(--fg); font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; margin:0; padding:0; }
+    main { max-width:980px; margin:0 auto; padding:48px 24px 96px; }
+    h1 { font-size:2.5rem; margin:0 0 8px; letter-spacing:-0.02em; }
+    h2 { font-size:1.5rem; margin:48px 0 12px; border-bottom:1px solid var(--line); padding-bottom:8px; }
+    h3 { font-size:1.1rem; margin:24px 0 8px; color:var(--accent); }
+    p.lede { font-size:1.2rem; color:var(--muted); margin:0 0 32px; max-width:720px; }
+    .badge { display:inline-block; background:#1f6feb22; color:#79c0ff; border:1px solid #1f6feb55; padding:2px 10px; border-radius:99px; font-size:0.85rem; font-weight:600; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin:24px 0; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; }
+    .card h3 { margin-top:0; color:var(--accent); }
+    .card p { color:var(--muted); font-size:0.95rem; margin:0; }
+    pre { background:#010409; border:1px solid var(--line); border-radius:6px; padding:16px; overflow-x:auto; font-size:0.85rem; color:#c9d1d9; }
+    code { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .lifecycle { display:flex; gap:8px; align-items:center; margin:24px 0; flex-wrap:wrap; }
+    .lifecycle .step { flex:1; min-width:140px; background:var(--card); border:1px solid var(--line); padding:16px; border-radius:6px; text-align:center; }
+    .lifecycle .step b { display:block; font-size:1.1rem; color:var(--accent); margin-bottom:4px; }
+    .lifecycle .arrow { color:var(--muted); font-size:1.5rem; }
+    table { width:100%; border-collapse:collapse; margin:16px 0; }
+    th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); font-size:0.95rem; }
+    th { color:var(--accent); font-weight:600; }
+    .tier { display:inline-block; padding:1px 8px; border-radius:4px; font-size:0.8rem; font-weight:600; }
+    .tier-free { background:#3fb95022; color:#7ee787; border:1px solid #3fb95055; }
+    .tier-pro { background:#1f6feb22; color:#79c0ff; border:1px solid #1f6feb55; }
+    .tier-business { background:#bf8b3022; color:#e3b341; border:1px solid #bf8b3055; }
+    .tier-enterprise { background:#a371f722; color:#d2a8ff; border:1px solid #a371f755; }
+    nav.top { position:sticky; top:0; background:rgba(10,14,20,0.9); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); padding:12px 24px; }
+    nav.top a { color:var(--fg); text-decoration:none; margin-right:20px; font-weight:500; }
+    nav.top a:hover { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <nav class="top">
+    <a href="/">WAB</a>
+    <a href="/atp.html"><b>ATP</b></a>
+    <a href="/docs.html">Docs</a>
+    <a href="/premium.html">Pricing</a>
+    <a href="/login.html">Login</a>
+  </nav>
+  <main>
+    <span class="badge">v3.9.0 · the keystone primitive</span>
+    <h1>Agent Transaction Primitive</h1>
+    <p class="lede">
+      WAB is no longer just a discovery and execution protocol — it is the
+      <b>trust + transaction layer</b> for agentic commerce. ATP makes four
+      guarantees first-class: a signed intent contract from the human,
+      idempotent execution, a cryptographically verifiable receipt, and
+      explicit compensation.
+    </p>
+
+    <h2>The lifecycle</h2>
+    <div class="lifecycle">
+      <div class="step"><b>1 · Intent</b>The user declares scope, spend cap, expiry. Single-use nonce.</div>
+      <div class="arrow">→</div>
+      <div class="step"><b>2 · Authorize</b>The user confirms. The contract is now binding on the agent.</div>
+      <div class="arrow">→</div>
+      <div class="step"><b>3 · Transact</b>Idempotent execution under the intent. Every step is logged.</div>
+      <div class="arrow">→</div>
+      <div class="step"><b>4 · Receipt</b>Ed25519-signed canonical JSON. Anyone can verify it.</div>
+      <div class="arrow">→</div>
+      <div class="step"><b>5 · Compensate</b>If something goes wrong, the rollback path is explicit.</div>
+    </div>
+
+    <h2>Why this matters</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>For users</h3>
+        <p>You see exactly what you authorized, what the agent did, and you can verify the receipt later — even without WAB online.</p>
+      </div>
+      <div class="card">
+        <h3>For agents</h3>
+        <p>No more retries causing double-charges. <code>idempotency-key</code> + the intent's spend cap make safe execution structural, not aspirational.</p>
+      </div>
+      <div class="card">
+        <h3>For sites</h3>
+        <p>Every transaction comes with a signed proof of consent. Disputes become deterministic, not he-said-she-said.</p>
+      </div>
+      <div class="card">
+        <h3>For ecosystems</h3>
+        <p>The protocol is open. The verification endpoint is public. The receipt format is canonical JSON. No vendor lock-in.</p>
+      </div>
+    </div>
+
+    <h2>Quick start</h2>
+<pre><code>// Node 18+ — install: npm i web-agent-bridge
+const { ATPClient } = require('web-agent-bridge/sdk');
+
+const atp = new ATPClient({ baseUrl: 'https://webagentbridge.com', token: USER_JWT });
+
+// 1) The human declares the contract.
+const intent = await atp.createIntent({
+  purpose: 'Buy a book ≤ €30',
+  scope: { actions: ['search','add_to_cart','checkout'] },
+  spend_cap_cents: 3000,
+  ttl_seconds: 600,
+});
+
+// 2) The human confirms.
+await atp.authorizeIntent(intent.id);
+
+// 3) The agent executes — idempotent by key.
+const tx = await atp.beginTransaction({
+  intent_id: intent.id, amount_cents: 1500,
+  idempotency_key: 'order-' + Date.now(),
+});
+await atp.transition(tx.id, 'executing');
+await atp.step(tx.id, { action: 'checkout.confirm', evidence: { order_id: 'X1' } });
+await atp.transition(tx.id, 'executed');
+await atp.transition(tx.id, 'settled');
+
+// 4) Signed receipt — anyone can verify.
+const receipt = await atp.issueReceipt(tx.id);
+const verification = await atp.verifyReceipt(receipt.id);
+console.log(verification.verification.ok); // true</code></pre>
+
+    <h2>The signed receipt</h2>
+    <p>Every receipt is a canonical JSON document signed with Ed25519. The public verification endpoint (<code>POST /api/atp/receipts/verify</code>) requires <b>no authentication</b> — that is the whole point. Anyone can hold a receipt accountable.</p>
+<pre><code>{
+  "type": "atp.receipt.v1",
+  "receipt_id": "atp_rcpt_…",
+  "transaction": { "id": "atp_tx_…", "status": "settled", "amount_cents": 1500, … },
+  "intent":      { "id": "atp_int_…", "purpose": "Buy a book ≤ €30", "scope": { … }, … },
+  "steps":       [ { "seq": 1, "action": "checkout.confirm", "state": "succeeded" } ],
+  "signature":   {
+    "algorithm": "ed25519",
+    "value":     "BASE64…",
+    "key_id":    "16-char fingerprint",
+    "public_key":"BASE64…",
+    "signed_at": "ISO-8601"
+  }
+}</code></pre>
+
+    <h2>Open core · paid features</h2>
+    <p>The protocol and verification stay open so the standard can spread. Higher throughput, persistent key binding, and enterprise features fund the work.</p>
+    <table>
+      <thead><tr><th>Capability</th><th>Tier</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Protocol spec &amp; SDK</td><td><span class="tier tier-free">open source</span></td><td>MIT licensed. Implement it anywhere.</td></tr>
+        <tr><td>Public receipt verification (no auth)</td><td><span class="tier tier-free">open source</span></td><td>Anyone can verify any ATP receipt.</td></tr>
+        <tr><td>Intent creation</td><td><span class="tier tier-free">free</span></td><td>10/day on Free, 50/day on Starter.</td></tr>
+        <tr><td>Receipts with persistent site key binding</td><td><span class="tier tier-pro">pro</span></td><td>500 intents/day. Continuity of trust across receipts.</td></tr>
+        <tr><td>Idempotent execution at scale</td><td><span class="tier tier-pro">pro</span></td><td>Higher quotas, audit export.</td></tr>
+        <tr><td>Compensation flows + retry classification</td><td><span class="tier tier-business">business</span></td><td>5 000 intents/day, webhook subscriptions.</td></tr>
+        <tr><td>HSM-backed signing, custom workflows, SLA</td><td><span class="tier tier-enterprise">enterprise</span></td><td>Unlimited, dedicated settlement queue.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Security posture</h2>
+    <ul>
+      <li><b>Single-use nonces.</b> Authorization burns the nonce in <code>atp_nonces</code> — replays fail at the DB layer.</li>
+      <li><b>State machine in the DB.</b> CHECK constraints make illegal transitions unrepresentable, not just unlikely.</li>
+      <li><b>Idempotency.</b> <code>UNIQUE (intent_id, idempotency_key)</code> means retries can never double-execute.</li>
+      <li><b>Spend cap on every transition.</b> Enforced server-side, not in the agent.</li>
+      <li><b>Canonical JSON signing.</b> RFC 8785-style key ordering means a tampered receipt cannot pass verification.</li>
+      <li><b>Public verify rate-limited.</b> 120 req/min per IP, cryptographic check is the answer.</li>
+    </ul>
+
+    <h2>Reference</h2>
+    <p>Full API in <a href="/docs.html">/docs.html</a> and machine-readable spec in <code>docs/SPEC.md</code>. Mount path: <code>/api/atp</code>. Source: <a href="https://github.com/abokenan444/web-agent-bridge">github.com/abokenan444/web-agent-bridge</a>.</p>
+  </main>
+</body>
+</html>

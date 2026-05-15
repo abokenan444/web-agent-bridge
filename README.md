@@ -3,12 +3,14 @@
   <img src="https://raw.githubusercontent.com/abokenan444/web-agent-bridge/master/public/images/wab-logo-large.png" alt="Web Agent Bridge Logo" width="180" />
 
   <h1>Web Agent Bridge (WAB)</h1>
-  <p><b>The open AI ↔ Web protocol & agent platform.</b></p>
-  <p><i>robots.txt told bots what NOT to do. WAB tells AI agents what they CAN do.</i></p>
+  <p><b>The trust + transaction layer for agentic commerce.</b></p>
+  <p><i>Signed intent contracts · idempotent transactions · Ed25519-verifiable receipts · explicit compensation.</i></p>
+  <p><i>robots.txt told bots what NOT to do. WAB tells AI agents what they CAN do — and proves what they did.</i></p>
 
   [![npm](https://img.shields.io/npm/v/web-agent-bridge?color=blue&style=flat-square)](https://www.npmjs.com/package/web-agent-bridge)
   [![License: Open Core](https://img.shields.io/badge/License-Open_Core-blue.svg?style=flat-square)](LICENSE)
-  [![Tests](https://img.shields.io/badge/Tests-428%2F428_passing-22c55e?style=flat-square&logo=jest&logoColor=white)](tests)
+  [![Tests](https://img.shields.io/badge/Tests-445%2F445_passing-22c55e?style=flat-square&logo=jest&logoColor=white)](tests)
+  [![ATP](https://img.shields.io/badge/ATP-v3.9.0-7c3aed?style=flat-square)](docs/SPEC.md#21-agent-transaction-primitive-atp--v390)
   [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/NnbpJYEF)
 
   <br />
@@ -28,6 +30,38 @@ AI agents today guess their way through the web — DOM scraping, brittle select
 
 - **For site owners** — control exactly how AI interacts with you. Permissions, rate limits, audit trail.
 - **For agent builders** — one stable interface for any WAB-enabled site. No more custom scrapers.
+
+---
+
+## ATP — Agent Transaction Primitive *(new in v3.9)*
+
+WAB v3.9 introduces the **Agent Transaction Primitive (ATP)** — the missing trust + transaction layer for agentic commerce.
+
+```
+Intent  →  Authorize  →  Transact  →  Receipt  →  (Compensate)
+contract    single-use     idempotent   Ed25519-     explicit
++ scope     nonce burn     UNIQUE key   signed       rollback
++ spend cap                              JSON
+```
+
+- **Intent contracts** — the user's signed authorization (scope, spend cap, expiry, single-use nonce).
+- **Idempotent execution** — `UNIQUE (intent_id, idempotency_key)`: retries can never double-execute.
+- **Signed receipts** — Ed25519 over canonical JSON; verifiable via the **public** `/api/atp/receipts/verify` endpoint with zero auth.
+- **Compensation** — explicit rollback that decrements the intent's spend counter.
+
+```js
+const { ATPClient } = require('web-agent-bridge/sdk');
+const atp = new ATPClient({ baseUrl: 'https://api.webagentbridge.com', token: USER_JWT });
+
+const intent = await atp.createIntent({ purpose: 'buy 1 widget', scope: { actions: ['cart.add','checkout'] }, max_spend_cents: 5000, currency: 'EUR' });
+await atp.authorizeIntent(intent.id);
+const tx = await atp.beginTransaction({ intent_id: intent.id, idempotency_key: 'order-42', amount_cents: 4200 });
+await atp.transition(tx.id, 'executing'); await atp.transition(tx.id, 'executed'); await atp.transition(tx.id, 'settled');
+const r = await atp.issueReceipt(tx.id);                       // signed
+const v = await atp.verifyReceipt({ receiptId: r.receipt_id }); // public, no auth
+```
+
+Full spec: [`docs/SPEC.md` §21](docs/SPEC.md#21-agent-transaction-primitive-atp--v390) · Public docs page: [`/atp.html`](public/atp.html).
 
 ---
 

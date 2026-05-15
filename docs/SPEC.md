@@ -2141,3 +2141,122 @@ X-WAB-Version: 1.0
 *End of WAB Protocol Specification v1.0*
 
 *Copyright 2026 Web Agent Bridge Contributors. Licensed under MIT.*
+
+---
+
+## 21. Agent Transaction Primitive (ATP) — v3.9.0
+
+The Agent Transaction Primitive elevates WAB from a *discover-and-execute*
+protocol into a *trust + transaction* layer. It introduces four DB-backed
+first-class primitives — intents, transactions, steps, receipts — that
+together provide the guarantees agentic commerce has been missing:
+
+1. **Intent contracts** — the user's signed authorization (scope, spend cap,
+   expiry, single-use nonce).
+2. **Idempotent execution** — `UNIQUE (intent_id, idempotency_key)` means
+   retries can never double-execute.
+3. **Signed receipts** — Ed25519-signed canonical JSON; the public
+   `/api/atp/receipts/verify` endpoint requires no auth.
+4. **Compensation** — explicit rollback path that decrements the intent's
+   spend counter and surfaces a `compensated` terminal state.
+
+### 21.1 Data model
+
+| Table | Purpose | Key invariants |
+|---|---|---|
+| `atp_intents` | Human → agent authorization contracts | `nonce UNIQUE`, CHECK on `status` |
+| `atp_transactions` | Executions under an intent | `UNIQUE (intent_id, idempotency_key)`, CHECK on `status` |
+| `atp_steps` | Per-step ledger inside a transaction | `UNIQUE (transaction_id, seq)` |
+| `atp_receipts` | Signed proof of outcome | `UNIQUE (transaction_id)` |
+| `atp_nonces` | Single-use nonces, replay protection | PK = nonce |
+
+### 21.2 State machines (enforced by CHECK constraints)
+
+**Intent:** `draft → authorized → consumed | revoked | expired`
+
+**Transaction:**
+```
+pending  → executing → executed → settled
+                                  ↘ compensated
+         ↘ failed → compensated
+```
+
+### 21.3 REST surface (mount: `/api/atp`)
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| POST | /intents | JWT | Create draft intent. Daily quota by tier. |
+| GET  | /intents | JWT | List my intents. |
+| GET  | /intents/:id | JWT | Fetch one (owner only). |
+| POST | /intents/:id/authorize | JWT | Burn nonce, move to `authorized`. |
+| POST | /intents/:id/revoke | JWT | Revoke with reason. |
+| POST | /transactions | JWT | Begin tx. `Idempotency-Key` header honored. |
+| GET  | /transactions/:id | JWT | Fetch tx + ordered steps. |
+| POST | /transactions/:id/steps | JWT | Append step with evidence + compensation. |
+| POST | /transactions/:id/transition | JWT | Move state machine. |
+| POST | /transactions/:id/compensate | JWT | Rollback. |
+| POST | /transactions/:id/receipt | JWT | Issue signed receipt (idempotent per tx). |
+| GET  | /receipts/:id | — | **Public.** Returns the signed receipt. |
+| POST | /receipts/verify | — | **Public.** Verify by id or by raw body. |
+| GET  | /health | — | Liveness. |
+
+### 21.4 Receipt envelope (`atp.receipt.v1`)
+
+Canonical JSON; signed with Ed25519 via `wab-crypto.signManifest`. The
+top-level `signature` field is excluded from the canonicalized body, so
+verifiers can reproduce the bytes bit-for-bit and validate without trusting
+the server that issued them.
+
+```json
+{
+  "type": "atp.receipt.v1",
+  "receipt_id": "atp_rcpt_…",
+  "issued_at": "ISO-8601",
+  "transaction": { "id": "...", "status": "settled", "amount_cents": 1500, "currency": "EUR", ... },
+  "intent":      { "id": "...", "purpose": "...", "scope": { "actions": ["..."] }, ... },
+  "steps":       [ { "seq": 1, "action": "...", "state": "succeeded", ... } ],
+  "site_id":     null,
+  "agent_id":    null,
+  "signature": {
+    "algorithm": "ed25519",
+    "value":     "<base64>",
+    "key_id":    "<16-char fingerprint>",
+    "public_key":"<base64, optional>",
+    "signed_at": "ISO-8601"
+  }
+}
+```
+
+### 21.5 Tier gating (open core)
+
+The protocol, the SDK and **public receipt verification** are MIT-licensed
+and unauthenticated — that is the trust primitive and it must spread.
+Throughput, persistent key binding, compensation tooling and enterprise
+features are paid.
+
+| Tier | Daily intent quota |
+|---|---|
+| free | 10 |
+| starter | 50 |
+| pro | 500 |
+| business | 5 000 |
+| enterprise | 100 000 |
+
+### 21.6 Security model
+
+- **Nonces are single-use across the user** (PK on `atp_nonces`).
+- **State transitions are guarded** by both code (`VALID_TX_TRANSITIONS`)
+  and DB (`CHECK (status IN ('pending','executing','executed','settled','failed','compensated'))`).
+- **Idempotency** is structural, not advisory:
+  `UNIQUE (intent_id, idempotency_key)`.
+- **Spend cap is checked at every `beginTransaction`** against the live
+  `spent_cents` counter — not just at intent creation.
+- **Canonical JSON** prevents the classic "re-serialize and forge" attack.
+- **Public verification is rate-limited** (120 req/min per IP).
+
+### 21.7 SDK helper
+
+`require('web-agent-bridge/sdk').ATPClient` is a zero-dependency client
+that wraps the REST surface and handles the `Idempotency-Key` header.
+See `sdk/atp.js`.
+

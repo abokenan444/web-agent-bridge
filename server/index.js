@@ -305,6 +305,9 @@ const { wabTrustMiddleware } = require('./middleware/wab-trust');
 app.use(wabTrustMiddleware);
 app.use('/api/ring4', apiLimiter, ring4Router);
 
+// ── Agent Transaction Primitive (ATP) v3.9.0 — intents · transactions · signed receipts ──
+app.use('/api/atp', apiLimiter, require('./routes/transactions'));
+
 // ── WAB Commercial Foundations v3.8.0 (Partners · Trust Graph API · Governance SaaS · Enterprise Mesh) ──
 app.use('/api/partners',         apiLimiter, require('./routes/partners'));
 app.use('/api/keys',             apiLimiter, require('./routes/api-keys'));
