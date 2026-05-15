@@ -215,8 +215,12 @@ router.get('/receipts/:id', publicReceiptLimiter, (req, res) => {
 router.post('/receipts/verify', publicReceiptLimiter, express.json({ limit: '256kb' }), (req, res) => {
   const input = req.body && (req.body.receipt || req.body);
   let target = input;
-  if (typeof input === 'object' && input.id && !input.signature) {
-    const stored = transactions.getReceipt(input.id);
+  // Allow lookup by id: { receipt_id: "..." } or { id: "..." } with no signature attached
+  const lookupId = typeof input === 'object' && input
+    ? (input.receipt_id || input.id)
+    : (typeof input === 'string' ? input : null);
+  if (lookupId && (typeof input !== 'object' || !input.signature)) {
+    const stored = transactions.getReceipt(lookupId);
     if (!stored) return res.status(404).json({ ok: false, error: 'not_found' });
     target = stored.body;
   }
