@@ -8,10 +8,29 @@
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/admin/_shell.css">
   <script src="/admin/_shell.js"></script>
+  <style>
+    .a-tabs { display:flex; gap:6px; margin:16px 0; flex-wrap:wrap; }
+    .a-tabs button { padding:6px 14px; border-radius:999px; border:1px solid var(--border,#2a2a2a); background:transparent; color:inherit; cursor:pointer; font-size:0.9rem; }
+    .a-tabs button.active { background:linear-gradient(135deg,#ef4444,#f59e0b); border-color:transparent; color:#fff; }
+    .a-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; }
+    .a-chart { height:160px; position:relative; }
+    .a-bar { position:absolute; bottom:0; background:linear-gradient(180deg,#ef4444,#f59e0b); border-radius:3px 3px 0 0; }
+    .a-bar .a-bar-vis { position:absolute; left:0; right:0; bottom:0; background:rgba(255,255,255,0.45); border-radius:2px 2px 0 0; }
+    .a-bar:hover { outline:1px solid #fff8; }
+    .a-pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; background:#222; color:#ddd; margin-right:4px; }
+    .a-pill.bot { background:#4b1d1d; color:#fcc; }
+    .a-pill.human { background:#1d4b2a; color:#cfc; }
+    .a-pill.auth { background:#1d3a4b; color:#cdf; }
+    .a-row-bot td { color:#f87171; }
+    .a-mono { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; }
+    .a-truncate { max-width:340px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle; }
+    .a-section { margin-top:28px; }
+    .a-empty { color:var(--text-muted,#888); padding:16px; }
+  </style>
 </head>
 <body>
 <script>
-const { api, escapeHtml: H } = AdminShell;
+const { api, escapeHtml: H, fmtDate } = AdminShell;
 
 AdminShell.init({
   page: 'analytics',
@@ -19,53 +38,230 @@ AdminShell.init({
     root.innerHTML = `
       <div class="admin-page">
         <h1>Platform Analytics</h1>
-        <p class="page-sub">Aggregated from <code>GET /api/admin/analytics?days=N</code> (real DB query, no caching).</p>
-        <div class="toolbar">
+        <p class="page-sub">Live visitor data + agent activity, queried directly from <code>page_visits</code> and <code>analytics</code>.</p>
+
+        <div class="toolbar" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
           <label>Window:&nbsp;
             <select id="days" class="form-input">
+              <option value="1">24 hours</option>
               <option value="7">7 days</option>
               <option value="30" selected>30 days</option>
               <option value="90">90 days</option>
             </select>
           </label>
+          <button id="refresh" class="btn btn-secondary btn-sm">Refresh</button>
+          <span id="lastLoad" style="color:var(--text-muted,#999);font-size:0.85rem;"></span>
         </div>
-        <div id="content"><div class="empty">Loading…</div></div>
+
+        <div class="a-tabs">
+          <button data-tab="visits" class="active">🌐 Visitors</button>
+          <button data-tab="actions">🤖 Agent actions</button>
+          <button data-tab="live">📡 Live feed</button>
+        </div>
+
+        <div id="tab-visits"></div>
+        <div id="tab-actions" style="display:none;"></div>
+        <div id="tab-live" style="display:none;"></div>
       </div>
     `;
 
-    async function load() {
-      const days = document.getElementById('days').value;
-      const r = await api('/api/admin/analytics?days=' + days);
-      const c = document.getElementById('content');
-      const totals = r.totals || {};
-      const events = r.events || r.byEvent || [];
-      const top = r.topSites || [];
-      c.innerHTML = `
-        <div class="grid stats-grid" style="margin:18px 0;">
-          ${Object.entries(totals).map(([k,v]) => `
-            <div class="stat-card">
-              <div class="stat-label">${H(k.replace(/_/g,' '))}</div>
-              <div class="stat-value">${H(typeof v === 'number' ? v.toLocaleString() : v)}</div>
-            </div>
-          `).join('') || '<div class="empty">No totals.</div>'}
+    const tabBtns = root.querySelectorAll('.a-tabs button');
+    tabBtns.forEach(b => b.addEventListener('click', () => {
+      tabBtns.forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      ['visits','actions','live'].forEach(t => {
+        document.getElementById('tab-' + t).style.display = (b.dataset.tab === t ? '' : 'none');
+      });
+    }));
+
+    function fmtNum(n) { return Number(n || 0).toLocaleString(); }
+    function fmtPct(n, d) { return d ? ((n / d) * 100).toFixed(1) + '%' : '0%'; }
+    function pct(num, max) { return max > 0 ? Math.round((num / max) * 100) : 0; }
+
+    function timelineChart(timeline) {
+      if (!timeline.length) return '<div class="a-empty">No data in this window yet.</div>';
+      const maxPv = Math.max(...timeline.map(t => t.pageviews || 0), 1);
+      const w = 100 / timeline.length;
+      return `
+        <div class="a-chart">
+          ${timeline.map((t,i) => {
+            const ph = pct(t.pageviews || 0, maxPv);
+            const vh = pct(t.visitors || 0, maxPv);
+            return `
+              <div class="a-bar" style="left:${(i*w).toFixed(3)}%;width:${(w*0.85).toFixed(3)}%;height:${ph}%;" title="${H(t.day)} — ${fmtNum(t.pageviews)} views, ${fmtNum(t.visitors)} visitors, ${fmtNum(t.bots||0)} bots">
+                <div class="a-bar-vis" style="height:${vh && ph ? ((vh/ph)*100).toFixed(1) : 0}%;"></div>
+              </div>
+            `;
+          }).join('')}
         </div>
-
-        <h3>Events by type</h3>
-        ${events.length ? `<div class="table-wrapper"><table>
-          <thead><tr><th>Event</th><th>Count</th></tr></thead>
-          <tbody>${events.map(e => `<tr><td>${H(e.event_type || e.event)}</td><td>${H(e.count || e.c)}</td></tr>`).join('')}</tbody>
-        </table></div>` : '<div class="empty">No events.</div>'}
-
-        <h3 style="margin-top:24px;">Top sites</h3>
-        ${top.length ? `<div class="table-wrapper"><table>
-          <thead><tr><th>Domain</th><th>Events</th></tr></thead>
-          <tbody>${top.map(s => `<tr><td>${H(s.domain)}</td><td>${H(s.events || s.count)}</td></tr>`).join('')}</tbody>
-        </table></div>` : '<div class="empty">No site activity.</div>'}
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted,#999);margin-top:4px;">
+          <span>${H(timeline[0].day)}</span><span>${H(timeline[timeline.length-1].day)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted,#999);margin-top:6px;">
+          <span style="display:inline-block;width:10px;height:10px;background:linear-gradient(180deg,#ef4444,#f59e0b);vertical-align:middle;margin-right:4px;"></span>Pageviews
+          &nbsp;
+          <span style="display:inline-block;width:10px;height:10px;background:rgba(255,255,255,0.45);vertical-align:middle;margin-right:4px;"></span>Unique visitors
+        </div>
       `;
     }
 
-    document.getElementById('days').addEventListener('change', load);
-    await load();
+    function statBox(label, value, sub) {
+      return `<div class="stat-card"><div class="stat-label">${H(label)}</div><div class="stat-value">${H(value)}</div>${sub?`<div class="stat-sub">${H(sub)}</div>`:''}</div>`;
+    }
+
+    async function loadVisits() {
+      const days = document.getElementById('days').value;
+      const c = document.getElementById('tab-visits');
+      c.innerHTML = '<div class="a-empty">Loading…</div>';
+      let r;
+      try { r = await api('/api/admin/analytics/visits?days=' + days); }
+      catch (e) { c.innerHTML = `<div class="a-empty">Failed to load visits: ${H(e.message)}</div>`; return; }
+      const t = r.totals || {};
+      c.innerHTML = `
+        <div class="grid stats-grid" style="margin:18px 0;">
+          ${statBox('Pageviews (window)', fmtNum(t.pageviews), `${fmtNum(t.visitors)} unique visitors`)}
+          ${statBox('Today', fmtNum(t.pageviews_today), `${fmtNum(t.visitors_today)} unique`)}
+          ${statBox('Last 24h', fmtNum(t.pageviews_24h), `${fmtNum(t.visitors_24h)} unique`)}
+          ${statBox('Human vs bot', fmtNum(t.human_hits), `${fmtPct(t.human_hits, t.pageviews)} human · ${fmtNum(t.bot_hits)} bot hits`)}
+          ${statBox('Authenticated hits', fmtNum(t.authenticated_hits), `${fmtNum(t.authenticated_users)} signed-in users`)}
+        </div>
+
+        <div class="card" style="padding:18px;">
+          <h3 style="margin:0 0 12px;">Traffic timeline (${H(days)}d)</h3>
+          ${timelineChart(r.timeline || [])}
+        </div>
+
+        <div class="a-grid a-section">
+          <div class="card" style="padding:18px;">
+            <h3 style="margin:0 0 12px;">Top pages</h3>
+            ${(r.topPaths||[]).length ? `<table style="width:100%;"><thead><tr><th style="text-align:left;">Path</th><th style="text-align:right;">Views</th><th style="text-align:right;">Visitors</th></tr></thead><tbody>
+              ${r.topPaths.map(p => `<tr><td><span class="a-truncate a-mono">${H(p.path)}</span></td><td style="text-align:right;">${fmtNum(p.pageviews)}</td><td style="text-align:right;">${fmtNum(p.visitors)}</td></tr>`).join('')}
+            </tbody></table>` : '<div class="a-empty">No page traffic yet.</div>'}
+          </div>
+
+          <div class="card" style="padding:18px;">
+            <h3 style="margin:0 0 12px;">Top referrers</h3>
+            ${(r.topReferrers||[]).length ? `<table style="width:100%;"><thead><tr><th style="text-align:left;">Source</th><th style="text-align:right;">Hits</th></tr></thead><tbody>
+              ${r.topReferrers.map(p => `<tr><td><span class="a-truncate a-mono">${H(p.source)}</span></td><td style="text-align:right;">${fmtNum(p.hits)}</td></tr>`).join('')}
+            </tbody></table>` : '<div class="a-empty">No referrer data.</div>'}
+          </div>
+
+          <div class="card" style="padding:18px;">
+            <h3 style="margin:0 0 12px;">Devices</h3>
+            ${(r.devices||[]).length ? `<table style="width:100%;"><thead><tr><th style="text-align:left;">Device</th><th style="text-align:right;">Hits</th></tr></thead><tbody>
+              ${r.devices.map(p => `<tr><td>${H(p.device)}</td><td style="text-align:right;">${fmtNum(p.hits)}</td></tr>`).join('')}
+            </tbody></table>` : '<div class="a-empty">No device data.</div>'}
+          </div>
+
+          <div class="card" style="padding:18px;">
+            <h3 style="margin:0 0 12px;">Countries</h3>
+            ${(r.countries||[]).length ? `<table style="width:100%;"><thead><tr><th style="text-align:left;">Country</th><th style="text-align:right;">Hits</th></tr></thead><tbody>
+              ${r.countries.map(p => `<tr><td>${H(p.country)}</td><td style="text-align:right;">${fmtNum(p.hits)}</td></tr>`).join('')}
+            </tbody></table>` : '<div class="a-empty">No geo data (requires Cloudflare or similar in front of the app).</div>'}
+          </div>
+
+          <div class="card" style="padding:18px;">
+            <h3 style="margin:0 0 12px;">Bots crawling the site</h3>
+            ${(r.topBots||[]).length ? `<table style="width:100%;"><thead><tr><th style="text-align:left;">Bot</th><th style="text-align:right;">Hits</th></tr></thead><tbody>
+              ${r.topBots.map(p => `<tr><td>${H(p.bot)}</td><td style="text-align:right;">${fmtNum(p.hits)}</td></tr>`).join('')}
+            </tbody></table>` : '<div class="a-empty">No bot activity yet.</div>'}
+          </div>
+
+          <div class="card" style="padding:18px;">
+            <h3 style="margin:0 0 12px;">New signups (window)</h3>
+            ${(r.signups||[]).length ? `<table style="width:100%;"><thead><tr><th style="text-align:left;">Day</th><th style="text-align:right;">Signups</th></tr></thead><tbody>
+              ${r.signups.map(p => `<tr><td>${H(p.day)}</td><td style="text-align:right;">${fmtNum(p.count)}</td></tr>`).join('')}
+            </tbody></table>` : '<div class="a-empty">No signups yet.</div>'}
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadActions() {
+      const days = document.getElementById('days').value;
+      const c = document.getElementById('tab-actions');
+      c.innerHTML = '<div class="a-empty">Loading…</div>';
+      let r;
+      try { r = await api('/api/admin/analytics?days=' + days); }
+      catch (e) { c.innerHTML = `<div class="a-empty">Failed to load actions: ${H(e.message)}</div>`; return; }
+      const timeline = r.timeline || [];
+      const topActions = r.topActions || [];
+      const signups = r.signups || [];
+      const totals = {
+        events: timeline.reduce((s,t) => s + (t.count||0), 0),
+        actions: topActions.length,
+        days_active: timeline.length,
+      };
+      c.innerHTML = `
+        <div class="grid stats-grid" style="margin:18px 0;">
+          ${statBox('Total agent events', fmtNum(totals.events), `${fmtNum(totals.days_active)} active days`)}
+          ${statBox('Distinct actions', fmtNum(totals.actions))}
+          ${statBox('Signups (window)', fmtNum(signups.reduce((s,d)=>s+(d.count||0),0)))}
+        </div>
+
+        <div class="card" style="padding:18px;">
+          <h3 style="margin:0 0 12px;">Events per day</h3>
+          ${timelineChart(timeline.map(t => ({day:t.day, pageviews:t.count, visitors:0, bots:0})))}
+        </div>
+
+        <div class="a-grid a-section">
+          <div class="card" style="padding:18px;">
+            <h3 style="margin:0 0 12px;">Top agent actions</h3>
+            ${topActions.length ? `<table style="width:100%;"><thead><tr><th style="text-align:left;">Action</th><th style="text-align:right;">Count</th></tr></thead><tbody>
+              ${topActions.map(a => `<tr><td><span class="a-mono">${H(a.action_name)}</span></td><td style="text-align:right;">${fmtNum(a.count)}</td></tr>`).join('')}
+            </tbody></table>` : '<div class="a-empty">No agent actions recorded yet.</div>'}
+          </div>
+          <div class="card" style="padding:18px;">
+            <h3 style="margin:0 0 12px;">User signups (timeline)</h3>
+            ${signups.length ? `<table style="width:100%;"><thead><tr><th style="text-align:left;">Day</th><th style="text-align:right;">Signups</th></tr></thead><tbody>
+              ${signups.map(s => `<tr><td>${H(s.day)}</td><td style="text-align:right;">${fmtNum(s.count)}</td></tr>`).join('')}
+            </tbody></table>` : '<div class="a-empty">No signups in this window.</div>'}
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadLive() {
+      const c = document.getElementById('tab-live');
+      c.innerHTML = '<div class="a-empty">Loading…</div>';
+      let r;
+      try { r = await api('/api/admin/analytics/visits/recent?limit=100'); }
+      catch (e) { c.innerHTML = `<div class="a-empty">Failed to load live feed: ${H(e.message)}</div>`; return; }
+      const visits = r.visits || [];
+      if (!visits.length) { c.innerHTML = '<div class="a-empty">No visits recorded yet. Open <a href="/" target="_blank">the homepage</a> in another tab and refresh.</div>'; return; }
+      c.innerHTML = `
+        <p style="color:var(--text-muted,#999);margin-top:12px;">Latest ${visits.length} requests — refresh manually with the button above.</p>
+        <div class="table-wrapper"><table>
+          <thead><tr>
+            <th>When</th><th>Path</th><th>Device</th><th>Country</th><th>Status</th><th>User</th><th>Referrer</th><th>UA</th>
+          </tr></thead>
+          <tbody>
+            ${visits.map(v => `
+              <tr class="${v.is_bot ? 'a-row-bot' : ''}">
+                <td>${H(fmtDate(v.created_at))}</td>
+                <td><span class="a-truncate a-mono">${H(v.path)}</span></td>
+                <td>${v.is_bot ? '<span class="a-pill bot">bot</span>' : `<span class="a-pill human">${H(v.device||'unknown')}</span>`}</td>
+                <td>${H(v.country || '—')}</td>
+                <td>${H(v.status_code || '—')}</td>
+                <td>${v.user_id ? `<span class="a-pill auth">${H(String(v.user_id).slice(0,8))}…</span>` : '<span style="color:var(--text-muted,#888);">anon</span>'}</td>
+                <td><span class="a-truncate">${H(v.referrer || 'Direct')}</span></td>
+                <td><span class="a-truncate a-mono" title="${H(v.user_agent||'')}">${H((v.user_agent||'').slice(0,60))}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table></div>
+      `;
+    }
+
+    async function loadAll() {
+      const t0 = Date.now();
+      await Promise.all([loadVisits(), loadActions(), loadLive()]);
+      document.getElementById('lastLoad').textContent = 'Loaded in ' + (Date.now() - t0) + ' ms';
+    }
+
+    document.getElementById('days').addEventListener('change', loadAll);
+    document.getElementById('refresh').addEventListener('click', loadAll);
+    await loadAll();
   },
 });
 </script>

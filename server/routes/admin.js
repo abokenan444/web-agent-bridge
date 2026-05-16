@@ -23,6 +23,7 @@ const {
 } = require('../models/db');
 const { sendEmail } = require('../services/email');
 const { createCheckoutSession, createPortalSession, isStripeConfigured, getStripePrices } = require('../services/stripe');
+const visitorTracker = require('../services/visitor-tracker');
 
 // ─── Auth ──────────────────────────────────────────────────────────────
 
@@ -60,6 +61,35 @@ router.get('/me', authenticateAdmin, (req, res) => {
 router.get('/stats', authenticateAdmin, (req, res) => {
   const stats = getAdminStats();
   stats.stripeConfigured = isStripeConfigured();
+
+  // Expose normalized keys that the overview dashboard expects, while keeping
+  // the legacy keys for any older clients still reading them.
+  stats.users  = stats.totalUsers;
+  stats.sites  = stats.totalSites;
+  stats.analytics_total = stats.totalAnalytics;
+  stats.analytics_today = stats.todayAnalytics;
+  stats.revenue30d = (() => {
+    try {
+      const r = db.prepare(
+        `SELECT COALESCE(SUM(amount),0) AS t FROM payments WHERE status='succeeded' AND created_at >= datetime('now','-30 days')`
+      ).get();
+      return r ? r.t : 0;
+    } catch { return 0; }
+  })();
+  stats.active_subscriptions = (() => {
+    try {
+      const r = db.prepare(
+        `SELECT COUNT(*) AS c FROM stripe_subscriptions WHERE status='active'`
+      ).get();
+      return r ? r.c : 0;
+    } catch { return 0; }
+  })();
+
+  // Visitor counts (registered + anonymous).
+  try {
+    Object.assign(stats, visitorTracker.getQuickCounts());
+  } catch { /* table may not exist on first boot before migration */ }
+
   res.json(stats);
 });
 
@@ -67,6 +97,26 @@ router.get('/analytics', authenticateAdmin, (req, res) => {
   const days = parseInt(req.query.days) || 30;
   const data = getPlatformAnalytics(days);
   res.json(data);
+});
+
+// ─── Visitor analytics (page hits, registered + anonymous) ────────────
+
+router.get('/analytics/visits', authenticateAdmin, (req, res) => {
+  try {
+    const data = visitorTracker.getVisitorAnalytics(req.query.days);
+    res.json({ ok: true, ...data });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+router.get('/analytics/visits/recent', authenticateAdmin, (req, res) => {
+  try {
+    const visits = visitorTracker.getRecentVisits(req.query.limit);
+    res.json({ ok: true, visits });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 // ─── Users Management ─────────────────────────────────────────────────

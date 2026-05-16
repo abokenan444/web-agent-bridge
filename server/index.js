@@ -232,6 +232,15 @@ const licenseLimiter = rateLimit({
   }
 });
 
+// Visitor analytics — record every public page hit (HTML routes only) before
+// they're served by express.static. Skips assets, /api, /admin and other noise.
+try {
+  const visitorTracker = require('./services/visitor-tracker');
+  app.use(visitorTracker.middleware());
+} catch (e) {
+  console.warn('[wab] visitor-tracker disabled:', e.message);
+}
+
 // Whitepaper guard — must run BEFORE express.static so we can apply strict headers
 // and intercept both /whitepaper and /whitepaper.html with the same protections.
 const whitepaperHandler = (req, res) => {

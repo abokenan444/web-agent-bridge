@@ -45,8 +45,12 @@ AdminShell.init({
     }
     const stats = await api('/api/admin/stats').catch(() => ({}));
     document.getElementById('stats').innerHTML = [
-      box('Users', stats.users || 0),
+      box('Users', stats.users || 0, (stats.monthlySignups || 0) + ' new in 30d'),
       box('Sites', stats.sites || 0),
+      box('Visitors 24h', stats.visitors_24h || 0,
+          (stats.pageviews_24h || 0) + ' pageviews'),
+      box('Visitors 30d', stats.visitors_30d || 0,
+          (stats.pageviews_30d || 0) + ' pageviews'),
       box('Active subs', stats.active_subscriptions || stats.activeSubs || 0),
       box('Revenue (30d)', '$' + (((stats.revenue30d || 0) / 100).toFixed(2)),
           'Stripe ' + (stats.stripeConfigured ? 'configured' : 'not configured')),
