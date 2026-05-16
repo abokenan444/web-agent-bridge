@@ -507,6 +507,154 @@ function expireOverdueIntents() {
   return r.changes;
 }
 
+// ── Platform self-dogfooding ─────────────────────────────────────────────────
+
+/**
+ * Record a real WAB platform money event (e.g. Stripe subscription payment)
+ * as a complete ATP cycle: intent → authorize → tx → step → settle → receipt.
+ *
+ * This is "eat-your-own-cooking": every dollar that flows into WAB is itself
+ * a publicly-verifiable Ed25519 receipt that any auditor can re-verify.
+ *
+ * Idempotent on (externalRef): replaying the same Stripe invoice id is a
+ * no-op and returns the existing receipt.
+ */
+function recordPlatformPayment(params) {
+  const {
+    userId, amountCents, currency = 'USD', tier,
+    externalRef, description = null,
+    periodStart = null, periodEnd = null,
+    provider = 'stripe',
+  } = params;
+
+  if (!userId) throw badRequest('userId required');
+  if (!Number.isInteger(amountCents) || amountCents < 0) throw badRequest('amountCents must be non-negative integer');
+  if (!externalRef || typeof externalRef !== 'string') throw badRequest('externalRef required');
+  if (!tier || typeof tier !== 'string') throw badRequest('tier required');
+
+  // Idempotency: if a receipt already exists for this external ref, return it.
+  const prior = db.prepare(`
+    SELECT r.id AS rid
+      FROM atp_receipts r
+      JOIN atp_transactions t ON t.id = r.transaction_id
+      JOIN atp_intents i      ON i.id = t.intent_id
+     WHERE json_extract(i.metadata, '$.platform') = 1
+       AND json_extract(i.metadata, '$.external_ref') = ?
+     LIMIT 1
+  `).get(externalRef);
+  if (prior) return getReceipt(prior.rid);
+
+  const cur = String(currency || 'USD').toUpperCase();
+  const meta = {
+    platform: true,
+    kind: 'wab_subscription',
+    tier,
+    provider,
+    external_ref: externalRef,
+    period_start: periodStart,
+    period_end: periodEnd,
+  };
+
+  // 1. Intent
+  const intent = createIntent({
+    userId,
+    purpose: `WAB platform subscription — ${tier}`,
+    scope: { actions: ['pay'] },
+    spendCapCents: amountCents,
+    spendCurrency: cur,
+    maxExecutions: 1,
+    ttlSeconds: 3600,
+    metadata: meta,
+  });
+  // 2. Authorize
+  authorizeIntent(intent.id, { userId });
+  // 3. Begin tx (idempotent on externalRef)
+  const tx = beginTransaction({
+    intentId: intent.id,
+    idempotencyKey: externalRef,
+    amountCents,
+    currency: cur,
+    summary: description || `Subscription payment for ${tier}`,
+    metadata: { external_ref: externalRef, provider },
+  });
+  // 4. Step (the actual payment evidence)
+  appendStep(tx.id, {
+    action: 'pay',
+    evidence: {
+      provider,
+      external_ref: externalRef,
+      amount_cents: amountCents,
+      currency: cur,
+      tier,
+      period_start: periodStart,
+      period_end: periodEnd,
+    },
+  });
+  // 5. Drive lifecycle to settled
+  transitionTransaction(tx.id, 'executing');
+  transitionTransaction(tx.id, 'executed');
+  transitionTransaction(tx.id, 'settled');
+  // 6. Issue receipt
+  return issueReceipt(tx.id);
+}
+
+/**
+ * List platform-issued receipts (the "transparency feed").
+ * Public-safe: filters to intents with metadata.platform=1 only.
+ */
+function listPlatformReceipts({ limit = 20, offset = 0 } = {}) {
+  const lim = Math.max(1, Math.min(100, Number(limit) || 20));
+  const off = Math.max(0, Number(offset) || 0);
+  const rows = db.prepare(`
+    SELECT r.id           AS receipt_id,
+           r.issued_at    AS issued_at,
+           r.algorithm    AS algorithm,
+           r.key_id       AS key_id,
+           t.amount_cents AS amount_cents,
+           t.currency     AS currency,
+           t.status       AS tx_status,
+           json_extract(i.metadata, '$.tier')        AS tier,
+           json_extract(i.metadata, '$.provider')    AS provider,
+           json_extract(i.metadata, '$.period_start') AS period_start,
+           json_extract(i.metadata, '$.period_end')   AS period_end
+      FROM atp_receipts r
+      JOIN atp_transactions t ON t.id = r.transaction_id
+      JOIN atp_intents i      ON i.id = t.intent_id
+     WHERE json_extract(i.metadata, '$.platform') = 1
+     ORDER BY r.issued_at DESC
+     LIMIT ? OFFSET ?
+  `).all(lim, off);
+  return rows;
+}
+
+/**
+ * Aggregate stats for the public transparency page.
+ */
+function getPlatformStats() {
+  const row = db.prepare(`
+    SELECT COUNT(*) AS receipts,
+           COALESCE(SUM(t.amount_cents), 0) AS total_cents,
+           MIN(r.issued_at) AS first_at,
+           MAX(r.issued_at) AS last_at
+      FROM atp_receipts r
+      JOIN atp_transactions t ON t.id = r.transaction_id
+      JOIN atp_intents i      ON i.id = t.intent_id
+     WHERE json_extract(i.metadata, '$.platform') = 1
+  `).get();
+  const byTier = db.prepare(`
+    SELECT json_extract(i.metadata, '$.tier') AS tier,
+           COUNT(*) AS receipts,
+           COALESCE(SUM(t.amount_cents), 0) AS total_cents
+      FROM atp_receipts r
+      JOIN atp_transactions t ON t.id = r.transaction_id
+      JOIN atp_intents i      ON i.id = t.intent_id
+     WHERE json_extract(i.metadata, '$.platform') = 1
+     GROUP BY tier
+     ORDER BY total_cents DESC
+  `).all();
+  return { ...row, by_tier: byTier };
+}
+
 module.exports = {
   // intents
   createIntent, getIntent, listIntentsForUser, authorizeIntent, revokeIntent,
@@ -520,6 +668,8 @@ module.exports = {
   compensateTransaction,
   // maintenance
   expireOverdueIntents,
+  // platform dogfooding
+  recordPlatformPayment, listPlatformReceipts, getPlatformStats,
   // re-exports for tests
   _validateScope: validateScope,
 };

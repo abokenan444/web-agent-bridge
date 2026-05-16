@@ -1,6 +1,6 @@
 {
   "name": "web-agent-bridge",
-  "version": "3.9.0",
+  "version": "3.9.1",
   "description": "Agent Transaction Bridge — the trust + transaction layer for agentic commerce. Signed intent contracts, idempotent transactions, Ed25519-verifiable receipts, explicit compensation. Plus the original WAB stack: sovereign browser, ShieldQR, SSL health, DNS discovery, agent mesh, and unified gateway for safe AI–website interaction.",
   "author": "Web Agent Bridge <dev@webagentbridge.com>",
   "main": "server/index.js",

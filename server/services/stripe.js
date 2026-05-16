@@ -138,6 +138,25 @@ function handleWebhookEvent(event) {
             periodStart: new Date(invoice.period_start * 1000).toISOString(),
             periodEnd: new Date(invoice.period_end * 1000).toISOString()
           });
+          // ── WAB dogfooding: record this real money event as an ATP receipt ──
+          // Every dollar that flows into WAB is itself a publicly-verifiable
+          // Ed25519 receipt. Failure here MUST NOT block payment confirmation.
+          try {
+            const transactions = require('./transactions');
+            transactions.recordPlatformPayment({
+              userId: sub.user_id,
+              amountCents: invoice.amount_paid,
+              currency: (invoice.currency || 'USD').toUpperCase(),
+              tier: sub.tier,
+              externalRef: invoice.id || invoice.payment_intent,
+              description: `WAB ${sub.tier} subscription`,
+              periodStart: invoice.period_start ? new Date(invoice.period_start * 1000).toISOString() : null,
+              periodEnd:   invoice.period_end   ? new Date(invoice.period_end * 1000).toISOString()   : null,
+              provider: 'stripe',
+            });
+          } catch (e) {
+            console.error('[atp] recordPlatformPayment failed (non-fatal):', e.message);
+          }
         }
       }
       break;

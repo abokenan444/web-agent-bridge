@@ -2260,3 +2260,39 @@ features are paid.
 that wraps the REST surface and handles the `Idempotency-Key` header.
 See `sdk/atp.js`.
 
+
+
+### 21.8 Platform self-application (dogfooding)
+
+WAB applies ATP to its own subscription business. Every payment processed
+by webagentbridge.com through Stripe produces a complete ATP cycle:
+
+1. On `invoice.payment_succeeded`, `recordPlatformPayment()` runs the
+   full lifecycle for the paying user: `createIntent` (purpose =
+   `WAB platform subscription — <tier>`, scope = `{actions:['pay']}`,
+   spend_cap = invoice amount), `authorizeIntent`, `beginTransaction`
+   (idempotency_key = Stripe invoice id), `appendStep` with the payment
+   evidence, then `pending ? executing ? executed ? settled`, and
+   finally `issueReceipt`.
+2. The intent is tagged `metadata.platform = true` so the receipt can
+   be aggregated into a public transparency feed without leaking any
+   non-platform receipts.
+3. Idempotency: replaying the same `invoice.id` returns the original
+   receipt instead of creating a duplicate cycle.
+
+Two new public endpoints expose the result:
+
+| Method | Path                          | Description                                  |
+|-------:|-------------------------------|----------------------------------------------|
+| GET    | `/api/atp/platform/receipts`  | Latest platform receipts (id, tier, amount). |
+| GET    | `/api/atp/platform/stats`     | Aggregated counts and totals by tier.        |
+
+The human-facing view is `/transparency.html`. Any visitor can:
+
+- read the feed,
+- fetch the full signed body via `GET /api/atp/receipts/<id>`,
+- re-verify the Ed25519 signature in their browser via
+  `POST /api/atp/receipts/verify { "receipt_id": "<id>" }`.
+
+This is the marketing claim made operational: *"WAB doesn't just build
+the trust layer for agentic commerce — it runs its own business on it."*

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAB Transparency — Live ATP Receipts for Every Subscription</title>
+<meta name="description" content="WAB doesn't just build the trust layer for agentic commerce — it runs its own business on it. Every subscription processed through webagentbridge.com is an ATP transaction with a public Ed25519 receipt.">
+<meta property="og:title" content="WAB Transparency — Live ATP Receipts">
+<meta property="og:description" content="Every WAB subscription produces a publicly-verifiable Ed25519 receipt. Audit the books, byte by byte.">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg:#0b0d12; --bg2:#11141b; --fg:#e6e8ec; --muted:#8a93a6;
+    --accent:#7c5cff; --accent2:#22d3ee; --ok:#10b981; --bad:#ef4444;
+    --border:#1f2430;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif;
+    background: radial-gradient(1200px 600px at 20% -10%, rgba(124,92,255,.18), transparent 60%),
+                radial-gradient(900px 500px at 90% 10%, rgba(34,211,238,.12), transparent 55%),
+                var(--bg);
+    color:var(--fg); line-height:1.55; min-height:100vh;
+  }
+  a { color:var(--accent2); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  header.top {
+    padding: 22px 0; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .brand { font-weight:700; letter-spacing:.2px; }
+  .brand span { color: var(--accent); }
+  nav a { margin-left: 18px; color: var(--muted); font-size:14px; }
+  nav a:hover { color: var(--fg); }
+
+  .hero { padding: 70px 0 50px; text-align:center; }
+  .hero .eyebrow {
+    display:inline-block; padding:6px 14px; border-radius:999px;
+    background: rgba(124,92,255,.12); color:#c8bdff; font-size:12px;
+    letter-spacing:.18em; text-transform:uppercase; border:1px solid rgba(124,92,255,.35);
+  }
+  .hero h1 {
+    font-size: clamp(34px, 5vw, 56px); margin: 18px 0 14px; line-height:1.08;
+    background: linear-gradient(180deg, #fff 30%, #b8c0d4 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    font-weight: 800; letter-spacing:-.5px;
+  }
+  .hero p.sub { color: var(--muted); max-width: 780px; margin: 0 auto; font-size:18px; }
+  .hero p.tag { margin-top: 22px; font-size: 15px; color:#cdd5e3; }
+  .hero p.tag strong { color: var(--fg); }
+
+  .stats {
+    display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+    margin: 36px 0 12px;
+  }
+  .stat {
+    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+    border:1px solid var(--border); border-radius:14px; padding:18px;
+  }
+  .stat .k { color: var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+  .stat .v { font-size: 26px; font-weight: 700; margin-top:6px; }
+  .stat .v small { color: var(--muted); font-size:13px; font-weight:500; }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+  section { padding: 30px 0; }
+  h2 { font-size: 24px; margin: 28px 0 14px; letter-spacing:-.3px; }
+
+  .feed {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; overflow:hidden;
+  }
+  table { width:100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: rgba(255,255,255,.02); color: var(--muted); font-weight: 600;
+       font-size: 12px; letter-spacing:.08em; text-transform:uppercase; }
+  tr:last-child td { border-bottom: 0; }
+  tr:hover td { background: rgba(124,92,255,.04); }
+  .mono { font-family: ui-monospace, "JetBrains Mono", Menlo, monospace; font-size: 12.5px; }
+  .receipt-id { color: var(--accent2); }
+  .tier { display:inline-block; padding:3px 8px; border-radius:6px; font-size:11px;
+          font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+  .tier.starter   { background: rgba(34,211,238,.15);  color:#7ee9ff; }
+  .tier.pro       { background: rgba(124,92,255,.18);  color:#c8bdff; }
+  .tier.business  { background: rgba(16,185,129,.18);  color:#7feac3; }
+  .tier.enterprise{ background: rgba(245,158,11,.18);  color:#ffd58a; }
+  .badge-verify {
+    display:inline-flex; align-items:center; gap:6px;
+    background: rgba(16,185,129,.12); color: var(--ok); padding: 4px 10px;
+    border-radius:999px; font-size:12px; font-weight:600; border:1px solid rgba(16,185,129,.3);
+    cursor:pointer; transition: all .15s;
+  }
+  .badge-verify:hover { background: rgba(16,185,129,.22); }
+  .badge-verify.bad { background: rgba(239,68,68,.12); color:var(--bad); border-color: rgba(239,68,68,.3); }
+  .badge-verify.loading { opacity:.6; }
+
+  .empty { padding:38px 18px; text-align:center; color: var(--muted); }
+  .empty code { background: var(--bg); padding:2px 6px; border-radius:4px; color: var(--accent2); }
+
+  .how {
+    background: var(--bg2); border:1px solid var(--border); border-radius:14px;
+    padding: 22px 24px; margin: 24px 0;
+  }
+  .how ol { padding-left: 20px; margin: 8px 0 0; }
+  .how li { margin: 8px 0; color:#cdd5e3; }
+  .how code { background: var(--bg); padding:2px 6px; border-radius:4px;
+              color: var(--accent2); font-size: 12.5px; }
+
+  footer {
+    border-top:1px solid var(--border); margin-top: 60px; padding: 30px 0;
+    color: var(--muted); font-size: 13px; text-align:center;
+  }
+  footer a { color: var(--muted); margin: 0 10px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="container" style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+    <div class="brand">Web Agent Bridge <span>·</span> Transparency</div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/atp.html">ATP Spec</a>
+      <a href="/docs.html">Docs</a>
+      <a href="/premium.html">Pricing</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <div class="eyebrow">Eat your own cooking</div>
+      <h1>Every subscription is a public, signed receipt.</h1>
+      <p class="sub">
+        WAB doesn't just build the trust layer for agentic commerce — it runs its own
+        business on it. Every dollar that flows into webagentbridge.com is itself an
+        ATP transaction with a publicly-verifiable Ed25519 receipt.
+      </p>
+      <p class="tag">
+        <strong>This page reads directly from the production ATP ledger.</strong>
+        Click <em>Verify</em> on any row to re-check the signature in your browser.
+      </p>
+
+      <div class="stats" id="stats">
+        <div class="stat"><div class="k">Receipts issued</div><div class="v" id="s-count">—</div></div>
+        <div class="stat"><div class="k">Total settled</div><div class="v" id="s-total">—</div></div>
+        <div class="stat"><div class="k">First receipt</div><div class="v" id="s-first">—</div></div>
+        <div class="stat"><div class="k">Latest receipt</div><div class="v" id="s-last">—</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Live receipt feed</h2>
+      <div class="feed">
+        <table>
+          <thead>
+            <tr>
+              <th>Issued</th>
+              <th>Tier</th>
+              <th>Amount</th>
+              <th>Receipt ID</th>
+              <th>Key</th>
+              <th style="text-align:right;">Signature</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="6" class="empty">Loading public ATP ledger…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="how">
+        <h2 style="margin-top:0;">How to audit this yourself</h2>
+        <ol>
+          <li>List receipts: <code>GET /api/atp/platform/receipts?limit=50</code></li>
+          <li>Fetch full signed body: <code>GET /api/atp/receipts/&lt;receipt_id&gt;</code></li>
+          <li>Verify Ed25519 signature: <code>POST /api/atp/receipts/verify</code> with <code>{"receipt_id":"…"}</code></li>
+          <li>Or verify offline: every receipt embeds its own public key under <code>signature.public_key</code>. The canonical body is the receipt JSON with the <code>signature</code> field removed.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <div>WAB · <a href="/atp.html">ATP Protocol</a> · <a href="/docs.html">Docs</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a></div>
+    <div style="margin-top:8px;">Receipts shown on this page are real, generated automatically when payments settle on Stripe.</div>
+  </div>
+</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function fmtMoney(cents, currency) {
+  const v = (cents || 0) / 100;
+  try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(v); }
+  catch { return `${v.toFixed(2)} ${currency || ''}`; }
+}
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(s.replace(' ', 'T') + (s.includes('Z') ? '' : 'Z'));
+  if (isNaN(+d)) return s;
+  return d.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+}
+function shortId(id, n = 12) { return id ? id.slice(0, n) + '…' : '—'; }
+
+async function loadStats() {
+  try {
+    const r = await fetch('/api/atp/platform/stats').then(r => r.json());
+    const s = r.data || {};
+    $('s-count').innerHTML = (s.receipts || 0).toLocaleString();
+    // total_cents is mixed currency; show approximate USD-equivalent string with note
+    $('s-total').innerHTML = `${fmtMoney(s.total_cents || 0, 'USD')} <small>gross</small>`;
+    $('s-first').innerHTML = s.first_at ? fmtDate(s.first_at) : '—';
+    $('s-last').innerHTML  = s.last_at  ? fmtDate(s.last_at)  : '—';
+  } catch (e) {
+    $('s-count').textContent = 'n/a';
+  }
+}
+
+async function verifyReceipt(receiptId, btn) {
+  btn.classList.add('loading');
+  btn.textContent = 'verifying…';
+  try {
+    const r = await fetch('/api/atp/receipts/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ receipt_id: receiptId })
+    }).then(r => r.json());
+    btn.classList.remove('loading');
+    if (r.ok && r.verification && r.verification.ok) {
+      btn.classList.remove('bad');
+      btn.innerHTML = '✓ signature valid';
+    } else {
+      btn.classList.add('bad');
+      btn.textContent = '✗ ' + ((r.verification && r.verification.reason) || 'invalid');
+    }
+  } catch (e) {
+    btn.classList.remove('loading');
+    btn.classList.add('bad');
+    btn.textContent = '✗ network';
+  }
+}
+
+async function loadReceipts() {
+  try {
+    const r = await fetch('/api/atp/platform/receipts?limit=50').then(r => r.json());
+    const rows = (r.data || []);
+    const tb = $('rows');
+    if (!rows.length) {
+      tb.innerHTML = `<tr><td colspan="6" class="empty">
+        No platform receipts yet. Receipts appear automatically when Stripe settles a subscription.<br>
+        Try the protocol with your own intent at <code>/atp.html</code>.
+      </td></tr>`;
+      return;
+    }
+    tb.innerHTML = rows.map(row => `
+      <tr>
+        <td>${fmtDate(row.issued_at)}</td>
+        <td><span class="tier ${(row.tier || '').toLowerCase()}">${row.tier || '—'}</span></td>
+        <td class="mono">${fmtMoney(row.amount_cents, row.currency)}</td>
+        <td class="mono receipt-id" title="${row.receipt_id}">
+          <a href="/api/atp/receipts/${row.receipt_id}" target="_blank" rel="noopener">${shortId(row.receipt_id, 22)}</a>
+        </td>
+        <td class="mono">${shortId(row.key_id, 10)}</td>
+        <td style="text-align:right;">
+          <button class="badge-verify" data-rid="${row.receipt_id}">Verify</button>
+        </td>
+      </tr>
+    `).join('');
+    tb.querySelectorAll('.badge-verify').forEach(btn => {
+      btn.addEventListener('click', () => verifyReceipt(btn.dataset.rid, btn));
+    });
+  } catch (e) {
+    $('rows').innerHTML = `<tr><td colspan="6" class="empty">Failed to load: ${e.message}</td></tr>`;
+  }
+}
+
+loadStats();
+loadReceipts();
+</script>
+</body>
+</html>

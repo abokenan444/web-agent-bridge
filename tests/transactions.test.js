@@ -328,3 +328,54 @@ describe('ATP HTTP — /api/atp', () => {
     expect(r.body.service).toBe('atp');
   });
 });
+
+describe('ATP platform dogfooding — recordPlatformPayment', () => {
+  test('records a subscription payment as a verifiable receipt', () => {
+    const extRef = 'in_test_' + Date.now();
+    const receipt = transactions.recordPlatformPayment({
+      userId: 'user_atp_1',
+      amountCents: 4900,
+      currency: 'USD',
+      tier: 'pro',
+      externalRef: extRef,
+      description: 'WAB pro subscription',
+      provider: 'stripe',
+    });
+    expect(receipt).toBeTruthy();
+    expect(receipt.id).toMatch(/^atp_rcpt_/);
+    expect(receipt.body.transaction.status).toBe('settled');
+    expect(receipt.body.transaction.amount_cents).toBe(4900);
+    expect(receipt.body.intent.purpose).toMatch(/WAB platform subscription/);
+    const v = transactions.verifyReceipt(receipt.id);
+    expect(v.ok).toBe(true);
+  });
+
+  test('idempotent on external_ref — same Stripe invoice returns same receipt', () => {
+    const extRef = 'in_idempotent_' + Date.now();
+    const r1 = transactions.recordPlatformPayment({
+      userId: 'user_atp_1', amountCents: 1900, currency: 'USD', tier: 'starter', externalRef: extRef,
+    });
+    const r2 = transactions.recordPlatformPayment({
+      userId: 'user_atp_1', amountCents: 1900, currency: 'USD', tier: 'starter', externalRef: extRef,
+    });
+    expect(r1.id).toBe(r2.id);
+  });
+
+  test('public /platform/receipts feed exposes platform payments only', async () => {
+    const r = await request(app).get('/api/atp/platform/receipts?limit=5');
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(Array.isArray(r.body.data)).toBe(true);
+    expect(r.body.data.length).toBeGreaterThan(0);
+    expect(r.body.data[0]).toHaveProperty('receipt_id');
+    expect(r.body.data[0]).toHaveProperty('tier');
+  });
+
+  test('public /platform/stats aggregates counts and totals', async () => {
+    const r = await request(app).get('/api/atp/platform/stats');
+    expect(r.status).toBe(200);
+    expect(r.body.data.receipts).toBeGreaterThan(0);
+    expect(r.body.data.total_cents).toBeGreaterThan(0);
+    expect(Array.isArray(r.body.data.by_tier)).toBe(true);
+  });
+});

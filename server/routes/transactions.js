@@ -230,4 +230,19 @@ router.post('/receipts/verify', publicReceiptLimiter, express.json({ limit: '256
 
 router.get('/health', (req, res) => res.json({ ok: true, service: 'atp', version: '1.0.0' }));
 
+// ─── Public transparency feed ─────────────────────────────────────────────
+// WAB dogfoods ATP: every subscription payment processed via webagentbridge.com
+// produces a publicly-verifiable Ed25519 receipt. This feed lists them.
+router.get('/platform/receipts', publicReceiptLimiter, (req, res) => {
+  const limit  = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+  const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+  const items = transactions.listPlatformReceipts({ limit, offset });
+  res.json({ ok: true, data: items, limit, offset });
+});
+
+router.get('/platform/stats', publicReceiptLimiter, (req, res) => {
+  const stats = transactions.getPlatformStats();
+  res.json({ ok: true, data: stats });
+});
+
 module.exports = router;
