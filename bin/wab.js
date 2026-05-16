@@ -64,6 +64,60 @@ switch (command) {
       fs.writeFileSync(envTarget, defaultEnv);
       console.log('  Created default .env file.');
     }
+
+    // Generate wab.json — site manifest for agents
+    const wabJsonTarget = path.join(process.cwd(), 'wab.json');
+    if (fs.existsSync(wabJsonTarget)) {
+      console.log('  wab.json already exists. Skipping.');
+    } else {
+      const projectName = (() => {
+        try {
+          const pkgPath = path.join(process.cwd(), 'package.json');
+          if (fs.existsSync(pkgPath)) {
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+            return pkg.name || path.basename(process.cwd());
+          }
+        } catch { /* ignore */ }
+        return path.basename(process.cwd());
+      })();
+
+      const wabJson = {
+        $schema: 'https://webagentbridge.com/schemas/wab.schema.json',
+        version: '1.0',
+        site: {
+          name: projectName,
+          domain: 'example.com',
+          description: 'A WAB-enabled site. Replace this with your real description.'
+        },
+        agentPermissions: {
+          readContent: true,
+          click: true,
+          fillForms: false,
+          scroll: true,
+          navigate: false,
+          apiAccess: false,
+          automatedLogin: false,
+          extractData: false
+        },
+        restrictions: {
+          allowedSelectors: [],
+          blockedSelectors: ['.private', '[data-private]'],
+          rateLimit: { maxCallsPerMinute: 60 }
+        },
+        actions: [
+          {
+            name: 'example_action',
+            description: 'Example action — replace with your real actions',
+            selector: '#example',
+            type: 'click'
+          }
+        ],
+        logging: { enabled: true, level: 'basic' }
+      };
+      fs.writeFileSync(wabJsonTarget, JSON.stringify(wabJson, null, 2) + '\n');
+      console.log('  Created wab.json site manifest.');
+      console.log('  Edit wab.json to describe your site and actions.');
+    }
     break;
   }
 

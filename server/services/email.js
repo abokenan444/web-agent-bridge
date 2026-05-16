@@ -123,6 +123,59 @@ const templates = {
     `
   }),
 
+  email_verification: (data) => ({
+    subject: 'Verify your email — Web Agent Bridge',
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0e1a;color:#f0f4ff;padding:40px;border-radius:12px;">
+        <div style="text-align:center;margin-bottom:30px;">
+          <div style="font-size:40px;">✉️</div>
+          <h1 style="color:#3b82f6;margin:10px 0;">Verify your email</h1>
+        </div>
+        <p style="color:#94a3b8;">Hello ${escapeHtml(data.name)},</p>
+        <p style="color:#94a3b8;line-height:1.8;">
+          Thanks for signing up for Web Agent Bridge. Please confirm your email by clicking the button below.
+        </p>
+        <div style="text-align:center;margin:30px 0;">
+          <a href="${data.verifyUrl}" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;">Verify Email</a>
+        </div>
+        <p style="color:#64748b;font-size:13px;">
+          This link expires in 7 days. If you didn't create an account, ignore this email.
+        </p>
+        <p style="color:#64748b;font-size:12px;text-align:center;margin-top:30px;">
+          &copy; ${new Date().getFullYear()} Web Agent Bridge
+        </p>
+      </div>
+    `
+  }),
+
+  license_delivery: (data) => ({
+    subject: `Your ${sanitizeSubjectPart(data.tier || 'WAB')} license is active — Web Agent Bridge`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0e1a;color:#f0f4ff;padding:40px;border-radius:12px;">
+        <div style="text-align:center;margin-bottom:30px;">
+          <div style="font-size:40px;">🎟️</div>
+          <h1 style="color:#10b981;margin:10px 0;">Payment received</h1>
+        </div>
+        <p style="color:#94a3b8;">Hello ${escapeHtml(data.name || '')},</p>
+        <p style="color:#94a3b8;line-height:1.8;">
+          Your subscription to <strong style="color:#10b981;">${escapeHtml(String(data.tier || '').toUpperCase())}</strong> is now active.
+          Below are your license details — keep them safe.
+        </p>
+        <div style="background:#1a2236;border-radius:8px;padding:20px;margin:20px 0;">
+          ${data.siteDomain ? `<p style="color:#94a3b8;"><strong style="color:#f0f4ff;">Site:</strong> ${escapeHtml(data.siteDomain)}</p>` : ''}
+          ${data.licenseKey ? `<p style="color:#94a3b8;"><strong style="color:#f0f4ff;">License key:</strong> <code style="color:#f0f4ff;">${escapeHtml(data.licenseKey)}</code></p>` : ''}
+          ${data.amount ? `<p style="color:#94a3b8;"><strong style="color:#f0f4ff;">Amount:</strong> ${escapeHtml(data.amount)}</p>` : ''}
+        </div>
+        <div style="text-align:center;margin-top:30px;">
+          <a href="${data.dashboardUrl || 'https://webagentbridge.com/dashboard'}" style="background:linear-gradient(135deg,#10b981,#3b82f6);color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;">Open Dashboard</a>
+        </div>
+        <p style="color:#64748b;font-size:12px;text-align:center;margin-top:30px;">
+          &copy; ${new Date().getFullYear()} Web Agent Bridge
+        </p>
+      </div>
+    `
+  }),
+
   contact: (data) => ({
     subject: `New Contact Message: ${sanitizeSubjectPart(data.subject || 'No Subject')}`,
     html: `

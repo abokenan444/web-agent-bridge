@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, requireTier } = require('../middleware/auth');
 const premium = require('../services/premium');
 const { findSiteById, findSitesByUser } = require('../models/db');
 
@@ -15,7 +15,7 @@ function requireSiteOwnership(req, res, next) {
 
 // ─── Traffic Intelligence ────────────────────────────────────────────────
 
-router.get('/traffic/:siteId/profiles', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.get('/traffic/:siteId/profiles', authenticateToken, requireSiteOwnership, requireTier('business'), async (req, res) => {
   try {
     const { limit, offset, type } = req.query;
     const profiles = await premium.getAgentProfiles(req.params.siteId, {
@@ -29,7 +29,7 @@ router.get('/traffic/:siteId/profiles', authenticateToken, requireSiteOwnership,
   }
 });
 
-router.get('/traffic/:siteId/stats', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.get('/traffic/:siteId/stats', authenticateToken, requireSiteOwnership, requireTier('business'), async (req, res) => {
   try {
     const days = req.query.days ? parseInt(req.query.days) : 30;
     const stats = await premium.getTrafficStats(req.params.siteId, days);
@@ -39,7 +39,7 @@ router.get('/traffic/:siteId/stats', authenticateToken, requireSiteOwnership, as
   }
 });
 
-router.get('/traffic/:siteId/alerts', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.get('/traffic/:siteId/alerts', authenticateToken, requireSiteOwnership, requireTier('business'), async (req, res) => {
   try {
     const { limit, acknowledged } = req.query;
     const alerts = await premium.getAnomalyAlerts(req.params.siteId, {
@@ -52,7 +52,7 @@ router.get('/traffic/:siteId/alerts', authenticateToken, requireSiteOwnership, a
   }
 });
 
-router.post('/traffic/:siteId/alerts/:alertId/acknowledge', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.post('/traffic/:siteId/alerts/:alertId/acknowledge', authenticateToken, requireSiteOwnership, requireTier('business'), async (req, res) => {
   try {
     const ok = await premium.acknowledgeAlert(req.params.alertId, req.params.siteId);
     if (!ok) return res.status(404).json({ error: 'Alert not found' });
@@ -62,7 +62,7 @@ router.post('/traffic/:siteId/alerts/:alertId/acknowledge', authenticateToken, r
   }
 });
 
-router.post('/traffic/:siteId/check-anomalies', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.post('/traffic/:siteId/check-anomalies', authenticateToken, requireSiteOwnership, requireTier('business'), async (req, res) => {
   try {
     const alerts = await premium.checkForAnomalies(req.params.siteId);
     res.json({ alerts });
@@ -73,7 +73,7 @@ router.post('/traffic/:siteId/check-anomalies', authenticateToken, requireSiteOw
 
 // ─── Exploit Shield ──────────────────────────────────────────────────────
 
-router.get('/security/:siteId/events', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.get('/security/:siteId/events', authenticateToken, requireSiteOwnership, requireTier('business'), async (req, res) => {
   try {
     const { limit, severity, since } = req.query;
     const events = await premium.getSecurityEvents(req.params.siteId, {
@@ -87,7 +87,7 @@ router.get('/security/:siteId/events', authenticateToken, requireSiteOwnership, 
   }
 });
 
-router.get('/security/:siteId/report', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.get('/security/:siteId/report', authenticateToken, requireSiteOwnership, requireTier('business'), async (req, res) => {
   try {
     const days = req.query.days ? parseInt(req.query.days) : 30;
     const report = await premium.getSecurityReport(req.params.siteId, days);
@@ -97,7 +97,7 @@ router.get('/security/:siteId/report', authenticateToken, requireSiteOwnership, 
   }
 });
 
-router.get('/security/:siteId/blocked', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.get('/security/:siteId/blocked', authenticateToken, requireSiteOwnership, requireTier('business'), async (req, res) => {
   try {
     const blocked = await premium.getBlockedAgents(req.params.siteId);
     res.json({ blocked });
@@ -106,7 +106,7 @@ router.get('/security/:siteId/blocked', authenticateToken, requireSiteOwnership,
   }
 });
 
-router.post('/security/:siteId/block', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.post('/security/:siteId/block', authenticateToken, requireSiteOwnership, requireTier('business'), async (req, res) => {
   try {
     const { agentSignature, reason, expiresAt } = req.body;
     if (!agentSignature) return res.status(400).json({ error: 'agentSignature is required' });
@@ -117,7 +117,7 @@ router.post('/security/:siteId/block', authenticateToken, requireSiteOwnership, 
   }
 });
 
-router.delete('/security/:siteId/block/:blockId', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.delete('/security/:siteId/block/:blockId', authenticateToken, requireSiteOwnership, requireTier('business'), async (req, res) => {
   try {
     const ok = await premium.unblockAgent(req.params.blockId, req.params.siteId);
     if (!ok) return res.status(404).json({ error: 'Block record not found' });
@@ -193,7 +193,7 @@ router.delete('/actions/:siteId/install/:installId', authenticateToken, requireS
 
 // ─── Custom Agents ───────────────────────────────────────────────────────
 
-router.get('/agents/:siteId', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.get('/agents/:siteId', authenticateToken, requireSiteOwnership, requireTier('pro'), async (req, res) => {
   try {
     const agents = await premium.getAgents(req.user.id, req.params.siteId);
     res.json({ agents });
@@ -202,7 +202,7 @@ router.get('/agents/:siteId', authenticateToken, requireSiteOwnership, async (re
   }
 });
 
-router.post('/agents/:siteId', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.post('/agents/:siteId', authenticateToken, requireSiteOwnership, requireTier('pro'), async (req, res) => {
   try {
     const { name, description, steps, schedule } = req.body;
     if (!name || !steps) return res.status(400).json({ error: 'name and steps are required' });
@@ -213,7 +213,7 @@ router.post('/agents/:siteId', authenticateToken, requireSiteOwnership, async (r
   }
 });
 
-router.get('/agents/:siteId/:agentId', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.get('/agents/:siteId/:agentId', authenticateToken, requireSiteOwnership, requireTier('pro'), async (req, res) => {
   try {
     const agent = await premium.getAgent(req.params.agentId, req.user.id);
     if (!agent) return res.status(404).json({ error: 'Agent not found' });
@@ -223,7 +223,7 @@ router.get('/agents/:siteId/:agentId', authenticateToken, requireSiteOwnership, 
   }
 });
 
-router.put('/agents/:siteId/:agentId', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.put('/agents/:siteId/:agentId', authenticateToken, requireSiteOwnership, requireTier('pro'), async (req, res) => {
   try {
     const { name, description, steps, schedule } = req.body;
     const ok = await premium.updateAgent(req.params.agentId, req.user.id, { name, description, steps, schedule });
@@ -234,7 +234,7 @@ router.put('/agents/:siteId/:agentId', authenticateToken, requireSiteOwnership, 
   }
 });
 
-router.delete('/agents/:siteId/:agentId', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.delete('/agents/:siteId/:agentId', authenticateToken, requireSiteOwnership, requireTier('pro'), async (req, res) => {
   try {
     const ok = await premium.deleteAgent(req.params.agentId, req.user.id);
     if (!ok) return res.status(404).json({ error: 'Agent not found' });
@@ -244,7 +244,7 @@ router.delete('/agents/:siteId/:agentId', authenticateToken, requireSiteOwnershi
   }
 });
 
-router.post('/agents/:siteId/:agentId/run', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.post('/agents/:siteId/:agentId/run', authenticateToken, requireSiteOwnership, requireTier('pro'), async (req, res) => {
   try {
     const result = await premium.runAgent(req.params.agentId, req.user.id);
     res.json({ result });
@@ -253,7 +253,7 @@ router.post('/agents/:siteId/:agentId/run', authenticateToken, requireSiteOwners
   }
 });
 
-router.get('/agents/:siteId/:agentId/runs', authenticateToken, requireSiteOwnership, async (req, res) => {
+router.get('/agents/:siteId/:agentId/runs', authenticateToken, requireSiteOwnership, requireTier('pro'), async (req, res) => {
   try {
     const { limit } = req.query;
     const runs = await premium.getAgentRuns(req.params.agentId, {

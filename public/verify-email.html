@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify email — Web Agent Bridge</title>
+  <style>body{background:#0a0e1a;color:#f0f4ff;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;min-height:100vh}</style>
+  <link rel="stylesheet" href="/css/styles.css?v=3.0.1">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card fade-in">
+      <div style="text-align:center; margin-bottom:32px;">
+        <a href="/" class="navbar-brand" style="justify-content:center;">
+          <div class="brand-icon">⚡</div>
+          <span>WAB</span>
+        </a>
+      </div>
+      <h1 style="text-align:center;" id="title">Verifying…</h1>
+      <p class="subtitle" style="text-align:center;" id="message">Please wait while we confirm your email.</p>
+
+      <div class="alert alert-error" id="errorAlert"></div>
+      <div class="alert alert-success" id="successAlert" style="display:none;">Email verified. You can now use all features.</div>
+
+      <div class="auth-footer" style="text-align:center;">
+        <a href="/dashboard" id="dashLink" style="display:none;">Go to dashboard</a>
+        <a href="/login" id="loginLink">Back to sign in</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (async function () {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      const titleEl = document.getElementById('title');
+      const msgEl = document.getElementById('message');
+      const errorEl = document.getElementById('errorAlert');
+      const okEl = document.getElementById('successAlert');
+      const dashLink = document.getElementById('dashLink');
+
+      if (!token) {
+        titleEl.textContent = 'Missing token';
+        msgEl.textContent = 'This link is invalid. Sign in and request a new verification email.';
+        errorEl.textContent = 'No verification token in URL.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/verify-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          titleEl.textContent = 'Verification failed';
+          msgEl.textContent = data.error || 'Token invalid or expired.';
+          errorEl.textContent = data.error || 'Verification failed';
+          errorEl.style.display = 'block';
+          return;
+        }
+        titleEl.textContent = 'Verified ✓';
+        msgEl.textContent = 'Your email has been confirmed.';
+        okEl.style.display = 'block';
+        dashLink.style.display = 'inline';
+      } catch (err) {
+        titleEl.textContent = 'Network error';
+        msgEl.textContent = 'Please try again later.';
+        errorEl.textContent = 'Connection error.';
+        errorEl.style.display = 'block';
+      }
+    })();
+  </script>
+</body>
+</html>

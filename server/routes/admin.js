@@ -597,4 +597,65 @@ router.post('/governance/approvals/:rid/decide', authenticateAdmin, (req, res) =
   res.json(out);
 });
 
+// ─── ATP Merchant Commission (platform-wide view) ──────────────────────
+const _commissions = require('../services/commissions');
+
+router.get('/commissions/stats', authenticateAdmin, (req, res) => {
+  try {
+    res.json({ ok: true, data: _commissions.getPlatformCommissionStats() });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+router.get('/commissions', authenticateAdmin, (req, res) => {
+  const limit  = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
+  const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+  const status = req.query.status || null;
+  try {
+    let rows;
+    if (status) {
+      rows = db.prepare(`
+        SELECT c.*, u.email AS merchant_email, s.domain AS merchant_domain
+          FROM atp_commissions c
+          LEFT JOIN users u ON u.id = c.merchant_user_id
+          LEFT JOIN sites s ON s.id = c.merchant_site_id
+         WHERE c.status = ?
+         ORDER BY c.created_at DESC LIMIT ? OFFSET ?
+      `).all(status, limit, offset);
+    } else {
+      rows = db.prepare(`
+        SELECT c.*, u.email AS merchant_email, s.domain AS merchant_domain
+          FROM atp_commissions c
+          LEFT JOIN users u ON u.id = c.merchant_user_id
+          LEFT JOIN sites s ON s.id = c.merchant_site_id
+         ORDER BY c.created_at DESC LIMIT ? OFFSET ?
+      `).all(limit, offset);
+    }
+    res.json({ ok: true, data: rows, limit, offset });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+router.post('/commissions/:id/status', authenticateAdmin, (req, res) => {
+  const next = String(req.body?.status || '').toLowerCase();
+  const allowed = ['pending', 'invoiced', 'collected', 'refunded', 'waived'];
+  if (!allowed.includes(next)) {
+    return res.status(400).json({ ok: false, error: `status must be one of ${allowed.join(',')}` });
+  }
+  try {
+    const r = db.prepare(`
+      UPDATE atp_commissions
+         SET status=?, notes = COALESCE(notes || ' | ', '') || ?, updated_at = datetime('now')
+       WHERE id=?
+    `).run(next, `admin:${req.admin.id} → ${next}`, req.params.id);
+    if (r.changes === 0) return res.status(404).json({ ok: false, error: 'not_found' });
+    auditLog({ actorType: 'admin', actorId: String(req.admin.id), action: 'commission_status_update', details: { id: req.params.id, status: next } });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;

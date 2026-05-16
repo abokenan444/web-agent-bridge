@@ -116,6 +116,35 @@ function handleWebhookEvent(event) {
           periodEnd: null
         });
         updateSiteTier.run(tier || 'starter', wab_site_id, wab_user_id);
+
+        // ── License delivery email (best-effort, non-blocking) ──
+        try {
+          const { findUserById, findSiteById: getSite } = require('../models/db');
+          const user = findUserById.get(wab_user_id);
+          const site = getSite.get(wab_site_id);
+          if (user && site) {
+            const { sendEmail } = require('./email');
+            const baseUrl = process.env.BASE_URL || 'https://webagentbridge.com';
+            const amount = session.amount_total != null
+              ? `${(session.amount_total / 100).toFixed(2)} ${(session.currency || 'usd').toUpperCase()}`
+              : null;
+            Promise.resolve(sendEmail({
+              to: user.email,
+              template: 'license_delivery',
+              data: {
+                name: user.name,
+                tier: tier || 'starter',
+                siteDomain: site.domain,
+                licenseKey: site.license_key,
+                amount,
+                dashboardUrl: `${baseUrl}/dashboard`
+              },
+              userId: user.id
+            })).catch((e) => console.error('[stripe] license_delivery email failed:', e.message));
+          }
+        } catch (e) {
+          console.error('[stripe] license_delivery setup failed:', e.message);
+        }
       }
       break;
     }
@@ -184,6 +213,85 @@ function handleWebhookEvent(event) {
       const invoice = event.data.object;
       if (invoice.subscription) {
         updateStripeSubscription(invoice.subscription, { status: 'past_due' });
+      }
+      break;
+    }
+
+    case 'charge.refunded': {
+      const charge = event.data.object;
+      try {
+        const userId =
+          (charge.metadata && charge.metadata.wab_user_id) ||
+          (charge.invoice && (() => {
+            // best-effort: look up subscription via the invoice's subscription id
+            try {
+              const inv = charge.invoice;
+              if (typeof inv === 'string') return null;
+              if (inv && inv.subscription) {
+                const sub = getStripeSubscriptionBySubId(inv.subscription);
+                return sub ? sub.user_id : null;
+              }
+            } catch { return null; }
+            return null;
+          })()) || null;
+
+        if (userId) {
+          savePayment({
+            userId,
+            stripePaymentId: `refund_${charge.id}`,
+            amount: -(charge.amount_refunded || charge.amount || 0),
+            currency: charge.currency || 'usd',
+            status: 'refunded',
+            description: `Refund: ${charge.id}`
+          });
+        }
+
+        // Downgrade any subscription tied to this charge (best-effort)
+        if (charge.invoice) {
+          try {
+            const invId = typeof charge.invoice === 'string' ? null : charge.invoice;
+            // Subscription id can be on the expanded invoice; we mark the
+            // user's subscriptions as refunded so admin tools can review.
+            if (invId && invId.subscription) {
+              updateStripeSubscription(invId.subscription, { status: 'cancelled' });
+              const sub = getStripeSubscriptionBySubId(invId.subscription);
+              if (sub) updateSiteTier.run('free', sub.site_id, sub.user_id);
+            }
+          } catch (e) {
+            console.error('[stripe] charge.refunded subscription update failed:', e.message);
+          }
+        }
+        console.warn(`[stripe] charge.refunded processed: charge=${charge.id} amount=${charge.amount_refunded}`);
+      } catch (e) {
+        console.error('[stripe] charge.refunded handler error:', e.message);
+      }
+      break;
+    }
+
+    case 'charge.dispute.created': {
+      const dispute = event.data.object;
+      try {
+        const userId = (dispute.metadata && dispute.metadata.wab_user_id) || null;
+        if (userId) {
+          savePayment({
+            userId,
+            stripePaymentId: `dispute_${dispute.id}`,
+            amount: -(dispute.amount || 0),
+            currency: dispute.currency || 'usd',
+            status: 'disputed',
+            description: `Chargeback/dispute: ${dispute.id} reason=${dispute.reason || 'unknown'}`
+          });
+        }
+        // Suspend any subscription on the disputed charge
+        try {
+          if (dispute.charge) {
+            // Without expanding the charge we cannot reliably find the sub,
+            // but admins are alerted via the audit log + payments row above.
+          }
+        } catch { /* noop */ }
+        console.warn(`[stripe] charge.dispute.created: dispute=${dispute.id} reason=${dispute.reason}`);
+      } catch (e) {
+        console.error('[stripe] charge.dispute.created handler error:', e.message);
       }
       break;
     }

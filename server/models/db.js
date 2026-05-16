@@ -674,6 +674,74 @@ function getAdStats() {
   return { total, pending, approved, totalImpressions, totalClicks, totalRevenueCents };
 }
 
+// ─── Password Reset & Email Verification ──────────────────────────────
+// Prepared statements are lazy because the tables are created by migration 022.
+
+let _stmts = null;
+function _authStmts() {
+  if (_stmts) return _stmts;
+  _stmts = {
+    insertPRT: db.prepare(`INSERT INTO password_reset_tokens (token_hash, user_id, expires_at) VALUES (?, ?, ?)`),
+    findPRT:   db.prepare(`SELECT * FROM password_reset_tokens WHERE token_hash = ?`),
+    usePRT:    db.prepare(`UPDATE password_reset_tokens SET used_at = datetime('now') WHERE token_hash = ? AND used_at IS NULL`),
+    delPRTForUser: db.prepare(`DELETE FROM password_reset_tokens WHERE user_id = ?`),
+    updateUserPassword: db.prepare(`UPDATE users SET password = ?, updated_at = datetime('now') WHERE id = ?`),
+
+    insertEVT: db.prepare(`INSERT INTO email_verification_tokens (token_hash, user_id, expires_at) VALUES (?, ?, ?)`),
+    findEVT:   db.prepare(`SELECT * FROM email_verification_tokens WHERE token_hash = ?`),
+    useEVT:    db.prepare(`UPDATE email_verification_tokens SET used_at = datetime('now') WHERE token_hash = ? AND used_at IS NULL`),
+    delEVTForUser: db.prepare(`DELETE FROM email_verification_tokens WHERE user_id = ?`),
+    markVerified: db.prepare(`UPDATE users SET email_verified = 1, email_verified_at = datetime('now') WHERE id = ?`),
+    isVerified: db.prepare(`SELECT email_verified FROM users WHERE id = ?`)
+  };
+  return _stmts;
+}
+
+function createPasswordResetToken({ userId, tokenHash, ttlMinutes = 60 }) {
+  const expires = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
+  _authStmts().delPRTForUser.run(userId); // invalidate previous
+  _authStmts().insertPRT.run(tokenHash, userId, expires);
+  return expires;
+}
+
+function consumePasswordResetToken(tokenHash) {
+  const row = _authStmts().findPRT.get(tokenHash);
+  if (!row) return null;
+  if (row.used_at) return null;
+  if (new Date(row.expires_at).getTime() < Date.now()) return null;
+  const r = _authStmts().usePRT.run(tokenHash);
+  if (r.changes === 0) return null;
+  return row.user_id;
+}
+
+function updateUserPassword(userId, plainPassword) {
+  const hashed = bcrypt.hashSync(plainPassword, 12);
+  _authStmts().updateUserPassword.run(hashed, userId);
+}
+
+function createEmailVerificationToken({ userId, tokenHash, ttlMinutes = 60 * 24 * 7 }) {
+  const expires = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
+  _authStmts().delEVTForUser.run(userId);
+  _authStmts().insertEVT.run(tokenHash, userId, expires);
+  return expires;
+}
+
+function consumeEmailVerificationToken(tokenHash) {
+  const row = _authStmts().findEVT.get(tokenHash);
+  if (!row) return null;
+  if (row.used_at) return null;
+  if (new Date(row.expires_at).getTime() < Date.now()) return null;
+  const r = _authStmts().useEVT.run(tokenHash);
+  if (r.changes === 0) return null;
+  _authStmts().markVerified.run(row.user_id);
+  return row.user_id;
+}
+
+function isEmailVerified(userId) {
+  const row = _authStmts().isVerified.get(userId);
+  return !!(row && row.email_verified);
+}
+
 module.exports = {
   db,
   registerUser,
@@ -736,5 +804,12 @@ module.exports = {
   updateAdStatus,
   deleteAd,
   recordAdEvent,
-  getAdStats
+  getAdStats,
+  // Auth recovery & verification
+  createPasswordResetToken,
+  consumePasswordResetToken,
+  updateUserPassword,
+  createEmailVerificationToken,
+  consumeEmailVerificationToken,
+  isEmailVerified
 };

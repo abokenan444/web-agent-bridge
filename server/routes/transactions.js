@@ -245,4 +245,36 @@ router.get('/platform/stats', publicReceiptLimiter, (req, res) => {
   res.json({ ok: true, data: stats });
 });
 
+// ─── Merchant commission endpoints ────────────────────────────────────────
+// Every merchant tx settled through ATP on a paid plan accrues a small
+// platform commission (default 0.10%). Merchants can inspect their own
+// accrual via these endpoints. Public commission rate is exposed for
+// transparency.
+const commissions = require('../services/commissions');
+
+router.get('/commissions/rate', (req, res) => {
+  res.json({
+    ok: true,
+    data: {
+      rate_bps: commissions.getCommissionBps(),
+      rate_percent: commissions.getCommissionBps() / 100,
+      min_tier: commissions.getMinTier(),
+      applies_to: 'Successful merchant transactions settled through ATP on a paid plan.',
+    },
+  });
+});
+
+router.get('/commissions', authenticateToken, (req, res) => {
+  const limit  = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
+  const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+  const status = req.query.status || null;
+  const items = commissions.listCommissionsForMerchant(req.user.id, { limit, offset, status });
+  res.json({ ok: true, data: items, limit, offset });
+});
+
+router.get('/commissions/stats', authenticateToken, (req, res) => {
+  const stats = commissions.getMerchantCommissionStats(req.user.id);
+  res.json({ ok: true, data: stats });
+});
+
 module.exports = router;

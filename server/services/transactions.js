@@ -292,6 +292,14 @@ function transitionTransaction(txId, toStatus, patch = {}) {
       db.prepare("UPDATE atp_intents SET status='consumed', updated_at=? WHERE id=? AND status='authorized'")
         .run(nowIso(), tx.intent_id);
     }
+
+    // Platform commission (best-effort, never blocks the tx).
+    try {
+      const commissions = require('./commissions');
+      commissions.recordCommissionForTransaction(getTransaction(txId));
+    } catch (e) {
+      console.error('[atp] commission record failed (non-fatal):', e.message);
+    }
   }
   if (toStatus === 'compensated' && tx.status === 'settled') {
     db.prepare(`
@@ -300,6 +308,13 @@ function transitionTransaction(txId, toStatus, patch = {}) {
              updated_at = ?
        WHERE id = ?
     `).run(tx.amount_cents, nowIso(), tx.intent_id);
+
+    try {
+      const commissions = require('./commissions');
+      commissions.markCommissionRefunded(txId, 'tx_compensated');
+    } catch (e) {
+      console.error('[atp] commission refund mark failed (non-fatal):', e.message);
+    }
   }
 
   return getTransaction(txId);
