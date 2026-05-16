@@ -790,6 +790,12 @@ if (process.env.NODE_ENV !== 'test') {
   // Start the Certificate Transparency Monitor (opt-in via WAB_CT_MONITOR=true).
   try { require('./services/ssl-ct-monitor').start(); } catch (e) { console.warn('[ct-monitor] start failed:', e.message); }
 
+  // Start the ATP commission billing timer (opt-in via WAB_COMMISSION_BILLING_INTERVAL_HOURS).
+  try {
+    const r = require('./services/commission-billing').startPeriodicBilling();
+    if (r) console.log(`[commission-billing] periodic cycle every ${r.intervalHours}h`);
+  } catch (e) { console.warn('[commission-billing] start failed:', e.message); }
+
   server.listen(PORT, () => {
     console.log(`\n  ╔══════════════════════════════════════════╗`);
     console.log(`  ║   Web Agent Bridge v${pkg.version}                ║`);

@@ -151,6 +151,18 @@ function handleWebhookEvent(event) {
 
     case 'invoice.payment_succeeded': {
       const invoice = event.data.object;
+
+      // ── ATP merchant commission invoice paid? Flip rows to 'collected'. ──
+      try {
+        if (invoice.metadata && invoice.metadata.wab_kind === 'atp_commission_batch') {
+          const billing = require('./commission-billing');
+          const changed = billing.onStripeInvoicePaid(invoice);
+          console.log(`[atp] commission invoice ${invoice.id} paid; ${changed} rows → collected`);
+        }
+      } catch (e) {
+        console.error('[atp] commission invoice paid handler failed (non-fatal):', e.message);
+      }
+
       if (invoice.subscription) {
         const sub = getStripeSubscriptionBySubId(invoice.subscription);
         if (sub) {

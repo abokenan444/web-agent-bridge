@@ -658,4 +658,22 @@ router.post('/commissions/:id/status', authenticateAdmin, (req, res) => {
   }
 });
 
+// Run a billing cycle (turn `pending` rows into Stripe invoices).
+// ?dry_run=1 returns the plan without touching Stripe or the DB.
+router.post('/commissions/run-billing', authenticateAdmin, async (req, res) => {
+  const dryRun = req.query.dry_run === '1' || req.body?.dry_run === true;
+  try {
+    const billing = require('../services/commission-billing');
+    const summary = await billing.runBillingCycle({ dryRun });
+    auditLog({
+      actorType: 'admin', actorId: String(req.admin.id),
+      action: 'commission_billing_cycle',
+      details: { dry_run: dryRun, batches_billed: summary.batches_billed, rows_invoiced: summary.rows_invoiced, total_cents: summary.total_commission_cents },
+    });
+    res.json({ ok: true, data: summary });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;
