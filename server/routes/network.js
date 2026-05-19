@@ -1,24 +1,45 @@
 'use strict';
 
 /**
- * Network-effect public endpoints (v3.14.0).
+ * Network-effect public endpoints (v3.14.0 + signed snapshots v3.15.0).
  *
- *   GET /api/trusted-domains.json — snapshot of currently-attested,
+ *   GET /api/trusted-domains.json — signed snapshot of currently-attested,
  *     non-revoked WAB sites. Cached 1 hour. Designed for agent bootstrap
  *     and third-party crawlers building "verified web" indexes.
  *   GET /api/trusted-domains.txt  — same data, newline-separated domains.
- *   GET /api/revocations/feed.json — JSON Feed 1.1 of the transparency log.
- *   GET /api/revocations/feed.xml  — Atom 1.0 of the transparency log.
+ *   GET /api/trusted-domains/archive.json — manifest of available daily snapshots.
+ *   GET /api/trusted-domains/:date.json    — historical signed snapshot.
+ *   GET /api/transparency/feed.json — JSON Feed 1.1 of the transparency log.
+ *   GET /api/transparency/feed.xml  — Atom 1.0 of the transparency log.
+ *   GET /api/operator-key.json — operator Ed25519 public key (b64 + JWK).
  *
  * Mounted at /api in server/index.js.
  */
 
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 const router = express.Router();
 const { db } = require('../models/db');
+const { canonicalize } = require('../services/canonical-json');
+const signer = require('../services/operator-signer');
 
 const SNAPSHOT_TTL_MS = 60 * 60 * 1000; // 1h
+const ARCHIVE_DIR = process.env.WAB_SNAPSHOT_DIR ||
+  path.join(__dirname, '..', '..',
+    (process.env.NODE_ENV === 'test' ? 'data-test' : 'data'),
+    'snapshots');
+
 let _snapshotCache = { ts: 0, data: null };
+
+function _ensureArchiveDir() {
+  try { fs.mkdirSync(ARCHIVE_DIR, { recursive: true }); } catch (_) { /* ignore */ }
+}
+
+function _todayUtc() {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+}
 
 function buildSnapshot() {
   // Active sites that have no active blocking revocation.
@@ -37,16 +58,18 @@ function buildSnapshot() {
       ORDER BY s.created_at ASC
     `).all();
   } catch (_) {
-    // site_revocations may not yet exist on a very first boot
     rows = db.prepare(`
       SELECT id, domain, name, description, tier, created_at
       FROM sites WHERE active = 1 ORDER BY created_at ASC
     `).all();
   }
 
-  return {
+  const generated_at = new Date().toISOString();
+  const date = generated_at.slice(0, 10);
+  const payload = {
     schema: 'wab-trusted-domains/v1',
-    generated_at: new Date().toISOString(),
+    generated_at,
+    date,
     total: rows.length,
     domains: rows.map(r => ({
       domain: r.domain,
@@ -57,6 +80,29 @@ function buildSnapshot() {
       badge_url: 'https://webagentbridge.com/api/discovery/badge/' + r.domain + '.svg'
     }))
   };
+
+  // Hash + sign over the canonical bytes of `payload` (without signature fields).
+  const canonical = canonicalize(payload);
+  const content_hash = 'sha256:' + crypto.createHash('sha256').update(canonical, 'utf8').digest('hex');
+  const signature = signer.sign(payload);
+
+  const out = Object.assign({}, payload, {
+    content_hash,
+    signature: signature
+      ? { alg: signer.ALGORITHM, value: signature, key_url: '/api/operator-key.json' }
+      : null,
+  });
+
+  // Persist today's snapshot to disk for time-machine queries (idempotent overwrite).
+  try {
+    _ensureArchiveDir();
+    const file = path.join(ARCHIVE_DIR, date + '.json');
+    fs.writeFileSync(file, JSON.stringify(out, null, 2) + '\n', 'utf8');
+  } catch (e) {
+    console.warn('[network] snapshot archive write failed (non-fatal):', e.message);
+  }
+
+  return out;
 }
 
 function getSnapshot() {
@@ -73,6 +119,8 @@ router.get('/trusted-domains.json', (req, res) => {
   const snap = getSnapshot();
   res.set('Cache-Control', 'public, max-age=3600, s-maxage=3600');
   res.set('X-WAB-Snapshot-Schema', snap.schema);
+  res.set('X-WAB-Snapshot-Hash', snap.content_hash);
+  if (snap.signature) res.set('X-WAB-Snapshot-Signature', snap.signature.value);
   res.json(snap);
 });
 
@@ -82,6 +130,75 @@ router.get('/trusted-domains.txt', (req, res) => {
   res.type('text/plain; charset=utf-8');
   res.send(snap.domains.map(d => d.domain).join('\n') + '\n');
 });
+
+// ── Daily archive ────────────────────────────────────────────────────
+
+function _listArchiveDates() {
+  try {
+    _ensureArchiveDir();
+    return fs.readdirSync(ARCHIVE_DIR)
+      .filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+      .map(f => f.replace(/\.json$/, ''))
+      .sort();
+  } catch (_) { return []; }
+}
+
+router.get('/trusted-domains/archive.json', (req, res) => {
+  // Touch today's snapshot to ensure at least today is archived.
+  getSnapshot();
+  const dates = _listArchiveDates();
+  const manifest = {
+    schema: 'wab-trusted-domains-archive/v1',
+    generated_at: new Date().toISOString(),
+    total: dates.length,
+    snapshots: dates.map(d => ({
+      date: d,
+      url: '/api/trusted-domains/' + d + '.json',
+    })),
+  };
+  const sig = signer.sign(manifest);
+  if (sig) manifest.signature = { alg: signer.ALGORITHM, value: sig, key_url: '/api/operator-key.json' };
+  res.set('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+  res.json(manifest);
+});
+
+router.get('/trusted-domains/:date.json', (req, res) => {
+  const date = req.params.date;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'invalid_date', hint: 'Use YYYY-MM-DD.' });
+  }
+  // Serve today live (so a fresh boot doesn't return 404 before the first snapshot).
+  if (date === _todayUtc()) {
+    return res.json(getSnapshot());
+  }
+  _ensureArchiveDir();
+  const file = path.join(ARCHIVE_DIR, date + '.json');
+  if (!fs.existsSync(file)) {
+    return res.status(404).json({ error: 'snapshot_not_found', date });
+  }
+  res.set('Cache-Control', 'public, max-age=86400, s-maxage=86400, immutable');
+  res.type('application/json; charset=utf-8');
+  res.send(fs.readFileSync(file, 'utf8'));
+});
+
+// ── Operator public key ──────────────────────────────────────────────
+
+router.get('/operator-key.json', (req, res) => {
+  const pub = signer.publicKey();
+  if (!pub) {
+    return res.status(503).json({ error: 'signing_not_configured' });
+  }
+  res.set('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+  res.json({
+    schema: 'wab-operator-key/v1',
+    alg: signer.ALGORITHM,
+    public_key_b64: pub.b64,
+    jwk: pub.jwk,
+    issued_at: new Date().toISOString(),
+    notice: 'Use this key to verify signatures on /api/trusted-domains.json and /api/trusted-domains/*.json.',
+  });
+});
+
 
 // ── Revocation feeds ─────────────────────────────────────────────────
 
