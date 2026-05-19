@@ -24,7 +24,7 @@ function db() {
   const DATA_DIR = process.env.NODE_ENV === 'test'
     ? path.join(__dirname, '..', '..', 'data-test')
     : (process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data'));
-  const dbFile = process.env.NODE_ENV === 'test' ? 'wab-test.db' : 'wab.db';
+  const dbFile = process.env.NODE_ENV === 'test' ? `wab-test-${process.env.JEST_WORKER_ID || '1'}.db` : 'wab.db';
   _db = new Database(path.join(DATA_DIR, dbFile));
   return _db;
 }

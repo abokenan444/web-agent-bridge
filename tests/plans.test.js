@@ -8,7 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const request = require('supertest');
 
-const TEST_DB_FILE = path.join(__dirname, '..', 'data-test', 'wab-test.db');
+const TEST_DB_FILE = path.join(__dirname, '..', 'data-test', `wab-test-${process.env.JEST_WORKER_ID || '1'}.db`);
 
 beforeAll(() => {
   if (fs.existsSync(TEST_DB_FILE)) {

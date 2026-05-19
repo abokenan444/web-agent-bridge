@@ -10,7 +10,7 @@ process.env.NODE_ENV = 'test';
 const path = require('path');
 const fs = require('fs');
 
-const TEST_DB_FILE = path.join(__dirname, '..', 'data-test', 'wab-test.db');
+const TEST_DB_FILE = path.join(__dirname, '..', 'data-test', `wab-test-${process.env.JEST_WORKER_ID || '1'}.db`);
 
 let transactions, commissions, dbModule;
 

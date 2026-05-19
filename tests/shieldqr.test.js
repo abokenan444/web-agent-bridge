@@ -11,7 +11,7 @@ const crypto = require('node:crypto');
 const request = require('supertest');
 
 const TEST_DATA_DIR = path.join(__dirname, '..', 'data-test');
-const DB_PATH = path.join(TEST_DATA_DIR, 'wab-test.db');
+const DB_PATH = path.join(TEST_DATA_DIR, `wab-test-${process.env.JEST_WORKER_ID || '1'}.db`);
 
 beforeAll(() => {
   process.env.NODE_ENV = 'test';

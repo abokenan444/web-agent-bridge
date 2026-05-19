@@ -17,7 +17,7 @@ const shieldqr = require('../services/shieldqr');
 const DATA_DIR = process.env.NODE_ENV === 'test'
   ? path.join(__dirname, '..', '..', 'data-test')
   : (process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data'));
-const DB_FILE = process.env.NODE_ENV === 'test' ? 'wab-test.db' : 'wab.db';
+const DB_FILE = process.env.NODE_ENV === 'test' ? `wab-test-${process.env.JEST_WORKER_ID || '1'}.db` : 'wab.db';
 
 let _db = null;
 function db() {

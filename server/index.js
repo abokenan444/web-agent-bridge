@@ -779,9 +779,12 @@ process.on('unhandledRejection', (reason) => {
   console.error('[process] unhandledRejection:', reason?.message || reason);
 });
 
+// Run migrations on every load (including tests) so worker-isolated DBs have
+// a complete schema before the first request.
+runMigrations();
+
 if (process.env.NODE_ENV !== 'test') {
   console.log('Running database migrations...');
-  runMigrations();
   maybeBootstrapAdmin();
   initSearchEngine(db);
 

@@ -12,7 +12,8 @@ const DATA_DIR = isTest
   : (process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data'));
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-const dbFile = isTest ? 'wab-test.db' : 'wab.db';
+// In test mode, isolate per Jest worker so parallel suites can't trample each other's data.
+const dbFile = isTest ? `wab-test-${process.env.JEST_WORKER_ID || '1'}.db` : 'wab.db';
 const db = new Database(path.join(DATA_DIR, dbFile));
 
 db.pragma('journal_mode = WAL');
