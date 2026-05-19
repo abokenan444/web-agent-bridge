@@ -327,6 +327,9 @@ app.use('/api/agent', apiLimiter, require('./routes/agent-prompt'));
 // (apiLimiter already applies via /api mount above; do not stack it here.)
 app.use('/api', require('./routes/network'));
 
+// ── Webhook Subscriptions v3.16.0 (Phase 4) — instant push for revocations ──
+app.use('/api/webhooks', apiLimiter, require('./routes/webhooks'));
+
 // ── WAB Commercial Foundations v3.8.0 (Partners · Trust Graph API · Governance SaaS · Enterprise Mesh) ──
 app.use('/api/partners',         apiLimiter, require('./routes/partners'));
 app.use('/api/keys',             apiLimiter, require('./routes/api-keys'));

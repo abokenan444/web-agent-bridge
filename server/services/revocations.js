@@ -33,6 +33,29 @@ const { db } = require('../models/db');
 const { canonicalize } = require('./canonical-json');
 const { auditLog } = require('./security');
 
+function _emitWebhook(eventType, row) {
+  try {
+    const webhooks = require('./webhooks');
+    webhooks.emit(eventType, { revocation: _publicRevocationView(row) });
+  } catch (e) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.warn('[revocations] webhook emit failed:', e.message);
+    }
+  }
+}
+
+function _publicRevocationView(r) {
+  if (!r) return null;
+  return {
+    id: r.id, domain: r.domain, type: r.type,
+    reason_code: r.reason_code, reason_text: r.reason_text,
+    evidence_url: r.evidence_url,
+    decided_at: r.decided_at, appeal_deadline: r.appeal_deadline,
+    status: r.status, finalized_at: r.finalized_at,
+    reinstated_at: r.reinstated_at,
+  };
+}
+
 const APPEAL_WINDOW_DAYS = Number(process.env.WAB_REVOCATION_APPEAL_DAYS || 7);
 const APPEAL_WINDOW_MS   = APPEAL_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 const OPERATOR_KEY_B64   = process.env.WAB_OPERATOR_ED25519_PRIV || '';
@@ -139,7 +162,9 @@ function openRevocation({ siteId, type, reasonCode, reasonText, decidedBy, evide
     severity: type === 'revoked' ? 'critical' : 'warning',
   });
 
-  return db.prepare(`SELECT * FROM site_revocations WHERE id = ?`).get(id);
+  const inserted = db.prepare(`SELECT * FROM site_revocations WHERE id = ?`).get(id);
+  if (type !== 'owner_disable') _emitWebhook('revocation.opened', inserted);
+  return inserted;
 }
 
 /**
@@ -253,7 +278,10 @@ function decideAppeal({ revocationId, decision, decisionReason, adminId }) {
     severity: decision === 'rejected' ? 'warning' : 'info',
   });
 
-  return db.prepare(`SELECT * FROM site_revocations WHERE id = ?`).get(revocationId);
+  const updated = db.prepare(`SELECT * FROM site_revocations WHERE id = ?`).get(revocationId);
+  _emitWebhook('revocation.appeal_decided', { ...updated, _decision: decision });
+  if (decision === 'upheld') _emitWebhook('revocation.reinstated', updated);
+  return updated;
 }
 
 /**
@@ -280,7 +308,9 @@ function reinstate({ revocationId, actorId, actorType = 'admin', reason }) {
     details: { domain: rev.domain, reason: reason || null },
   });
 
-  return db.prepare(`SELECT * FROM site_revocations WHERE id = ?`).get(revocationId);
+  const updated = db.prepare(`SELECT * FROM site_revocations WHERE id = ?`).get(revocationId);
+  _emitWebhook('revocation.reinstated', updated);
+  return updated;
 }
 
 /**
