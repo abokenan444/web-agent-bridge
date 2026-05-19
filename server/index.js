@@ -323,6 +323,10 @@ app.use('/api/revocations', apiLimiter, require('./routes/revocations'));
 // ── Agent-Driven Adoption v3.12.0 — canonical LLM agent system prompt ──
 app.use('/api/agent', apiLimiter, require('./routes/agent-prompt'));
 
+// ── Network Effect v3.14.0 — trusted-domains snapshot + revocations feeds ──
+// (apiLimiter already applies via /api mount above; do not stack it here.)
+app.use('/api', require('./routes/network'));
+
 // ── WAB Commercial Foundations v3.8.0 (Partners · Trust Graph API · Governance SaaS · Enterprise Mesh) ──
 app.use('/api/partners',         apiLimiter, require('./routes/partners'));
 app.use('/api/keys',             apiLimiter, require('./routes/api-keys'));
