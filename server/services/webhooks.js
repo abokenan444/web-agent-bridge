@@ -20,6 +20,8 @@
 
 const crypto = require('crypto');
 const { db } = require('../models/db');
+const { canonicalize } = require('./canonical-json');
+const signer = require('./operator-signer');
 
 const VALID_EVENTS = new Set([
   'revocation.opened',
@@ -183,6 +185,10 @@ async function _attemptDelivery(deliveryId, subscription, body) {
     'X-WAB-Webhook-Delivery': deliveryId,
     'User-Agent': 'web-agent-bridge-webhooks/1.0',
   };
+  if (subscription._operatorSignature) {
+    headers['X-WAB-Operator-Signature'] = subscription._operatorSignature;
+    headers['X-WAB-Operator-Key-Url'] = '/api/operator-key.json';
+  }
   try {
     const res = await _httpPost(subscription.url, body, headers);
     if (res.ok) {
@@ -264,6 +270,20 @@ function emit(eventType, data) {
     created_at: new Date().toISOString(),
     data,
   };
+  // Ed25519-sign the canonical form of the payload (RFC 8785). Receivers verify
+  // with the public key published at /api/operator-key.json. If no operator key
+  // is configured, we still deliver — the HMAC signature alone is sufficient for
+  // per-subscription auth.
+  const operatorSignature = signer.isConfigured() ? signer.sign(payload) : null;
+  if (operatorSignature) {
+    payload.signature = {
+      alg: signer.ALGORITHM,
+      value: operatorSignature,
+      key_url: '/api/operator-key.json',
+      canonicalization: 'RFC8785',
+      signed_fields: ['id', 'type', 'created_at', 'data'],
+    };
+  }
   const body = JSON.stringify(payload);
 
   for (const sub of subs) {
@@ -273,7 +293,12 @@ function emit(eventType, data) {
         (id, subscription_id, event_id, event_type, payload, status, attempts)
       VALUES (?, ?, ?, ?, ?, 'pending', 0)
     `).run(deliveryId, sub.id, eventId, eventType, body);
-    const enriched = { ...sub, _eventId: eventId, _eventType: eventType };
+    const enriched = {
+      ...sub,
+      _eventId: eventId,
+      _eventType: eventType,
+      _operatorSignature: operatorSignature,
+    };
     setImmediate(async () => {
       const ok = await _attemptDelivery(deliveryId, enriched, body);
       if (!ok) _scheduleRetry(deliveryId, enriched, body, 1);
@@ -298,6 +323,40 @@ function verifySignature({ secret, header, body, toleranceSec = 300 }) {
   } catch (_) { return false; }
 }
 
+/**
+ * Verify the operator (Ed25519) signature embedded inside an event body.
+ *
+ * The receiver passes the parsed JSON envelope (or the raw body string + we
+ * parse). We strip the `signature` field, RFC8785-canonicalise the remainder,
+ * and verify with the operator public key (32-byte raw, base64).
+ *
+ *   verifyOperatorSignature({ body, publicKeyB64 }) -> true | false
+ */
+function verifyOperatorSignature({ body, publicKeyB64 }) {
+  if (!body || !publicKeyB64) return false;
+  let envelope;
+  try {
+    envelope = typeof body === 'string' ? JSON.parse(body) : body;
+  } catch (_) { return false; }
+  const sigObj = envelope.signature;
+  if (!sigObj || sigObj.alg !== 'ed25519' || !sigObj.value) return false;
+
+  const { signature: _omit, ...signed } = envelope;
+  const canon = canonicalize(signed);
+
+  try {
+    const raw = Buffer.from(publicKeyB64, 'base64');
+    if (raw.length !== 32) return false;
+    // Reconstruct SPKI DER for Ed25519: 12-byte prefix + 32-byte raw.
+    const spki = Buffer.concat([
+      Buffer.from('302a300506032b6570032100', 'hex'),
+      raw,
+    ]);
+    const pub = crypto.createPublicKey({ key: spki, format: 'der', type: 'spki' });
+    return crypto.verify(null, Buffer.from(canon, 'utf8'), pub, Buffer.from(sigObj.value, 'base64'));
+  } catch (_) { return false; }
+}
+
 module.exports = {
   createSubscription,
   listSubscriptions,
@@ -307,6 +366,7 @@ module.exports = {
   listDeliveries,
   emit,
   verifySignature,
+  verifyOperatorSignature,
   VALID_EVENTS,
   // exposed for tests
   _attemptDelivery,

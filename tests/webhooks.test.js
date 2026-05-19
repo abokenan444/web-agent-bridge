@@ -9,6 +9,14 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret-key-for-testing';
 process.env.JWT_SECRET_ADMIN = process.env.JWT_SECRET_ADMIN || 'test-admin-secret-for-testing';
 
+// Ed25519 operator key so the dispatcher signs every event envelope (v3.17.0).
+if (!process.env.WAB_OPERATOR_ED25519_PRIV) {
+  const { privateKey } = crypto.generateKeyPairSync('ed25519');
+  process.env.WAB_OPERATOR_ED25519_PRIV = privateKey
+    .export({ format: 'der', type: 'pkcs8' })
+    .toString('base64');
+}
+
 const app = require('../server/index');
 const { db } = require('../server/models/db');
 require('../server/utils/migrate').runMigrations();
@@ -181,6 +189,31 @@ describe('Webhooks API (Phase 4)', () => {
       body: captured.body,
     });
     expect(bad).toBe(false);
+
+    // v3.17.0: operator (Ed25519) signature header + embedded envelope signature.
+    expect(captured.headers['x-wab-operator-signature']).toBeTruthy();
+    expect(captured.headers['x-wab-operator-key-url']).toBe('/api/operator-key.json');
+    expect(parsed.signature).toBeDefined();
+    expect(parsed.signature.alg).toBe('ed25519');
+    expect(parsed.signature.canonicalization).toBe('RFC8785');
+    // Header value must match the value embedded in the envelope.
+    expect(captured.headers['x-wab-operator-signature']).toBe(parsed.signature.value);
+
+    // Fetch the operator public key from the API and verify the envelope.
+    const keyRes = await request(app).get('/api/operator-key.json');
+    expect(keyRes.status).toBe(200);
+    const pubB64 = keyRes.body.public_key_b64;
+    const opOk = webhooks.verifyOperatorSignature({ body: captured.body, publicKeyB64: pubB64 });
+    expect(opOk).toBe(true);
+
+    // Tampering with the data must break the operator signature.
+    const tampered = JSON.parse(captured.body);
+    tampered.data.revocation.domain = 'evil.test';
+    const tamperedOk = webhooks.verifyOperatorSignature({
+      body: JSON.stringify(tampered),
+      publicKeyB64: pubB64,
+    });
+    expect(tamperedOk).toBe(false);
 
     // Delivery row recorded as success.
     const deliveries = webhooks.listDeliveries({ subscriptionId: subId, userId });

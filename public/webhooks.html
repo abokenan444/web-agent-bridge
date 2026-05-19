@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Webhooks · Web Agent Bridge</title>
+<link rel="stylesheet" href="/css/dashboard.css" />
+<style>
+  body { background: #f7f8fa; color: #111; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 24px; }
+  h1 { margin: 0 0 8px; font-size: 28px; }
+  .lede { color: #555; margin: 0 0 28px; }
+  .card { background: #fff; border: 1px solid #e6e7ea; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  input, select, button { font: inherit; padding: 9px 12px; border-radius: 8px; border: 1px solid #cfd1d6; background: #fff; }
+  input { flex: 1 1 280px; min-width: 240px; }
+  button { background: #111; color: #fff; border-color: #111; cursor: pointer; }
+  button.ghost { background: #fff; color: #111; }
+  button.danger { background: #c0392b; border-color: #c0392b; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; vertical-align: top; }
+  th { color: #666; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .pill.ok { background: #e7f6ee; color: #146c43; }
+  .pill.off { background: #fdecea; color: #b71c1c; }
+  .pill.warn { background: #fff4e5; color: #8a5a00; }
+  .secret-box { background: #fff8e1; border: 1px solid #f1d27a; border-radius: 8px; padding: 12px; margin: 10px 0; }
+  .muted { color: #777; font-size: 13px; }
+  details summary { cursor: pointer; color: #2563eb; font-size: 13px; }
+  .empty { text-align: center; color: #888; padding: 28px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Webhooks</h1>
+  <p class="lede">Subscribe to instant push notifications for revocation events. Each payload is HMAC-signed with your subscription secret and Ed25519-signed by the operator.</p>
+
+  <div class="card">
+    <h3 style="margin-top:0">Create subscription</h3>
+    <form id="createForm" class="row" autocomplete="off">
+      <input id="urlInput" type="url" placeholder="https://your-endpoint/webhooks" required />
+      <input id="descInput" type="text" placeholder="Optional description" style="flex: 0 1 220px" />
+      <button type="submit">Subscribe</button>
+    </form>
+    <p class="muted" style="margin: 10px 0 0">Receives <code>revocation.opened</code>, <code>revocation.reinstated</code>, <code>revocation.appeal_decided</code>. <a href="/api/webhooks/events" target="_blank">View events</a> · <a href="/api/operator-key.json" target="_blank">Operator public key</a></p>
+    <div id="secretBox" class="secret-box" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content: space-between; margin-bottom: 12px">
+      <h3 style="margin: 0">Your subscriptions</h3>
+      <button class="ghost" onclick="loadSubs()">Refresh</button>
+    </div>
+    <table>
+      <thead><tr><th>URL</th><th>Events</th><th>Status</th><th>Last result</th><th></th></tr></thead>
+      <tbody id="subsBody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Verifying a delivery</h3>
+    <p class="muted">Every request carries two signatures:</p>
+    <ol class="muted" style="line-height: 1.7">
+      <li><strong>HMAC-SHA256</strong> per subscription — header <code>X-WAB-Webhook-Signature: t=&lt;unix&gt;,v1=&lt;hex&gt;</code>. Recompute over <code>${'`${t}.${rawBody}`'}</code> with your secret.</li>
+      <li><strong>Ed25519 operator signature</strong> — header <code>X-WAB-Operator-Signature</code> + embedded <code>signature.value</code>. Fetch the public key at <code>/api/operator-key.json</code> and verify over the RFC 8785 canonicalisation of the envelope minus the <code>signature</code> field.</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+const TOKEN = localStorage.getItem('wab_token');
+if (!TOKEN) { location.href = '/login.html?next=/webhooks.html'; }
+
+const H = { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
+
+async function api(method, path, body) {
+  const opts = { method, headers: H };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`);
+  return j.data;
+}
+
+function escape(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[c]);
+}
+
+function pill(active, lastError) {
+  if (!active) return '<span class="pill off">disabled</span>';
+  if (lastError) return '<span class="pill warn">warning</span>';
+  return '<span class="pill ok">active</span>';
+}
+
+async function loadSubs() {
+  const body = document.getElementById('subsBody');
+  body.innerHTML = '<tr><td colspan="5" class="empty">Loading…</td></tr>';
+  try {
+    const subs = await api('GET', '/api/webhooks');
+    if (!subs.length) {
+      body.innerHTML = '<tr><td colspan="5" class="empty">No subscriptions yet.</td></tr>';
+      return;
+    }
+    body.innerHTML = subs.map((s) => `
+      <tr>
+        <td><div class="mono">${escape(s.url)}</div>${s.description ? `<div class="muted">${escape(s.description)}</div>` : ''}</td>
+        <td><div class="muted">${s.events.map(escape).join('<br>')}</div></td>
+        <td>${pill(s.active, s.last_error)}</td>
+        <td>
+          ${s.last_success_at ? `<div class="muted">ok: ${escape(s.last_success_at)}</div>` : ''}
+          ${s.last_error_at ? `<div class="muted">err: ${escape(s.last_error_at)}</div>` : ''}
+          ${s.consecutive_failures ? `<div class="muted">${s.consecutive_failures} consecutive failures</div>` : ''}
+        </td>
+        <td style="text-align:right; white-space: nowrap">
+          <button class="ghost" onclick="toggle('${s.id}', ${!s.active})">${s.active ? 'Pause' : 'Resume'}</button>
+          <button class="ghost" onclick="showDeliveries('${s.id}')">Deliveries</button>
+          <button class="danger" onclick="del('${s.id}')">Delete</button>
+        </td>
+      </tr>
+      <tr id="deliv-${s.id}" style="display:none"><td colspan="5"><div id="deliv-body-${s.id}" class="muted">Loading deliveries…</div></td></tr>
+    `).join('');
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="5" class="empty">Error: ${escape(e.message)}</td></tr>`;
+  }
+}
+
+async function showDeliveries(id) {
+  const row = document.getElementById('deliv-' + id);
+  const target = document.getElementById('deliv-body-' + id);
+  if (row.style.display === 'table-row') { row.style.display = 'none'; return; }
+  row.style.display = 'table-row';
+  try {
+    const list = await api('GET', `/api/webhooks/${id}/deliveries?limit=20`);
+    if (!list.length) { target.innerHTML = 'No deliveries yet.'; return; }
+    target.innerHTML = '<table>' +
+      '<thead><tr><th>Event</th><th>Status</th><th>Attempts</th><th>Code</th><th>When</th><th>Error</th></tr></thead><tbody>' +
+      list.map((d) => `<tr>
+        <td class="mono">${escape(d.event_type)}</td>
+        <td>${escape(d.status)}</td>
+        <td>${d.attempts}</td>
+        <td>${d.last_status_code || ''}</td>
+        <td class="muted">${escape(d.delivered_at || d.created_at)}</td>
+        <td class="muted" style="max-width: 320px; word-break: break-word">${escape(d.last_error || '')}</td>
+      </tr>`).join('') + '</tbody></table>';
+  } catch (e) {
+    target.innerHTML = 'Error: ' + escape(e.message);
+  }
+}
+
+async function toggle(id, active) {
+  try { await api('PATCH', '/api/webhooks/' + id, { active }); loadSubs(); }
+  catch (e) { alert(e.message); }
+}
+
+async function del(id) {
+  if (!confirm('Delete this subscription?')) return;
+  try { await api('DELETE', '/api/webhooks/' + id); loadSubs(); }
+  catch (e) { alert(e.message); }
+}
+
+document.getElementById('createForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const url = document.getElementById('urlInput').value.trim();
+  const description = document.getElementById('descInput').value.trim() || null;
+  try {
+    const sub = await api('POST', '/api/webhooks', { url, description });
+    const box = document.getElementById('secretBox');
+    box.style.display = 'block';
+    box.innerHTML = '<strong>Subscription created.</strong> Save this secret now — it will not be shown again:' +
+      `<div class="mono" style="margin-top:8px; word-break: break-all; user-select: all">${escape(sub.secret)}</div>`;
+    document.getElementById('urlInput').value = '';
+    document.getElementById('descInput').value = '';
+    loadSubs();
+  } catch (e) { alert(e.message); }
+});
+
+loadSubs();
+</script>
+</body>
+</html>
