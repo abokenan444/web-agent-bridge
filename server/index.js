@@ -320,6 +320,9 @@ app.use('/api/atp', apiLimiter, require('./routes/transactions'));
 // ── Site Revocations & Appeals v3.11.0 — public transparency + owner appeals ──
 app.use('/api/revocations', apiLimiter, require('./routes/revocations'));
 
+// ── Agent-Driven Adoption v3.12.0 — canonical LLM agent system prompt ──
+app.use('/api/agent', apiLimiter, require('./routes/agent-prompt'));
+
 // ── WAB Commercial Foundations v3.8.0 (Partners · Trust Graph API · Governance SaaS · Enterprise Mesh) ──
 app.use('/api/partners',         apiLimiter, require('./routes/partners'));
 app.use('/api/keys',             apiLimiter, require('./routes/api-keys'));

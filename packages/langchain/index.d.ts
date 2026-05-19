@@ -28,3 +28,48 @@ export declare class WABToolkit {
   /** Return the raw discovery document. */
   getDiscovery(): Promise<any>;
 }
+
+export interface WABLiveToolOptions {
+  /** WAB registry base URL (default https://api.webagentbridge.com). */
+  registry?: string;
+  /** Request timeout in ms (default 15000). */
+  timeout?: number;
+  /** API key sent as Authorization header during site execution. */
+  apiKey?: string;
+  /** Agent identity advertised via X-Agent header. */
+  agentName?: string;
+  /** Override the LangChain tool name. */
+  name?: string;
+  /** Override the LangChain tool description. */
+  description?: string;
+}
+
+export interface WABLiveToolInput {
+  domain: string;
+  action: string;
+  params?: Record<string, unknown>;
+}
+
+export interface WABLiveToolResult {
+  ok: boolean;
+  stage: 'input' | 'discover' | 'verify' | 'revoked' | 'execute';
+  domain?: string;
+  action?: string;
+  statuses?: Record<string, string>;
+  revocation?: Record<string, unknown> | null;
+  result?: unknown;
+  error?: string;
+  hint?: string;
+}
+
+/**
+ * Single LangChain tool that performs WAB discover → verify-live → execute
+ * as one safe call. Refuses to transact with revoked domains.
+ */
+export declare function WABLiveTool(options?: WABLiveToolOptions): WABLangChainTool;
+
+/** Lower-level helper used by WABLiveTool. */
+export declare function runWabFlow(
+  input: WABLiveToolInput,
+  options?: WABLiveToolOptions
+): Promise<WABLiveToolResult>;

@@ -117,6 +117,19 @@ export declare class WABAgent {
   screenshot(opts?: { fullPage?: boolean }): Promise<string>;
 }
 
+// ─── Canonical WAB Agent System Prompt ───────────────────────────────
+export declare const SYSTEM_PROMPT: string;
+export declare const SYSTEM_PROMPT_VERSION: string;
+
+/**
+ * Returns the canonical WAB agent system prompt. Pass `{ agentName, agentVersion }`
+ * to append an identity line.
+ */
+export declare function systemPrompt(opts?: {
+  agentName?: string;
+  agentVersion?: string;
+}): string;
+
 // ─── WABMultiAgent — Cross-Site Agent Orchestration ────────────────────
 
 export interface WABMultiAgentOptions {

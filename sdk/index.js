@@ -632,6 +632,13 @@ const { WABGovernance, WABGovernanceError } = require('./governance');
 const autoDiscovery = require('./auto-discovery');
 // Agent Transaction Primitive (v3.9.0) — intent → authorization → execution → receipt.
 const { ATPClient, ATPError } = require('./atp');
+// Canonical agent system prompt (v3.12.0)
+const { systemPrompt, SYSTEM_PROMPT, SYSTEM_PROMPT_VERSION } = require('./system-prompt');
+// WABLiveTool — single LangChain tool with built-in revocation gate
+let WABLiveTool = null;
+try { WABLiveTool = require('../packages/langchain').WABLiveTool; } catch {
+  try { WABLiveTool = require('web-agent-bridge-langchain').WABLiveTool; } catch {}
+}
 
 module.exports = {
   WABAgent,
@@ -640,6 +647,7 @@ module.exports = {
   WABAgentMesh,
   WABAgentOS,
   WABToolkit,
+  WABLiveTool,
   SafetyShieldClient,
   WABSafeMode,
   WABSafeModeError,
@@ -650,4 +658,7 @@ module.exports = {
   discover: autoDiscovery.discover,
   ATPClient,
   ATPError,
+  systemPrompt,
+  SYSTEM_PROMPT,
+  SYSTEM_PROMPT_VERSION,
 };

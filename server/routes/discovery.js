@@ -2283,9 +2283,19 @@ router.get('/badge/:domainfile', (req, res) => {
     label = r.label;
   } catch { /* fall through with defaults */ }
 
+  // v3.12.0 — revocation override: a revoked or suspended domain wins over score.
+  let revoked = false;
+  try {
+    const activeRev = require('../services/revocations').getActiveByDomain(domain);
+    if (activeRev) {
+      revoked = true;
+      label = activeRev.type === 'suspended' ? 'suspended' : 'revoked';
+    }
+  } catch { /* table missing on first boot */ }
+
   const style = String(req.query.style || 'flat').toLowerCase();
-  const right = score > 0 ? `${label} ${score}` : 'unrated';
-  const color = _wabBadgeColor(score);
+  const right = revoked ? label : (score > 0 ? `${label} ${score}` : 'unrated');
+  const color = revoked ? '#dc2626' : _wabBadgeColor(score);
 
   // Approximate widths for Verdana 11px (works fine without web fonts).
   const charW = 6.5;
@@ -2323,6 +2333,7 @@ router.get('/badge/:domainfile', (req, res) => {
   res.set('Content-Type', 'image/svg+xml; charset=utf-8');
   res.set('Cache-Control', 'public, max-age=300, s-maxage=300');
   res.set('X-WAB-Version', WAB_VERSION);
+  if (revoked) res.set('X-WAB-Revoked', label);
   res.send(svg);
 });
 

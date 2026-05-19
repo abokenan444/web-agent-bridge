@@ -215,4 +215,6 @@ WABToolkit.prototype._execute = async function (name, params) {
   throw new Error('Provide siteUrl or agent');
 };
 
-module.exports = { WABToolkit: WABToolkit };
+const { WABLiveTool, runWabFlow } = require('./wab-tool');
+
+module.exports = { WABToolkit: WABToolkit, WABLiveTool: WABLiveTool, runWabFlow: runWabFlow };
