@@ -317,6 +317,9 @@ app.use('/api/ring4', apiLimiter, ring4Router);
 // ── Agent Transaction Primitive (ATP) v3.9.0 — intents · transactions · signed receipts ──
 app.use('/api/atp', apiLimiter, require('./routes/transactions'));
 
+// ── Site Revocations & Appeals v3.11.0 — public transparency + owner appeals ──
+app.use('/api/revocations', apiLimiter, require('./routes/revocations'));
+
 // ── WAB Commercial Foundations v3.8.0 (Partners · Trust Graph API · Governance SaaS · Enterprise Mesh) ──
 app.use('/api/partners',         apiLimiter, require('./routes/partners'));
 app.use('/api/keys',             apiLimiter, require('./routes/api-keys'));
@@ -795,6 +798,12 @@ if (process.env.NODE_ENV !== 'test') {
     const r = require('./services/commission-billing').startPeriodicBilling();
     if (r) console.log(`[commission-billing] periodic cycle every ${r.intervalHours}h`);
   } catch (e) { console.warn('[commission-billing] start failed:', e.message); }
+
+  // Start the revocation appeal-window sweep (opt-in via WAB_REVOCATION_SWEEP_INTERVAL_HOURS).
+  try {
+    const r = require('./services/revocations').startPeriodicSweep();
+    if (r) console.log(`[revocations] periodic sweep every ${r.intervalHours}h`);
+  } catch (e) { console.warn('[revocations] sweep start failed:', e.message); }
 
   server.listen(PORT, () => {
     console.log(`\n  ╔══════════════════════════════════════════╗`);

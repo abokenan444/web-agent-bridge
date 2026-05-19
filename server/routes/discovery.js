@@ -683,6 +683,25 @@ async function buildProof(domain, opts = {}) {
     out.statuses.production = toBooleanState((cfg.environment || 'production') === 'production');
   }
 
+  // v3.11.0: surface any active revocation against this domain.
+  try {
+    const activeRev = require('../services/revocations').getActiveByDomain(domain);
+    if (activeRev) {
+      out.statuses.revoked = 'yes';
+      out.revocation = {
+        id: activeRev.id,
+        type: activeRev.type,
+        reason_code: activeRev.reason_code,
+        reason_text: activeRev.reason_text,
+        decided_at: activeRev.decided_at,
+        appeal_deadline: activeRev.appeal_deadline,
+        status: activeRev.status,
+      };
+    } else {
+      out.statuses.revoked = 'no';
+    }
+  } catch (_) { /* table may not exist on first boot before migration */ }
+
   const proof = await verify(domain, { timeoutMs: 6000 }).catch((err) => ({
     ok: false,
     records: [{

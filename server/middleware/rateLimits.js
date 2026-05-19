@@ -87,6 +87,27 @@ const licenseTrackLimiter = rateLimit({
   message: { error: 'Too many track requests, please try again later' }
 });
 
+// ─── ATP write endpoints (v3.11.0) ───────────────────────────────────
+// Stricter than apiLimiter — intents and execute are spend-causing actions.
+// Keyed per user when authenticated to avoid noisy-neighbour starvation.
+const atpStrictLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.WAB_ATP_RATE_MAX || 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${req.ip}:${req.user?.id || 'anon'}`,
+  message: { error: 'Too many ATP write requests, please slow down' },
+});
+
+const atpReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.WAB_ATP_READ_MAX || 60),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${req.ip}:${req.user?.id || 'anon'}`,
+  message: { error: 'Too many ATP read requests' },
+});
+
 module.exports = {
   authLimiter,
   registerLimiter,
@@ -97,4 +118,6 @@ module.exports = {
   searchLimiter,
   licenseTokenLimiter,
   licenseTrackLimiter,
+  atpStrictLimiter,
+  atpReadLimiter,
 };

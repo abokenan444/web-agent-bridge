@@ -145,7 +145,11 @@ function authorizeIntent(intentId, { userId }) {
   if (!intent) throw notFound('intent not found');
   if (intent.user_id !== userId) throw forbidden('not your intent');
   if (intent.status !== 'draft') throw conflict(`cannot authorize intent in status '${intent.status}'`, 'invalid_state');
-  if (new Date(intent.expires_at).getTime() < Date.now()) {
+  // v3.11.0: allow a small clock-skew tolerance so clients on slightly drifted
+  // clocks aren't rejected. Default \u00b160s; override via WAB_CLOCK_SKEW_TOLERANCE_SEC.
+  const skewSec = Number(process.env.WAB_CLOCK_SKEW_TOLERANCE_SEC || 60);
+  const expiresAt = new Date(intent.expires_at).getTime();
+  if (expiresAt + (skewSec * 1000) < Date.now()) {
     db.prepare("UPDATE atp_intents SET status='expired', updated_at=? WHERE id=?").run(nowIso(), intentId);
     throw conflict('intent expired before authorization', 'expired');
   }

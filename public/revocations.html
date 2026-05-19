@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domain Revocations · Transparency · Web Agent Bridge</title>
+  <meta name="description" content="Public log of every WAB domain suspension or revocation with reason, evidence, and appeal status.">
+  <meta property="og:title" content="WAB Domain Revocations — Transparency Log">
+  <meta property="og:description" content="Every WAB suspension or revocation is published here with its reason, evidence, and appeal status.">
+  <link rel="icon" href="/assets/favicon.svg">
+  <style>
+    :root {
+      --bg: #0a0e1a; --bg-2: #111827;
+      --fg: #e5e7eb; --fg-dim: #9ca3af;
+      --accent: #38bdf8; --warn: #f59e0b; --crit: #ef4444; --ok: #10b981;
+      --border: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg); color: var(--fg); line-height: 1.6;
+    }
+    header { background: var(--bg-2); border-bottom: 1px solid var(--border); padding: 24px 32px; }
+    header h1 { margin: 0 0 4px; font-size: 24px; }
+    header p { margin: 0; color: var(--fg-dim); font-size: 14px; max-width: 760px; }
+    header a { color: var(--accent); text-decoration: none; }
+    main { max-width: 1100px; margin: 0 auto; padding: 32px; }
+    .toolbar { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+    .toolbar input, .toolbar select {
+      background: var(--bg-2); color: var(--fg); border: 1px solid var(--border);
+      padding: 8px 12px; border-radius: 6px; font-size: 14px;
+    }
+    .toolbar button {
+      background: var(--accent); color: #0a0e1a; border: 0;
+      padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;
+    }
+    table { width: 100%; border-collapse: collapse; background: var(--bg-2); border-radius: 8px; overflow: hidden; }
+    th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: top; }
+    th { background: rgba(255,255,255,0.03); color: var(--fg-dim); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+    tr:last-child td { border-bottom: 0; }
+    .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .pill-pending_appeal { background: rgba(245, 158, 11, 0.15); color: var(--warn); }
+    .pill-appealed       { background: rgba(56, 189, 248, 0.15); color: var(--accent); }
+    .pill-final          { background: rgba(239, 68, 68, 0.15);  color: var(--crit); }
+    .pill-overturned, .pill-reinstated { background: rgba(16, 185, 129, 0.15); color: var(--ok); }
+    .pill-suspended      { background: rgba(245, 158, 11, 0.15); color: var(--warn); }
+    .pill-revoked        { background: rgba(239, 68, 68, 0.15);  color: var(--crit); }
+    .domain { font-family: 'SF Mono', Menlo, monospace; font-size: 13px; color: var(--accent); }
+    .reason { color: var(--fg-dim); font-size: 13px; max-width: 320px; }
+    .empty { text-align: center; padding: 60px; color: var(--fg-dim); }
+    footer { text-align: center; padding: 32px; color: var(--fg-dim); font-size: 13px; }
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>WAB Domain Revocations</h1>
+  <p>Every domain suspension or permanent revocation is published here with its reason, evidence, and appeal status. Owners have 7 days to file an appeal. See also <a href="/transparency.html">live ATP receipts</a>.</p>
+</header>
+
+<main>
+  <div class="toolbar">
+    <input id="filter-domain" placeholder="Filter by domain…" autocomplete="off">
+    <select id="filter-status">
+      <option value="">All statuses</option>
+      <option value="pending_appeal">Pending appeal</option>
+      <option value="appealed">Appealed</option>
+      <option value="final">Final</option>
+      <option value="overturned">Overturned</option>
+      <option value="reinstated">Reinstated</option>
+    </select>
+    <button id="refresh-btn">Refresh</button>
+    <span style="flex:1"></span>
+    <a href="/api/revocations/transparency" style="color: var(--fg-dim); font-size:13px; align-self:center;">JSON feed →</a>
+  </div>
+
+  <table id="rev-table">
+    <thead>
+      <tr>
+        <th>Domain</th><th>Type</th><th>Reason</th>
+        <th>Decided</th><th>Appeal deadline</th><th>Status</th><th>Evidence</th>
+      </tr>
+    </thead>
+    <tbody id="rev-tbody">
+      <tr><td colspan="7" class="empty">Loading…</td></tr>
+    </tbody>
+  </table>
+</main>
+
+<footer>
+  Web Agent Bridge — <a href="/">webagentbridge.com</a> · <a href="/docs.html">Docs</a> · <a href="/api/revocations/transparency">API</a>
+</footer>
+
+<script>
+const tbody = document.getElementById('rev-tbody');
+const filterDomain = document.getElementById('filter-domain');
+const filterStatus = document.getElementById('filter-status');
+let rows = [];
+
+function fmt(ts) {
+  if (!ts) return '—';
+  try { return new Date(ts).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'; }
+  catch { return ts; }
+}
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
+}
+
+function render() {
+  const dq = (filterDomain.value || '').toLowerCase().trim();
+  const sq = filterStatus.value;
+  const filtered = rows.filter(r =>
+    (!dq || (r.domain || '').toLowerCase().includes(dq)) &&
+    (!sq || r.status === sq)
+  );
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">No revocations match.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(r => `
+    <tr>
+      <td><span class="domain">${escapeHtml(r.domain)}</span></td>
+      <td><span class="pill pill-${r.type}">${escapeHtml(r.type)}</span></td>
+      <td><div><strong>${escapeHtml(r.reason_code)}</strong></div><div class="reason">${escapeHtml(r.reason_text || '')}</div></td>
+      <td>${fmt(r.decided_at)}</td>
+      <td>${fmt(r.appeal_deadline)}</td>
+      <td><span class="pill pill-${r.status}">${escapeHtml((r.status || '').replace('_', ' '))}</span></td>
+      <td>${r.evidence_url ? `<a href="${escapeHtml(r.evidence_url)}" target="_blank" rel="noopener nofollow">link</a>` : '—'}</td>
+    </tr>
+  `).join('');
+}
+
+async function load() {
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>';
+  try {
+    const r = await fetch('/api/revocations/transparency?limit=200');
+    const j = await r.json();
+    rows = (j && j.data) || [];
+    render();
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">Failed to load.</td></tr>';
+  }
+}
+
+filterDomain.addEventListener('input', render);
+filterStatus.addEventListener('change', render);
+document.getElementById('refresh-btn').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>

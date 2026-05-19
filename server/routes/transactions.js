@@ -25,6 +25,7 @@ const express = require('express');
 const router  = express.Router();
 
 const { authenticateToken } = require('../middleware/auth');
+const { atpStrictLimiter } = require('../middleware/rateLimits');
 const transactions = require('../services/transactions');
 const { db } = require('../models/db');
 
@@ -63,7 +64,7 @@ function send(res, fn) {
 }
 
 // ─── Intents ─────────────────────────────────────────────────────────────────
-router.post('/intents', authenticateToken, express.json({ limit: '32kb' }), (req, res) => {
+router.post('/intents', atpStrictLimiter, authenticateToken, express.json({ limit: '32kb' }), (req, res) => {
   const q = checkDailyIntentQuota(req.user.id);
   if (!q.ok) {
     return res.status(429).json({
@@ -125,7 +126,7 @@ function loadTxOwned(txId, userId) {
   return { tx, intent };
 }
 
-router.post('/transactions', authenticateToken, express.json({ limit: '32kb' }), (req, res) => {
+router.post('/transactions', atpStrictLimiter, authenticateToken, express.json({ limit: '32kb' }), (req, res) => {
   send(res, () => {
     const intent = loadIntentAuthorized(req.body.intent_id, req.user.id);
     const idem = req.headers['idempotency-key'] || req.body.idempotency_key;
