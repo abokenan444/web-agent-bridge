@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WAB Research API — open dataset for academic and industry research</title>
+<meta name="description" content="Open, anonymized, CC-BY-4.0 dataset and JSON API describing the growth and trust posture of the WAB-enabled web.">
+<link rel="icon" href="/assets/favicon.svg">
+<style>
+  :root{--bg:#0b0f17;--panel:#111827;--fg:#e5e7eb;--muted:#9ca3af;--line:#1f2937;--accent:#60a5fa}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{padding:48px 24px 24px;text-align:center;border-bottom:1px solid var(--line)}
+  h1{margin:0 0 8px;font-size:28px}
+  main{max-width:840px;margin:0 auto;padding:24px}
+  h2{margin-top:32px;font-size:18px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  pre,code{background:#0d1320;border:1px solid var(--line);border-radius:6px}
+  pre{padding:12px;overflow-x:auto;font-size:12px}
+  code{padding:2px 6px;font-size:12.5px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  footer{padding:32px 24px;text-align:center;color:var(--muted);font-size:12px;border-top:1px solid var(--line);margin-top:48px}
+</style>
+</head>
+<body>
+<header>
+  <h1>WAB Research API</h1>
+  <p>Open, anonymized data about the agent-discoverable web. CC-BY-4.0. CORS open. No authentication required.</p>
+</header>
+<main>
+  <h2>Endpoints</h2>
+  <pre>GET /api/research/stats             # high-level counts
+GET /api/research/timeseries?days=30 # daily series
+GET /api/research/sample?n=20       # random domain sample</pre>
+
+  <h2>Citing</h2>
+  <p>Please cite as:</p>
+  <pre>Web Agent Bridge Observatory.
+  https://webagentbridge.com/research
+  Accessed YYYY-MM-DD.</pre>
+
+  <h2>What's <em>not</em> in this dataset</h2>
+  <ul>
+    <li>No request-level data (no IPs, user agents, referrers, cookies).</li>
+    <li>No per-user analytics.</li>
+    <li>No private manifest content — we only expose the SHA-256 and signed/unsigned status.</li>
+  </ul>
+
+  <h2>Larger exports</h2>
+  <p>For full historical exports (per-domain status over time, signature rotation logs), contact <a href="mailto:research@webagentbridge.com">research@webagentbridge.com</a>. Academic use is free; commercial use requires a partner agreement.</p>
+
+  <h2>Try it</h2>
+  <pre>$ curl https://webagentbridge.com/api/research/stats | jq .</pre>
+</main>
+<footer>Part of the <a href="/">Web Agent Bridge</a> protocol. See also: <a href="/observatory">Observatory</a>, <a href="/notary">Notary</a>.</footer>
+</body>
+</html>

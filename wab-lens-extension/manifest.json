@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "WAB Lens",
+  "version": "0.1.0",
+  "description": "Detect, verify and badge Web Agent Bridge (WAB) discovery on every page you visit.",
+  "homepage_url": "https://webagentbridge.com/wab-lens",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "WAB Lens",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  }
+}

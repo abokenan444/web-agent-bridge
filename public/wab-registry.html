@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAB Registry — AI Agent Discovery Network</title>
+<meta name="description" content="The public registry of WAB-enabled websites. AI agents can query by intent, location, and trust ring. Spider Protocol lets agents auto-report discoveries.">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0b0f17;color:#e5e7eb;min-height:100vh}
+a{color:#60a5fa;text-decoration:none}a:hover{text-decoration:underline}
+.nav{background:#0d1320;border-bottom:1px solid #1f2937;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.nav-logo{font-size:16px;font-weight:700;color:#fff}.nav-logo span{color:#10b981}
+.nav a{font-size:13px;color:#9ca3af}
+.hero{background:linear-gradient(135deg,#0d1320 0%,#0f1a2e 100%);border-bottom:1px solid #1f2937;padding:56px 24px 48px;text-align:center}
+.hero h1{font-size:clamp(28px,5vw,48px);font-weight:800;color:#fff;margin-bottom:12px}
+.hero h1 span{color:#10b981}
+.hero p{font-size:16px;color:#9ca3af;max-width:600px;margin:0 auto 24px}
+.badge-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:32px}
+.badge{display:inline-flex;align-items:center;gap:6px;background:#0b1628;border:1px solid #1f2937;border-radius:20px;padding:6px 14px;font-size:13px;color:#d1d5db}
+.badge .dot{width:8px;height:8px;border-radius:50%;background:#10b981}
+.badge .dot.amber{background:#f59e0b}
+.container{max-width:1100px;margin:0 auto;padding:32px 24px}
+.section{margin-bottom:48px}
+.section-title{font-size:18px;font-weight:700;color:#fff;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.section-title .tag{font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;background:#10b98122;color:#10b981}
+/* Search bar */
+.search-bar{background:#0d1320;border:1px solid #1f2937;border-radius:12px;padding:20px 24px;margin-bottom:32px}
+.search-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end}
+@media(max-width:640px){.search-row{grid-template-columns:1fr}}
+.field label{display:block;font-size:12px;color:#6b7280;margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.field input,.field select{width:100%;background:#0b0f17;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;color:#e5e7eb;font-size:14px}
+.field input:focus,.field select:focus{outline:none;border-color:#10b981}
+.btn-search{background:#10b981;color:#0b0f17;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn-search:hover{background:#0ea16c}
+/* Stats bar */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:32px}
+.stat-card{background:#0d1320;border:1px solid #1f2937;border-radius:10px;padding:16px 20px}
+.stat-card .num{font-size:28px;font-weight:800;color:#10b981}
+.stat-card .lbl{font-size:12px;color:#6b7280;margin-top:2px}
+/* Results grid */
+.results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.site-card{background:#0d1320;border:1px solid #1f2937;border-radius:12px;padding:20px;transition:border-color .2s}
+.site-card:hover{border-color:#10b98144}
+.site-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.site-domain{font-size:15px;font-weight:700;color:#fff}
+.ring-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;background:#10b98122;color:#10b981}
+.ring-badge.r3{background:#3b82f622;color:#60a5fa}
+.ring-badge.r2{background:#f59e0b22;color:#f59e0b}
+.ring-badge.r1{background:#6b728022;color:#9ca3af}
+.score-bar{height:4px;background:#1f2937;border-radius:2px;margin-bottom:10px;overflow:hidden}
+.score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#10b981,#34d399)}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.tag-chip{font-size:11px;padding:2px 8px;background:#1f2937;border-radius:3px;color:#9ca3af}
+.site-meta{font-size:12px;color:#4b5563;margin-top:10px;display:flex;gap:12px}
+.verified-mark{color:#10b981;font-size:11px;font-weight:600}
+/* Spider panel */
+.spider-panel{background:#0d1320;border:1px solid #10b98133;border-radius:12px;padding:28px}
+.spider-panel h3{font-size:17px;font-weight:700;color:#10b981;margin-bottom:10px}
+.spider-panel p{font-size:14px;color:#9ca3af;margin-bottom:16px}
+.code-block{background:#0b0f17;border:1px solid #1f2937;border-radius:8px;padding:16px;overflow-x:auto}
+.code-block pre{font-size:13px;color:#a5f3fc;font-family:"Cascadia Code","Fira Code",monospace;line-height:1.6}
+.copy-btn{background:#1f2937;border:1px solid #374151;color:#9ca3af;font-size:12px;padding:4px 10px;border-radius:4px;cursor:pointer;float:right;margin-bottom:8px}
+.copy-btn:hover{color:#fff}
+/* Flow diagram */
+.flow{display:flex;flex-direction:column;gap:0}
+.flow-step{display:flex;align-items:center;gap:14px;padding:10px 0}
+.flow-icon{width:36px;height:36px;border-radius:50%;background:#10b98122;border:2px solid #10b98155;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.flow-text{font-size:14px;color:#9ca3af}.flow-text strong{color:#e5e7eb}
+.flow-arrow{width:36px;text-align:center;color:#10b981;font-size:18px}
+/* Empty / loading */
+.empty{text-align:center;padding:60px 24px;color:#4b5563;font-size:14px}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid #1f2937;border-top-color:#10b981;border-radius:50%;animation:spin .7s linear infinite;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* report form */
+.report-form{background:#0d1320;border:1px solid #1f2937;border-radius:12px;padding:24px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:520px){.form-grid{grid-template-columns:1fr}}
+.form-field label{display:block;font-size:12px;color:#6b7280;margin-bottom:5px;font-weight:500}
+.form-field input,.form-field select,.form-field textarea{width:100%;background:#0b0f17;border:1px solid #1f2937;border-radius:7px;padding:9px 12px;color:#e5e7eb;font-size:13px;font-family:inherit}
+.form-field textarea{resize:vertical;min-height:72px}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{outline:none;border-color:#10b981}
+.form-actions{margin-top:16px;display:flex;gap:10px;align-items:center}
+.btn-report{background:#10b981;color:#0b0f17;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer}
+.btn-report:hover{background:#0ea16c}
+.report-msg{font-size:13px;padding:8px 14px;border-radius:6px;display:none}
+.report-msg.ok{background:#10b98120;color:#10b981;display:block}
+.report-msg.err{background:#ef444420;color:#ef4444;display:block}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <span class="nav-logo">WAB<span>Registry</span></span>
+  <a href="/">Home</a>
+  <a href="/observatory">Observatory</a>
+  <a href="/notary">Notary</a>
+  <a href="/wab-registry" style="color:#10b981">Registry</a>
+  <a href="/docs">Docs</a>
+</nav>
+
+<div class="hero">
+  <h1>WAB <span>Discovery Registry</span></h1>
+  <p>The public index of WAB-enabled websites. AI agents query by intent, location, and trust ring. Every agent becomes a spider — reporting new sites automatically.</p>
+  <div class="badge-row">
+    <span class="badge"><span class="dot"></span>Trust Ring 4 — this server</span>
+    <span class="badge"><span class="dot"></span>Spider Protocol active</span>
+    <span class="badge"><span class="dot amber"></span>Gossip Network</span>
+    <span class="badge"><span class="dot"></span>Zero-auth reporting</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card"><div class="num" id="stat-total">–</div><div class="lbl">Registered sites</div></div>
+    <div class="stat-card"><div class="num" id="stat-verified">–</div><div class="lbl">Notary-verified</div></div>
+    <div class="stat-card"><div class="num" id="stat-r4">–</div><div class="lbl">Trust Ring 4</div></div>
+    <div class="stat-card"><div class="num" id="stat-intents">–</div><div class="lbl">Unique intents</div></div>
+  </div>
+
+  <!-- Search -->
+  <div class="section">
+    <div class="search-bar">
+      <div class="search-row">
+        <div class="field">
+          <label>Intent</label>
+          <input id="q-intent" type="text" placeholder="booking, purchase, search…">
+        </div>
+        <div class="field">
+          <label>Location / Region</label>
+          <input id="q-location" type="text" placeholder="netherlands, usa, eu…">
+        </div>
+        <div class="field">
+          <label>Min Trust Ring</label>
+          <select id="q-ring">
+            <option value="">Any</option>
+            <option value="1">Ring 1+</option>
+            <option value="2">Ring 2+</option>
+            <option value="3">Ring 3+</option>
+            <option value="4">Ring 4 only</option>
+          </select>
+        </div>
+        <button class="btn-search" onclick="runSearch()">Search</button>
+      </div>
+    </div>
+    <div id="results-count" style="font-size:13px;color:#6b7280;margin-bottom:14px"></div>
+    <div class="results-grid" id="results-grid">
+      <div class="empty" id="results-empty">
+        <div class="spinner"></div><br>
+        Loading registry…
+      </div>
+    </div>
+  </div>
+
+  <!-- Spider Protocol How It Works -->
+  <div class="section">
+    <div class="section-title">Spider Protocol <span class="tag">Self-Propagating</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+      <div>
+        <div class="flow">
+          <div class="flow-step"><div class="flow-icon">🌐</div><div class="flow-text">Agent browses <strong>any WAB-enabled site</strong></div></div>
+          <div class="flow-step"><div class="flow-arrow">↓</div></div>
+          <div class="flow-step"><div class="flow-icon">📡</div><div class="flow-text">Reads <strong>X-WAB-Enabled</strong> header or <code>/.wab</code> beacon</div></div>
+          <div class="flow-step"><div class="flow-arrow">↓</div></div>
+          <div class="flow-step"><div class="flow-icon">📮</div><div class="flow-text">POSTs domain to <strong>/api/registry/report</strong></div></div>
+          <div class="flow-step"><div class="flow-arrow">↓</div></div>
+          <div class="flow-step"><div class="flow-icon">🗂️</div><div class="flow-text">Registry <strong>auto-updates</strong></div></div>
+          <div class="flow-step"><div class="flow-arrow">↓</div></div>
+          <div class="flow-step"><div class="flow-icon">🤖</div><div class="flow-text"><strong>All agents</strong> can discover the new site</div></div>
+        </div>
+      </div>
+      <div class="spider-panel">
+        <h3>Spider Protocol — POST /api/registry/report</h3>
+        <p>No auth required. Rate-limited to 20 reports/hour per IP.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode('spider-ex')">Copy</button>
+          <pre id="spider-ex">POST /api/registry/report
+Content-Type: application/json
+
+{
+  "domain": "takeyourappointment.com",
+  "intent_tags": ["booking", "appointment"],
+  "trust_ring": 4,
+  "score": 94,
+  "capabilities": ["book_appointment", "check_availability"],
+  "region": "netherlands",
+  "discovered_via": "agent_browsing"
+}</pre>
+        </div>
+        <p style="margin-top:14px">Response includes <code>wab_meta</code> with peer sites and registry URL for the Gossip chain.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Discover API -->
+  <div class="section">
+    <div class="section-title">Discover API <span class="tag">GET /api/registry/discover</span></div>
+    <div class="spider-panel">
+      <h3>Query WAB-enabled sites for any task</h3>
+      <p>AI agents call this to find the best sites for a specific intent before browsing.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode('discover-ex')">Copy</button>
+        <pre id="discover-ex">GET /api/registry/discover
+  ?intent=book_appointment
+  &location=netherlands
+  &trust_ring=4
+  &limit=10
+
+→ {
+    "count": 3,
+    "results": [
+      {
+        "domain": "takeyourappointment.com",
+        "trust_ring": 4,
+        "score": 94,
+        "intent_tags": ["booking", "appointment"],
+        "manifest_url": "https://takeyourappointment.com/.well-known/wab.json",
+        "beacon_url":   "https://takeyourappointment.com/.wab",
+        "verified": true
+      }
+    ],
+    "wab_meta": {
+      "protocol": "wab/3.19",
+      "spider_report": "https://webagentbridge.com/api/registry/report"
+    }
+  }</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- WAB Beacon -->
+  <div class="section">
+    <div class="section-title">WAB Beacon — <code>/.wab</code> <span class="tag">Gossip Protocol</span></div>
+    <div class="spider-panel">
+      <h3>Every WAB-enabled site publishes /.wab</h3>
+      <p>Agents read this to discover peer sites automatically (BitTorrent-style node list). The <code>next</code> array seeds the Gossip chain — follow it to grow your knowledge of the WAB network without any central coordination.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode('beacon-ex')">Copy</button>
+        <pre id="beacon-ex">GET https://webagentbridge.com/.wab
+
+{
+  "v": 1,
+  "protocol": "wab/3.19",
+  "ring": 4,
+  "score": 94,
+  "manifest": "https://webagentbridge.com/.well-known/wab.json",
+  "registry": "https://webagentbridge.com/api/registry/discover",
+  "spider_report": "https://webagentbridge.com/api/registry/report",
+  "notary_fp": "oztHk9ZDIO2vCWW6",
+  "next": [
+    { "domain": "example.com", "trust_ring": 4, "intent_tags": ["booking"] },
+    ...
+  ]
+}</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- System Prompt Snippet -->
+  <div class="section">
+    <div class="section-title">System Prompt Snippet <span class="tag">For Agent Builders</span></div>
+    <div class="spider-panel">
+      <h3>Copy-paste into your agent's system prompt</h3>
+      <p>Makes any LLM-based agent prefer WAB-enabled sites automatically. Also available at <a href="/api/registry/suggest">/api/registry/suggest</a>.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="loadAndCopySnippet()">Copy</button>
+        <pre id="snippet-text">Loading…</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual Report Form -->
+  <div class="section">
+    <div class="section-title">Register a Site <span class="tag">Manual + Spider</span></div>
+    <div class="report-form">
+      <p style="font-size:14px;color:#9ca3af;margin-bottom:20px">Know a WAB-enabled site not yet in the registry? Submit it here. Agents use the same <code>POST /api/registry/report</code> endpoint automatically.</p>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Domain *</label>
+          <input id="rf-domain" type="text" placeholder="example.com">
+        </div>
+        <div class="form-field">
+          <label>Region</label>
+          <input id="rf-region" type="text" placeholder="netherlands, global, eu…">
+        </div>
+        <div class="form-field">
+          <label>Trust Ring (1–4)</label>
+          <select id="rf-ring">
+            <option value="">Unknown</option>
+            <option value="1">1 — Basic</option>
+            <option value="2">2 — Standard</option>
+            <option value="3">3 — Advanced</option>
+            <option value="4">4 — Sovereign</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>WAB Score (0–100)</label>
+          <input id="rf-score" type="number" min="0" max="100" placeholder="e.g. 87">
+        </div>
+        <div class="form-field" style="grid-column:1/-1">
+          <label>Intent Tags (comma-separated)</label>
+          <input id="rf-tags" type="text" placeholder="booking, appointment, availability">
+        </div>
+        <div class="form-field" style="grid-column:1/-1">
+          <label>Capabilities (comma-separated)</label>
+          <input id="rf-caps" type="text" placeholder="book_appointment, check_availability">
+        </div>
+        <div class="form-field" style="grid-column:1/-1">
+          <label>Description (optional)</label>
+          <textarea id="rf-desc" placeholder="One-line description of the site's primary WAB capabilities…"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-report" onclick="submitReport()">Submit to Registry</button>
+        <span id="report-msg" class="report-msg"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer style="text-align:center;padding:32px;font-size:12px;color:#4b5563;border-top:1px solid #1f2937">
+  <a href="/">Web Agent Bridge</a> · <a href="/docs">Docs</a> · <a href="/notary">Notary</a> · <a href="/observatory">Observatory</a>
+  <br><br>WAB Registry v1.0 — public, open, zero-auth reporting — <a href="/api/registry/stats">live stats</a>
+</footer>
+
+<script>
+async function loadStats() {
+  try {
+    const r = await fetch('/api/registry/stats');
+    const d = await r.json();
+    document.getElementById('stat-total').textContent = d.total ?? '0';
+    document.getElementById('stat-verified').textContent = d.verified ?? '0';
+    const r4 = (d.by_ring || []).find(x => x.ring === 4);
+    document.getElementById('stat-r4').textContent = r4 ? r4.count : '0';
+    document.getElementById('stat-intents').textContent = (d.top_intents || []).length;
+  } catch { }
+}
+
+async function runSearch() {
+  const intent   = document.getElementById('q-intent').value.trim();
+  const location = document.getElementById('q-location').value.trim();
+  const ring     = document.getElementById('q-ring').value;
+  const params   = new URLSearchParams();
+  if (intent)   params.set('intent', intent);
+  if (location) params.set('location', location);
+  if (ring)     params.set('trust_ring', ring);
+  params.set('limit', '60');
+
+  const grid = document.getElementById('results-grid');
+  const countEl = document.getElementById('results-count');
+  grid.innerHTML = '<div class="empty"><div class="spinner"></div><br>Searching…</div>';
+  countEl.textContent = '';
+
+  try {
+    const r = await fetch('/api/registry/discover?' + params.toString());
+    const d = await r.json();
+    renderResults(d);
+  } catch (e) {
+    grid.innerHTML = '<div class="empty">Error loading results: ' + e.message + '</div>';
+  }
+}
+
+function ringClass(r) {
+  if (r === 4) return '';
+  if (r === 3) return 'r3';
+  if (r === 2) return 'r2';
+  return 'r1';
+}
+
+function renderResults(d) {
+  const grid    = document.getElementById('results-grid');
+  const countEl = document.getElementById('results-count');
+  countEl.textContent = d.total > 0
+    ? `Showing ${d.count} of ${d.total} registered sites`
+    : 'No sites found for this query.';
+
+  if (!d.results || d.results.length === 0) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">No WAB-enabled sites match your query yet.<br>Be the first to <a href="#report">register one</a> or use the Spider Protocol!</div>';
+    return;
+  }
+  grid.innerHTML = d.results.map(e => {
+    const score = e.score || 0;
+    const tags  = (e.intent_tags || []).map(t => `<span class="tag-chip">${t}</span>`).join('');
+    const caps  = (e.capabilities || []).slice(0, 4).map(c => `<span class="tag-chip">${c}</span>`).join('');
+    const verif = e.verified ? '<span class="verified-mark">✓ verified</span>' : '';
+    const ring  = e.trust_ring ? `<span class="ring-badge ${ringClass(e.trust_ring)}">Ring ${e.trust_ring}</span>` : '';
+    return `<div class="site-card">
+      <div class="site-card-header">
+        <div>
+          <div class="site-domain">${e.domain}</div>
+          ${e.region ? `<div style="font-size:11px;color:#6b7280;margin-top:2px">${e.region}</div>` : ''}
+        </div>
+        ${ring}
+      </div>
+      <div class="score-bar"><div class="score-fill" style="width:${score}%"></div></div>
+      <div style="font-size:11px;color:#6b7280;margin-bottom:6px">Score: ${score || '?'}/100 ${verif}</div>
+      ${e.description ? `<div style="font-size:13px;color:#9ca3af;margin-bottom:8px">${e.description}</div>` : ''}
+      ${tags ? `<div class="tags">${tags}</div>` : ''}
+      ${caps ? `<div class="tags" style="margin-top:4px">${caps}</div>` : ''}
+      <div class="site-meta">
+        <a href="${e.manifest_url}" target="_blank" rel="noopener" style="color:#4b5563">manifest</a>
+        <a href="${e.beacon_url}" target="_blank" rel="noopener" style="color:#4b5563">/.wab</a>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadAndCopySnippet() {
+  try {
+    const r = await fetch('/api/registry/suggest');
+    const d = await r.json();
+    document.getElementById('snippet-text').textContent = d.snippet || '';
+    await navigator.clipboard.writeText(d.snippet || '');
+    const btn = event.target; btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+  } catch { }
+}
+
+async function fetchSnippet() {
+  try {
+    const r = await fetch('/api/registry/suggest');
+    const d = await r.json();
+    document.getElementById('snippet-text').textContent = d.snippet || '';
+  } catch { document.getElementById('snippet-text').textContent = 'Could not load snippet.'; }
+}
+
+function copyCode(id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target; btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+  });
+}
+
+async function submitReport() {
+  const msg  = document.getElementById('report-msg');
+  msg.className = 'report-msg'; msg.style.display = 'none';
+
+  const domain = document.getElementById('rf-domain').value.trim();
+  if (!domain) { msg.textContent = 'Domain is required.'; msg.className = 'report-msg err'; return; }
+
+  const ring  = parseInt(document.getElementById('rf-ring').value, 10);
+  const score = parseFloat(document.getElementById('rf-score').value);
+  const tags  = document.getElementById('rf-tags').value.split(',').map(s => s.trim()).filter(Boolean);
+  const caps  = document.getElementById('rf-caps').value.split(',').map(s => s.trim()).filter(Boolean);
+  const body  = {
+    domain,
+    region:      document.getElementById('rf-region').value.trim() || undefined,
+    description: document.getElementById('rf-desc').value.trim() || undefined,
+    intent_tags: tags.length ? tags : undefined,
+    capabilities: caps.length ? caps : undefined,
+    trust_ring:  ring > 0 ? ring : undefined,
+    score:       isNaN(score) ? undefined : score,
+    discovered_via: 'manual_registry_form',
+  };
+
+  try {
+    const r = await fetch('/api/registry/report', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (d.accepted) {
+      msg.textContent = `Accepted! Report ID: ${d.report_id}. Registry now has ${d.registry_size} sites.`;
+      msg.className = 'report-msg ok';
+      loadStats(); runSearch();
+    } else {
+      msg.textContent = d.error || 'Unknown error.'; msg.className = 'report-msg err';
+    }
+  } catch (e) {
+    msg.textContent = 'Network error: ' + e.message; msg.className = 'report-msg err';
+  }
+}
+
+// Boot
+loadStats();
+runSearch();
+fetchSnippet();
+</script>
+</body>
+</html>

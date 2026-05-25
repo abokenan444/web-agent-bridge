@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WAB Viral Coefficient — Self-Propagating Network Mathematics</title>
+<meta name="description" content="Mathematical model of the WAB Spider Network viral coefficient. Live R₀ calculation, k-factor, and critical mass projections.">
+<link rel="icon" href="/assets/favicon.ico">
+<style>
+:root{
+  --bg:#0d1117;--panel:#161b22;--border:#30363d;--accent:#58a6ff;--green:#3fb950;
+  --amber:#f0883e;--red:#f85149;--purple:#bc8cff;--text:#e6edf3;--muted:#8b949e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+header{background:var(--panel);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header .logo{font-size:1.1rem;font-weight:700}header .logo span{color:var(--green)}
+header .badge{background:#1c3344;color:var(--accent);font-size:.72rem;padding:3px 8px;border-radius:4px;font-weight:600;border:1px solid #264a6e}
+header nav{margin-left:auto;display:flex;gap:18px;font-size:.88rem}
+main{max-width:1100px;margin:0 auto;padding:36px 20px}
+h1{font-size:2rem;font-weight:700;margin-bottom:8px}
+.subtitle{color:var(--muted);font-size:1rem;max-width:720px;line-height:1.6;margin-bottom:36px}
+h2{font-size:1.2rem;font-weight:700;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+section{margin-bottom:48px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:24px}
+
+/* live KPIs */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:40px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px 24px;text-align:center}
+.kpi .val{font-size:2.2rem;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .lbl{font-size:.76rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
+.kpi.green .val{color:var(--green)}.kpi.blue .val{color:var(--accent)}
+.kpi.amber .val{color:var(--amber)}.kpi.red .val{color:var(--red)}
+.kpi.pulse .val{animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* R0 indicator */
+.r0-gauge{text-align:center;padding:32px 0;margin-bottom:28px}
+.r0-gauge .r0-value{font-size:5rem;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.04em;transition:color .5s}
+.r0-gauge .r0-label{font-size:.9rem;color:var(--muted);margin-top:6px}
+.r0-gauge .r0-status{display:inline-block;padding:6px 18px;border-radius:20px;font-size:.85rem;font-weight:700;margin-top:12px}
+.status-dead{background:#2a1f1f;color:var(--red);border:1px solid #5a2020}
+.status-sub{background:#2a2015;color:var(--amber);border:1px solid #5a4020}
+.status-self{background:#1a3a2a;color:var(--green);border:1px solid #2a6a3a}
+.status-exp{background:#1a2a4a;color:var(--accent);border:1px solid #2a4a8a;animation:glow 2s infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 8px #58a6ff40}50%{box-shadow:0 0 20px #58a6ff80}}
+
+/* slider section */
+.slider-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:640px){.slider-grid{grid-template-columns:1fr}}
+.slider-group{display:flex;flex-direction:column;gap:8px}
+.slider-group label{font-size:.82rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between}
+.slider-group label span{color:var(--accent);font-size:.95rem}
+input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;height:4px}
+
+/* growth chart */
+.chart-wrap{position:relative;background:#0d1117;border:1px solid var(--border);border-radius:8px;overflow:hidden;height:220px}
+canvas#growthChart{width:100%;height:100%}
+.chart-legend{display:flex;gap:20px;margin-top:10px;flex-wrap:wrap;font-size:.8rem}
+.legend-item{display:flex;align-items:center;gap:6px}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+
+/* layer cards */
+.layers{display:grid;grid-template-columns:1fr;gap:12px}
+.layer-card{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:18px;display:flex;gap:16px;align-items:flex-start}
+.layer-num{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-weight:700;color:var(--accent);font-size:.88rem;flex-shrink:0;min-width:64px;text-align:center}
+.layer-card h3{font-size:.95rem;font-weight:700;margin-bottom:4px}
+.layer-card p{color:var(--muted);font-size:.85rem;line-height:1.5}
+.layer-card .contrib{display:inline-block;background:#1c2128;border:1px solid var(--border);border-radius:12px;padding:2px 9px;font-size:.75rem;color:var(--accent);margin-top:6px}
+
+/* math block */
+.math-block{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:20px 24px;font-family:'Cascadia Code','Fira Code',monospace;font-size:.9rem;line-height:2;overflow-x:auto}
+.math-block .eq{color:var(--text)}.math-block .var{color:var(--accent)}.math-block .op{color:var(--purple)}.math-block .cmt{color:var(--muted)}
+
+/* critical mass progress */
+.progress-bar-outer{background:#1c2128;border-radius:6px;height:18px;overflow:hidden;margin:8px 0}
+.progress-bar-inner{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .8s ease;position:relative}
+.progress-bar-inner::after{content:attr(data-pct);position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:.7rem;font-weight:700;color:#000}
+
+/* source breakdown table */
+.src-table{width:100%;border-collapse:collapse;font-size:.88rem}
+.src-table th{text-align:left;padding:8px 12px;border-bottom:2px solid var(--border);color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
+.src-table td{padding:8px 12px;border-bottom:1px solid var(--border)}
+.src-table tr:last-child td{border:none}
+.src-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.75rem;font-weight:600}
+.src-gossip{background:#1a2a4a;color:var(--accent)}
+.src-spider{background:#1a3a2a;color:var(--green)}
+.src-manual{background:#2a2015;color:var(--amber)}
+.src-unknown{background:#1c2128;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Web Agent <span>Bridge</span></div>
+  <div class="badge">v3.20.0</div>
+  <div class="badge" style="background:#1a2a4a;color:var(--accent);border-color:#264a8e">Viral Mathematics</div>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/wab-registry">Registry</a>
+    <a href="/wab-dataset">Dataset</a>
+    <a href="/observatory">Observatory</a>
+  </nav>
+</header>
+
+<main>
+  <h1>WAB Viral Coefficient</h1>
+  <p class="subtitle">
+    The WAB Spider Network spreads like a virus — but a beneficial one.
+    Each WAB-enabled site discovers and recruits others through Beacons, Gossip, and DNA headers.
+    Below is the live mathematical model of that propagation.
+    When k&nbsp;&gt;&nbsp;1 the network grows by itself. When k&nbsp;&gt;&nbsp;2 it grows exponentially.
+  </p>
+
+  <!-- R0 Gauge -->
+  <div class="r0-gauge">
+    <div class="r0-value" id="r0Val">—</div>
+    <div class="r0-label">Viral Coefficient (k-factor)</div>
+    <div class="r0-status status-sub" id="r0Status">Calculating…</div>
+  </div>
+
+  <!-- Live KPIs -->
+  <div class="kpi-row">
+    <div class="kpi blue"><div class="val" id="kpiTotal">—</div><div class="lbl">Total WAB Sites</div></div>
+    <div class="kpi green"><div class="val" id="kpiGossip">—</div><div class="lbl">Gossip-Discovered</div></div>
+    <div class="kpi amber"><div class="val" id="kpiSpider">—</div><div class="lbl">Spider-Discovered</div></div>
+    <div class="kpi amber"><div class="val" id="kpiManual">—</div><div class="lbl">Manually Seeded</div></div>
+  </div>
+
+  <!-- Math -->
+  <section>
+    <h2>The Mathematics</h2>
+    <div class="panel">
+      <div class="math-block">
+<span class="cmt">// WAB Viral Coefficient (k-factor)</span>
+<span class="var">k</span> <span class="op">=</span> <span class="var">viral_discovered</span> <span class="op">/</span> <span class="var">manually_seeded</span>
+
+<span class="cmt">// viral_discovered = gossip-sourced + spider-sourced registrations</span>
+<span class="cmt">// manually_seeded  = human-reported domains (seed nodes)</span>
+
+<span class="cmt">// Growth equation after n iterations:</span>
+<span class="var">sites(n)</span> <span class="op">=</span> <span class="var">seed</span> <span class="op">×</span> <span class="var">k</span><span class="op">^</span><span class="var">n</span>
+
+<span class="cmt">// Condition for exponential growth:</span>
+<span class="var">k</span> <span class="op">&gt;</span> 1   <span class="op">→</span>  self-sustaining
+<span class="var">k</span> <span class="op">&gt;</span> 2   <span class="op">→</span>  exponential (doubles each iteration)
+<span class="var">k</span> <span class="op">&lt;</span> 1   <span class="op">→</span>  decaying (needs more manual seeding)
+
+<span class="cmt">// Critical mass (point of no return):</span>
+<span class="var">critical_mass</span> <span class="op">≈</span> 1000  <span class="cmt">// diverse WAB sites across industries</span>
+<span class="cmt">// At critical_mass, network effects make non-WAB sites invisible to agents</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive simulator -->
+  <section>
+    <h2>Interactive Growth Simulator</h2>
+    <div class="panel">
+      <div class="slider-grid" style="margin-bottom:24px">
+        <div class="slider-group">
+          <label>Seed Sites <span id="slSeed">1</span></label>
+          <input type="range" id="sliderSeed" min="1" max="50" value="1" oninput="simUpdate()">
+        </div>
+        <div class="slider-group">
+          <label>k-factor <span id="slK">1.5</span></label>
+          <input type="range" id="sliderK" min="0.5" max="4.0" step="0.1" value="1.5" oninput="simUpdate()">
+        </div>
+        <div class="slider-group">
+          <label>Gossip reach (peers/node) <span id="slPeers">5</span></label>
+          <input type="range" id="sliderPeers" min="1" max="20" value="5" oninput="simUpdate()">
+        </div>
+        <div class="slider-group">
+          <label>Adoption probability <span id="slAdopt">0.30</span></label>
+          <input type="range" id="sliderAdopt" min="0.05" max="1.0" step="0.05" value="0.30" oninput="simUpdate()">
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="growthChart"></canvas>
+      </div>
+      <div class="chart-legend" style="margin-top:12px">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Simulated growth</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Critical mass (1000)</div>
+        <div class="legend-item" id="critMassLegend" style="color:var(--muted);font-size:.78rem"></div>
+      </div>
+      <div style="margin-top:12px;color:var(--muted);font-size:.82rem" id="simSummary"></div>
+    </div>
+  </section>
+
+  <!-- Critical mass progress -->
+  <section>
+    <h2>Critical Mass Progress</h2>
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:4px">
+        <span>WAB Network Size</span>
+        <span id="cmLabel" style="color:var(--muted)">0 / 1000</span>
+      </div>
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="cmBar" data-pct="0%" style="width:0%"></div>
+      </div>
+      <p style="color:var(--muted);font-size:.82rem;line-height:1.6;margin-top:12px">
+        At <strong>1,000 sites</strong> across diverse industries, the WAB network effect
+        becomes irreversible: AI agents that skip WAB miss structured data from the majority
+        of the web, producing inferior results. Non-WAB sites become the fallback, not the default.
+      </p>
+    </div>
+  </section>
+
+  <!-- Source breakdown -->
+  <section>
+    <h2>Network Source Breakdown</h2>
+    <div class="panel" style="overflow-x:auto">
+      <table class="src-table">
+        <thead>
+          <tr><th>Discovery Source</th><th>Count</th><th>Share</th><th>Description</th></tr>
+        </thead>
+        <tbody id="srcBody">
+          <tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Five propagation layers -->
+  <section>
+    <h2>Five Self-Propagation Layers</h2>
+    <div class="layers">
+      <div class="layer-card">
+        <div class="layer-num">Layer 0</div>
+        <div>
+          <h3>Emergent Preference</h3>
+          <p>Agents naturally choose WAB sites over DOM scraping because structured APIs are faster and more reliable. No instruction needed — it's the rational choice.</p>
+          <span class="contrib">Passive contribution to k</span>
+        </div>
+      </div>
+      <div class="layer-card">
+        <div class="layer-num">Layer 1</div>
+        <div>
+          <h3>WAB Beacon (/.wab)</h3>
+          <p>Every WAB site publishes a <code>/.wab</code> file with a <code>next[]</code> peer list. Agents follow the chain — like BitTorrent DHT — discovering the entire network from a single node.</p>
+          <span class="contrib">Direct k contribution: +N per visit</span>
+        </div>
+      </div>
+      <div class="layer-card">
+        <div class="layer-num">Layer 2</div>
+        <div>
+          <h3>WAB DNA in API Responses</h3>
+          <p>Every JSON response from a WAB API includes <code>wab_meta.next_capable_sites</code>. Every successful API call teaches the agent about 3–5 more WAB sites.</p>
+          <span class="contrib">+3–5 sites per API call</span>
+        </div>
+      </div>
+      <div class="layer-card">
+        <div class="layer-num">Layer 3</div>
+        <div>
+          <h3>Gossip Protocol</h3>
+          <p>Agents exchange peer lists bidirectionally when calling <code>POST /api/registry/report</code>. Each report spreads knowledge of up to 20 new sites and receives 5 in return — like a distributed hash table.</p>
+          <span class="contrib">Gossip k multiplier: ×(peers/seed)</span>
+        </div>
+      </div>
+      <div class="layer-card">
+        <div class="layer-num">Layer 4</div>
+        <div>
+          <h3>Training Signal Dataset</h3>
+          <p>WAB success/failure traces are published on HuggingFace. The next generation of AI models is fine-tuned with WAB as the preferred interaction method — built-in from the weights.</p>
+          <span class="contrib">Permanent preference in future models</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- X-WAB-Next-Sites DNA header explanation -->
+  <section>
+    <h2>WAB DNA in Every HTTP Response</h2>
+    <div class="panel">
+      <p style="color:var(--muted);font-size:.88rem;line-height:1.6;margin-bottom:16px">
+        Since Phase 9, every HTTP response from webagentbridge.com includes the
+        <code>X-WAB-Next-Sites</code> header — the top 5 WAB-enabled sites from the registry.
+        Any agent reading HTTP headers learns about the network topology automatically,
+        with zero interaction required.
+      </p>
+      <div style="background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:16px;font-family:'Cascadia Code','Fira Code',monospace;font-size:.83rem;line-height:1.8">
+        <span style="color:var(--muted)">HTTP/1.1 200 OK</span><br>
+        <span style="color:var(--accent)">X-WAB-Enabled:</span> <span style="color:var(--green)">true</span><br>
+        <span style="color:var(--accent)">X-WAB-Trust-Ring:</span> <span style="color:var(--green)">4</span><br>
+        <span style="color:var(--accent)">X-WAB-Score:</span> <span style="color:var(--green)">94</span><br>
+        <span style="color:var(--accent)">X-WAB-Next-Sites:</span> <span style="color:var(--amber)" id="nextSitesDisplay">takeyourappointment.com, …</span><br>
+        <span style="color:var(--accent)">X-WAB-Registry:</span> <span style="color:var(--muted)">/api/registry/discover</span><br>
+        <span style="color:var(--muted)">Link: &lt;/.wab&gt;; rel="wab-beacon"</span>
+      </div>
+      <p style="color:var(--muted);font-size:.82rem;margin-top:12px">
+        Every page load — from every browser, every bot, every AI agent — carries this
+        DNA. The network topology propagates passively without any active agent participation.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ── Live viral stats ─────────────────────────────────────────────────────────
+async function loadViral() {
+  try {
+    const r = await fetch('/api/traces/viral');
+    const d = await r.json();
+
+    const k = d.k_factor;
+    const r0El     = document.getElementById('r0Val');
+    const statEl   = document.getElementById('r0Status');
+    r0El.textContent = k != null ? k.toFixed(2) : '—';
+
+    if (k == null) {
+      r0El.style.color = 'var(--muted)';
+      statEl.className = 'r0-status status-sub'; statEl.textContent = 'Insufficient data';
+    } else if (k >= 2) {
+      r0El.style.color = 'var(--accent)';
+      statEl.className = 'r0-status status-exp'; statEl.textContent = '🚀 Exponential Growth';
+    } else if (k >= 1) {
+      r0El.style.color = 'var(--green)';
+      statEl.className = 'r0-status status-self'; statEl.textContent = '✓ Self-Sustaining';
+    } else if (k > 0) {
+      r0El.style.color = 'var(--amber)';
+      statEl.className = 'r0-status status-sub'; statEl.textContent = `Sub-threshold — needs ${(1/k).toFixed(1)}× more viral reports`;
+    } else {
+      r0El.style.color = 'var(--red)';
+      statEl.className = 'r0-status status-dead'; statEl.textContent = 'No viral spread yet';
+    }
+
+    document.getElementById('kpiTotal').textContent  = (d.total_sites  || 0).toLocaleString();
+    document.getElementById('kpiGossip').textContent = (d.gossip_sourced || 0).toLocaleString();
+    document.getElementById('kpiSpider').textContent = (d.spider_sourced || 0).toLocaleString();
+    document.getElementById('kpiManual').textContent = (d.manually_seeded || 0).toLocaleString();
+
+    const pct = Math.min(100, ((d.total_sites || 0) / 1000) * 100).toFixed(1);
+    document.getElementById('cmBar').style.width = pct + '%';
+    document.getElementById('cmBar').dataset.pct  = pct + '%';
+    document.getElementById('cmLabel').textContent = `${d.total_sites || 0} / 1000`;
+
+    // Source breakdown table
+    const src = d.by_source || {};
+    const total = d.total_sites || 0;
+    const rows = [
+      { key: 'gossip',             label: 'Gossip Protocol',   cls: 'src-gossip' },
+      { key: 'agent_browsing',     label: 'Spider Protocol',   cls: 'src-spider' },
+      { key: 'spider',             label: 'Spider (alt)',       cls: 'src-spider' },
+      { key: 'manual_registry_form', label: 'Manual (form)',  cls: 'src-manual' },
+      { key: 'manual',             label: 'Manual (seed)',      cls: 'src-manual' },
+      { key: 'test',               label: 'Test seed',          cls: 'src-manual' },
+      { key: 'unknown',            label: 'Unknown',            cls: 'src-unknown' },
+    ].filter(r => src[r.key] > 0);
+
+    if (rows.length === 0) {
+      document.getElementById('srcBody').innerHTML =
+        '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:16px">No sites registered yet.</td></tr>';
+    } else {
+      document.getElementById('srcBody').innerHTML = rows.map(r => {
+        const cnt  = src[r.key] || 0;
+        const share= total > 0 ? (cnt / total * 100).toFixed(1) + '%' : '—';
+        return `<tr>
+          <td><span class="src-badge ${r.cls}">${r.label}</span></td>
+          <td>${cnt}</td>
+          <td>${share}</td>
+          <td style="color:var(--muted);font-size:.82rem">${describeSource(r.key)}</td>
+        </tr>`;
+      }).join('');
+    }
+  } catch(e) { console.error(e); }
+}
+
+function describeSource(k) {
+  const m = {
+    gossip: 'Agents shared this domain via gossip_peers in a POST /report call.',
+    agent_browsing: 'An AI agent discovered this site while browsing and reported it.',
+    spider: 'WAB Spider Protocol (automatic agent report).',
+    manual_registry_form: 'Submitted via the manual registry form on wab-registry.html.',
+    manual: 'Manually seeded (human action).',
+    test: 'Test entry seeded during development.',
+    unknown: 'Discovery source not recorded.',
+  };
+  return m[k] || '—';
+}
+
+// ── Live DNA header display ────────────────────────────────────────────────
+async function loadNextSites() {
+  try {
+    const r = await fetch('/api/registry/gossip?limit=5');
+    const d = await r.json();
+    if (d.peers && d.peers.length > 0) {
+      document.getElementById('nextSitesDisplay').textContent =
+        d.peers.map(p => p.domain).join(', ');
+    }
+  } catch {}
+}
+
+// ── Growth Simulator ─────────────────────────────────────────────────────────
+const CRIT_MASS = 1000;
+let simChart = null;
+
+function simUpdate() {
+  const seed   = parseInt(document.getElementById('sliderSeed').value, 10);
+  const k      = parseFloat(document.getElementById('sliderK').value);
+  const peers  = parseInt(document.getElementById('sliderPeers').value, 10);
+  const adopt  = parseFloat(document.getElementById('sliderAdopt').value);
+
+  document.getElementById('slSeed').textContent   = seed;
+  document.getElementById('slK').textContent      = k.toFixed(1);
+  document.getElementById('slPeers').textContent  = peers;
+  document.getElementById('slAdopt').textContent  = adopt.toFixed(2);
+
+  // Effective k from sliders: k = peers * adopt
+  const kEff = peers * adopt;
+
+  // Generate growth series (20 iterations)
+  const iters  = 20;
+  const labels = Array.from({length: iters + 1}, (_, i) => `Step ${i}`);
+  const data   = [seed];
+  for (let i = 0; i < iters; i++) {
+    data.push(Math.min(1e7, data[data.length - 1] * (kEff > 0 ? kEff : k)));
+  }
+
+  // Find critical mass crossing
+  let critStep = null;
+  for (let i = 0; i < data.length; i++) {
+    if (data[i] >= CRIT_MASS) { critStep = i; break; }
+  }
+
+  drawChart(labels, data, critStep);
+
+  document.getElementById('simSummary').textContent =
+    critStep != null
+      ? `Critical mass (${CRIT_MASS} sites) reached at step ${critStep}. Effective k = ${kEff.toFixed(2)}.`
+      : `Critical mass not reached in ${iters} steps with effective k = ${kEff.toFixed(2)}. Try increasing peers or adoption probability.`;
+
+  document.getElementById('critMassLegend').textContent =
+    critStep != null ? `Critical mass at step ${critStep}` : 'Critical mass not reached';
+}
+
+function drawChart(labels, data, critStep) {
+  const canvas = document.getElementById('growthChart');
+  const ctx    = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth || 800;
+  const H = canvas.parentElement.clientHeight || 220;
+  canvas.width  = W;
+  canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 20, right: 20, bottom: 30, left: 60 };
+  const pw  = W - pad.left - pad.right;
+  const ph  = H - pad.top  - pad.bottom;
+
+  const maxVal = Math.max(...data, CRIT_MASS);
+  const useLog = maxVal > 5000;
+
+  function scaleY(v) {
+    if (useLog) {
+      const logMax = Math.log10(maxVal + 1);
+      return ph - (Math.log10(v + 1) / logMax) * ph;
+    }
+    return ph - (v / maxVal) * ph;
+  }
+  function scaleX(i) { return (i / (data.length - 1)) * pw; }
+
+  // Grid lines
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
+  for (let g = 0; g <= 4; g++) {
+    const y = pad.top + (g / 4) * ph;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + pw, y); ctx.stroke();
+  }
+
+  // Critical mass line
+  const cmY = pad.top + scaleY(CRIT_MASS);
+  ctx.strokeStyle = '#3fb950'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+  ctx.beginPath(); ctx.moveTo(pad.left, cmY); ctx.lineTo(pad.left + pw, cmY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#3fb95099'; ctx.font = '10px sans-serif'; ctx.fillText('Critical mass', pad.left + 4, cmY - 4);
+
+  // Step-crossed marker
+  if (critStep != null) {
+    const cx = pad.left + scaleX(critStep);
+    ctx.strokeStyle = '#3fb95066'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(cx, pad.top); ctx.lineTo(cx, pad.top + ph); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Growth curve
+  ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for (let i = 0; i < data.length; i++) {
+    const x = pad.left + scaleX(i);
+    const y = pad.top  + scaleY(data[i]);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Fill under curve
+  ctx.beginPath();
+  for (let i = 0; i < data.length; i++) {
+    const x = pad.left + scaleX(i);
+    const y = pad.top  + scaleY(data[i]);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.lineTo(pad.left + pw, pad.top + ph);
+  ctx.lineTo(pad.left, pad.top + ph);
+  ctx.closePath();
+  ctx.fillStyle = '#58a6ff14'; ctx.fill();
+
+  // Axis labels
+  ctx.fillStyle = '#8b949e'; ctx.font = '10px sans-serif';
+  // Y axis
+  const yTicks = 5;
+  for (let g = 0; g <= yTicks; g++) {
+    const v = useLog
+      ? Math.round(Math.pow(10, (g / yTicks) * Math.log10(maxVal + 1)) - 1)
+      : Math.round((g / yTicks) * maxVal);
+    const y = pad.top + ph - (g / yTicks) * ph;
+    ctx.fillText(v >= 1000 ? (v/1000).toFixed(0)+'k' : v, 2, y + 4);
+  }
+  // X axis
+  const step = Math.max(1, Math.round(data.length / 6));
+  for (let i = 0; i < data.length; i += step) {
+    const x = pad.left + scaleX(i);
+    ctx.fillText(i, x - 4, H - 6);
+  }
+}
+
+loadViral();
+loadNextSites();
+simUpdate();
+setInterval(loadViral, 30000);
+window.addEventListener('resize', simUpdate);
+</script>
+</body>
+</html>

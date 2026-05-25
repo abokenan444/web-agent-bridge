@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WAB Observatory — public registry of agent-discoverable sites</title>
+<meta name="description" content="Live public registry of domains publishing /.well-known/wab.json. Track verification status, signed ratio, and ecosystem growth.">
+<link rel="icon" href="/assets/favicon.svg">
+<style>
+  :root { --bg:#0b0f17; --panel:#111827; --fg:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --ok:#10b981; --warn:#f59e0b; --err:#ef4444; --gray:#9ca3af; --accent:#60a5fa; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{padding:48px 24px 24px;text-align:center;border-bottom:1px solid var(--line)}
+  h1{margin:0 0 8px;font-size:28px}
+  header p{margin:0;color:var(--muted);max-width:680px;margin-inline:auto}
+  main{max-width:1100px;margin:0 auto;padding:24px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+  .stat .v{font-size:24px;font-weight:600}
+  .stat .l{color:var(--muted);font-size:12px;margin-top:4px}
+  .toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+  input{background:var(--panel);border:1px solid var(--line);color:var(--fg);padding:8px 10px;border-radius:6px;font:inherit;min-width:240px}
+  button{background:var(--accent);color:#0b0f17;border:0;padding:8px 14px;border-radius:6px;font-weight:600;cursor:pointer}
+  button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:13px}
+  th{background:#0d1320;color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  tr:last-child td{border-bottom:0}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+  .pill.verified{background:rgba(16,185,129,.15);color:var(--ok)}
+  .pill.enabled{background:rgba(245,158,11,.15);color:var(--warn)}
+  .pill.missing{background:rgba(239,68,68,.15);color:var(--err)}
+  .pill.invalid{background:rgba(156,163,175,.15);color:var(--gray)}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .muted{color:var(--muted);font-size:12px}
+  footer{padding:32px 24px;text-align:center;color:var(--muted);font-size:12px;border-top:1px solid var(--line);margin-top:48px}
+</style>
+</head>
+<body>
+<header>
+  <h1>WAB Observatory</h1>
+  <p>Live public registry of domains publishing <code>/.well-known/wab.json</code>. Anyone can submit a domain — verification is automatic.</p>
+</header>
+<main>
+  <div class="stats" id="stats"><div class="stat"><div class="v">…</div><div class="l">loading</div></div></div>
+
+  <div class="toolbar">
+    <input id="host" type="text" placeholder="example.com" autocomplete="off">
+    <button id="submit">Submit domain</button>
+    <button class="ghost" id="refresh">Refresh</button>
+    <span class="muted" id="msg"></span>
+  </div>
+
+  <table>
+    <thead><tr><th>Domain</th><th>Status</th><th>Signed</th><th>Badge</th><th>Manifest</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+  </table>
+
+  <p class="muted" style="margin-top:24px">
+    API: <a href="/api/observatory/domains">/api/observatory/domains</a> · <a href="/api/observatory/stats">/api/observatory/stats</a> · <a href="/api/research/stats">/api/research/stats</a>
+    · License: CC-BY-4.0
+  </p>
+</main>
+<footer>
+  Part of the <a href="/">Web Agent Bridge</a> open protocol. Source: <a href="/research">Research API</a> · <a href="/notary">Notary</a>.
+</footer>
+<script>
+async function load(){
+  const s = await fetch('/api/observatory/stats').then(r=>r.json());
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="v">${s.total}</div><div class="l">tracked domains</div></div>
+    <div class="stat"><div class="v">${s.by_status.verified||0}</div><div class="l">verified (signed)</div></div>
+    <div class="stat"><div class="v">${s.by_status.enabled||0}</div><div class="l">enabled (unsigned)</div></div>
+    <div class="stat"><div class="v">${s.by_status.missing||0}</div><div class="l">missing</div></div>
+  `;
+  const d = await fetch('/api/observatory/domains?limit=200').then(r=>r.json());
+  const rows = d.domains.map(r => `
+    <tr>
+      <td><a href="https://${r.host}" rel="noopener">${r.host}</a></td>
+      <td><span class="pill ${r.status}">${r.status}</span></td>
+      <td>${r.signed?'✓':'—'}</td>
+      <td><img src="/badge/${r.host}.svg" alt="" height="20"></td>
+      <td><a href="https://${r.host}/.well-known/wab.json" rel="noopener">view</a></td>
+    </tr>`).join('');
+  document.getElementById('rows').innerHTML = rows || '<tr><td colspan="5" class="muted">No domains yet — submit one!</td></tr>';
+}
+document.getElementById('submit').onclick = async () => {
+  const host = document.getElementById('host').value.trim().toLowerCase();
+  if (!host) return;
+  const msg = document.getElementById('msg');
+  msg.textContent = 'Submitting…';
+  const r = await fetch('/api/observatory/track', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({host}) });
+  const j = await r.json();
+  msg.textContent = j.tracked ? '✓ tracked. Refreshing…' : ('Error: '+(j.error||'unknown'));
+  document.getElementById('host').value = '';
+  if (j.tracked) setTimeout(load, 500);
+};
+document.getElementById('refresh').onclick = load;
+load();
+</script>
+</body>
+</html>

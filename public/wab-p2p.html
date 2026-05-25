@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WAB Local Cache Network — peer-assisted manifest distribution</title>
+<meta name="description" content="Optional peer-to-peer caching extension for /.well-known/wab.json — agents share signed manifests so verification keeps working when the origin is down.">
+<link rel="icon" href="/assets/favicon.svg">
+<style>
+  :root{--bg:#0b0f17;--panel:#111827;--fg:#e5e7eb;--muted:#9ca3af;--line:#1f2937;--accent:#60a5fa}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{padding:48px 24px 24px;text-align:center;border-bottom:1px solid var(--line)}
+  h1{margin:0 0 8px;font-size:28px}
+  main{max-width:840px;margin:0 auto;padding:24px}
+  h2{margin-top:32px;font-size:18px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  pre,code{background:#0d1320;border:1px solid var(--line);border-radius:6px}
+  pre{padding:12px;overflow-x:auto;font-size:12px}
+  code{padding:2px 6px;font-size:12.5px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  footer{padding:32px 24px;text-align:center;color:var(--muted);font-size:12px;border-top:1px solid var(--line);margin-top:48px}
+  .note{border-left:3px solid var(--accent);padding:8px 12px;background:rgba(96,165,250,.08);margin:12px 0;font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>WAB Local Cache Network</h1>
+  <p>An optional peer-to-peer extension that keeps WAB manifests verifiable even when the origin server is unreachable.</p>
+</header>
+<main>
+  <div class="note">Status: <strong>draft</strong>. Reference implementation lives in <code>sdk/agent-mesh.js</code>; production peers are not yet incentivised — this page describes the wire format only.</div>
+
+  <h2>Why</h2>
+  <ul>
+    <li>Manifests are signed (Ed25519) → integrity is verifiable without trusting the source.</li>
+    <li>Once signed, manifests are <strong>immutable until the next rotation</strong> → they cache perfectly.</li>
+    <li>P2P distribution removes a single point of failure (the origin) and reduces traffic on sites with bursty agent demand.</li>
+  </ul>
+
+  <h2>Wire format</h2>
+  <p>A peer announces what it has cached by publishing:</p>
+  <pre>{
+  "schema": "wab-cache/1",
+  "peer_id":    "&lt;libp2p-peer-id&gt;",
+  "manifests": [
+    {
+      "host": "example.com",
+      "sha256": "&lt;manifest-bytes-sha256&gt;",
+      "signed_at": "2026-05-20T00:00:00Z",
+      "expires_at": "2026-08-18T00:00:00Z",
+      "size": 1842
+    }
+  ]
+}</pre>
+
+  <p>Lookups happen over a Kademlia DHT keyed by <code>sha256(host || "/" || version)</code>. Any peer can serve a manifest; the requesting agent verifies the Ed25519 signature itself, so a malicious peer can corrupt nothing — it can only fail to serve.</p>
+
+  <h2>Manifest opt-in</h2>
+  <p>Sites that want their manifest aggressively cached add:</p>
+  <pre>{
+  "version": "1",
+  "host": "example.com",
+  "cache_peers": {
+    "policy": "public",          // public | private | none
+    "max_age": 86400,            // seconds
+    "discoverable_via": ["dht-kademlia", "libp2p-pubsub"]
+  }
+}</pre>
+
+  <h2>Threat model</h2>
+  <ul>
+    <li><strong>Tampering</strong> — defeated by Ed25519. Peers serve raw bytes; clients verify.</li>
+    <li><strong>Rollback</strong> — manifests carry <code>signed_at</code>; clients reject anything older than the freshest signature they have seen for that host.</li>
+    <li><strong>Sybil flooding</strong> — DHT queries fan out to ≥ 3 peers, and the agent picks the manifest whose <code>signed_at</code> is highest (with hash agreement).</li>
+    <li><strong>Privacy</strong> — manifests are public artifacts; no opaque side-channel.</li>
+  </ul>
+
+  <h2>Reference behaviour</h2>
+  <pre>// Pseudocode for agents
+async function resolveManifest(host) {
+  try {
+    return await fetchOrigin(host);          // happy path
+  } catch (originDown) {
+    const peers = await dht.findPeers(host); // P2P fallback
+    for (const peer of peers) {
+      const m = await peer.fetch(host);
+      if (verifyEd25519(m)) return m;        // signature wins
+    }
+    throw originDown;
+  }
+}</pre>
+</main>
+<footer>Part of the <a href="/">Web Agent Bridge</a> protocol. See also: <a href="/security">Security</a>, <a href="/threat-model">Threat model</a>.</footer>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WAB for Email — verifiable agent metadata in email headers</title>
+<meta name="description" content="X-WAB-Manifest and X-WAB-Receipt email headers let receiving agents verify that a transactional email originated from a WAB-enabled domain.">
+<link rel="icon" href="/assets/favicon.svg">
+<style>
+  :root{--bg:#0b0f17;--panel:#111827;--fg:#e5e7eb;--muted:#9ca3af;--line:#1f2937;--accent:#60a5fa}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{padding:48px 24px 24px;text-align:center;border-bottom:1px solid var(--line)}
+  h1{margin:0 0 8px;font-size:28px}
+  main{max-width:840px;margin:0 auto;padding:24px}
+  h2{margin-top:32px;font-size:18px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  pre,code{background:#0d1320;border:1px solid var(--line);border-radius:6px}
+  pre{padding:12px;overflow-x:auto;font-size:12px}
+  code{padding:2px 6px;font-size:12.5px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  footer{padding:32px 24px;text-align:center;color:var(--muted);font-size:12px;border-top:1px solid var(--line);margin-top:48px}
+</style>
+</head>
+<body>
+<header>
+  <h1>WAB for Email</h1>
+  <p>Three optional RFC 5322 headers that let AI agents and email clients verify that a transactional email originated from a domain with a published WAB manifest.</p>
+</header>
+<main>
+  <h2>Headers</h2>
+  <table>
+    <tr><th>Header</th><th>Required</th><th>Value</th></tr>
+    <tr><td><code>X-WAB-Manifest</code></td><td>required</td><td>Absolute URL to the sender's <code>/.well-known/wab.json</code></td></tr>
+    <tr><td><code>X-WAB-Action</code></td><td>optional</td><td>Action id from the manifest this email relates to (e.g. <code>order.confirmed</code>)</td></tr>
+    <tr><td><code>X-WAB-Receipt</code></td><td>optional</td><td>Signed ATP receipt (base64 JWS) for the action — see <a href="/atp-semantics">ATP semantics</a></td></tr>
+    <tr><td><code>X-WAB-Signature</code></td><td>optional</td><td><code>ed25519=&lt;base64&gt;</code> over <code>SHA256(Date + From + To + Subject + Message-ID)</code></td></tr>
+  </table>
+
+  <h2>Example email</h2>
+  <pre>From: orders@example-shop.com
+To: alice@example.com
+Subject: Order #1842 confirmed
+Date: Mon, 25 May 2026 17:20:00 +0000
+Message-ID: &lt;1842@example-shop.com&gt;
+X-WAB-Manifest: https://example-shop.com/.well-known/wab.json
+X-WAB-Action: order.confirmed
+X-WAB-Receipt: eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJob3N0…
+X-WAB-Signature: ed25519=Bx9k7q…
+Content-Type: text/html; charset=utf-8
+
+…</pre>
+
+  <h2>Verification flow (receiving agent)</h2>
+  <ol>
+    <li>Read <code>X-WAB-Manifest</code> and fetch the manifest URL (cache 5 min).</li>
+    <li>Confirm the <code>From</code> domain matches the manifest's <code>host</code> field.</li>
+    <li>Look up the manifest's signing key from DNS <code>_wab.&lt;host&gt;</code> TXT (<code>pk=ed25519:&lt;b64&gt;</code>).</li>
+    <li>Verify <code>X-WAB-Signature</code> over the canonical header digest using that key.</li>
+    <li>If <code>X-WAB-Receipt</code> is present, decode the JWS and confirm the action id matches <code>X-WAB-Action</code>.</li>
+  </ol>
+
+  <h2>Why not just DKIM/ARC?</h2>
+  <ul>
+    <li>DKIM proves the domain authorised the message; WAB headers prove <strong>what action the message represents</strong>.</li>
+    <li>An agent inbox can route, summarize, or auto-acknowledge based on the action id alone.</li>
+    <li>ATP receipts in email give end-users a verifiable record of every transaction without storing PII on the sender side.</li>
+  </ul>
+
+  <h2>Status</h2>
+  <p>Draft 0.2 — implemented by the reference server in <a href="https://github.com/wassimibsais/web-agent-bridge">web-agent-bridge</a> (<code>server/services/email.js</code>). Feedback welcome via <a href="/responsible-disclosure">responsible disclosure</a> or GitHub issues.</p>
+</main>
+<footer>Part of the <a href="/">Web Agent Bridge</a> protocol. See also: <a href="/atp-semantics">ATP receipts</a>, <a href="/security">Security</a>.</footer>
+</body>
+</html>

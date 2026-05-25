@@ -4,7 +4,47 @@
  */
 
 const nodemailer = require('nodemailer');
+const crypto     = require('crypto');
 const { getSmtpSettings, logNotification } = require('../models/db');
+
+// WAB email headers (RFC 5322 X-* extension headers) — let receiving agents
+// verify that a transactional email came from a WAB-enabled domain. Spec at
+// https://webagentbridge.com/wab-email. Signing is opt-in via env:
+//   WAB_EMAIL_HOST           — the domain that owns the wab.json manifest
+//   WAB_EMAIL_SIGNING_KEY    — base64 Ed25519 private key (32 bytes raw)
+const WAB_EMAIL_HOST = process.env.WAB_EMAIL_HOST || 'webagentbridge.com';
+const WAB_EMAIL_KEY  = process.env.WAB_EMAIL_SIGNING_KEY || '';
+let _wabSigningKey = null;
+function _getSigningKey() {
+  if (_wabSigningKey !== null) return _wabSigningKey;
+  if (!WAB_EMAIL_KEY) { _wabSigningKey = false; return false; }
+  try {
+    const raw = Buffer.from(WAB_EMAIL_KEY, 'base64');
+    if (raw.length !== 32) throw new Error('expected 32-byte ed25519 seed');
+    const der = Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), raw]);
+    _wabSigningKey = crypto.createPrivateKey({ key: der, format: 'der', type: 'pkcs8' });
+  } catch (e) {
+    console.warn('[wab-email] signing disabled:', e.message);
+    _wabSigningKey = false;
+  }
+  return _wabSigningKey;
+}
+function buildWabHeaders({ from, to, subject, template, messageId, receipt }) {
+  const headers = {
+    'X-WAB-Manifest': `https://${WAB_EMAIL_HOST}/.well-known/wab.json`,
+    'X-WAB-Action':   `email.${template || 'transactional'}`
+  };
+  if (receipt) headers['X-WAB-Receipt'] = receipt;
+  const key = _getSigningKey();
+  if (key) {
+    const digest = crypto.createHash('sha256')
+      .update(`${from}\n${to}\n${subject}\n${messageId}`)
+      .digest();
+    const sig = crypto.sign(null, digest, key).toString('base64');
+    headers['X-WAB-Signature'] = `ed25519=${sig}`;
+  }
+  return headers;
+}
 
 function escapeHtml(s) {
   if (s == null) return '';
@@ -269,11 +309,19 @@ async function sendEmail({ to, template, data, userId }) {
   const { subject, html } = tmpl(data);
 
   try {
+    const from = `"${settings.from_name}" <${settings.from_email}>`;
+    const messageId = `<${crypto.randomBytes(12).toString('hex')}@${WAB_EMAIL_HOST}>`;
+    const wabHeaders = buildWabHeaders({
+      from: settings.from_email, to, subject, template,
+      messageId, receipt: data && data.wab_receipt
+    });
     await transport.sendMail({
-      from: `"${settings.from_name}" <${settings.from_email}>`,
+      from,
       to,
       subject,
-      html
+      html,
+      messageId,
+      headers: wabHeaders
     });
     logNotification({ userId, emailTo: to, template, subject, status: 'sent' });
     return { success: true };

@@ -266,6 +266,142 @@ app.get('/.well-known/wab.json', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', '.well-known', 'wab.json'));
 });
 
+// WAB Beacon — /.wab — compact machine-readable trust signal for AI agents.
+// Agents following the Gossip / Spider Protocol read this to learn:
+//   ring, score, manifest, registry, and a list of peer WAB-enabled sites.
+app.get('/.wab', (req, res) => {
+  const { currentPublicKey, currentFingerprint } = require('./routes/notary');
+  const registry = require('./routes/registry');
+  // top 10 verified or highest-scored registry entries as peer hints
+  let peers = [];
+  try {
+    const regData = JSON.parse(
+      require('fs').readFileSync(
+        require('path').join(__dirname, '..', 'data', 'registry.json'), 'utf8')
+    );
+    if (Array.isArray(regData)) {
+      peers = regData
+        .filter(e => e.active !== false)
+        .sort((a, b) => (b.score || 0) - (a.score || 0) || (b.trust_ring || 0) - (a.trust_ring || 0))
+        .slice(0, 10)
+        .map(e => ({ domain: e.domain, trust_ring: e.trust_ring, intent_tags: (e.intent_tags || []).slice(0, 5) }));
+    }
+  } catch { /* registry may be empty */ }
+  res.set('Cache-Control', 'public, max-age=120');
+  res.set('Access-Control-Allow-Origin', '*');
+  res.json({
+    v:          1,
+    protocol:   'wab/3.19',
+    ring:       4,
+    score:      94,
+    manifest:   'https://webagentbridge.com/.well-known/wab.json',
+    registry:   'https://webagentbridge.com/api/registry/discover',
+    spider_report: 'https://webagentbridge.com/api/registry/report',
+    notary_fp:  typeof currentFingerprint === 'function' ? currentFingerprint() : null,
+    next:       peers,
+    generated_at: new Date().toISOString(),
+  });
+});
+
+// Discovery headers — advertised on every HTML/JSON response so AI agents,
+// crawlers and MCP-style clients can find the WAB manifest and llms.txt
+// without having to scrape. Mirrors the Mintlify X-Llms-Txt convention and
+// adds X-WAB-Discovery alongside RFC 8288 Link rels.
+// Phase 8: X-WAB-Enabled + X-WAB-Trust-Ring + X-WAB-Score + X-WAB-Registry
+// signal preference to any agent that reads HTTP response headers.
+// Phase 9: X-WAB-Next-Sites — WAB DNA header, top peers from registry (cached 60s)
+// so every HTTP response carries network topology. This is the WAB Gossip DNA.
+let _nextSitesCache = { value: '', exp: 0 };
+function getNextSitesDNA() {
+  if (Date.now() < _nextSitesCache.exp) return _nextSitesCache.value;
+  try {
+    const reg = JSON.parse(
+      require('fs').readFileSync(path.join(__dirname, '..', 'data', 'registry.json'), 'utf8')
+    );
+    const top = Array.isArray(reg)
+      ? reg.filter(e => e.active !== false)
+          .sort((a, b) => (b.trust_ring || 0) - (a.trust_ring || 0) || (b.score || 0) - (a.score || 0))
+          .slice(0, 5).map(e => e.domain).join(', ')
+      : '';
+    _nextSitesCache = { value: top, exp: Date.now() + 60000 };
+    return top;
+  } catch { return ''; }
+}
+app.use((req, res, next) => {
+  res.set('X-WAB-Discovery',  '/.well-known/wab.json');
+  res.set('X-WAB-Enabled',    'true');
+  res.set('X-WAB-Trust-Ring', '4');
+  res.set('X-WAB-Score',      '94');
+  res.set('X-WAB-Registry',   '/api/registry/discover');
+  res.set('X-Llms-Txt',       '/llms.txt');
+  const nextSites = getNextSitesDNA();
+  if (nextSites) res.set('X-WAB-Next-Sites', nextSites);
+  res.append('Link', '</.well-known/wab.json>; rel="wab-manifest"; type="application/json"');
+  res.append('Link', '</.wab>; rel="wab-beacon"; type="application/json"');
+  res.append('Link', '</llms.txt>; rel="llms-txt"; type="text/plain"');
+  res.append('Link', '</llms-full.txt>; rel="llms-full-txt"; type="text/plain"');
+  next();
+});
+
+// WAB compliance badge — embeddable SVG. Usage:
+//   <img src="https://webagentbridge.com/badge/example.com.svg">
+// Returns green/amber/red based on whether the domain publishes a reachable
+// /.well-known/wab.json (and optionally an Ed25519 signature). Result is
+// cached in-process for 10 minutes to keep this endpoint cheap and DoS-safe.
+const _badgeCache = new Map();
+function _badgeSvg(label, value, color) {
+  const labelW = 56;
+  const valueW = Math.max(48, value.length * 7 + 14);
+  const total  = labelW + valueW;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="20" role="img" aria-label="${label}: ${value}">
+  <linearGradient id="b" x2="0" y2="100%"><stop offset="0" stop-color="#fff" stop-opacity=".7"/><stop offset=".1" stop-color="#aaa" stop-opacity=".1"/><stop offset=".9" stop-opacity=".3"/><stop offset="1" stop-opacity=".5"/></linearGradient>
+  <mask id="m"><rect width="${total}" height="20" rx="3" fill="#fff"/></mask>
+  <g mask="url(#m)">
+    <rect width="${labelW}" height="20" fill="#1f2937"/>
+    <rect x="${labelW}" width="${valueW}" height="20" fill="${color}"/>
+    <rect width="${total}" height="20" fill="url(#b)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="${labelW/2}" y="14">${label}</text>
+    <text x="${labelW + valueW/2}" y="14">${value}</text>
+  </g>
+</svg>`;
+}
+app.get('/badge/:domain', async (req, res) => {
+  let host = String(req.params.domain || '').replace(/\.svg$/i, '').trim().toLowerCase();
+  host = host.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(host)) {
+    res.type('image/svg+xml').set('Cache-Control', 'public, max-age=60');
+    return res.send(_badgeSvg('WAB', 'invalid', '#9ca3af'));
+  }
+  const cached = _badgeCache.get(host);
+  if (cached && cached.exp > Date.now()) {
+    res.type('image/svg+xml').set('Cache-Control', 'public, max-age=600').set('Access-Control-Allow-Origin', '*');
+    return res.send(cached.svg);
+  }
+  let value = 'unknown', color = '#9ca3af';
+  try {
+    const ac = new AbortController();
+    const t  = setTimeout(() => ac.abort(), 3500);
+    const r  = await fetch(`https://${host}/.well-known/wab.json`, { signal: ac.signal, redirect: 'follow' });
+    clearTimeout(t);
+    if (r.ok) {
+      const j = await r.json().catch(() => null);
+      const signed = !!(j && (j.signature || (j.trust && j.trust.signed)));
+      value = signed ? 'verified' : 'enabled';
+      color = signed ? '#10b981' : '#f59e0b';
+    } else {
+      value = 'missing'; color = '#ef4444';
+    }
+  } catch (_) {
+    value = 'missing'; color = '#ef4444';
+  }
+  const svg = _badgeSvg('WAB', value, color);
+  _badgeCache.set(host, { svg, exp: Date.now() + 10 * 60 * 1000 });
+  res.type('image/svg+xml').set('Cache-Control', 'public, max-age=600').set('Access-Control-Allow-Origin', '*');
+  return res.send(svg);
+});
+
 app.use(express.static(path.join(__dirname, '..', 'public'), {
   setHeaders(res, filePath) {
     if (filePath.endsWith('.html')) {
@@ -410,6 +546,128 @@ app.get(['/ring4', '/trust-handshake'], noCache, (req, res) => {
 // /refusals — Public refusal log (anonymized constitutional refusal stats)
 app.get('/refusals', noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'refusals.html'));
+});
+// Trust & protocol pages
+app.get(['/security', '/security.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'security.html'));
+});
+app.get(['/threat-model', '/threat-model.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'threat-model.html'));
+});
+app.get(['/responsible-disclosure', '/responsible-disclosure.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'responsible-disclosure.html'));
+});
+app.get(['/key-rotation', '/key-rotation.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'key-rotation.html'));
+});
+app.get(['/atp-semantics', '/atp-semantics.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'atp-semantics.html'));
+});
+app.get(['/benchmarks', '/benchmarks.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'benchmarks.html'));
+});
+
+// ── WAB Ecosystem v3.18.0 — Observatory · Notary · Research · URI scheme · Lens ──
+app.use('/api/notary',      apiLimiter, require('./routes/notary'));
+app.use('/api/observatory', apiLimiter, require('./routes/observatory'));
+app.use('/api/research',    apiLimiter, require('./routes/research'));
+
+// ── WAB Spider Network v3.19.0 — Public Registry + Spider Protocol ──
+app.use('/api/registry',    apiLimiter, require('./routes/registry'));
+
+// ── WAB Self-Propagating Protocol v3.20.0 — Training Signal + Viral Stats ──
+app.use('/api/traces',      apiLimiter, require('./routes/traces'));
+
+app.get(['/observatory', '/observatory.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'observatory.html'));
+});
+app.get(['/notary', '/notary.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'notary.html'));
+});
+app.get(['/research', '/research.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'research.html'));
+});
+app.get(['/wab-uri', '/wab-uri.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'wab-uri.html'));
+});
+app.get(['/wab-email', '/wab-email.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'wab-email.html'));
+});
+app.get(['/wab-p2p', '/wab-p2p.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'wab-p2p.html'));
+});
+app.get(['/wab-lens', '/wab-lens.html'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'wab-lens.html'));
+});
+app.get(['/wab-registry', '/wab-registry.html', '/registry'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'wab-registry.html'));
+});
+app.get(['/wab-dataset', '/wab-dataset.html', '/dataset'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'wab-dataset.html'));
+});
+app.get(['/viral-coefficient', '/viral-coefficient.html', '/viral'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'viral-coefficient.html'));
+});
+
+// /resolve?u=wab://host/action?... — universal handler for the wab:// URI scheme.
+// Parses the URI, fetches the target manifest, validates the action and shows
+// a confirmation page. Renders an inline HTML response so it works without JS.
+app.get('/resolve', async (req, res) => {
+  const raw = String(req.query.u || '');
+  const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function page(title, body) {
+    res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
+<style>body{font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0b0f17;color:#e5e7eb;margin:0;padding:48px 24px;max-width:640px;margin-inline:auto}
+h1{font-size:22px}a{color:#60a5fa}code,pre{background:#0d1320;border:1px solid #1f2937;border-radius:6px;padding:2px 6px}
+pre{padding:12px;overflow-x:auto;font-size:12px}.err{color:#ef4444}.ok{color:#10b981}
+button,a.btn{display:inline-block;background:#60a5fa;color:#0b0f17;border:0;padding:10px 18px;border-radius:6px;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;margin-top:12px}
+</style></head><body>${body}<p style="margin-top:32px;font-size:12px;color:#9ca3af"><a href="/wab-uri">About the wab:// URI scheme</a></p></body></html>`);
+  }
+  if (!/^wab:\/\//i.test(raw)) {
+    return page('Invalid wab:// URI', `<h1 class="err">Invalid wab:// URI</h1><p>The <code>u</code> parameter must start with <code>wab://</code>.</p>`);
+  }
+  let host, action, params;
+  try {
+    const u = new URL(raw.replace(/^wab:\/\//i, 'https://'));
+    host = u.hostname.toLowerCase();
+    action = u.pathname.replace(/^\/+/, '').split('/')[0] || '';
+    params = Object.fromEntries(u.searchParams.entries());
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(host) || !action) throw new Error('bad uri');
+  } catch (e) {
+    return page('Invalid wab:// URI', `<h1 class="err">Could not parse</h1><pre>${esc(raw)}</pre>`);
+  }
+  let manifest = null;
+  try {
+    const ac = new AbortController();
+    const t  = setTimeout(() => ac.abort(), 4000);
+    const r  = await fetch(`https://${host}/.well-known/wab.json`, { signal: ac.signal, redirect: 'follow' });
+    clearTimeout(t);
+    if (r.ok) manifest = await r.json().catch(() => null);
+  } catch (_) {}
+  if (!manifest) {
+    return page('Manifest not found', `<h1 class="err">${esc(host)} does not publish a WAB manifest</h1>
+      <p>The wab:// URI cannot be resolved because <code>https://${esc(host)}/.well-known/wab.json</code> is not reachable.</p>`);
+  }
+  const actions = Array.isArray(manifest.actions) ? manifest.actions : [];
+  const match = actions.find(a => a && a.id === action);
+  if (!match) {
+    return page('Action not found', `<h1 class="err">Unknown action <code>${esc(action)}</code></h1>
+      <p>${esc(host)} publishes a manifest, but no action with id <code>${esc(action)}</code> is declared.</p>
+      <p>Known actions: ${actions.map(a => `<code>${esc(a.id||'')}</code>`).join(', ') || '<em>none</em>'}</p>`);
+  }
+  const signed = !!(manifest.signature || (manifest.trust && manifest.trust.signed));
+  return page(`Confirm: ${action} on ${host}`, `
+    <h1>Confirm action</h1>
+    <p>You are about to invoke <code>${esc(action)}</code> on <strong>${esc(host)}</strong>${signed ? ' <span class="ok">✓ signed manifest</span>' : ''}.</p>
+    <h3 style="margin-top:24px;font-size:14px">Parameters</h3>
+    <pre>${esc(JSON.stringify(params, null, 2))}</pre>
+    <h3 style="margin-top:24px;font-size:14px">Endpoint</h3>
+    <pre>${esc(match.method || 'POST')} ${esc(match.endpoint || '')}</pre>
+    <form method="${esc(match.safe ? 'GET' : 'POST')}" action="${esc(match.endpoint || '#')}">
+      ${Object.entries(params).map(([k,v]) => `<input type="hidden" name="${esc(k)}" value="${esc(v)}">`).join('')}
+      <button type="submit">Proceed</button>
+      <a class="btn" style="background:transparent;color:#e5e7eb;border:1px solid #1f2937;margin-left:6px" href="javascript:history.back()">Cancel</a>
+    </form>`);
 });
 // /.well-known/jwks.json — standard JWKS discovery for OIDC/JWT ecosystem
 app.get('/.well-known/jwks.json', (req, res) => {

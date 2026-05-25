@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>wab:// URI scheme — direct agent action handoff</title>
+<meta name="description" content="The wab:// URI scheme lets users hand off a specific action to a WAB-enabled site or agent, the way mailto: hands off to email clients.">
+<link rel="icon" href="/assets/favicon.svg">
+<style>
+  :root{--bg:#0b0f17;--panel:#111827;--fg:#e5e7eb;--muted:#9ca3af;--line:#1f2937;--accent:#60a5fa}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{padding:48px 24px 24px;text-align:center;border-bottom:1px solid var(--line)}
+  h1{margin:0 0 8px;font-size:28px}
+  header p{margin:0;color:var(--muted);max-width:680px;margin-inline:auto}
+  main{max-width:840px;margin:0 auto;padding:24px}
+  h2{margin-top:32px;font-size:18px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  pre,code{background:#0d1320;border:1px solid var(--line);border-radius:6px}
+  pre{padding:12px;overflow-x:auto;font-size:12px}
+  code{padding:2px 6px;font-size:12.5px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
+  th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  footer{padding:32px 24px;text-align:center;color:var(--muted);font-size:12px;border-top:1px solid var(--line);margin-top:48px}
+</style>
+</head>
+<body>
+<header>
+  <h1>wab:// URI scheme</h1>
+  <p>The <code>wab://</code> scheme is the <em>mailto:</em> of agent actions — a portable, registerable link that triggers a specific intent on a WAB-enabled site.</p>
+</header>
+<main>
+  <h2>Grammar</h2>
+  <pre>wab://&lt;host&gt;/&lt;action&gt;[?param=value&amp;param=value...]</pre>
+  <table>
+    <tr><th>Part</th><th>Meaning</th></tr>
+    <tr><td><code>host</code></td><td>Domain that publishes <code>/.well-known/wab.json</code></td></tr>
+    <tr><td><code>action</code></td><td>An <code>id</code> from the manifest's <code>actions[]</code> array</td></tr>
+    <tr><td><code>params</code></td><td>URL-encoded key/value pairs matching the action's parameter schema</td></tr>
+  </table>
+
+  <h2>Examples</h2>
+  <ul>
+    <li><code>wab://example-shop.com/checkout?sku=ABC&amp;qty=1</code></li>
+    <li><code>wab://restaurant.com/book?date=2026-06-01&amp;guests=2</code></li>
+    <li><code>wab://news.example/subscribe?plan=monthly</code></li>
+  </ul>
+
+  <h2>Resolver</h2>
+  <p>Until OS handlers ship, this site hosts a universal resolver:</p>
+  <pre>https://webagentbridge.com/resolve?u=&lt;url-encoded wab:// URI&gt;</pre>
+  <p>The resolver fetches the target's manifest, validates the action exists, and either:</p>
+  <ol>
+    <li>Renders a confirmation page showing exactly what will happen, or</li>
+    <li>Redirects the user agent to the action's <code>endpoint</code> with the parameters attached (when the action is marked <code>safe:true</code> in the manifest).</li>
+  </ol>
+
+  <h2>Manifest declaration</h2>
+  <pre>{
+  "version": "1",
+  "host": "example-shop.com",
+  "actions": [
+    {
+      "id": "checkout",
+      "endpoint": "https://example-shop.com/api/checkout",
+      "method": "POST",
+      "params": {
+        "sku": { "type": "string", "required": true },
+        "qty": { "type": "integer", "minimum": 1 }
+      },
+      "safe": false,
+      "uri_handler": "wab://example-shop.com/checkout"
+    }
+  ]
+}</pre>
+
+  <h2>Native handler registration</h2>
+  <p>Browsers can register a site as the handler for the <code>wab</code> scheme via <a href="https://developer.mozilla.org/en-US/docs/Web/API/Navigator/registerProtocolHandler">navigator.registerProtocolHandler</a>:</p>
+  <pre>navigator.registerProtocolHandler('web+wab',
+  'https://your-agent.example/handle?u=%s',
+  'My WAB-aware agent');</pre>
+  <p>Note: browsers require the <code>web+</code> prefix for unregistered schemes — the canonical wire form remains <code>wab://</code> for portability.</p>
+</main>
+<footer>Part of the <a href="/">Web Agent Bridge</a> protocol. See also: <a href="/docs">Docs</a>, <a href="/atp-semantics">ATP semantics</a>.</footer>
+</body>
+</html>

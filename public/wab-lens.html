@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WAB Lens — browser extension for the agent-discoverable web</title>
+<meta name="description" content="Chrome / Edge / Brave extension that detects, verifies and badges Web Agent Bridge discovery on every page you visit.">
+<link rel="icon" href="/assets/favicon.svg">
+<style>
+  :root{--bg:#0b0f17;--panel:#111827;--fg:#e5e7eb;--muted:#9ca3af;--line:#1f2937;--accent:#60a5fa}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{padding:48px 24px 24px;text-align:center;border-bottom:1px solid var(--line)}
+  h1{margin:0 0 8px;font-size:28px}
+  main{max-width:780px;margin:0 auto;padding:24px}
+  h2{margin-top:32px;font-size:18px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  pre,code{background:#0d1320;border:1px solid var(--line);border-radius:6px}
+  pre{padding:12px;overflow-x:auto;font-size:12px}
+  code{padding:2px 6px;font-size:12.5px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .cta{display:inline-block;background:var(--accent);color:#0b0f17;padding:10px 18px;border-radius:6px;font-weight:600;margin:8px 8px 0 0}
+  footer{padding:32px 24px;text-align:center;color:var(--muted);font-size:12px;border-top:1px solid var(--line);margin-top:48px}
+</style>
+</head>
+<body>
+<header>
+  <h1>WAB Lens</h1>
+  <p>The browser extension that shows you which sites are agent-discoverable — and which are signed.</p>
+</header>
+<main>
+  <p>
+    <a class="cta" href="https://github.com/wassimibsais/web-agent-bridge/tree/main/wab-lens-extension">Source on GitHub</a>
+    <a class="cta" style="background:transparent;color:var(--fg);border:1px solid var(--line)" href="/observatory">Live Observatory</a>
+  </p>
+
+  <h2>What it does</h2>
+  <ul>
+    <li>On every page load, probes <code>/.well-known/wab.json</code> for the current domain.</li>
+    <li>Toolbar badge: <strong style="color:#10b981">✓</strong> verified · <strong style="color:#f59e0b">•</strong> enabled · _empty_ missing.</li>
+    <li>Popup shows the live manifest, with one-click links to the Notary attestation and Observatory record.</li>
+  </ul>
+
+  <h2>Install (developer mode)</h2>
+  <ol>
+    <li>Clone or download the repository.</li>
+    <li>Open <code>chrome://extensions</code> and enable <strong>Developer mode</strong>.</li>
+    <li>Click <strong>Load unpacked</strong> and select <code>wab-lens-extension/</code>.</li>
+  </ol>
+  <p>Public Web Store release: TBD. Stay tuned via the <a href="/feed.xml">RSS feed</a>.</p>
+
+  <h2>Privacy</h2>
+  <ul>
+    <li>No telemetry by default.</li>
+    <li>Optional Observatory auto-submission sends only bare hostnames — no URLs, paths, queries, or referrers.</li>
+    <li>Source is auditable; everything runs locally.</li>
+  </ul>
+</main>
+<footer>Part of the <a href="/">Web Agent Bridge</a> protocol. See also: <a href="/observatory">Observatory</a>, <a href="/notary">Notary</a>.</footer>
+</body>
+</html>

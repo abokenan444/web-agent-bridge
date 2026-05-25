@@ -412,22 +412,37 @@ docker compose up -d
 
 زُر `http://localhost:3000/register` وأنشئ حساباً، ثم أضف موقعك من لوحة التحكم.
 
-### ٣. إضافة السكريبت لموقعك
+### ٣. إعلان موقعك للوكلاء (الطريقة الحديثة)
+
+أنشئ `wab.json` + مفتاح Ed25519 ثم أعلن النطاق عبر DNS:
+
+```bash
+npx wab-init --site=https://yourdomain.com --yes
+```
+
+يولد هذا `/.well-known/wab.json` ويطبع سجل DNS TXT المطلوب:
+
+```
+_wab.yourdomain.com.   TXT   "v=wab1; pk=ed25519:BASE64…; url=/.well-known/wab.json"
+```
+
+وبدون أي سكريبت إضافي تصبح صفحتك قابلة للاكتشاف والتحقق المشفّر (Ed25519) من أي وكيل، وتستطيع التعامل مع ATP (عقود نيّات موقّعة ؋ idempotent ؋ إيصالات قابلة للتحقق).
+
+راجع: [وثائق docs](https://webagentbridge.com/docs) · [دلالات ATP](https://webagentbridge.com/atp-semantics) · [نموذج التهديد](https://webagentbridge.com/threat-model).
+
+#### (بديل قديم — مسار legacy v1)
 
 ```html
 <script>
 window.AIBridgeConfig = {
   licenseKey: "WAB-XXXXX-XXXXX-XXXXX-XXXXX",
-  agentPermissions: {
-    readContent: true,
-    click: true,
-    fillForms: true,
-    scroll: true
-  }
+  agentPermissions: { readContent: true, click: true, fillForms: true, scroll: true }
 };
 </script>
-<script src="http://localhost:3000/script/ai-agent-bridge.js"></script>
+<script src="https://cdn.webagentbridge.com/wab.min.js"></script>
 ```
+
+⚠️ هذا المسار مدعوم للتوافق الخلفي فقط، ولا يُنصح به للدمج الجديد.
 
 ### ٤. الآن يمكن لوكلاء الذكاء الاصطناعي التفاعل
 
@@ -697,7 +712,10 @@ web-agent-bridge/
 
 ## 🔧 الإعدادات
 
+> **ملاحظة:** الكتلة أدناه تخص البريدج القديم (legacy v1). الدمج الحديث يعتمد `wab.json` + DNS + Ed25519 ولا يحتاج إلى `licenseKey` في الصفحة. راجع [docs](https://webagentbridge.com/docs).
+
 ```javascript
+// legacy v1 — مدعوم للتوافق الخلفي فقط
 window.AIBridgeConfig = {
   licenseKey: "WAB-XXXXX-XXXXX-XXXXX-XXXXX",
   agentPermissions: {
@@ -943,6 +961,7 @@ npx web-agent-bridge init
 لمواجهة أنظمة الحماية من البوتات:
 
 ```javascript
+// legacy v1 — مدعوم للتوافق الخلفي فقط
 window.AIBridgeConfig = { stealth: { enabled: true } };
 ```
 

@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body{margin:0;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0b0f17;color:#e5e7eb;width:320px}
+  header{padding:14px 14px 10px;border-bottom:1px solid #1f2937}
+  header h1{margin:0;font-size:14px}
+  header .host{color:#9ca3af;font-size:12px;margin-top:2px;word-break:break-all}
+  main{padding:12px 14px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;margin-right:6px}
+  .verified{background:rgba(16,185,129,.2);color:#10b981}
+  .enabled{background:rgba(245,158,11,.2);color:#f59e0b}
+  .missing{background:rgba(156,163,175,.2);color:#9ca3af}
+  dl{margin:8px 0;font-size:12px}
+  dt{color:#9ca3af;margin-top:6px}
+  dd{margin:2px 0 0;word-break:break-all}
+  a{color:#60a5fa;text-decoration:none}
+  a:hover{text-decoration:underline}
+  pre{background:#0d1320;border:1px solid #1f2937;border-radius:4px;padding:8px;font-size:11px;max-height:180px;overflow:auto;margin:6px 0}
+  footer{padding:8px 14px;border-top:1px solid #1f2937;color:#9ca3af;font-size:11px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>WAB Lens</h1>
+  <div class="host" id="host">…</div>
+</header>
+<main>
+  <div id="status"><span class="pill missing">loading</span></div>
+  <dl id="meta"></dl>
+  <pre id="manifest" style="display:none"></pre>
+</main>
+<footer><a href="https://webagentbridge.com" target="_blank">webagentbridge.com</a> · <a href="https://webagentbridge.com/observatory" target="_blank">Observatory</a></footer>
+<script src="popup.js"></script>
+</body>
+</html>
