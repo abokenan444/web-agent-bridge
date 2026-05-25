@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Threat Model — Web Agent Bridge</title>
+<meta name="description" content="Explicit adversary model for the WAB protocol: who we defend against, who we do not, and where Sybil, key-compromise, and replay risks live.">
+<link rel="canonical" href="https://webagentbridge.com/threat-model">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="stylesheet" href="/css/styles.css?v=3.0.1">
+<style>
+  .trust-page { max-width: 980px; margin: 0 auto; padding: 48px 24px 80px; }
+  .trust-page h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); margin: 0 0 10px; }
+  .trust-page .lead { color: #94a3b8; font-size: 1.1rem; max-width: 760px; }
+  .trust-page h2 { margin-top: 48px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
+  .trust-page h3 { margin-top: 28px; }
+  .trust-page table { width: 100%; border-collapse: collapse; margin: 16px 0; background: #10172a; border: 1px solid #1f2937; border-radius: 10px; overflow: hidden; }
+  .trust-page th, .trust-page td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #1f2937; vertical-align: top; }
+  .trust-page th { background: #0d1322; color: #94a3b8; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .trust-page tr:last-child td { border-bottom: none; }
+  .trust-page code { background: rgba(34,211,238,.08); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+  .callout { background: rgba(34,211,238,.07); border: 1px solid rgba(34,211,238,.25); border-radius: 12px; padding: 14px 18px; margin: 18px 0; }
+  .callout.warn { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.35); }
+  .callout.danger { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.35); }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
+  .pill.def { background: rgba(52,211,153,.15); color:#34d399; }
+  .pill.par { background: rgba(245,158,11,.15); color:#fbbf24; }
+  .pill.no  { background: rgba(248,113,113,.15); color:#f87171; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="/" class="navbar-brand"><div class="brand-icon">⚡</div><span>WAB</span></a>
+    <ul class="navbar-links">
+      <li><a href="/docs">Docs</a></li>
+      <li><a href="/security">Security</a></li>
+      <li><a href="/threat-model" style="color:#f0f4ff;">Threat Model</a></li>
+      <li><a href="/whitepaper">Whitepaper</a></li>
+    </ul>
+    <div class="navbar-actions">
+      <a href="/login" class="btn btn-ghost">Sign In</a>
+      <a href="/register" class="btn btn-primary btn-sm">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<main class="trust-page">
+
+  <h1>WAB Threat Model</h1>
+  <p class="lead">
+    An explicit, falsifiable description of the adversaries WAB defends against, the ones it
+    only partially mitigates, and the ones it does not address at all. Companion to
+    <a href="/security">/security</a>.
+  </p>
+
+  <h2 id="assumptions">1. Trust assumptions</h2>
+  <ul>
+    <li><strong>TLS works.</strong> We assume the TLS PKI is sound enough for HTTPS to bind the site identity, just as the rest of the web does.</li>
+    <li><strong>DNS resolution is observable.</strong> An attacker on-path may see DNS queries; with DNSSEC (recommended) they cannot forge responses.</li>
+    <li><strong>The site's private key is held by the site operator.</strong> Key compromise is treated as an incident, not a normal state.</li>
+    <li><strong>Clocks are loosely synchronized.</strong> ±300 s tolerance on signature timestamps.</li>
+    <li><strong>Storage is honest.</strong> The site's database honors the <code>UNIQUE</code> constraints that anchor idempotency. (Server-side DBs do; eventual-consistency stores do not — see <a href="/atp-semantics">/atp-semantics</a>.)</li>
+  </ul>
+
+  <h2 id="adversaries">2. Adversary model</h2>
+  <table>
+    <thead><tr><th>Adversary</th><th>Defense</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Passive network observer</td><td><span class="pill def">DEFENDED</span></td><td>TLS confidentiality; signatures don't leak secrets.</td></tr>
+      <tr><td>Active MITM on HTTPS</td><td><span class="pill def">DEFENDED</span></td><td>Inherits TLS PKI protection.</td></tr>
+      <tr><td>Off-path forger (no key, no zone control)</td><td><span class="pill def">DEFENDED</span></td><td>Ed25519 forgery is infeasible.</td></tr>
+      <tr><td>Replay of captured signed request</td><td><span class="pill def">DEFENDED</span></td><td>±300 s window + single-use nonce burn.</td></tr>
+      <tr><td>Duplicate / out-of-order client retries</td><td><span class="pill def">DEFENDED</span></td><td>Idempotency key + DB <code>UNIQUE</code>.</td></tr>
+      <tr><td>Cross-origin agent confusion</td><td><span class="pill def">DEFENDED</span></td><td>Receipts and intents bind <code>site</code>; agents reject mismatches.</td></tr>
+      <tr><td>DNS spoofing without DNSSEC</td><td><span class="pill par">PARTIAL</span></td><td>Fallback verification via <code>/.well-known/wab.json</code> over HTTPS; DNSSEC strongly recommended.</td></tr>
+      <tr><td>Compromised site private key</td><td><span class="pill par">PARTIAL</span></td><td>Detected via key-rotation log + receipt audit. Mitigated by rotation. See <a href="/key-rotation">/key-rotation</a>.</td></tr>
+      <tr><td>Sybil at the Reality Anchor / trust-graph layer</td><td><span class="pill par">PARTIAL</span></td><td>Weighted quorum and admission cost discussed in §4. Current production weighting favors long-lived, DNSSEC-validated origins.</td></tr>
+      <tr><td>Malicious site operator (declares lies)</td><td><span class="pill no">OUT OF SCOPE</span></td><td>WAB authenticates the origin; the policy layer (Ring 4, user consent, agent rules) must judge intent.</td></tr>
+      <tr><td>Compromised user device</td><td><span class="pill no">OUT OF SCOPE</span></td><td>Standard endpoint security applies; we limit blast radius via short-lived tokens.</td></tr>
+      <tr><td>Quantum adversary against Ed25519</td><td><span class="pill no">OUT OF SCOPE</span></td><td>Post-quantum migration tracked at <code>schema_version</code>; not a 2026 threat.</td></tr>
+      <tr><td>Network-layer DoS</td><td><span class="pill no">OUT OF SCOPE</span></td><td>Belongs to your edge (CDN/WAF).</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="sybil">3. Sybil &amp; reputation considerations</h2>
+  <p>
+    The Ring 4 trust graph is a <em>signal</em>, not a vote. To resist Sybil inflation we currently weight
+    contributions by:
+  </p>
+  <ul>
+    <li><strong>Origin age</strong> — first-seen timestamp of the DNS TXT record, validated by an independent passive observer.</li>
+    <li><strong>DNSSEC-validated chain</strong> — origins with a validated chain receive higher weight.</li>
+    <li><strong>Receipt history</strong> — origins with a non-trivial history of verifiable ATP receipts (Ed25519, no compensations beyond the ambient rate) accumulate weight.</li>
+    <li><strong>Independent attestors</strong> — when more than one attestor is online, no single attestor's vote can exceed 1/3 of the weight (BFT-style cap).</li>
+  </ul>
+  <p>
+    Admission has a real, non-zero cost: a registered domain, a functioning DNS zone, and a published key.
+    This makes farm-scale Sybils economically unattractive, but it is not free — high-value scenarios should
+    layer additional policy at the agent.
+  </p>
+  <div class="callout warn">
+    <strong>Honest status:</strong> the Reality Anchor weighting algorithm is implemented and live, but the
+    formal quorum proof and a public dashboard of attestor diversity are still in progress. We will publish
+    the algorithm before promoting it from <em>signal</em> to <em>gate</em>.
+  </div>
+
+  <h2 id="key-compromise">4. Site-key compromise scenarios</h2>
+  <p>If a site's Ed25519 private key leaks, an attacker can issue valid-looking manifests and receipts. WAB responds in four layers:</p>
+  <ol>
+    <li><strong>Detect</strong> — the site operator publishes a signed <code>revoked_keys</code> list in their next manifest version. Agents that already cached the old key learn of the revocation on next discovery refresh (TTL ≤ 1 h recommended).</li>
+    <li><strong>Rotate</strong> — a new keypair is generated; the new public key replaces <code>public_key</code> and is co-signed by the old key during a grace window.</li>
+    <li><strong>Revoke</strong> — old key is added to a published revocation list at <code>/.well-known/wab-revocations.json</code> and to the Ring 4 trust graph.</li>
+    <li><strong>Reconcile</strong> — receipts signed by the revoked key remain mathematically valid but are marked <em>distrusted</em> in the trust graph from the revocation timestamp forward. Downstream parties decide whether to accept them.</li>
+  </ol>
+  <p>Full procedure: <a href="/key-rotation">/key-rotation</a>.</p>
+
+  <h2 id="abuse">5. Abuse scenarios at the application layer</h2>
+  <ul>
+    <li><strong>Spam intents</strong> — bounded by per-user rate limit (default 60/min) and per-IP request budget at the edge.</li>
+    <li><strong>Pre-emptive nonce burns</strong> — an attacker submits a malformed intent to burn the nonce. The intent table records the burn but does not advance state; the legitimate retry simply uses a fresh nonce.</li>
+    <li><strong>Receipt griefing</strong> — an attacker calls the public <code>verify</code> endpoint with garbage. The endpoint is constant-time and rate-limited; verification is stateless and cheap.</li>
+    <li><strong>Compensation race</strong> — two parties try to compensate the same transaction. The first wins; the second receives <code>409 already_compensated</code>. The audit log records both attempts.</li>
+  </ul>
+
+  <h2 id="changelog">6. Document history</h2>
+  <ul>
+    <li><strong>2026-05-25</strong> — Initial publication. Reflects v3.17.x protocol.</li>
+  </ul>
+
+  <p style="margin-top: 48px; color:#94a3b8;">
+    Related: <a href="/security">/security</a> ·
+    <a href="/responsible-disclosure">/responsible-disclosure</a> ·
+    <a href="/key-rotation">/key-rotation</a> ·
+    <a href="/atp-semantics">/atp-semantics</a>
+  </p>
+
+</main>
+
+<footer class="footer" style="margin-top:32px;">
+  <div class="container">
+    <div class="footer-bottom">
+      <span>© 2026 Web Agent Bridge. Open Core.</span>
+      <a href="/" class="btn btn-ghost btn-sm">Back to Home</a>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/auth-nav.js?v=3.0.1"></script>
+<script src="/js/cookie-consent.js?v=3.0.1"></script>
+</body>
+</html>

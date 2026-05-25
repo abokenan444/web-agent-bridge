@@ -41,80 +41,150 @@
       <!-- Sidebar -->
       <aside class="docs-sidebar">
         <ul>
+          <li style="opacity:.6;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;padding:8px 0 4px;">Protocol</li>
           <li><a href="#overview" class="active">Overview</a></li>
-          <li><a href="#quick-start">Quick Start</a></li>
-          <li><a href="#configuration">Configuration</a></li>
+          <li><a href="#quick-start">Quick Start (modern)</a></li>
+          <li><a href="#wab-json">wab.json manifest</a></li>
+          <li><a href="#dns-discovery">DNS discovery</a></li>
+          <li><a href="/spec">Full Spec ↗</a></li>
+
+          <li style="opacity:.6;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;padding:14px 0 4px;">Trust &amp; Security</li>
+          <li><a href="/security">Security model ↗</a></li>
+          <li><a href="/threat-model">Threat model ↗</a></li>
+          <li><a href="/responsible-disclosure">Responsible disclosure ↗</a></li>
+          <li><a href="/key-rotation">Key rotation ↗</a></li>
+
+          <li style="opacity:.6;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;padding:14px 0 4px;">ATP (Transactions)</li>
+          <li><a href="/atp">ATP overview ↗</a></li>
+          <li><a href="/atp-semantics">Consistency model ↗</a></li>
+          <li><a href="/benchmarks">Benchmarks ↗</a></li>
+
+          <li style="opacity:.6;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;padding:14px 0 4px;">API</li>
           <li><a href="#permissions">Permissions</a></li>
-          <li><a href="#api-reference">API Reference</a></li>
-          <li><a href="#actions">Actions</a></li>
-          <li><a href="#events">Events</a></li>
-          <li><a href="#agent-guide">Agent Integration Guide</a></li>
-          <li><a href="#security">Security</a></li>
-          <li><a href="#examples">Examples</a></li>
+          <li><a href="#api-reference">Browser API</a></li>
           <li><a href="#rest-api">REST API</a></li>
           <li><a href="#faq">FAQ</a></li>
+
+          <li style="opacity:.6;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;padding:14px 0 4px;">Legacy (v1)</li>
+          <li><a href="#legacy-config">window.AIBridgeConfig</a></li>
+          <li><a href="#examples">Legacy examples</a></li>
         </ul>
       </aside>
 
       <!-- Content -->
       <div class="docs-content">
 
-        <h2 id="overview">Overview</h2>
-        <p>
-          <strong>Web Agent Bridge (WAB)</strong> is an open-source middleware script that creates a standardized 
-          interface between AI agents and websites. Instead of forcing AI agents to parse and guess DOM structures, 
-          WAB provides a clean, documented command layer that agents can read and execute.
-        </p>
-        <p>
-          When a website includes the WAB script, it exposes a <code>window.AICommands</code> object that describes 
-          all available actions, their parameters, and how to execute them. AI agents can discover these commands 
-          instantly and interact with the site accurately and securely.
-        </p>
-
-        <h3>Key Concepts</h3>
-        <ul>
-          <li><strong>Bridge Script</strong> — The client-side JavaScript file added to websites</li>
-          <li><strong>Actions</strong> — Defined operations that AI agents can execute (click, fill, scroll, API call)</li>
-          <li><strong>Permissions</strong> — Granular controls over what agents are allowed to do</li>
-          <li><strong>License Key</strong> — Unique identifier that links a site to its WAB account</li>
-          <li><strong>Auto-Discovery</strong> — Automatic detection of interactive elements on the page</li>
-        </ul>
-
-        <h2 id="quick-start">Quick Start</h2>
-        <p>Get your website AI-ready in under 5 minutes.</p>
-
-        <h3>Step 1: Create an Account</h3>
-        <p>Sign up at <a href="/register">/register</a> and add your site from the dashboard. You'll receive a license key.</p>
-
-        <h3>Step 2: Add the Script</h3>
-        <p>Include this in your website's HTML:</p>
-        <div class="code-block">
-          <div class="code-header">
-            <div class="code-dots"><span></span><span></span><span></span></div>
-            <span class="code-lang">HTML</span>
-          </div>
-          <div class="code-body">
-<pre><code><span class="cm">&lt;!-- Web Agent Bridge Configuration --&gt;</span>
-&lt;script&gt;
-window.AIBridgeConfig = {
-  <span class="prop">licenseKey</span>: <span class="str">"WAB-XXXXX-XXXXX-XXXXX-XXXXX"</span>,
-  <span class="prop">agentPermissions</span>: {
-    <span class="prop">readContent</span>: <span class="bool">true</span>,
-    <span class="prop">click</span>: <span class="bool">true</span>,
-    <span class="prop">fillForms</span>: <span class="bool">true</span>,
-    <span class="prop">scroll</span>: <span class="bool">true</span>
-  }
-};
-&lt;/script&gt;
-&lt;script src=<span class="str">"https://yourserver.com/script/ai-agent-bridge.js"</span>&gt;&lt;/script&gt;</code></pre>
+        <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.3);border-radius:12px;padding:14px 20px;margin:0 0 28px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <span style="font-size:1.3rem">📐</span>
+          <div>
+            <strong>New to WAB?</strong> These docs assume familiarity with the current protocol.
+            For a plain-English map of all six architectural layers and how WAB evolved from a browser script to a
+            full infrastructure layer, start with <a href="/wab-today" style="color:#818cf8;font-weight:600">WAB Today →</a>
           </div>
         </div>
 
-        <h3>Step 3: Verify</h3>
-        <p>Open your browser console and type <code>window.AICommands</code>. You should see the bridge object with discovered actions.</p>
+        <h2 id="overview">Overview</h2>
+        <p>
+          <strong>Web Agent Bridge (WAB)</strong> is an open protocol for discovery, trust, and transactions
+          between AI agents and websites. Sites publish a signed <code>wab.json</code> manifest declaring what
+          agents can do; agents discover it via DNS (<code>_wab.&lt;domain&gt;</code> TXT) or HTTPS; every action and
+          receipt is cryptographically verifiable (Ed25519).
+        </p>
+        <p>
+          WAB replaces guesswork (DOM scraping, brittle selectors, vision models) with a contract:
+          <em>scoped, rate-limited, idempotent, and auditable</em>. The browser SDK (<code>wab.min.js</code>) and the
+          original <code>window.AICommands</code> surface remain available for backward compatibility — see the
+          <a href="#legacy-config">Legacy section</a>.
+        </p>
 
-        <h2 id="configuration">Configuration</h2>
-        <p>The bridge is configured through the <code>window.AIBridgeConfig</code> object, which must be set before loading the script.</p>
+        <h3>The four layers</h3>
+        <ul>
+          <li><strong>Discovery</strong> — DNS TXT (<code>_wab.&lt;domain&gt;</code>) or <code>/.well-known/wab.json</code>.</li>
+          <li><strong>Manifest</strong> — <code>wab.json</code>: capabilities, scopes, public key, version.</li>
+          <li><strong>Trust</strong> — Ed25519 signatures, Ring 4 trust graph, replay protection, key rotation.</li>
+          <li><strong>Transactions (ATP)</strong> — signed intent contracts, idempotent execution, verifiable receipts. See <a href="/atp">/atp</a>.</li>
+        </ul>
+
+        <div style="background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.25);border-radius:12px;padding:14px 18px;margin:18px 0;">
+          <strong style="color:#22d3ee">📘 Looking for the full spec?</strong> The normative protocol
+          definition lives in <a href="/spec">/spec</a>. For the trust + security architecture, see
+          <a href="/security">/security</a> and <a href="/threat-model">/threat-model</a>.
+        </div>
+
+        <h2 id="quick-start">Quick Start</h2>
+        <p>Make your site discoverable and signed in three steps.</p>
+
+        <h3>Step 1 — Initialize</h3>
+        <p>From your project root:</p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">bash</span>
+          </div>
+          <div class="code-body">
+<pre><code><span class="cm"># Generates wab.json + Ed25519 key pair, prints DNS TXT to publish</span>
+npx wab-init --site=https://yourdomain.com --yes</code></pre>
+          </div>
+        </div>
+
+        <h3 id="wab-json">Step 2 — Publish <code>wab.json</code></h3>
+        <p>Host the generated manifest at <code>https://yourdomain.com/.well-known/wab.json</code>:</p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JSON — /.well-known/wab.json</span>
+          </div>
+          <div class="code-body">
+<pre><code>{
+  <span class="prop">"schema_version"</span>: <span class="str">"wab/1"</span>,
+  <span class="prop">"site"</span>: <span class="str">"https://yourdomain.com"</span>,
+  <span class="prop">"public_key"</span>: <span class="str">"ed25519:BASE64..."</span>,
+  <span class="prop">"capabilities"</span>: [
+    { <span class="prop">"name"</span>: <span class="str">"search"</span>, <span class="prop">"scope"</span>: <span class="str">"public"</span> },
+    { <span class="prop">"name"</span>: <span class="str">"cart.add"</span>, <span class="prop">"scope"</span>: <span class="str">"user"</span>, <span class="prop">"requires"</span>: [<span class="str">"atp:intent"</span>] }
+  ],
+  <span class="prop">"endpoints"</span>: {
+    <span class="prop">"atp"</span>: <span class="str">"https://yourdomain.com/api/atp"</span>
+  },
+  <span class="prop">"signature"</span>: <span class="str">"ed25519:BASE64..."</span>
+}</code></pre>
+          </div>
+        </div>
+
+        <h3 id="dns-discovery">Step 3 — Publish the DNS record</h3>
+        <p>Add a single TXT record so agents can discover you without scraping HTML:</p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">DNS — _wab.yourdomain.com</span>
+          </div>
+          <div class="code-body">
+<pre><code>_wab.yourdomain.com.  TXT  <span class="str">"v=wab1; pk=ed25519:BASE64...; url=https://yourdomain.com/.well-known/wab.json"</span></code></pre>
+          </div>
+        </div>
+
+        <p>That's it. Any WAB-aware agent can now discover, verify, and transact with your site.
+          Add the optional browser SDK for in-page hints:</p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">HTML — optional in-page bridge</span>
+          </div>
+          <div class="code-body">
+<pre><code>&lt;script src=<span class="str">"https://cdn.webagentbridge.com/wab.min.js"</span>&gt;&lt;/script&gt;</code></pre>
+          </div>
+        </div>
+
+        <h2 id="legacy-config">Legacy (v1) configuration</h2>
+        <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.35);border-radius:12px;padding:14px 18px;margin:18px 0;">
+          <strong style="color:#fbbf24">⚠️ Legacy surface — backward compatible.</strong> The sections below
+          document the original v1 <code>window.AIBridgeConfig</code> object and license-key model. They remain
+          supported but are <em>not</em> the recommended path for new integrations. New work should use the
+          <code>wab.json</code> manifest + Ed25519 model documented above.
+        </div>
+
+        <h3 id="configuration">Configuration (legacy)</h3>
+        <p>The legacy bridge is configured through the <code>window.AIBridgeConfig</code> object, which must be set before loading the script.</p>
 
         <div class="code-block">
           <div class="code-header">

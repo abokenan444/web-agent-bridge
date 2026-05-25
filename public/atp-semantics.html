@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATP Consistency &amp; Semantics — Web Agent Bridge</title>
+<meta name="description" content="Delivery guarantees, idempotency, receipt timing, retry policy and partition behavior of the Agent Transaction Protocol (ATP).">
+<link rel="canonical" href="https://webagentbridge.com/atp-semantics">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="stylesheet" href="/css/styles.css?v=3.0.1">
+<style>
+  .trust-page { max-width: 980px; margin: 0 auto; padding: 48px 24px 80px; }
+  .trust-page h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); margin: 0 0 10px; }
+  .trust-page .lead { color: #94a3b8; font-size: 1.1rem; max-width: 760px; }
+  .trust-page h2 { margin-top: 48px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
+  .trust-page h3 { margin-top: 28px; }
+  .trust-page table { width: 100%; border-collapse: collapse; margin: 16px 0; background: #10172a; border: 1px solid #1f2937; border-radius: 10px; overflow: hidden; }
+  .trust-page th, .trust-page td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #1f2937; vertical-align: top; }
+  .trust-page th { background: #0d1322; color: #94a3b8; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .trust-page code { background: rgba(34,211,238,.08); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
+  .trust-page pre { background: #0d1322; border: 1px solid #1f2937; border-radius: 10px; padding: 16px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; line-height: 1.55; }
+  .callout { background: rgba(34,211,238,.07); border: 1px solid rgba(34,211,238,.25); border-radius: 12px; padding: 14px 18px; margin: 18px 0; }
+  .callout.warn { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.35); }
+  .state-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 20px 0; }
+  .state { background: #10172a; border: 1px solid #1f2937; border-radius: 10px; padding: 14px; text-align: center; }
+  .state .name { font-weight: 600; color: #22d3ee; font-family: 'JetBrains Mono', monospace; }
+  .state .desc { color: #94a3b8; font-size: 0.85rem; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="/" class="navbar-brand"><div class="brand-icon">⚡</div><span>WAB</span></a>
+    <ul class="navbar-links">
+      <li><a href="/docs">Docs</a></li>
+      <li><a href="/atp">ATP</a></li>
+      <li><a href="/atp-semantics" style="color:#f0f4ff;">Semantics</a></li>
+      <li><a href="/security">Security</a></li>
+    </ul>
+    <div class="navbar-actions">
+      <a href="/login" class="btn btn-ghost">Sign In</a>
+      <a href="/register" class="btn btn-primary btn-sm">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<main class="trust-page">
+
+  <h1>ATP Consistency &amp; Semantics</h1>
+  <p class="lead">
+    The Agent Transaction Protocol gives you <em>at-least-once delivery, exactly-once effect</em>. This
+    page makes that promise precise: states, transitions, retries, receipt timing, and partition behavior.
+  </p>
+
+  <div class="callout">
+    <strong>One-line summary:</strong> retries are safe because <code>(intent_id, idempotency_key)</code> is
+    <code>UNIQUE</code> in the transactions table. A receipt is only emitted after the row transitions to
+    <code>settled</code> and is signed by the site key. There is no "maybe paid" state.
+  </div>
+
+  <h2 id="state-machine">1. Intent state machine</h2>
+  <div class="state-grid">
+    <div class="state"><div class="name">created</div><div class="desc">Intent received, signature valid, scope OK.</div></div>
+    <div class="state"><div class="name">authorized</div><div class="desc">User / agent consent recorded. Nonce burned.</div></div>
+    <div class="state"><div class="name">executing</div><div class="desc">Side-effects in flight (payment, fulfillment).</div></div>
+    <div class="state"><div class="name">executed</div><div class="desc">Side-effects acknowledged. Awaiting settlement signal.</div></div>
+    <div class="state"><div class="name">settled</div><div class="desc">Terminal success. Receipt signed and persisted.</div></div>
+    <div class="state"><div class="name">compensated</div><div class="desc">Terminal failure with rollback. Compensation receipt signed.</div></div>
+    <div class="state"><div class="name">expired</div><div class="desc">Terminal failure, no side-effects committed.</div></div>
+  </div>
+
+  <p><strong>Transitions are monotonic.</strong> Once a row leaves a state it does not return. There is no
+  <code>executing → authorized</code> edge. Recovery from a crash always re-enters at the same or a later state.</p>
+
+  <h2 id="delivery">2. Delivery guarantee</h2>
+  <p>
+    The wire protocol is <strong>at-least-once</strong>: agents may retry any step until they observe a
+    terminal state. The application layer turns this into <strong>exactly-once effect</strong> using the
+    idempotency key:
+  </p>
+  <pre><code>-- transactions table (canonical shape)
+CREATE TABLE transactions (
+  intent_id        TEXT NOT NULL,
+  idempotency_key  TEXT NOT NULL,
+  state            TEXT NOT NULL,
+  body             JSON NOT NULL,
+  receipt          JSON,
+  created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE (intent_id, idempotency_key)
+);</code></pre>
+  <p>
+    A retry with the same <code>(intent_id, idempotency_key)</code> returns the existing row verbatim —
+    same body, same receipt, same signature — without invoking the side-effecting handler again.
+  </p>
+
+  <h2 id="idempotency">3. Idempotency key rules</h2>
+  <ul>
+    <li><strong>Required</strong> on every <code>POST /api/atp/authorize</code> and <code>POST /api/atp/execute</code>.</li>
+    <li><strong>Opaque</strong> to the server: any 16–128 char string the agent chooses. UUIDv4 is fine.</li>
+    <li><strong>Bound to the intent</strong>: the same key used against a <em>different</em> <code>intent_id</code> is a different transaction. Cross-intent reuse is allowed.</li>
+    <li><strong>Stable across retries</strong>: the agent must persist it before the first attempt. If the agent loses the key, it must abandon the intent and let it expire — it must <em>not</em> retry with a fresh key, which would double-execute.</li>
+  </ul>
+
+  <h2 id="receipts">4. Receipt timing</h2>
+  <p>Receipts are issued <strong>only on entry to <code>settled</code> or <code>compensated</code></strong>. They are never issued speculatively.</p>
+  <table>
+    <thead><tr><th>State</th><th>Receipt visible?</th><th>Signed?</th></tr></thead>
+    <tbody>
+      <tr><td>created → executing</td><td>No</td><td>—</td></tr>
+      <tr><td>executed</td><td>No (pending)</td><td>—</td></tr>
+      <tr><td>settled</td><td>Yes</td><td>Ed25519 over JCS canonicalization of the receipt body</td></tr>
+      <tr><td>compensated</td><td>Yes (compensation receipt)</td><td>Ed25519, separate document referencing the original <code>intent_id</code></td></tr>
+      <tr><td>expired</td><td>No (none was promised)</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <p>Receipts are verifiable by any third party at <code>POST /api/atp/receipts/verify</code> with no shared secret.</p>
+
+  <h2 id="retries">5. Retry policy (recommended)</h2>
+  <ul>
+    <li>Exponential backoff, base 250 ms, jitter ±50 %, cap 30 s.</li>
+    <li>Retry on <code>5xx</code>, <code>408</code>, <code>425</code>, <code>429</code> (after <code>Retry-After</code>), <code>503</code>, and on connection errors.</li>
+    <li><strong>Do not retry</strong> on <code>4xx</code> other than the above — the response is final. In particular: <code>409 nonce_consumed</code> and <code>410 intent_expired</code> are terminal.</li>
+    <li>Bound total retry budget to the intent's <code>expires_at</code>; never retry past expiry.</li>
+  </ul>
+
+  <h2 id="partition">6. Network-partition behavior</h2>
+  <p>Failure modes during a partition:</p>
+  <ul>
+    <li><strong>Agent ⇄ site network loss after authorize, before execute response.</strong>
+      The agent re-issues <code>POST /execute</code> with the same idempotency key when connectivity returns.
+      If the original request committed, the agent gets the existing terminal record. If it didn't, it executes once.</li>
+    <li><strong>Site ⇄ payment-rail loss after charging.</strong>
+      The intent sits in <code>executing</code> until the rail callback or a reconciliation sweep completes.
+      Agents observe <code>executing</code> on polling and back off; they do not retry the intent itself.</li>
+    <li><strong>Reconciliation.</strong>
+      A periodic job (default 60 s) reconciles <code>executing</code> rows against the rail's idempotent
+      reference (e.g. Stripe PaymentIntent ID). Outcomes resolve to <code>settled</code> or <code>compensated</code>.</li>
+    <li><strong>Split-brain replicas.</strong>
+      ATP assumes a single authoritative writer per <code>(intent_id, idempotency_key)</code>. Multi-region
+      operators must route to the same primary or use a strong-consistency store. Eventual-consistency
+      stores break the exactly-once guarantee — they are explicitly unsupported.</li>
+  </ul>
+
+  <h2 id="duplicate-intent">7. Duplicate-intent detection</h2>
+  <p>
+    Distinct from duplicate <em>requests</em>: a duplicate <em>intent</em> is when the agent generates two
+    independent intent_ids for what the user meant as one action (the classic "double-click checkout"
+    failure). WAB does not eliminate this — it's a UX problem — but it limits the blast radius:
+  </p>
+  <ul>
+    <li><strong>Recommended:</strong> agents include an <code>action_dedup_key</code> in the signed intent (e.g. hash of cart contents + user_id + minute bucket). Sites that opt in reject duplicate <code>action_dedup_key</code> within the configured window.</li>
+    <li><strong>Always:</strong> the intent <code>nonce</code> is single-use, so an agent that <em>replays</em> the same signed intent gets a deterministic <code>409 nonce_consumed</code>.</li>
+  </ul>
+
+  <h2 id="ordering">8. Ordering</h2>
+  <p>
+    Intents are independent. ATP does <strong>not</strong> impose a total order between two intents from the
+    same agent or user. If your business logic requires "A before B", encode that as a precondition inside
+    the intent body (e.g. "execute only if intent X is <code>settled</code>"). The server evaluates the
+    precondition at <code>authorize</code> time.
+  </p>
+
+  <h2 id="examples">9. Concrete examples</h2>
+  <h3>Successful retry after timeout</h3>
+  <pre><code>POST /api/atp/execute
+Idempotency-Key: 9b1c...
+Body: { intent_id: "int_abc", ... }
+
+→ (timeout, agent retries the same request)
+
+POST /api/atp/execute
+Idempotency-Key: 9b1c...                ← same key
+Body: { intent_id: "int_abc", ... }     ← same body
+
+→ 200 OK
+{ "state": "settled", "receipt": { ...signed... } }
+(same row, no double-execution)</code></pre>
+
+  <h3>Nonce reuse (rejected)</h3>
+  <pre><code>POST /api/atp/authorize
+Body: { intent_id: "int_abc", nonce: "n1", signature: "..." }
+→ 200 authorized
+
+POST /api/atp/authorize
+Body: { intent_id: "int_abc", nonce: "n1", signature: "..." }   ← same nonce
+→ 409 { "error": "nonce_consumed", "first_consumed_at": "..." }</code></pre>
+
+  <h2 id="changelog">10. Document history</h2>
+  <ul>
+    <li><strong>2026-05-25</strong> — Initial publication.</li>
+  </ul>
+
+  <p style="margin-top: 48px; color:#94a3b8;">
+    Related: <a href="/atp">ATP overview</a> ·
+    <a href="/security">Security</a> ·
+    <a href="/threat-model">Threat model</a> ·
+    <a href="/benchmarks">Benchmarks</a>
+  </p>
+
+</main>
+
+<footer class="footer" style="margin-top:32px;">
+  <div class="container">
+    <div class="footer-bottom">
+      <span>© 2026 Web Agent Bridge. Open Core.</span>
+      <a href="/" class="btn btn-ghost btn-sm">Back to Home</a>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/auth-nav.js?v=3.0.1"></script>
+<script src="/js/cookie-consent.js?v=3.0.1"></script>
+</body>
+</html>

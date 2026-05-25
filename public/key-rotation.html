@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Key Rotation &amp; Emergency Revocation — Web Agent Bridge</title>
+<meta name="description" content="How WAB site keys and the Ring 4 trust anchor are rotated, including emergency revocation, grace windows, and audit semantics.">
+<link rel="canonical" href="https://webagentbridge.com/key-rotation">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="stylesheet" href="/css/styles.css?v=3.0.1">
+<style>
+  .trust-page { max-width: 980px; margin: 0 auto; padding: 48px 24px 80px; }
+  .trust-page h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); margin: 0 0 10px; }
+  .trust-page .lead { color: #94a3b8; font-size: 1.1rem; max-width: 760px; }
+  .trust-page h2 { margin-top: 48px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
+  .trust-page h3 { margin-top: 28px; }
+  .trust-page table { width: 100%; border-collapse: collapse; margin: 16px 0; background: #10172a; border: 1px solid #1f2937; border-radius: 10px; overflow: hidden; }
+  .trust-page th, .trust-page td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #1f2937; vertical-align: top; }
+  .trust-page th { background: #0d1322; color: #94a3b8; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .trust-page code { background: rgba(34,211,238,.08); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
+  .trust-page pre { background: #0d1322; border: 1px solid #1f2937; border-radius: 10px; padding: 16px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; line-height: 1.55; }
+  .callout { background: rgba(34,211,238,.07); border: 1px solid rgba(34,211,238,.25); border-radius: 12px; padding: 14px 18px; margin: 18px 0; }
+  .callout.warn { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.35); }
+  .callout.danger { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.35); }
+  .timeline { border-left: 2px solid #22d3ee; margin: 24px 0; padding-left: 20px; }
+  .timeline .step { margin-bottom: 18px; }
+  .timeline .step strong { color: #22d3ee; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="/" class="navbar-brand"><div class="brand-icon">⚡</div><span>WAB</span></a>
+    <ul class="navbar-links">
+      <li><a href="/docs">Docs</a></li>
+      <li><a href="/security">Security</a></li>
+      <li><a href="/threat-model">Threat Model</a></li>
+      <li><a href="/key-rotation" style="color:#f0f4ff;">Key Rotation</a></li>
+    </ul>
+    <div class="navbar-actions">
+      <a href="/login" class="btn btn-ghost">Sign In</a>
+      <a href="/register" class="btn btn-primary btn-sm">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<main class="trust-page">
+
+  <h1>Key Rotation &amp; Emergency Revocation</h1>
+  <p class="lead">
+    WAB key material is rotatable by design. This page documents the routine rotation procedure, the
+    emergency revocation procedure, and how downstream agents reconcile a rotation event.
+  </p>
+
+  <h2 id="kinds">1. Key kinds</h2>
+  <table>
+    <thead><tr><th>Key</th><th>Owner</th><th>Used for</th><th>Routine cadence</th></tr></thead>
+    <tbody>
+      <tr><td>Site Ed25519</td><td>Site operator</td><td>Signing <code>wab.json</code>, ATP receipts, intents</td><td>Recommended every 365 d</td></tr>
+      <tr><td>Site key-signing key (optional)</td><td>Site operator</td><td>Co-signing rotations of the Ed25519 key (anti-lockout)</td><td>3–5 years</td></tr>
+      <tr><td>Ring 4 anchor key</td><td>webagentbridge.com</td><td>Trust-graph attestations</td><td>Annual, scheduled</td></tr>
+      <tr><td>Webhook secret (HMAC)</td><td>Site operator</td><td>Stripe-style webhook auth</td><td>Per integration; rotate on suspicion</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="routine">2. Routine site-key rotation</h2>
+  <div class="timeline">
+    <div class="step">
+      <strong>T-7 days</strong> — Announce next-key. The site publishes <code>next_public_key</code> inside the current <code>wab.json</code>, co-signed by the existing key.
+    </div>
+    <div class="step">
+      <strong>T-0</strong> — Cutover. The site replaces <code>public_key</code> with the previously announced <code>next_public_key</code>, signs the new manifest with the new key, and lists the old key under <code>previous_keys</code> with a <code>valid_until</code> timestamp.
+    </div>
+    <div class="step">
+      <strong>T+30 days</strong> — Grace expires. Receipts signed by the old key after <code>valid_until</code> are rejected by compliant agents.
+    </div>
+    <div class="step">
+      <strong>T+90 days</strong> — Old key drops out of the manifest. Historical receipts remain verifiable from archived manifest snapshots.
+    </div>
+  </div>
+
+  <h3>Example manifest during a routine rotation</h3>
+  <pre><code>{
+  "schema_version": "wab/1",
+  "site": "https://yourdomain.com",
+  "public_key": "ed25519:NEW_KEY_BASE64",
+  "previous_keys": [
+    { "key": "ed25519:OLD_KEY_BASE64", "valid_until": "2026-06-25T00:00:00Z", "reason": "scheduled" }
+  ],
+  "next_public_key": null,
+  "signature": "ed25519:SIG_BY_NEW_KEY"
+}</code></pre>
+
+  <h2 id="emergency">3. Emergency revocation</h2>
+  <div class="callout danger">
+    Use this path when you believe the private key is — or may be — compromised. Speed matters more than ceremony.
+  </div>
+  <ol>
+    <li><strong>Generate a new Ed25519 keypair</strong> on a clean host. Keep the private key offline until publishing.</li>
+    <li><strong>Publish a revocation record</strong> at <code>https://yourdomain.com/.well-known/wab-revocations.json</code>:
+      <pre><code>{
+  "site": "https://yourdomain.com",
+  "revoked": [
+    { "key": "ed25519:COMPROMISED_BASE64", "revoked_at": "2026-05-25T12:00:00Z", "reason": "key_compromise" }
+  ],
+  "new_public_key": "ed25519:NEW_BASE64",
+  "signature_by_new_key": "ed25519:SIG",
+  "signature_by_dns_proof": "see wab.json TXT"
+}</code></pre>
+    </li>
+    <li><strong>Update DNS TXT</strong> at <code>_wab.&lt;domain&gt;</code> with the new public key. DNS propagation determines how quickly off-graph agents pick up the change; we recommend a TTL of 300 s on this record.</li>
+    <li><strong>Replace <code>/.well-known/wab.json</code></strong> with a manifest signed by the new key, listing the compromised key in <code>previous_keys</code> with <code>reason="key_compromise"</code> and <code>valid_until</code> set to the revocation timestamp.</li>
+    <li><strong>Notify Ring 4</strong> via <code>POST /api/trust/revoke</code> (signed by the new key). The trust graph propagates the revocation to attested agents within minutes.</li>
+    <li><strong>Audit receipts</strong> signed by the old key between the suspected compromise window and the revocation timestamp. Anything outside scope or above ambient compensation rate should be reviewed.</li>
+  </ol>
+
+  <h2 id="agent-behavior">4. Agent behavior during/after rotation</h2>
+  <ul>
+    <li>On every discovery refresh (default TTL ≤ 1 h), agents re-fetch <code>wab.json</code> and check <code>previous_keys</code> + <code>/.well-known/wab-revocations.json</code>.</li>
+    <li>Receipts signed by a key listed in <code>previous_keys</code> with <code>reason="key_compromise"</code> are flagged <em>distrusted</em> from <code>revoked_at</code> forward.</li>
+    <li>Receipts signed during the grace window (routine rotation) remain valid.</li>
+    <li>Agents <strong>must</strong> reject manifests whose <code>signature</code> does not validate against <code>public_key</code>, even if cached. No silent downgrade.</li>
+  </ul>
+
+  <h2 id="ring4">5. Ring 4 anchor rotation</h2>
+  <p>
+    The Ring 4 anchor key (held by webagentbridge.com) follows a stricter procedure:
+  </p>
+  <ol>
+    <li>New anchor key is generated and committed in a public transparency log <em>30 days</em> before activation.</li>
+    <li>Cross-signed by the previous anchor for a 90-day overlap.</li>
+    <li>Listed in DNS at <code>_anchor.webagentbridge.com</code> with both the old and new keys during overlap.</li>
+    <li>Old anchor key is retired and listed under <code>previous_anchors</code> with <code>valid_until</code>.</li>
+  </ol>
+  <p>
+    Emergency anchor rotation (compromise of the Ring 4 root) requires a published, signed
+    statement from the foundation, an out-of-band public announcement, and an attested transparency-log
+    entry. Trust scores from before the compromise event are recomputed.
+  </p>
+
+  <h2 id="webhook">6. Webhook secret rotation</h2>
+  <p>
+    Webhook HMAC secrets are rotated by your provider (e.g. Stripe). On the WAB side, support two secrets
+    in parallel for at least 30 days: the operator pastes the new one into the dashboard, requests roll the
+    old one out, and the system tries both during the overlap. Reject anything that matches neither.
+  </p>
+
+  <h2 id="checklist">7. Operator checklist</h2>
+  <ul>
+    <li>☐ Offline backup of the site Ed25519 private key (encrypted, two locations).</li>
+    <li>☐ Key-signing key (optional but recommended) on a separate device.</li>
+    <li>☐ DNS TXT TTL ≤ 300 s for <code>_wab</code> records.</li>
+    <li>☐ Routine rotation calendar entry annually.</li>
+    <li>☐ Runbook for emergency revocation tested at least once per year (table-top is fine).</li>
+    <li>☐ <code>security@</code> contact wired to a human, not a forwarding void.</li>
+  </ul>
+
+  <h2 id="changelog">8. Document history</h2>
+  <ul>
+    <li><strong>2026-05-25</strong> — Initial publication.</li>
+  </ul>
+
+  <p style="margin-top: 48px; color:#94a3b8;">
+    Related: <a href="/security">/security</a> ·
+    <a href="/threat-model">/threat-model</a> ·
+    <a href="/responsible-disclosure">/responsible-disclosure</a>
+  </p>
+
+</main>
+
+<footer class="footer" style="margin-top:32px;">
+  <div class="container">
+    <div class="footer-bottom">
+      <span>© 2026 Web Agent Bridge. Open Core.</span>
+      <a href="/" class="btn btn-ghost btn-sm">Back to Home</a>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/auth-nav.js?v=3.0.1"></script>
+<script src="/js/cookie-consent.js?v=3.0.1"></script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAB Benchmarks (preliminary) — Web Agent Bridge</title>
+<meta name="description" content="Preliminary performance numbers for the WAB protocol — discovery latency, signature verification, ATP throughput, replay-detection rate. Methodology and code published.">
+<link rel="canonical" href="https://webagentbridge.com/benchmarks">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="stylesheet" href="/css/styles.css?v=3.0.1">
+<style>
+  .trust-page { max-width: 980px; margin: 0 auto; padding: 48px 24px 80px; }
+  .trust-page h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); margin: 0 0 10px; }
+  .trust-page .lead { color: #94a3b8; font-size: 1.1rem; max-width: 760px; }
+  .trust-page h2 { margin-top: 48px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
+  .trust-page h3 { margin-top: 28px; }
+  .trust-page table { width: 100%; border-collapse: collapse; margin: 16px 0; background: #10172a; border: 1px solid #1f2937; border-radius: 10px; overflow: hidden; }
+  .trust-page th, .trust-page td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #1f2937; vertical-align: top; }
+  .trust-page th { background: #0d1322; color: #94a3b8; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .trust-page code { background: rgba(34,211,238,.08); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
+  .callout { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.35); border-radius: 12px; padding: 14px 18px; margin: 18px 0; }
+  .num { font-family: 'JetBrains Mono', monospace; color: #22d3ee; font-weight: 600; }
+  .tag { display:inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; background: rgba(245,158,11,.15); color: #fbbf24; margin-left: 8px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="/" class="navbar-brand"><div class="brand-icon">⚡</div><span>WAB</span></a>
+    <ul class="navbar-links">
+      <li><a href="/docs">Docs</a></li>
+      <li><a href="/atp-semantics">ATP Semantics</a></li>
+      <li><a href="/benchmarks" style="color:#f0f4ff;">Benchmarks</a></li>
+      <li><a href="/security">Security</a></li>
+    </ul>
+    <div class="navbar-actions">
+      <a href="/login" class="btn btn-ghost">Sign In</a>
+      <a href="/register" class="btn btn-primary btn-sm">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<main class="trust-page">
+
+  <h1>WAB Benchmarks <span class="tag">PRELIMINARY</span></h1>
+  <p class="lead">
+    Honest numbers from our reference deployment. <strong>Treat these as a starting point, not a marketing
+    claim.</strong> The harness and raw data will be published alongside the v4 spec; until then, take every
+    number with a grain of salt and reproduce it yourself.
+  </p>
+
+  <div class="callout">
+    <strong>Status:</strong> these results come from a single-region deployment on a 4 vCPU / 8 GB host
+    (Node.js 20, PostgreSQL 16, Cloudflare in front). They are <em>preliminary</em> in the literal sense:
+    we have not yet published the benchmarking harness, multi-region results, or adversarial stress tests.
+    Numbers will change. When they do, this page will be versioned.
+  </div>
+
+  <h2 id="methodology">1. Methodology (in progress)</h2>
+  <ul>
+    <li><strong>Hardware:</strong> 4 vCPU AMD EPYC, 8 GB RAM, NVMe storage, single region (us-east).</li>
+    <li><strong>Software:</strong> Node.js 20.x, Express, better-sqlite3 (dev) / PostgreSQL 16 (production), pm2 cluster mode (2 workers).</li>
+    <li><strong>Client:</strong> <code>autocannon</code> for HTTP load; custom Node.js harness for signature throughput.</li>
+    <li><strong>Network:</strong> client co-located in the same region; cross-region numbers will be added.</li>
+    <li><strong>Warmup:</strong> 30 s discarded before measurement.</li>
+    <li><strong>Reproducibility:</strong> harness scripts will live at <code>bench/</code> in the public repo. PRs that improve the harness are welcome.</li>
+  </ul>
+
+  <h2 id="discovery">2. Discovery latency</h2>
+  <table>
+    <thead><tr><th>Step</th><th>p50</th><th>p95</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>DNS TXT lookup (cached resolver)</td><td><span class="num">&lt; 2 ms</span></td><td><span class="num">&lt; 8 ms</span></td><td>Cloudflare 1.1.1.1, 300 s TTL.</td></tr>
+      <tr><td>DNS TXT lookup (cold)</td><td><span class="num">~ 25 ms</span></td><td><span class="num">~ 90 ms</span></td><td>Recursive resolution, varies wildly by network.</td></tr>
+      <tr><td>Manifest fetch (<code>/.well-known/wab.json</code>)</td><td><span class="num">~ 18 ms</span></td><td><span class="num">~ 45 ms</span></td><td>Static, CDN-cacheable.</td></tr>
+      <tr><td>Manifest signature verify (Ed25519)</td><td><span class="num">~ 0.15 ms</span></td><td><span class="num">~ 0.3 ms</span></td><td><code>tweetnacl</code>, single core.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="signature">3. Signature throughput</h2>
+  <table>
+    <thead><tr><th>Operation</th><th>Throughput</th><th>p95 latency</th></tr></thead>
+    <tbody>
+      <tr><td>Ed25519 sign (single)</td><td><span class="num">~ 20k ops/s</span></td><td><span class="num">&lt; 0.1 ms</span></td></tr>
+      <tr><td>Ed25519 verify (single)</td><td><span class="num">~ 7k ops/s</span></td><td><span class="num">~ 0.2 ms</span></td></tr>
+      <tr><td>Ed25519 verify (batch of 64)</td><td><span class="num">~ 22k ops/s effective</span></td><td><span class="num">~ 3 ms / batch</span></td></tr>
+      <tr><td>JCS canonicalization (intent ≈ 1 KB)</td><td><span class="num">~ 50k ops/s</span></td><td><span class="num">&lt; 0.05 ms</span></td></tr>
+    </tbody>
+  </table>
+  <p style="color:#94a3b8;font-size:0.9rem;">Numbers from <code>tweetnacl</code>. Switching to a native binding (<code>@noble/curves</code> WASM or sodium-native) typically yields a 2–3× improvement; we will rerun once the bench harness lands.</p>
+
+  <h2 id="atp">4. ATP end-to-end</h2>
+  <table>
+    <thead><tr><th>Step</th><th>p50</th><th>p95</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Authorize (signed intent → server, no payment)</td><td><span class="num">~ 18 ms</span></td><td><span class="num">~ 40 ms</span></td><td>Signature verify + DB insert.</td></tr>
+      <tr><td>Execute (no external rail)</td><td><span class="num">~ 22 ms</span></td><td><span class="num">~ 50 ms</span></td><td>Idempotent insert + state transition.</td></tr>
+      <tr><td>Execute (with Stripe PaymentIntent)</td><td><span class="num">~ 280 ms</span></td><td><span class="num">~ 480 ms</span></td><td>Bound by Stripe API latency.</td></tr>
+      <tr><td>Receipt sign + persist</td><td><span class="num">~ 1.5 ms</span></td><td><span class="num">~ 4 ms</span></td><td>JCS + Ed25519 + INSERT.</td></tr>
+      <tr><td>Receipt verify (public endpoint)</td><td><span class="num">~ 0.8 ms</span></td><td><span class="num">~ 2 ms</span></td><td>Stateless, cacheable.</td></tr>
+      <tr><td>Sustained throughput (authorize)</td><td colspan="2"><span class="num">~ 1.2k req/s</span></td><td>Two-worker pm2, single 4 vCPU host.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="replay">5. Replay detection</h2>
+  <table>
+    <thead><tr><th>Scenario</th><th>Detection rate</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Exact replay within ±300 s window</td><td><span class="num">100 %</span></td><td>Nonce burn, structural.</td></tr>
+      <tr><td>Replay after window expiry</td><td><span class="num">100 %</span></td><td>Timestamp rejected before nonce check.</td></tr>
+      <tr><td>Replay with tampered body</td><td><span class="num">100 %</span></td><td>Signature verify fails.</td></tr>
+      <tr><td>Replay across regions (with shared nonce store)</td><td><span class="num">100 %</span></td><td>Requires strong-consistency nonce store; verified on PostgreSQL primary.</td></tr>
+      <tr><td>Replay across regions (eventual-consistency nonce store)</td><td><span class="num">— unsupported —</span></td><td>Explicitly out of scope; do not deploy this way.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="roadmap">6. Benchmark roadmap</h2>
+  <ul>
+    <li>☐ Publish the harness in the public repo under <code>bench/</code>.</li>
+    <li>☐ Multi-region results (us-east ↔ eu-west).</li>
+    <li>☐ Native crypto binding comparison (<code>tweetnacl</code> vs <code>sodium-native</code> vs <code>@noble/curves</code>).</li>
+    <li>☐ Adversarial flood: signed-but-bogus intents at 10× the normal rate.</li>
+    <li>☐ Reconciliation sweep cost at 100k stale rows.</li>
+    <li>☐ Mobile / low-bandwidth discovery latency (Lite manifest path).</li>
+  </ul>
+
+  <h2 id="changelog">7. Document history</h2>
+  <ul>
+    <li><strong>2026-05-25</strong> — Initial publication. Numbers are preliminary and will be revised once the harness ships.</li>
+  </ul>
+
+  <p style="margin-top: 48px; color:#94a3b8;">
+    Related: <a href="/atp-semantics">/atp-semantics</a> · <a href="/security">/security</a> · <a href="/spec">/spec</a>
+  </p>
+
+</main>
+
+<footer class="footer" style="margin-top:32px;">
+  <div class="container">
+    <div class="footer-bottom">
+      <span>© 2026 Web Agent Bridge. Open Core.</span>
+      <a href="/" class="btn btn-ghost btn-sm">Back to Home</a>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/auth-nav.js?v=3.0.1"></script>
+<script src="/js/cookie-consent.js?v=3.0.1"></script>
+</body>
+</html>

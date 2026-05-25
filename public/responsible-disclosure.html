@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Responsible Disclosure — Web Agent Bridge</title>
+<meta name="description" content="How to report a security vulnerability in WAB. Safe-harbor language, response SLAs, encrypted contact, and scope.">
+<link rel="canonical" href="https://webagentbridge.com/responsible-disclosure">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="stylesheet" href="/css/styles.css?v=3.0.1">
+<style>
+  .trust-page { max-width: 920px; margin: 0 auto; padding: 48px 24px 80px; }
+  .trust-page h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); margin: 0 0 10px; }
+  .trust-page .lead { color: #94a3b8; font-size: 1.1rem; max-width: 760px; }
+  .trust-page h2 { margin-top: 48px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
+  .trust-page table { width: 100%; border-collapse: collapse; margin: 16px 0; background: #10172a; border: 1px solid #1f2937; border-radius: 10px; overflow: hidden; }
+  .trust-page th, .trust-page td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #1f2937; vertical-align: top; }
+  .trust-page th { background: #0d1322; color: #94a3b8; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .trust-page code { background: rgba(34,211,238,.08); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
+  .callout { background: rgba(34,211,238,.07); border: 1px solid rgba(34,211,238,.25); border-radius: 12px; padding: 14px 18px; margin: 18px 0; }
+  .callout.danger { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.35); }
+  .contact-card { background: #10172a; border: 1px solid #1f2937; border-radius: 14px; padding: 24px; margin: 24px 0; }
+  .contact-card .row { display:flex; justify-content:space-between; padding: 10px 0; border-bottom: 1px solid #1f2937; gap: 16px; flex-wrap: wrap; }
+  .contact-card .row:last-child { border-bottom: none; }
+  .contact-card .k { color: #94a3b8; font-size: 0.9rem; }
+  .contact-card .v { color: #e2e8f0; font-family: 'JetBrains Mono', monospace; font-size: 0.92rem; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="/" class="navbar-brand"><div class="brand-icon">⚡</div><span>WAB</span></a>
+    <ul class="navbar-links">
+      <li><a href="/docs">Docs</a></li>
+      <li><a href="/security">Security</a></li>
+      <li><a href="/responsible-disclosure" style="color:#f0f4ff;">Disclosure</a></li>
+      <li><a href="/whitepaper">Whitepaper</a></li>
+    </ul>
+    <div class="navbar-actions">
+      <a href="/login" class="btn btn-ghost">Sign In</a>
+      <a href="/register" class="btn btn-primary btn-sm">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<main class="trust-page">
+
+  <h1>Responsible Disclosure</h1>
+  <p class="lead">
+    We treat security reports as a partnership. If you've found a vulnerability in the WAB protocol,
+    SDK, server, or hosted infrastructure, please report it privately and we will respond, fix, and credit.
+  </p>
+
+  <h2 id="contact">1. How to report</h2>
+  <div class="contact-card">
+    <div class="row"><span class="k">Email</span><span class="v">security@webagentbridge.com</span></div>
+    <div class="row"><span class="k">PGP key</span><span class="v"><a href="/.well-known/pgp-key.txt" style="color:#22d3ee;">/.well-known/pgp-key.txt</a></span></div>
+    <div class="row"><span class="k">PGP fingerprint</span><span class="v">to be published</span></div>
+    <div class="row"><span class="k">security.txt</span><span class="v"><a href="/.well-known/security.txt" style="color:#22d3ee;">/.well-known/security.txt</a></span></div>
+    <div class="row"><span class="k">Acknowledge SLA</span><span class="v">≤ 72 hours</span></div>
+    <div class="row"><span class="k">Triage SLA</span><span class="v">≤ 7 days</span></div>
+    <div class="row"><span class="k">Fix SLA (critical)</span><span class="v">≤ 14 days from triage</span></div>
+  </div>
+
+  <div class="callout danger">
+    <strong>Please encrypt</strong> reports of critical issues with our PGP key. If PGP is impractical,
+    send an unencrypted summary plus a request for a secure channel, and we will set one up within 24 hours.
+  </div>
+
+  <h2 id="scope">2. Scope</h2>
+  <p><strong>In scope:</strong></p>
+  <ul>
+    <li><code>webagentbridge.com</code> and any subdomain we operate.</li>
+    <li>The <code>web-agent-bridge</code> npm package and its SDK packages.</li>
+    <li>The WAB protocol itself — signature, discovery, ATP semantics, replay protection.</li>
+    <li>The browser SDK (<code>wab.min.js</code>) and the WordPress / Hydrogen / Elementor integrations we publish.</li>
+  </ul>
+  <p><strong>Out of scope:</strong></p>
+  <ul>
+    <li>Findings that require a compromised user device, browser extension, or stolen credentials with no further escalation.</li>
+    <li>Volumetric DoS without an amplification primitive.</li>
+    <li>Self-XSS, missing best-practice headers without a concrete exploit, or social engineering of staff.</li>
+    <li>Third-party services we depend on (Stripe, Cloudflare, registrars) — please report those upstream.</li>
+  </ul>
+
+  <h2 id="safe-harbor">3. Safe harbor</h2>
+  <p>
+    Researchers acting in good faith under this policy are authorized to perform their work and will not be
+    pursued under the CFAA, equivalents elsewhere, or our own terms of service, provided they:
+  </p>
+  <ul>
+    <li>Do not access, modify, or destroy data that is not theirs.</li>
+    <li>Do not run automated scanning at a rate that materially harms availability.</li>
+    <li>Do not extort, threaten, or publicly disclose before coordinated release.</li>
+    <li>Stop testing and contact us if they encounter sensitive data unexpectedly.</li>
+  </ul>
+  <p>We will not pursue legal action against good-faith research that follows this policy.</p>
+
+  <h2 id="reward">4. Acknowledgement &amp; rewards</h2>
+  <table>
+    <thead><tr><th>Severity</th><th>Examples</th><th>Reward</th></tr></thead>
+    <tbody>
+      <tr><td>Critical</td><td>Forged ATP receipts, full key extraction, complete account takeover, RCE on production</td><td>USD 1,000 – 5,000 + hall of fame</td></tr>
+      <tr><td>High</td><td>Replay bypass, idempotency bypass, scope escalation, signed-intent forgery, persistent auth bypass</td><td>USD 250 – 1,000 + hall of fame</td></tr>
+      <tr><td>Medium</td><td>Authenticated IDOR, partial scope leak, server-side input flaws without RCE</td><td>USD 75 – 250 + hall of fame</td></tr>
+      <tr><td>Low</td><td>Reflected info disclosure, missing rate limits with no clear abuse path</td><td>Hall of fame + swag</td></tr>
+    </tbody>
+  </table>
+  <p style="color:#94a3b8;font-size:0.9rem;">
+    Rewards are paid at our discretion after the issue is verified, deduplicated, and fixed.
+    First reporter of a unique issue is rewarded.
+  </p>
+
+  <h2 id="process">5. Process</h2>
+  <ol>
+    <li><strong>Report</strong> — email <code>security@webagentbridge.com</code> with reproduction steps, affected version, and impact.</li>
+    <li><strong>Acknowledge</strong> — we reply within 72 hours.</li>
+    <li><strong>Triage</strong> — within 7 days we confirm severity and assign a tracking ID.</li>
+    <li><strong>Remediate</strong> — fix and deploy. Critical within 14 days, others within 90 days.</li>
+    <li><strong>Disclose</strong> — coordinated public advisory after the fix ships, crediting the reporter unless they prefer anonymity.</li>
+  </ol>
+
+  <h2 id="hall">6. Hall of fame</h2>
+  <p>Reporters who follow this policy are listed here (with permission). The list will appear after our first credited disclosure.</p>
+
+  <h2 id="changelog">7. Document history</h2>
+  <ul>
+    <li><strong>2026-05-25</strong> — Initial publication.</li>
+  </ul>
+
+  <p style="margin-top: 48px; color:#94a3b8;">
+    Related: <a href="/security">/security</a> · <a href="/threat-model">/threat-model</a> · <a href="/key-rotation">/key-rotation</a>
+  </p>
+
+</main>
+
+<footer class="footer" style="margin-top:32px;">
+  <div class="container">
+    <div class="footer-bottom">
+      <span>© 2026 Web Agent Bridge. Open Core.</span>
+      <a href="/" class="btn btn-ghost btn-sm">Back to Home</a>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/auth-nav.js?v=3.0.1"></script>
+<script src="/js/cookie-consent.js?v=3.0.1"></script>
+</body>
+</html>

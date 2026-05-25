@@ -566,6 +566,9 @@ app.get(['/atp-semantics', '/atp-semantics.html'], noCache, (req, res) => {
 app.get(['/benchmarks', '/benchmarks.html'], noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'benchmarks.html'));
 });
+app.get(['/wab-today', '/wab-today.html', '/architecture'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'wab-today.html'));
+});
 
 // ── WAB Ecosystem v3.18.0 — Observatory · Notary · Research · URI scheme · Lens ──
 app.use('/api/notary',      apiLimiter, require('./routes/notary'));

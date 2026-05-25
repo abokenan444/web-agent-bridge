@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Model — Web Agent Bridge</title>
+<meta name="description" content="WAB security model: cryptographic primitives, trust roots, scope enforcement, replay protection, and the boundaries between protocol-level and application-level security.">
+<link rel="canonical" href="https://webagentbridge.com/security">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="/css/styles.css?v=3.0.1">
+<style>
+  .trust-page { max-width: 980px; margin: 0 auto; padding: 48px 24px 80px; }
+  .trust-page h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); margin: 0 0 10px; }
+  .trust-page .lead { color: var(--text-secondary, #94a3b8); font-size: 1.1rem; max-width: 760px; }
+  .trust-page h2 { margin-top: 48px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
+  .trust-page h3 { margin-top: 28px; }
+  .trust-page table { width: 100%; border-collapse: collapse; margin: 16px 0; background: #10172a; border: 1px solid #1f2937; border-radius: 10px; overflow: hidden; }
+  .trust-page th, .trust-page td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #1f2937; vertical-align: top; }
+  .trust-page th { background: #0d1322; color: #94a3b8; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .trust-page tr:last-child td { border-bottom: none; }
+  .trust-page code { background: rgba(34,211,238,.08); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+  .callout { background: rgba(34,211,238,.07); border: 1px solid rgba(34,211,238,.25); border-radius: 12px; padding: 14px 18px; margin: 18px 0; }
+  .callout.warn { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.35); }
+  .callout.danger { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.35); }
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 20px 0; }
+  .meta-box { background: #10172a; border: 1px solid #1f2937; border-radius: 10px; padding: 16px; }
+  .meta-box .k { color: #94a3b8; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  .meta-box .v { color: #e2e8f0; font-weight: 600; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="/" class="navbar-brand">
+      <div class="brand-icon">⚡</div>
+      <span>WAB</span>
+    </a>
+    <ul class="navbar-links">
+      <li><a href="/#features">Features</a></li>
+      <li><a href="/docs">Docs</a></li>
+      <li><a href="/security" style="color:var(--text-primary,#f0f4ff);">Security</a></li>
+      <li><a href="/whitepaper">Whitepaper</a></li>
+    </ul>
+    <div class="navbar-actions">
+      <a href="/login" class="btn btn-ghost">Sign In</a>
+      <a href="/register" class="btn btn-primary btn-sm">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<main class="trust-page">
+
+  <h1>WAB Security Model</h1>
+  <p class="lead">
+    This page defines the cryptographic primitives, trust roots, and verification boundaries
+    that the WAB protocol provides — and, just as importantly, what it does <em>not</em> guarantee.
+    For the explicit adversary model see <a href="/threat-model">/threat-model</a>.
+  </p>
+
+  <div class="meta-grid">
+    <div class="meta-box"><div class="k">Signature</div><div class="v">Ed25519 (RFC 8032)</div></div>
+    <div class="meta-box"><div class="k">Canonicalization</div><div class="v">JCS (RFC 8785)</div></div>
+    <div class="meta-box"><div class="k">Discovery</div><div class="v">DNS TXT + DNSSEC-aware</div></div>
+    <div class="meta-box"><div class="k">Replay window</div><div class="v">±300 s, nonce burn</div></div>
+    <div class="meta-box"><div class="k">Status</div><div class="v">Production v3.x</div></div>
+  </div>
+
+  <h2 id="goals">1. Security goals</h2>
+  <p>The WAB protocol is designed to provide, by construction, the following properties:</p>
+  <ul>
+    <li><strong>Origin authenticity</strong> — agents can prove that a <code>wab.json</code> manifest, capability response, or ATP receipt was produced by the legitimate site operator (or someone holding its private key).</li>
+    <li><strong>Scope enforcement</strong> — every signed intent declares an explicit, auditable scope (actions, spend cap, expiry, single-use nonce). The server refuses anything outside the declared scope.</li>
+    <li><strong>Idempotency</strong> — for any <code>(intent_id, idempotency_key)</code> pair, the system executes at most once, regardless of retries, network partitions, or duplicate client submissions.</li>
+    <li><strong>Verifiable receipts</strong> — every transaction terminates in an Ed25519-signed JSON receipt that any third party can verify with no shared secret, via the public endpoint <code>/api/atp/receipts/verify</code>.</li>
+    <li><strong>Auditability</strong> — every accepted intent, transition, receipt and compensation is logged with an append-only nonce; the audit trail is replay-resistant by design.</li>
+  </ul>
+
+  <h2 id="non-goals">2. Non-goals (what WAB does <em>not</em> claim)</h2>
+  <p>The protocol is honest about its boundaries. The following are deliberately <em>out of scope</em>:</p>
+  <ul>
+    <li><strong>Confidentiality of payloads at the application layer.</strong> WAB rides on TLS but does not add end-to-end encryption on top. If your intent body is sensitive, encrypt it at the application layer.</li>
+    <li><strong>Defense against a compromised site key.</strong> If the site's Ed25519 private key is stolen, the attacker can sign valid manifests and receipts until the key is rotated. See <a href="/key-rotation">/key-rotation</a>.</li>
+    <li><strong>Defense against a malicious site operator.</strong> WAB authenticates that an action came from the declared origin; it does not stop that origin from declaring malicious capabilities. Agents and users must still evaluate trust at the policy layer (Ring 4 trust graph helps).</li>
+    <li><strong>Network-layer DoS resistance.</strong> Rate limits and replay nonces protect against floods of <em>signed</em> requests; raw network DoS belongs to your edge (CDN/WAF).</li>
+    <li><strong>Cross-chain or on-chain finality.</strong> ATP provides cryptographic receipts, not consensus. Settlement on top of payment rails (Stripe, ACH, etc.) is handled by those systems and reflected in the receipt body.</li>
+  </ul>
+
+  <h2 id="primitives">3. Cryptographic primitives</h2>
+  <table>
+    <thead><tr><th>Use</th><th>Primitive</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Manifest signature</td><td>Ed25519</td><td>Over JCS-canonicalized JSON of <code>wab.json</code> with <code>signature</code> removed.</td></tr>
+      <tr><td>Receipt signature</td><td>Ed25519</td><td>Over JCS-canonicalized JSON of the receipt body. Verified at <code>/api/atp/receipts/verify</code>.</td></tr>
+      <tr><td>Intent authorization</td><td>HMAC-SHA256 + Ed25519</td><td>HMAC for per-session integrity, Ed25519 for cross-party verifiability.</td></tr>
+      <tr><td>Nonce / replay</td><td>UUIDv4 + 300 s window</td><td>Server burns nonce on first accept; reuse rejected with <code>409 nonce_consumed</code>.</td></tr>
+      <tr><td>Webhook delivery</td><td>Stripe-style <code>t=&lt;ts&gt;,v1=&lt;hmac&gt;</code></td><td>5-minute timestamp tolerance, constant-time compare.</td></tr>
+      <tr><td>Discovery</td><td>DNS TXT</td><td>DNSSEC validation strongly recommended at the resolver.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="trust-roots">4. Trust roots</h2>
+  <p>The protocol intentionally has <strong>two distinct trust roots</strong>:</p>
+  <ul>
+    <li><strong>Per-site root</strong> — the site's own Ed25519 key, published via its DNS zone and <code>/.well-known/wab.json</code>. Authority over the site is bounded by control of its DNS zone (same trust boundary as TLS).</li>
+    <li><strong>Ring 4 trust graph</strong> — an optional reputation overlay (<code>webagentbridge.com</code>-anchored today, federated over time) that lets agents reason about <em>which</em> sites to honor without taking on individual trust decisions per request. Trust signals are softening: they bias scoring, they never override a hard refusal.</li>
+  </ul>
+  <div class="callout warn">
+    <strong>Trust anchor disclosure.</strong> Today the Ring 4 root key is published by webagentbridge.com.
+    This is comparable to early Let's Encrypt, Cloudflare, or Apple notarization — a single anchor is the
+    pragmatic bootstrap. Federation, weighted quorum and emergency rotation are documented at
+    <a href="/key-rotation">/key-rotation</a>. We will publish governance changes before activating them.
+  </div>
+
+  <h2 id="boundaries">5. Boundaries we enforce by construction</h2>
+  <ul>
+    <li><strong>Scope</strong> — intents cannot exceed the declared <code>actions</code>, <code>max_spend_cents</code>, and <code>expires_at</code>. The server rejects, never silently truncates.</li>
+    <li><strong>Single-use</strong> — every intent contract burns its nonce on the first <code>authorize</code>. Re-authorize fails closed.</li>
+    <li><strong>Idempotent execution</strong> — <code>UNIQUE (intent_id, idempotency_key)</code> in the transactions table makes double-execution structurally impossible.</li>
+    <li><strong>Receipt immutability</strong> — receipts are append-only. Compensation is a separate signed event, never a mutation.</li>
+    <li><strong>Time-bounded sessions</strong> — JWT access tokens default to 15 min; refresh tokens are bound to the device fingerprint.</li>
+  </ul>
+
+  <h2 id="reporting">6. Reporting vulnerabilities</h2>
+  <p>See <a href="/responsible-disclosure">/responsible-disclosure</a>. In short: email <code>security@webagentbridge.com</code>, encrypt with our published PGP key, and expect an initial response within 72 hours.</p>
+
+  <h2 id="changelog">7. Document history</h2>
+  <ul>
+    <li><strong>2026-05-25</strong> — Initial publication. Reflects v3.17.x protocol.</li>
+  </ul>
+
+  <p style="margin-top: 48px; color:#94a3b8;">
+    Related: <a href="/threat-model">/threat-model</a> ·
+    <a href="/responsible-disclosure">/responsible-disclosure</a> ·
+    <a href="/key-rotation">/key-rotation</a> ·
+    <a href="/atp-semantics">/atp-semantics</a> ·
+    <a href="/spec">Full spec</a>
+  </p>
+
+</main>
+
+<footer class="footer" style="margin-top:32px;">
+  <div class="container">
+    <div class="footer-bottom">
+      <span>© 2026 Web Agent Bridge. Open Core.</span>
+      <a href="/" class="btn btn-ghost btn-sm">Back to Home</a>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/auth-nav.js?v=3.0.1"></script>
+<script src="/js/cookie-consent.js?v=3.0.1"></script>
+</body>
+</html>

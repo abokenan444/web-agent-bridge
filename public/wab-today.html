@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAB Today — Architecture, Layers &amp; Identity (v3.20)</title>
+<meta name="description" content="What is Web Agent Bridge in 2026? A clear map of all six architectural layers — from DNS discovery to self-propagating protocol — and how they relate to each other.">
+<link rel="canonical" href="https://webagentbridge.com/wab-today">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="stylesheet" href="/css/styles.css?v=3.0.1">
+<style>
+.wt { max-width: 980px; margin: 0 auto; padding: 48px 24px 80px; }
+.wt h1 { font-size: clamp(1.9rem, 4vw, 2.7rem); margin: 0 0 10px; }
+.wt .lead { color: #94a3b8; font-size: 1.1rem; max-width: 760px; line-height: 1.65; margin-bottom: 48px; }
+.wt h2 { margin-top: 52px; border-bottom: 1px solid #1f2937; padding-bottom: 10px; font-size: 1.4rem; }
+.wt h3 { margin-top: 28px; color: #22d3ee; font-size: 1rem; }
+.wt p, .wt li { line-height: 1.7; }
+.wt ul { padding-left: 24px; color: #94a3b8; }
+.wt code { background: rgba(34,211,238,.08); padding: 2px 7px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.88em; }
+.wt a { color: #22d3ee; }
+
+/* layer stack */
+.layer-stack { display: flex; flex-direction: column; gap: 0; margin: 28px 0; }
+.layer { display: grid; grid-template-columns: 60px 1fr 200px; align-items: center; gap: 0; border: 1px solid #1f2937; }
+.layer:first-child { border-radius: 10px 10px 0 0; }
+.layer:last-child  { border-radius: 0 0 10px 10px; }
+.layer + .layer { border-top: none; }
+.layer .num  { background: #0d1322; padding: 18px 12px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: .9rem; font-weight: 700; border-right: 1px solid #1f2937; color: #94a3b8; height: 100%; display: flex; align-items: center; justify-content: center; }
+.layer .body { padding: 16px 20px; background: #10172a; }
+.layer .body strong { display: block; font-size: 1rem; margin-bottom: 4px; }
+.layer .body span  { color: #94a3b8; font-size: .85rem; }
+.layer .links { padding: 14px 16px; background: #0d1322; border-left: 1px solid #1f2937; display: flex; flex-direction: column; gap: 6px; font-size: .8rem; }
+.layer .links a { color: #22d3ee; text-decoration: none; }
+.layer .links a:hover { text-decoration: underline; }
+.l0 .num { color: #f87171; } .l0 .body { border-left: 3px solid #f87171; }
+.l1 .num { color: #fb923c; } .l1 .body { border-left: 3px solid #fb923c; }
+.l2 .num { color: #fbbf24; } .l2 .body { border-left: 3px solid #fbbf24; }
+.l3 .num { color: #34d399; } .l3 .body { border-left: 3px solid #34d399; }
+.l4 .num { color: #22d3ee; } .l4 .body { border-left: 3px solid #22d3ee; }
+.l5 .num { color: #a78bfa; } .l5 .body { border-left: 3px solid #a78bfa; }
+
+/* timeline */
+.timeline { position: relative; padding-left: 24px; margin: 24px 0; }
+.timeline::before { content: ''; position: absolute; left: 7px; top: 0; bottom: 0; width: 2px; background: linear-gradient(180deg, #f87171, #22d3ee, #a78bfa); }
+.tl-item { position: relative; margin-bottom: 22px; }
+.tl-item::before { content: ''; position: absolute; left: -21px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: #22d3ee; border: 2px solid #0d1322; }
+.tl-item .tl-ver { font-family: 'JetBrains Mono', monospace; color: #22d3ee; font-size: .82rem; font-weight: 700; }
+.tl-item .tl-title { font-weight: 600; margin: 2px 0; }
+.tl-item .tl-desc { color: #94a3b8; font-size: .85rem; line-height: 1.5; }
+
+/* callout */
+.callout { border-radius: 12px; padding: 16px 20px; margin: 20px 0; }
+.callout.info  { background: rgba(34,211,238,.07); border: 1px solid rgba(34,211,238,.25); }
+.callout.warn  { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.35); }
+.callout.green { background: rgba(52,211,153,.07); border: 1px solid rgba(52,211,153,.25); }
+
+/* who-are-you grid */
+.who-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 24px 0; }
+.who-card { background: #10172a; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; }
+.who-card h4 { margin: 0 0 10px; font-size: 1rem; }
+.who-card ul { margin: 0; padding-left: 18px; font-size: .85rem; color: #94a3b8; }
+.who-card ul li { margin-bottom: 5px; }
+.who-card a { color: #22d3ee; }
+
+/* positioning table */
+.pos-table { width: 100%; border-collapse: collapse; margin: 16px 0; background: #10172a; border: 1px solid #1f2937; border-radius: 10px; overflow: hidden; }
+.pos-table th, .pos-table td { padding: 11px 16px; text-align: left; border-bottom: 1px solid #1f2937; vertical-align: top; }
+.pos-table th { background: #0d1322; color: #94a3b8; font-weight: 600; font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; }
+.pos-table tr:last-child td { border-bottom: none; }
+.pos-table .old { color: #f87171; font-size: .85rem; }
+.pos-table .new { color: #34d399; font-size: .85rem; }
+
+@media (max-width: 640px) {
+  .layer { grid-template-columns: 48px 1fr; }
+  .layer .links { display: none; }
+}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="/" class="navbar-brand"><div class="brand-icon">⚡</div><span>WAB</span></a>
+    <ul class="navbar-links">
+      <li><a href="/docs">Docs</a></li>
+      <li><a href="/wab-today" style="color:var(--text-primary);">WAB Today</a></li>
+      <li><a href="/threat-model">Threat Model</a></li>
+      <li><a href="/atp-semantics">ATP Semantics</a></li>
+      <li><a href="/whitepaper">Whitepaper</a></li>
+    </ul>
+    <div class="navbar-actions">
+      <a href="/login" class="btn btn-ghost">Sign In</a>
+      <a href="/register" class="btn btn-primary btn-sm">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<main class="wt">
+
+  <div style="font-size:.8rem;color:#94a3b8;margin-bottom:12px;">
+    <a href="/" style="color:#94a3b8">Home</a> / WAB Today
+    <span style="display:inline-block;margin-left:12px;background:rgba(34,211,238,.1);color:#22d3ee;padding:2px 10px;border-radius:999px;font-weight:600;">v3.20.0</span>
+  </div>
+
+  <h1>WAB Today</h1>
+  <p class="lead">
+    What is Web Agent Bridge in 2026? This page is the single authoritative answer.
+    WAB evolved from a browser middleware script (v1) into a multi-layer open protocol and
+    infrastructure ecosystem. Below you'll find the current architecture, the evolution
+    timeline, and a guide to where each piece fits.
+  </p>
+
+  <!-- ── Positioning table ──────────────────────────────────────── -->
+  <div class="callout warn">
+    <strong style="color:#fbbf24">⚠️ Common first impression:</strong> many visitors arrive expecting a
+    JavaScript snippet and a license key. That was WAB v1. If you reached this page from old docs, a
+    tutorial, or an AI-generated summary, read this page first — the architecture changed significantly.
+  </div>
+
+  <h2 id="then-vs-now">Then vs. Now</h2>
+  <table class="pos-table">
+    <thead><tr><th>Dimension</th><th>WAB v1 (2024)</th><th>WAB v3.20 (2026)</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Core identity</td>
+        <td class="old">Browser middleware script</td>
+        <td class="new">Open AI↔Web protocol</td>
+      </tr>
+      <tr>
+        <td>Site integration</td>
+        <td class="old"><code>window.AIBridgeConfig + licenseKey</code></td>
+        <td class="new"><code>/.well-known/wab.json</code> + Ed25519 manifest</td>
+      </tr>
+      <tr>
+        <td>Agent discovery</td>
+        <td class="old">Script tag on page</td>
+        <td class="new">DNS TXT (<code>_wab.domain</code>) or <code>/.wab</code> beacon</td>
+      </tr>
+      <tr>
+        <td>Trust model</td>
+        <td class="old">License key (server-side)</td>
+        <td class="new">Ed25519 signatures + Ring 4 trust graph</td>
+      </tr>
+      <tr>
+        <td>Transactions</td>
+        <td class="old">Not supported</td>
+        <td class="new">ATP — signed intents, idempotent execution, verifiable receipts</td>
+      </tr>
+      <tr>
+        <td>Network effect</td>
+        <td class="old">None (per-site)</td>
+        <td class="new">Self-propagating Spider Network + Gossip Protocol</td>
+      </tr>
+      <tr>
+        <td>Governance</td>
+        <td class="old">None</td>
+        <td class="new">HMAC-chained audit log, EU AI Act Article 12 export</td>
+      </tr>
+      <tr>
+        <td>Agent training</td>
+        <td class="old">None</td>
+        <td class="new">Public HuggingFace dataset of interaction traces</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="color:#94a3b8;font-size:.88rem">
+    The legacy <code>window.AIBridgeConfig</code> interface remains supported for backward compatibility
+    and is documented in <a href="/docs#legacy-config">docs → Legacy section</a>. No new integrations
+    should use it.
+  </p>
+
+  <!-- ── Six layers ──────────────────────────────────────────────── -->
+  <h2 id="layers">The Six Architectural Layers</h2>
+  <p style="color:#94a3b8">WAB is not a single product. It is a stack of six layers, each independently usable, composable, and open.</p>
+
+  <div class="layer-stack">
+    <div class="layer l0">
+      <div class="num">L0</div>
+      <div class="body">
+        <strong>Discovery</strong>
+        <span>How agents find WAB-enabled sites. Three mechanisms: DNS TXT (<code>_wab.domain</code>), HTTPS manifest (<code>/.well-known/wab.json</code>), and the <code>/.wab</code> Beacon with a live <code>next[]</code> peer list. The Spider Network propagates discovery automatically through the Gossip Protocol — no registry required.</span>
+      </div>
+      <div class="links">
+        <a href="/dns">DNS Discovery ↗</a>
+        <a href="/.well-known/wab.json">wab.json example ↗</a>
+        <a href="/.wab">/.wab beacon ↗</a>
+        <a href="/wab-registry">Spider Registry ↗</a>
+        <a href="/api/registry/gossip">Gossip API ↗</a>
+      </div>
+    </div>
+    <div class="layer l1">
+      <div class="num">L1</div>
+      <div class="body">
+        <strong>Manifest &amp; Capabilities</strong>
+        <span>The <code>wab.json</code> manifest is the contract between a site and agents. It declares capabilities (what agents can do), scopes (public / user / admin), the site's Ed25519 public key, and endpoint URLs. Versioned with <code>schema_version</code>. Signed by the site key.</span>
+      </div>
+      <div class="links">
+        <a href="/docs#wab-json">Manifest spec ↗</a>
+        <a href="/spec">Full spec ↗</a>
+      </div>
+    </div>
+    <div class="layer l2">
+      <div class="num">L2</div>
+      <div class="body">
+        <strong>Trust &amp; Cryptography</strong>
+        <span>Ed25519 signatures on every manifest, receipt, and intent. Ring 4 trust graph: each ring adds a layer of verification (DNS, HTTPS, Notary attestation, governance). Key rotation is documented and automated. Emergency revocation reachable within minutes. All keys auditable on the public Notary.</span>
+      </div>
+      <div class="links">
+        <a href="/security">Security model ↗</a>
+        <a href="/threat-model">Threat model ↗</a>
+        <a href="/key-rotation">Key rotation ↗</a>
+        <a href="/notary">Notary ↗</a>
+      </div>
+    </div>
+    <div class="layer l3">
+      <div class="num">L3</div>
+      <div class="body">
+        <strong>ATP — Agent Transaction Protocol</strong>
+        <span>The trust + transaction layer for agentic commerce. Signed intent contracts (scope, spend cap, nonce), idempotent execution (<code>UNIQUE(intent_id, idempotency_key)</code>), and Ed25519-signed receipts. A receipt is only issued after <code>settled</code> state — there is no "maybe transacted" state. Retry-safe by construction.</span>
+      </div>
+      <div class="links">
+        <a href="/atp">ATP overview ↗</a>
+        <a href="/atp-semantics">Consistency model ↗</a>
+        <a href="/benchmarks">Benchmarks ↗</a>
+      </div>
+    </div>
+    <div class="layer l4">
+      <div class="num">L4</div>
+      <div class="body">
+        <strong>Governance &amp; Observability</strong>
+        <span>HMAC-chained audit log: every protocol event is chained so tampering is detectable. EU AI Act Article 12 export built-in. Observatory tracks WAB adoption across the web. Research dataset (CC-BY-4.0) available for academic use. WAB Lens browser extension shows trust status on every site.</span>
+      </div>
+      <div class="links">
+        <a href="/governance">Governance ↗</a>
+        <a href="/observatory">Observatory ↗</a>
+        <a href="/research">Research dataset ↗</a>
+        <a href="/wab-lens">WAB Lens ↗</a>
+      </div>
+    </div>
+    <div class="layer l5">
+      <div class="num">L5</div>
+      <div class="body">
+        <strong>Self-Propagating Protocol</strong>
+        <span>The ecosystem layer. After one human installs WAB, the network grows autonomously: Beacon <code>next[]</code> peer lists, Gossip peer exchange on every <code>/report</code> call, <code>X-WAB-Next-Sites</code> DNA header on every HTTP response, and a public training dataset that teaches future AI models to prefer WAB sites by default. Viral coefficient (k-factor) tracked live.</span>
+      </div>
+      <div class="links">
+        <a href="/viral-coefficient">Viral coefficient ↗</a>
+        <a href="/wab-dataset">Training dataset ↗</a>
+        <a href="/api/traces/stats">Live stats ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Evolution timeline ──────────────────────────────────────── -->
+  <h2 id="evolution">Protocol Evolution</h2>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-ver">v1.0 — 2024</div>
+      <div class="tl-title">Browser middleware script</div>
+      <div class="tl-desc"><code>window.AIBridgeConfig</code> + license key. Per-site setup, no DNS, no crypto. Still supported for backward compatibility.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-ver">v2.0</div>
+      <div class="tl-title">Open protocol + DNS discovery</div>
+      <div class="tl-desc"><code>wab.json</code> manifest, Ed25519 keys, <code>_wab.domain TXT</code> record. Agents can find you without HTML scraping.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-ver">v3.0</div>
+      <div class="tl-title">Ring 4 trust graph + SDK ecosystem</div>
+      <div class="tl-desc">Four-ring trust hierarchy, React/Vue/Svelte adapters, LangChain integration, MCP adapter. Enterprise Mesh and Governance SaaS.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-ver">v3.9</div>
+      <div class="tl-title">ATP — Agent Transaction Primitive</div>
+      <div class="tl-desc">Signed intent contracts, idempotent transactions, Ed25519 receipts. The missing trust layer for agentic commerce.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-ver">v3.18</div>
+      <div class="tl-title">Observatory · Notary · Research · WAB URI scheme</div>
+      <div class="tl-desc">Ecosystem observability: adoption tracking, public key attestation with key rotation and web-of-trust, CC-BY-4.0 research dataset, <code>wab://</code> URI scheme.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-ver">v3.19</div>
+      <div class="tl-title">Spider Network — public registry + /.wab beacon</div>
+      <div class="tl-desc">Agents auto-report WAB sites they discover. The <code>/.wab</code> beacon publishes a live <code>next[]</code> peer list. Discovery headers (<code>X-WAB-Enabled</code>, <code>X-WAB-Trust-Ring</code>) on every response.</div>
+    </div>
+    <div class="tl-item" style="margin-bottom:0">
+      <div class="tl-ver">v3.20 — current</div>
+      <div class="tl-title">Self-Propagating Protocol</div>
+      <div class="tl-desc">Gossip peer exchange in every <code>/report</code> call, <code>X-WAB-Next-Sites</code> DNA header on every HTTP response, public HuggingFace training dataset, live viral coefficient (k-factor) model. Network grows with zero human intervention after first install.</div>
+    </div>
+  </div>
+
+  <!-- ── Trust model summary ────────────────────────────────────── -->
+  <h2 id="trust">Trust Model — One-Page Summary</h2>
+  <div class="callout info">
+    Full details → <a href="/threat-model">Threat Model</a> · <a href="/security">Security Model</a> · <a href="/key-rotation">Key Rotation</a>
+  </div>
+
+  <h3>What WAB protects against</h3>
+  <ul>
+    <li><strong>Manifest tampering</strong> — Ed25519 signature over canonical JSON. Any byte change invalidates the signature.</li>
+    <li><strong>Receipt forgery</strong> — receipts are Ed25519-signed by the site key and chained via <code>intent_id</code>. A forged receipt is mathematically distinguishable.</li>
+    <li><strong>Replay attacks</strong> — single-use nonce burned on first use. Retries are safe because <code>UNIQUE(intent_id, idempotency_key)</code> prevents double-execution.</li>
+    <li><strong>DNS spoofing</strong> — Ring 4 requires cross-validation of DNS TXT + HTTPS manifest + Notary attestation. A spoofed DNS record alone is insufficient.</li>
+    <li><strong>Key compromise recovery</strong> — documented rotation procedure with grace window for downstream agents to reconcile. See <a href="/key-rotation">key-rotation</a>.</li>
+  </ul>
+
+  <h3>What WAB does not protect against (by design)</h3>
+  <ul>
+    <li><strong>Fully compromised origin server</strong> — if an attacker controls the origin, they control the signing key. This is a fundamental limit of all PKI systems, not a WAB-specific gap.</li>
+    <li><strong>Sybil attacks on collective intelligence</strong> — the reputation layer is early-stage. Temporal trust scoring and identity cost mechanisms are planned but not yet production-grade.</li>
+    <li><strong>WAB-aware but malicious agents</strong> — WAB constrains what agents can do (scopes, rate limits, spend caps), but cannot prevent a malicious agent that has a valid intent from acting within its declared scope.</li>
+  </ul>
+
+  <h3>Single trust anchor (Ring 4)</h3>
+  <p style="color:#94a3b8">
+    WAB's Notary service acts as a transparency root for Ring 4 attestations — similar to a certificate authority.
+    This is intentional and documented. Key rotation, cross-signing between Notary peers, and a public
+    transparency log are all operational. See <a href="/notary">Notary</a> and <a href="/key-rotation">Key Rotation</a>
+    for the full recovery procedure.
+  </p>
+
+  <!-- ── wab.json versioning ────────────────────────────────────── -->
+  <h2 id="versioning">wab.json Versioning &amp; Compatibility Policy</h2>
+
+  <table class="pos-table">
+    <thead><tr><th>schema_version</th><th>Status</th><th>Supported until</th><th>Migration</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>"wab/1"</code></td>
+        <td><span style="color:#fbbf24">Legacy</span></td>
+        <td>Indefinite (backward compat)</td>
+        <td>No action needed; ring ≤ 2 only</td>
+      </tr>
+      <tr>
+        <td><code>"wab/2"</code></td>
+        <td><span style="color:#34d399">Supported</span></td>
+        <td>Until v4.0</td>
+        <td>Add <code>endpoints.atp</code> for Ring 3+</td>
+      </tr>
+      <tr>
+        <td><code>"wab/3"</code></td>
+        <td><span style="color:#22d3ee">Current</span></td>
+        <td>Long-term stable</td>
+        <td>—</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="color:#94a3b8;font-size:.88rem">
+    <strong>Deprecation policy:</strong> a schema version is deprecated with a minimum 12-month notice in the changelog,
+    a warning field in the <code>/.wab</code> beacon, and a grace period during which both old and new versions
+    are accepted. Breaking changes require a major version increment and a migration guide.
+  </p>
+
+  <!-- ── Positioning ────────────────────────────────────────────── -->
+  <h2 id="positioning">What WAB Is — and Isn't</h2>
+  <p style="color:#94a3b8">
+    WAB spans multiple layers that are independently useful, which sometimes creates confusion about
+    its identity. Here is the honest positioning:
+  </p>
+  <table class="pos-table">
+    <thead><tr><th>What WAB is</th><th>What WAB is not</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>An open protocol (like HTTP, DNS)</td>
+        <td>A single SaaS product</td>
+      </tr>
+      <tr>
+        <td>A trust infrastructure layer (like TLS/CA)</td>
+        <td>A replacement for TLS</td>
+      </tr>
+      <tr>
+        <td>A transaction layer for AI agents (like Stripe for agents)</td>
+        <td>A payment processor</td>
+      </tr>
+      <tr>
+        <td>An ecosystem of optional modules (Observatory, Notary, Lens…)</td>
+        <td>A monolith you must adopt entirely</td>
+      </tr>
+      <tr>
+        <td>Self-hosted + open source (MIT core)</td>
+        <td>Vendor lock-in (SaaS tiers are optional)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout green">
+    <strong style="color:#34d399">One-sentence identity:</strong>
+    WAB is the open infrastructure layer that lets AI agents discover, verify, and transact with websites
+    — the same way HTTPS let browsers trust servers, but for agentic AI.
+  </div>
+
+  <!-- ── Start here ─────────────────────────────────────────────── -->
+  <h2 id="start">Where to Start</h2>
+  <div class="who-grid">
+    <div class="who-card" style="border-left:3px solid #fb923c;">
+      <h4>🛠️ Site Owner / Developer</h4>
+      <ul>
+        <li><a href="/docs#quick-start">Quick Start (60 seconds)</a></li>
+        <li><a href="/one-click">One-Click Wizard</a></li>
+        <li><a href="/dns">DNS Discovery guide</a></li>
+        <li><a href="/docs#wab-json">wab.json manifest spec</a></li>
+      </ul>
+    </div>
+    <div class="who-card" style="border-left:3px solid #22d3ee;">
+      <h4>🤖 Agent Builder</h4>
+      <ul>
+        <li><a href="/docs">Protocol docs</a></li>
+        <li><a href="/atp">ATP overview</a></li>
+        <li><a href="/atp-semantics">Consistency model</a></li>
+        <li><a href="/wab-registry">Find WAB-enabled sites</a></li>
+        <li><a href="/wab-dataset">Training dataset</a></li>
+      </ul>
+    </div>
+    <div class="who-card" style="border-left:3px solid #34d399;">
+      <h4>🔐 Security Reviewer</h4>
+      <ul>
+        <li><a href="/threat-model">Threat Model</a></li>
+        <li><a href="/security">Security Model</a></li>
+        <li><a href="/key-rotation">Key Rotation</a></li>
+        <li><a href="/responsible-disclosure">Responsible Disclosure</a></li>
+      </ul>
+    </div>
+    <div class="who-card" style="border-left:3px solid #a78bfa;">
+      <h4>🏛️ Enterprise / Evaluator</h4>
+      <ul>
+        <li><a href="/whitepaper">Whitepaper</a></li>
+        <li><a href="/governance">Governance SaaS</a></li>
+        <li><a href="/benchmarks">Benchmarks</a></li>
+        <li><a href="/enterprise-mesh">Enterprise Mesh</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:48px;padding-top:24px;border-top:1px solid #1f2937;display:flex;gap:16px;flex-wrap:wrap;font-size:.88rem;color:#94a3b8;">
+    <span>v3.20.0 · May 2026</span>
+    <a href="/spec" style="color:#22d3ee">Full Protocol Spec ↗</a>
+    <a href="/whitepaper" style="color:#22d3ee">Whitepaper ↗</a>
+    <a href="https://github.com/abokenan444/web-agent-bridge" target="_blank" rel="noopener" style="color:#22d3ee">GitHub ↗</a>
+  </div>
+
+</main>
+
+</body>
+</html>
