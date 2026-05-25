@@ -26,10 +26,11 @@ function getStripe() {
 
 function getStripePrices() {
   return {
-    starter: process.env.STRIPE_PRICE_STARTER || getPlatformSetting('stripe_price_starter'),
-    pro: process.env.STRIPE_PRICE_PRO || getPlatformSetting('stripe_price_pro'),
-    business: process.env.STRIPE_PRICE_BUSINESS || getPlatformSetting('stripe_price_business'),
-    enterprise: process.env.STRIPE_PRICE_ENTERPRISE || getPlatformSetting('stripe_price_enterprise')
+    starter:    process.env.STRIPE_PRICE_STARTER    || getPlatformSetting('stripe_price_starter'),
+    freelancer: process.env.STRIPE_PRICE_FREELANCER || getPlatformSetting('stripe_price_freelancer'),
+    pro:        process.env.STRIPE_PRICE_PRO        || getPlatformSetting('stripe_price_pro'),
+    business:   process.env.STRIPE_PRICE_BUSINESS   || getPlatformSetting('stripe_price_business'),
+    enterprise: process.env.STRIPE_PRICE_ENTERPRISE || getPlatformSetting('stripe_price_enterprise'),
   };
 }
 
@@ -332,6 +333,30 @@ function handleWebhookRequest(req) {
   if (!s) throw new Error('Stripe not configured');
   const event = s.webhooks.constructEvent(raw, sig, whSecret);
   handleWebhookEvent(event);
+
+  // ── Forward genius-tagged events to genius-platform (same webhook, same secret) ──
+  const obj = event.data && event.data.object;
+  const geniusOrgId = obj && obj.metadata && obj.metadata.genius_org_id;
+  if (geniusOrgId) {
+    const callbackUrl = `${process.env.GENIUS_CALLBACK_URL || 'http://localhost:3004'}/api/wab/billing-callback`;
+    (async () => {
+      try {
+        const fetchFn = globalThis.fetch || (await import('node-fetch').then(m => m.default).catch(() => null));
+        if (!fetchFn) return;
+        await fetchFn(callbackUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Secret': process.env.GENIUS_BRIDGE_SECRET || '',
+          },
+          body: JSON.stringify({ type: event.type, data: event.data }),
+        });
+        console.log(`[stripe] forwarded ${event.type} → genius-platform (org: ${geniusOrgId})`);
+      } catch (e) {
+        console.error('[stripe] genius billing-callback failed (non-fatal):', e.message);
+      }
+    })();
+  }
 }
 
 module.exports = {
