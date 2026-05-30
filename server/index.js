@@ -22,6 +22,7 @@ const apiRoutes = require('./routes/api');
 const licenseRoutes = require('./routes/license');
 const adminRoutes = require('./routes/admin');
 const billingRoutes = require('./routes/billing');
+const geniusGateway = require('./routes/genius-gateway');
 const sovereignRoutes = require('./routes/sovereign');
 const meshRoutes = require('./routes/mesh');
 const commanderRoutes = require('./routes/commander');
@@ -259,11 +260,105 @@ app.get(['/whitepaper', '/whitepaper.html'], whitepaperHandler);
 
 // WAB Trust artifact (signed Ed25519 wab.json) — served explicitly because
 // express.static skips dotfile directories like /.well-known by default.
+// We compose: signed trust payload (untouched, from disk) + a top-level
+// `actions` map so structural-agent platforms (e.g. The Code Genius) can
+// discover and execute the public API surface without DOM scraping.
+const WAB_ACTIONS_MANIFEST = {
+  v:           '1.0',
+  name:        'Web Agent Bridge',
+  description: 'Structural API surface for agents — registry discovery, trust verification, reputation queries, and ShieldQR scanning.',
+  endpoint:    'https://webagentbridge.com',
+  actions: {
+    discover_sites: {
+      id:          'discover_sites',
+      description: 'Search the WAB registry for sites by intent tag, ring, or domain pattern.',
+      url:         '/api/registry/discover',
+      method:      'GET',
+      inputs: {
+        intent: { type: 'string', required: false, description: 'Intent tag to filter by (e.g. "shop", "news")' },
+        ring:   { type: 'number', required: false, description: 'Minimum trust ring (0–4)' },
+        limit:  { type: 'number', required: false, description: 'Max results (default 20)' },
+      },
+    },
+    list_sites: {
+      id:          'list_sites',
+      description: 'List all active WAB-enabled sites in the public registry.',
+      url:         '/api/registry/list',
+      method:      'GET',
+      inputs: {
+        limit:  { type: 'number', required: false, description: 'Page size (default 50)' },
+        offset: { type: 'number', required: false, description: 'Page offset' },
+      },
+    },
+    get_registry_stats: {
+      id:          'get_registry_stats',
+      description: 'Get aggregated stats about the WAB network (total sites, rings distribution, top intents).',
+      url:         '/api/registry/stats',
+      method:      'GET',
+    },
+    suggest_peers: {
+      id:          'suggest_peers',
+      description: 'Get peer-site suggestions for cross-discovery (gossip protocol).',
+      url:         '/api/registry/suggest',
+      method:      'GET',
+      inputs: {
+        domain: { type: 'string', required: false, description: 'Seed domain for similarity search' },
+      },
+    },
+    list_plans: {
+      id:          'list_plans',
+      description: 'List all available WAB subscription plans with prices and features.',
+      url:         '/api/plans',
+      method:      'GET',
+    },
+    get_plan: {
+      id:          'get_plan',
+      description: 'Fetch a specific plan by ID.',
+      url:         '/api/plans/:id',
+      method:      'GET',
+      inputs: {
+        id: { type: 'string', required: true, description: 'Plan ID' },
+      },
+    },
+    scan_qr: {
+      id:          'scan_qr',
+      description: 'Verify a ShieldQR code — returns trust ring, issuer, and risk score for the encoded URL.',
+      url:         '/api/shieldqr/scan',
+      method:      'POST',
+      inputs: {
+        url: { type: 'string', required: true, description: 'URL decoded from the QR' },
+      },
+    },
+    recent_scans: {
+      id:          'recent_scans',
+      description: 'Get the most recent public ShieldQR scan reports.',
+      url:         '/api/shieldqr/recent',
+      method:      'GET',
+    },
+  },
+  privacy: {
+    allowed:    ['registry queries', 'public trust metadata', 'plan listings'],
+    disallowed: ['admin endpoints', 'billing webhooks', 'individual user data'],
+  },
+};
+
+let _trustPayloadCache = null;
+function loadTrustPayload() {
+  if (_trustPayloadCache) return _trustPayloadCache;
+  try {
+    const raw = require('fs').readFileSync(
+      path.join(__dirname, '..', 'public', '.well-known', 'wab.json'), 'utf8');
+    _trustPayloadCache = JSON.parse(raw);
+  } catch { _trustPayloadCache = {}; }
+  return _trustPayloadCache;
+}
+
 app.get('/.well-known/wab.json', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
   res.set('Access-Control-Allow-Origin', '*');
   res.type('application/json');
-  res.sendFile(path.join(__dirname, '..', 'public', '.well-known', 'wab.json'));
+  // Merge signed trust artifact (untouched) with action manifest
+  res.json({ ...loadTrustPayload(), ...WAB_ACTIONS_MANIFEST });
 });
 
 // WAB Beacon — /.wab — compact machine-readable trust signal for AI agents.
@@ -416,6 +511,8 @@ app.use('/api', apiLimiter, apiRoutes);
 app.use('/api/license', licenseLimiter, licenseRoutes);
 app.use('/api/admin', apiLimiter, adminRoutes);
 app.use('/api/billing', apiLimiter, billingRoutes);
+// genius-platform payment gateway — uses WAB's Stripe service (internal proxy)
+app.use('/api/genius', geniusGateway);
 app.use('/api/sovereign', apiLimiter, sovereignRoutes);
 app.use('/api/mesh', apiLimiter, meshRoutes);
 app.use('/api/commander', apiLimiter, commanderRoutes);

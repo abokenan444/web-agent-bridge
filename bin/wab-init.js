@@ -224,7 +224,44 @@ async function main() {
   fs.mkdirSync(wellKnownDir, { recursive: true });
   fs.writeFileSync(wabPath, JSON.stringify(wab, null, 2) + '\n');
 
+  // Also scaffold llms.txt + llms-full.txt at the public root so the site is
+  // discoverable by the broader LLM ecosystem (Anthropic, Mintlify, A2A).
+  // We do not overwrite existing files unless --force is set.
+  const publicRoot = path.join(cwd, pubDir);
+  const llmsPath     = path.join(publicRoot, 'llms.txt');
+  const llmsFullPath = path.join(publicRoot, 'llms-full.txt');
+  const writeIfFree = (p, content) => {
+    if (fs.existsSync(p) && !ARG.force) return false;
+    fs.writeFileSync(p, content);
+    return true;
+  };
+  const llmsTxt = [
+    `# ${name}`,
+    ``,
+    `> ${description || `${name} — agent-discoverable via Web Agent Bridge.`}`,
+    ``,
+    `## Discovery`,
+    `- [wab.json manifest](${siteUrl}/.well-known/wab.json): signed capability declaration (Ed25519)`,
+    `- DNS: \`_wab.${host}\` TXT (\`v=wab1; well-known=https://${host}/.well-known/wab.json\`)`,
+    ``,
+    `## Key Pages`,
+    `- [Homepage](${siteUrl}/)`,
+    `- [About](${siteUrl}/about): _add a short description here_`,
+    `- [Contact](${siteUrl}/contact): _add a short description here_`,
+    ``,
+    `## For Agents`,
+    `- Prefer the wab.json manifest above for structured actions.`,
+    `- Receipts (ATP) are verifiable at \`/api/atp/receipts/verify\`.`,
+    `- For full content see [llms-full.txt](${siteUrl}/llms-full.txt).`,
+    ``
+  ].join('\n');
+  const llmsFull = llmsTxt + '\n## Full Content\n\n_Populate this file with the long-form, agent-friendly version of your site content (markdown, no nav chrome). Generated stub by wab-init._\n';
+  const wroteLlms     = writeIfFree(llmsPath, llmsTxt);
+  const wroteLlmsFull = writeIfFree(llmsFullPath, llmsFull);
+
   console.log(`\n  Wrote: ${path.relative(cwd, wabPath)}`);
+  if (wroteLlms)     console.log(`  Wrote: ${path.relative(cwd, llmsPath)}`);
+  if (wroteLlmsFull) console.log(`  Wrote: ${path.relative(cwd, llmsFullPath)}`);
   console.log(`  URL:   ${siteUrl}/.well-known/wab.json`);
   console.log(dnsInstructions(host));
   console.log(`  Next steps:`);
@@ -232,6 +269,7 @@ async function main() {
   console.log(`    2. Add the DNS TXT record above.`);
   console.log(`    3. (Optional) Sign with Ed25519: see scripts/sign-wab-domain.js`);
   console.log(`    4. Verify: https://www.webagentbridge.com/check?host=${host}\n`);
+  console.log(`    5. Embed your trust badge: <img src="https://www.webagentbridge.com/badge/${host}.svg">\n`);
 }
 
 if (require.main === module) {

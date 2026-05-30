@@ -1,0 +1,49 @@
+# thecodegenius.com — nginx reverse proxy to Next.js (port 3004)
+# Place at: /etc/nginx/sites-available/thecodegenius.com
+# Enable: ln -s /etc/nginx/sites-available/thecodegenius.com /etc/nginx/sites-enabled/
+# SSL:    certbot --nginx -d thecodegenius.com -d www.thecodegenius.com
+
+server {
+    listen 80;
+    server_name thecodegenius.com www.thecodegenius.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name thecodegenius.com www.thecodegenius.com;
+
+    # SSL — managed by Certbot
+    ssl_certificate     /etc/letsencrypt/live/thecodegenius.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/thecodegenius.com/privkey.pem;
+    include             /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Security headers
+    add_header X-Frame-Options          "SAMEORIGIN"              always;
+    add_header X-Content-Type-Options   "nosniff"                 always;
+    add_header Referrer-Policy          "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy       "camera=(), microphone=(), geolocation=()" always;
+
+    # Block the billing-callback endpoint from external access.
+    # It is internal-only; WAB calls it on localhost:3004.
+    location /api/wab/billing-callback {
+        allow 127.0.0.1;
+        deny  all;
+        return 403;
+    }
+
+    # Proxy everything else to Next.js
+    location / {
+        proxy_pass         http://127.0.0.1:3004;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        'upgrade';
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 120s;
+    }
+}

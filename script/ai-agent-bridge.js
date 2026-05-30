@@ -1,14 +1,34 @@
 /**
- * Web Agent Bridge v2.0.0
- * Open-source middleware for AI agent ↔ website interaction
- * https://github.com/web-agent-bridge
- * License: MIT
+ * Web Agent Bridge — Legacy v1/v2 Browser Bridge (window.AIBridgeConfig)
+ *
+ * @status legacy
+ * @since 2.0.0
+ * @deprecated 3.0.0  Prefer the modern WAB protocol surface:
+ *   • wab.json manifest         — https://webagentbridge.com/docs#wab-json
+ *   • DNS TXT discovery         — _wab.<domain>
+ *   • ATP (signed intents)      — https://webagentbridge.com/atp-semantics
+ *   • Security / threat model   — https://webagentbridge.com/security
+ *
+ * This file remains fully supported for backward compatibility. The
+ * `window.AIBridgeConfig` + `licenseKey` model is NOT recommended for new
+ * integrations; it predates the discovery + trust + transaction model.
+ *
+ * License: MIT — https://github.com/web-agent-bridge
  */
 (function (global) {
   'use strict';
 
   const VERSION = '2.2.0';
   const LICENSING_SERVER = 'https://api.webagentbridge.com';
+
+  // One-shot soft warning so integrators know a modern surface exists.
+  try {
+    if (global && global.console && !global.__wabLegacyWarned) {
+      global.__wabLegacyWarned = true;
+      // eslint-disable-next-line no-console
+      console.info('[WAB] Loaded legacy bridge (window.AIBridgeConfig). For new integrations see https://webagentbridge.com/docs — wab.json + DNS discovery + ATP.');
+    }
+  } catch (_) { /* noop */ }
 
   // ─── Default Configuration ────────────────────────────────────────────
   const DEFAULT_CONFIG = {

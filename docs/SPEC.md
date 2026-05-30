@@ -2269,7 +2269,7 @@ by webagentbridge.com through Stripe produces a complete ATP cycle:
 
 1. On `invoice.payment_succeeded`, `recordPlatformPayment()` runs the
    full lifecycle for the paying user: `createIntent` (purpose =
-   `WAB platform subscription — <tier>`, scope = `{actions:['pay']}`,
+   `WAB platform subscription ï¿½ <tier>`, scope = `{actions:['pay']}`,
    spend_cap = invoice amount), `authorizeIntent`, `beginTransaction`
    (idempotency_key = Stripe invoice id), `appendStep` with the payment
    evidence, then `pending ? executing ? executed ? settled`, and
@@ -2295,4 +2295,4 @@ The human-facing view is `/transparency.html`. Any visitor can:
   `POST /api/atp/receipts/verify { "receipt_id": "<id>" }`.
 
 This is the marketing claim made operational: *"WAB doesn't just build
-the trust layer for agentic commerce — it runs its own business on it."*
+the trust layer for agentic commerce ï¿½ it runs its own business on it."*
