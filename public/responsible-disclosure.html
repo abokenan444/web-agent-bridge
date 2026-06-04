@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Responsible Disclosure — Web Agent Bridge</title>
-<meta name="description" content="How to report a security vulnerability in WAB. Safe-harbor language, response SLAs, encrypted contact, and scope.">
+<meta name="description" content="How to report a security vulnerability in WAB. Safe-harbor, response SLAs, encrypted contact, hall-of-fame opt-in.">
 <link rel="canonical" href="https://webagentbridge.com/responsible-disclosure">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <link rel="stylesheet" href="/css/styles.css?v=3.0.1">
@@ -19,11 +19,26 @@
   .trust-page code { background: rgba(34,211,238,.08); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
   .callout { background: rgba(34,211,238,.07); border: 1px solid rgba(34,211,238,.25); border-radius: 12px; padding: 14px 18px; margin: 18px 0; }
   .callout.danger { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.35); }
+  .callout.soft   { background: rgba(168,85,247,.07); border-color: rgba(168,85,247,.30); }
   .contact-card { background: #10172a; border: 1px solid #1f2937; border-radius: 14px; padding: 24px; margin: 24px 0; }
   .contact-card .row { display:flex; justify-content:space-between; padding: 10px 0; border-bottom: 1px solid #1f2937; gap: 16px; flex-wrap: wrap; }
   .contact-card .row:last-child { border-bottom: none; }
   .contact-card .k { color: #94a3b8; font-size: 0.9rem; }
   .contact-card .v { color: #e2e8f0; font-family: 'JetBrains Mono', monospace; font-size: 0.92rem; }
+  .form-grid { display: grid; gap: 14px; }
+  .form-grid label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px; }
+  .form-grid input, .form-grid select, .form-grid textarea {
+    width: 100%; background: #0d1322; border: 1px solid #1f2937; border-radius: 8px;
+    color: #e2e8f0; padding: 10px 12px; font: inherit; box-sizing: border-box;
+  }
+  .form-grid textarea { min-height: 80px; resize: vertical; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+  .submit-btn { background: #22d3ee; color: #0b0f17; border: 0; padding: 12px 22px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  .submit-btn[disabled] { opacity: 0.6; cursor: wait; }
+  .status-msg { margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; }
+  .status-msg.ok  { background: rgba(34,197,94,.10); color: #86efac; border:1px solid rgba(34,197,94,.30); }
+  .status-msg.err { background: rgba(248,113,113,.10); color: #fca5a5; border:1px solid rgba(248,113,113,.30); }
 </style>
 </head>
 <body>
@@ -35,7 +50,7 @@
       <li><a href="/docs">Docs</a></li>
       <li><a href="/security">Security</a></li>
       <li><a href="/responsible-disclosure" style="color:#f0f4ff;">Disclosure</a></li>
-      <li><a href="/whitepaper">Whitepaper</a></li>
+      <li><a href="/researchers">Researchers</a></li>
     </ul>
     <div class="navbar-actions">
       <a href="/login" class="btn btn-ghost">Sign In</a>
@@ -48,15 +63,16 @@
 
   <h1>Responsible Disclosure</h1>
   <p class="lead">
-    We treat security reports as a partnership. If you've found a vulnerability in the WAB protocol,
-    SDK, server, or hosted infrastructure, please report it privately and we will respond, fix, and credit.
+    WAB is an open-core project. We treat security reports as a partnership. If you have found a
+    vulnerability in the protocol, the SDK, the server, or our hosted infrastructure, please tell us
+    privately first — we will respond, fix it, and credit you (with your permission) on our
+    <a href="/researchers" style="color:#22d3ee;">researchers page</a>.
   </p>
 
   <h2 id="contact">1. How to report</h2>
   <div class="contact-card">
     <div class="row"><span class="k">Email</span><span class="v">security@webagentbridge.com</span></div>
     <div class="row"><span class="k">PGP key</span><span class="v"><a href="/.well-known/pgp-key.txt" style="color:#22d3ee;">/.well-known/pgp-key.txt</a></span></div>
-    <div class="row"><span class="k">PGP fingerprint</span><span class="v">to be published</span></div>
     <div class="row"><span class="k">security.txt</span><span class="v"><a href="/.well-known/security.txt" style="color:#22d3ee;">/.well-known/security.txt</a></span></div>
     <div class="row"><span class="k">Acknowledge SLA</span><span class="v">≤ 72 hours</span></div>
     <div class="row"><span class="k">Triage SLA</span><span class="v">≤ 7 days</span></div>
@@ -73,7 +89,7 @@
   <ul>
     <li><code>webagentbridge.com</code> and any subdomain we operate.</li>
     <li>The <code>web-agent-bridge</code> npm package and its SDK packages.</li>
-    <li>The WAB protocol itself — signature, discovery, ATP semantics, replay protection.</li>
+    <li>The WAB protocol itself — signature, discovery, ATP semantics, replay protection, auth middleware.</li>
     <li>The browser SDK (<code>wab.min.js</code>) and the WordPress / Hydrogen / Elementor integrations we publish.</li>
   </ul>
   <p><strong>Out of scope:</strong></p>
@@ -86,7 +102,7 @@
 
   <h2 id="safe-harbor">3. Safe harbor</h2>
   <p>
-    Researchers acting in good faith under this policy are authorized to perform their work and will not be
+    Researchers acting in good faith under this policy are authorised to perform their work and will not be
     pursued under the CFAA, equivalents elsewhere, or our own terms of service, provided they:
   </p>
   <ul>
@@ -97,20 +113,30 @@
   </ul>
   <p>We will not pursue legal action against good-faith research that follows this policy.</p>
 
-  <h2 id="reward">4. Acknowledgement &amp; rewards</h2>
-  <table>
-    <thead><tr><th>Severity</th><th>Examples</th><th>Reward</th></tr></thead>
-    <tbody>
-      <tr><td>Critical</td><td>Forged ATP receipts, full key extraction, complete account takeover, RCE on production</td><td>USD 1,000 – 5,000 + hall of fame</td></tr>
-      <tr><td>High</td><td>Replay bypass, idempotency bypass, scope escalation, signed-intent forgery, persistent auth bypass</td><td>USD 250 – 1,000 + hall of fame</td></tr>
-      <tr><td>Medium</td><td>Authenticated IDOR, partial scope leak, server-side input flaws without RCE</td><td>USD 75 – 250 + hall of fame</td></tr>
-      <tr><td>Low</td><td>Reflected info disclosure, missing rate limits with no clear abuse path</td><td>Hall of fame + swag</td></tr>
-    </tbody>
-  </table>
-  <p style="color:#94a3b8;font-size:0.9rem;">
-    Rewards are paid at our discretion after the issue is verified, deduplicated, and fixed.
-    First reporter of a unique issue is rewarded.
+  <h2 id="reward">4. Recognition &amp; discretionary rewards</h2>
+  <p>
+    WAB does <strong>not</strong> currently run a formal Bug Bounty programme. What we offer instead:
   </p>
+  <ul>
+    <li><strong>Public credit</strong> on <a href="/researchers" style="color:#22d3ee;">/researchers</a> (opt-in; anonymous credit is welcome too).</li>
+    <li><strong>A discretionary appreciation reward</strong> may be granted after we verify and fix the issue, based on its real-world severity and our project budget at the time. Typical range for medium findings on an open-source project at this stage is symbolic (e.g. USD 50–200); higher amounts are possible for clearly high-impact, first-reporter findings but are not promised.</li>
+    <li><strong>Co-author credit</strong> in the CHANGELOG and the matching CVE / advisory.</li>
+  </ul>
+  <p style="color:#94a3b8;font-size:0.9rem;">
+    By submitting a report you understand that any reward is offered at WAB's sole discretion and is
+    not a contractual obligation. Duplicates, low-severity issues, already-patched issues, and reports
+    that violate scope or safe-harbor rules are not eligible. The first reporter of a unique, valid
+    issue is the one credited and (if applicable) rewarded.
+  </p>
+
+  <div class="callout soft">
+    <strong>One friendly ask, not a hard requirement:</strong> if you enjoy what we are building, a
+    GitHub ⭐ on
+    <a href="https://github.com/web-agent-bridge/web-agent-bridge" target="_blank" rel="noopener" style="color:#a78bfa;">
+      github.com/web-agent-bridge/web-agent-bridge</a>
+    means a lot for an early-stage open-source project — it helps more sites adopt the WAB protocol,
+    which makes the whole web safer for agents. Your report is welcome either way.
+  </div>
 
   <h2 id="process">5. Process</h2>
   <ol>
@@ -118,19 +144,78 @@
     <li><strong>Acknowledge</strong> — we reply within 72 hours.</li>
     <li><strong>Triage</strong> — within 7 days we confirm severity and assign a tracking ID.</li>
     <li><strong>Remediate</strong> — fix and deploy. Critical within 14 days, others within 90 days.</li>
-    <li><strong>Disclose</strong> — coordinated public advisory after the fix ships, crediting the reporter unless they prefer anonymity.</li>
+    <li><strong>Credit</strong> — coordinated public advisory after the fix ships, naming the reporter (with permission) on <a href="/researchers" style="color:#22d3ee;">/researchers</a>.</li>
   </ol>
 
-  <h2 id="hall">6. Hall of fame</h2>
-  <p>Reporters who follow this policy are listed here (with permission). The list will appear after our first credited disclosure.</p>
+  <h2 id="hof">6. Hall of fame — submit your name</h2>
+  <p>
+    Once your report has been verified and fixed, please submit your preferred credit below. Entries are
+    reviewed manually before they appear on the public
+    <a href="/researchers" style="color:#22d3ee;">/researchers</a> page — this keeps the list meaningful
+    and spam-free. Choose <em>Anonymous</em> if you prefer not to be named publicly.
+  </p>
+
+  <form id="hofForm" class="form-grid" autocomplete="off" novalidate>
+    <div class="form-row">
+      <div>
+        <label for="hofName">Display name</label>
+        <input id="hofName" name="name" type="text" maxlength="60" placeholder="e.g. Miro Hatachi">
+      </div>
+      <div>
+        <label for="hofHandle">GitHub handle <span style="color:#64748b;">(optional)</span></label>
+        <input id="hofHandle" name="githubHandle" type="text" maxlength="40" placeholder="e.g. miro-h">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="hofUrl">Profile URL <span style="color:#64748b;">(optional — github / x / linkedin / mastodon)</span></label>
+        <input id="hofUrl" name="url" type="url" maxlength="200" placeholder="https://github.com/miro-h">
+      </div>
+      <div>
+        <label for="hofSeverity">Reported severity</label>
+        <select id="hofSeverity" name="severity">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="hofEmail">Contact email <span style="color:#64748b;">(private — never published)</span></label>
+        <input id="hofEmail" name="email" type="email" maxlength="120" placeholder="you@example.com">
+      </div>
+      <div>
+        <label for="hofRef">Report reference <span style="color:#64748b;">(optional)</span></label>
+        <input id="hofRef" name="reportRef" type="text" maxlength="120" placeholder="ticket ID, CVE, etc.">
+      </div>
+    </div>
+    <div>
+      <label for="hofNote">Short note <span style="color:#64748b;">(optional, max 240 chars — what you reported)</span></label>
+      <textarea id="hofNote" name="note" maxlength="240" placeholder="e.g. SSRF on /badge endpoint via DNS-deceptive hostnames"></textarea>
+    </div>
+    <div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input id="hofAnon" name="anonymous" type="checkbox">
+        <span>Credit me anonymously (we will publish "Anonymous" only)</span>
+      </label>
+    </div>
+    <div>
+      <button id="hofSubmit" type="submit" class="submit-btn">Submit for review</button>
+      <span style="color:#64748b;font-size:0.85rem;margin-left:12px;">No reward is paid via this form. Email <code>security@…</code> for the actual report.</span>
+    </div>
+    <div id="hofStatus" class="status-msg" style="display:none;"></div>
+  </form>
 
   <h2 id="changelog">7. Document history</h2>
   <ul>
+    <li><strong>2026-06-04</strong> — Reworded rewards section to "discretionary appreciation" (no formal bounty programme). Added hall-of-fame opt-in form. Added friendly GitHub-star ask.</li>
     <li><strong>2026-05-25</strong> — Initial publication.</li>
   </ul>
 
   <p style="margin-top: 48px; color:#94a3b8;">
-    Related: <a href="/security">/security</a> · <a href="/threat-model">/threat-model</a> · <a href="/key-rotation">/key-rotation</a>
+    Related: <a href="/security">/security</a> · <a href="/threat-model">/threat-model</a> · <a href="/key-rotation">/key-rotation</a> · <a href="/researchers">/researchers</a>
   </p>
 
 </main>
@@ -144,6 +229,65 @@
   </div>
 </footer>
 
+<script>
+(function () {
+  const form   = document.getElementById('hofForm');
+  const btn    = document.getElementById('hofSubmit');
+  const status = document.getElementById('hofStatus');
+  const anon   = document.getElementById('hofAnon');
+  const name   = document.getElementById('hofName');
+
+  function setStatus(kind, msg) {
+    status.className = 'status-msg ' + kind;
+    status.textContent = msg;
+    status.style.display = 'block';
+  }
+
+  anon.addEventListener('change', () => {
+    name.disabled = anon.checked;
+    if (anon.checked) name.value = '';
+  });
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    status.style.display = 'none';
+    const payload = {
+      name:         name.value.trim(),
+      githubHandle: document.getElementById('hofHandle').value.trim(),
+      url:          document.getElementById('hofUrl').value.trim(),
+      severity:     document.getElementById('hofSeverity').value,
+      email:        document.getElementById('hofEmail').value.trim(),
+      reportRef:    document.getElementById('hofRef').value.trim(),
+      note:         document.getElementById('hofNote').value.trim(),
+      anonymous:    anon.checked,
+    };
+    if (!payload.anonymous && payload.name.length < 2) {
+      return setStatus('err', 'Please enter a display name or check "Credit me anonymously".');
+    }
+    btn.disabled = true;
+    try {
+      const r = await fetch('/api/security-researchers/submit', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) {
+        setStatus('ok', j.message || 'Thanks — your entry is awaiting review.');
+        form.reset();
+        name.disabled = false;
+      } else {
+        const detail = Array.isArray(j.detail) ? ' (' + j.detail.join('; ') + ')' : '';
+        setStatus('err', (j.error || 'Submission failed') + detail);
+      }
+    } catch (e) {
+      setStatus('err', 'Network error — please try again later or email security@webagentbridge.com.');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+})();
+</script>
 <script src="/js/auth-nav.js?v=3.0.1"></script>
 <script src="/js/cookie-consent.js?v=3.0.1"></script>
 </body>

@@ -655,6 +655,9 @@ app.get(['/threat-model', '/threat-model.html'], noCache, (req, res) => {
 app.get(['/responsible-disclosure', '/responsible-disclosure.html'], noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'responsible-disclosure.html'));
 });
+app.get(['/researchers', '/researchers.html', '/hall-of-fame'], noCache, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'researchers.html'));
+});
 app.get(['/key-rotation', '/key-rotation.html'], noCache, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'key-rotation.html'));
 });
@@ -672,6 +675,7 @@ app.get(['/wab-today', '/wab-today.html', '/architecture'], noCache, (req, res) 
 app.use('/api/notary',      apiLimiter, require('./routes/notary'));
 app.use('/api/observatory', apiLimiter, require('./routes/observatory'));
 app.use('/api/research',    apiLimiter, require('./routes/research'));
+app.use('/api/security-researchers', apiLimiter, require('./routes/security-researchers'));
 
 // ── WAB Spider Network v3.19.0 — Public Registry + Spider Protocol ──
 app.use('/api/registry',    apiLimiter, require('./routes/registry'));
