@@ -11,6 +11,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { setupWebSocket } = require('./ws');
 const { runMigrations } = require('./utils/migrate');
+const { safeFetch } = require('./utils/safe-fetch');
 const { maybeBootstrapAdmin, db } = require('./models/db');
 const { initSearchEngine, search, getSuggestions, getTrendingSearches, getSearchStats, purgeOldCache } = require('./services/search-engine');
 const { processMessage: agentChat } = require('./services/agent-chat');
@@ -476,10 +477,10 @@ app.get('/badge/:domain', async (req, res) => {
   }
   let value = 'unknown', color = '#9ca3af';
   try {
-    const ac = new AbortController();
-    const t  = setTimeout(() => ac.abort(), 3500);
-    const r  = await fetch(`https://${host}/.well-known/wab.json`, { signal: ac.signal, redirect: 'follow' });
-    clearTimeout(t);
+    // SSRF-safe: safeFetch resolves DNS and blocks private/loopback/link-local IPs,
+    // re-validates on each redirect hop. This defeats nip.io-style tricks where
+    // the hostname "looks public" but resolves to 127.0.0.1.
+    const r = await safeFetch(`https://${host}/.well-known/wab.json`, {}, { timeoutMs: 3500, maxBytes: 256 * 1024, requireHttps: true });
     if (r.ok) {
       const j = await r.json().catch(() => null);
       const signed = !!(j && (j.signature || (j.trust && j.trust.signed)));
@@ -738,10 +739,9 @@ button,a.btn{display:inline-block;background:#60a5fa;color:#0b0f17;border:0;padd
   }
   let manifest = null;
   try {
-    const ac = new AbortController();
-    const t  = setTimeout(() => ac.abort(), 4000);
-    const r  = await fetch(`https://${host}/.well-known/wab.json`, { signal: ac.signal, redirect: 'follow' });
-    clearTimeout(t);
+    // SSRF-safe: routes through safeFetch which DNS-resolves and blocks
+    // private/loopback/link-local addresses (nip.io, AWS metadata, etc.)
+    const r = await safeFetch(`https://${host}/.well-known/wab.json`, {}, { timeoutMs: 4000, maxBytes: 256 * 1024, requireHttps: true });
     if (r.ok) manifest = await r.json().catch(() => null);
   } catch (_) {}
   if (!manifest) {

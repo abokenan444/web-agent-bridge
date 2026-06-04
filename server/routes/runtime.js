@@ -66,9 +66,14 @@ const PUBLIC_PATHS = [
 ];
 
 function authMiddleware(req, res, next) {
-  // Allow public GET endpoints
+  // Allow ONLY pre-declared public paths. Exact match is method-agnostic
+  // (covers POST /agents/register etc.); sub-resources are GET-only and
+  // require a '/' separator (so '/protocol' does NOT shadow '/protocol-secret').
+  // CRITICAL: do NOT allow arbitrary GET requests to bypass auth — prior code
+  // had `if (req.method === 'GET') return next()` which exposed task data,
+  // usage stats, and marketplace admin data to anonymous readers.
   const matchesPublic = PUBLIC_PATHS.some(p =>
-    req.path === p || (req.method === 'GET' && req.path.startsWith(p))
+    req.path === p || (req.method === 'GET' && req.path.startsWith(p + '/'))
   );
   if (matchesPublic) return next();
 
@@ -105,9 +110,6 @@ function authMiddleware(req, res, next) {
       return next();
     }
   }
-
-  // No auth on non-mutation GET requests (read-only)
-  if (req.method === 'GET') return next();
 
   metrics.increment('auth.rejected');
   return res.status(401).json({ error: 'Authentication required. Provide X-WAB-Key or Authorization: Bearer <token>' });

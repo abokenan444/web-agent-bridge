@@ -22,6 +22,7 @@ const crypto  = require('crypto');
 const fs      = require('fs');
 const path    = require('path');
 const wabCrypto = require('../services/wab-crypto');
+const { safeFetch } = require('../utils/safe-fetch');
 
 const router = express.Router();
 const KEY_PATH    = path.join(__dirname, '..', '..', 'data', '.notary-key.json');     // legacy single-key (kept for migration)
@@ -91,11 +92,12 @@ const HOST_RE = /^[a-z0-9.-]+\.[a-z]{2,}$/i;
 async function observe(host) {
   const cached = _cache.get(host);
   if (cached && cached.exp > Date.now()) return cached.attestation;
-  const ac = new AbortController();
-  const t  = setTimeout(() => ac.abort(), 4500);
   let status = 'missing', signed = false, manifest_sha256 = null, manifest_size = 0;
   try {
-    const r = await fetch(`https://${host}/.well-known/wab.json`, { signal: ac.signal, redirect: 'follow' });
+    // SSRF-safe: safeFetch resolves DNS and blocks private/loopback/link-local IPs,
+    // and re-validates on every redirect hop. This blocks nip.io-style hostnames
+    // that pass regex but resolve to internal addresses.
+    const r = await safeFetch(`https://${host}/.well-known/wab.json`, {}, { timeoutMs: 4500, maxBytes: 256 * 1024, requireHttps: true });
     if (r.ok) {
       const body = await r.text();
       manifest_size = body.length;
@@ -112,7 +114,7 @@ async function observe(host) {
       status = 'missing';
     }
   } catch (_) { status = 'missing'; }
-  finally { clearTimeout(t); }
+  finally { /* safeFetch manages its own timer */ }
   const observed_at = new Date().toISOString();
   const k = CURRENT();
   const payload = { host, status, signed, manifest_sha256, manifest_size, observed_at, notary: FP_OF(k.public_key), key_id: k.id, version: 1 };
