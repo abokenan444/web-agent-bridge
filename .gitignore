@@ -34,3 +34,6 @@ server/services/modules/price-engine.js
 server/services/modules/bargaining-engine.js
 server/services/modules/bounty-verification.js
 server/services/modules/affiliate-db.js
+
+# Ad-hoc local/deploy smoke-test scripts (never commit)
+check*.sh
