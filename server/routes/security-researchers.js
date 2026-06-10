@@ -115,10 +115,11 @@ router.post('/submit', express.json({ limit: '8kb' }), (req, res) => {
 
 // ── Admin ────────────────────────────────────────────────────────────────
 function _adminAuth(req, res, next) {
+  const { safeEqual } = require('../utils/safe-compare');
   const want = process.env.WAB_ADMIN_TOKEN;
   if (!want) return res.status(503).json({ error: 'WAB_ADMIN_TOKEN not configured' });
   const got = req.headers['x-wab-admin-token'] || req.query.token;
-  if (got !== want) return res.status(401).json({ error: 'admin token required' });
+  if (!safeEqual(got, want)) return res.status(401).json({ error: 'admin token required' });
   next();
 }
 

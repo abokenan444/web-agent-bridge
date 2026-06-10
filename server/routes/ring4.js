@@ -605,10 +605,11 @@ router.get('/jwks', (_req, res) => res.json(buildJwks()));
 // Key listing + rotation (admin-only)
 // ────────────────────────────────────────────────────────────────────────────
 function requireAdminToken(req, res, next) {
+  const { safeEqual } = require('../utils/safe-compare');
   const token = req.headers['x-ring4-admin-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   const expected = process.env.WAB_RING4_ADMIN_TOKEN;
   if (!expected) return res.status(503).json({ error: 'admin_disabled', message: 'WAB_RING4_ADMIN_TOKEN not configured' });
-  if (!token || token !== expected) return res.status(401).json({ error: 'unauthorized' });
+  if (!safeEqual(token, expected)) return res.status(401).json({ error: 'unauthorized' });
   next();
 }
 

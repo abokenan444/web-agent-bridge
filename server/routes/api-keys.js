@@ -38,9 +38,10 @@ function issueOk(ip) {
 }
 
 function adminGate(req, res, next) {
+  const { safeEqual } = require('../utils/safe-compare');
   const expected = process.env.WAB_API_KEYS_ADMIN_TOKEN || process.env.WAB_RING4_ADMIN_TOKEN;
   if (!expected) return res.status(503).json({ error: 'admin_disabled' });
-  if ((req.headers['x-admin-token'] || '') !== expected) return res.status(401).json({ error: 'unauthorized' });
+  if (!safeEqual(req.headers['x-admin-token'] || '', expected)) return res.status(401).json({ error: 'unauthorized' });
   next();
 }
 

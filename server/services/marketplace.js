@@ -125,19 +125,35 @@ class MarketplaceEngine {
     };
 
     this._purchases.set(purchaseId, purchase);
-    listing.installs++;
 
-    // Track earnings
-    if (sellerEarning > 0) {
-      const earnings = this._earnings.get(listing.sellerId) || { total: 0, pending: 0, paid: 0 };
-      earnings.total += sellerEarning;
-      earnings.pending += sellerEarning;
-      this._earnings.set(listing.sellerId, earnings);
+    // Only credit installs / revenue / seller earnings once the purchase is
+    // actually completed. For paid listings the purchase starts in
+    // 'pending_payment' and must be promoted via completePayment(). Crediting
+    // here would let any caller who can reach POST /marketplace/:id/purchase
+    // inflate a seller's earnings without ever paying.
+    if (purchase.status === 'completed') {
+      this._creditCompletedPurchase(listing, purchase);
     }
 
-    listing.revenue += listing.price;
     bus.emit('marketplace.purchased', { purchaseId, listingId, buyerId, price: listing.price });
     return purchase;
+  }
+
+  /**
+   * Credit installs / revenue / seller earnings for a completed purchase.
+   * Idempotent guard: stamps purchase._credited so a double-call is a no-op.
+   */
+  _creditCompletedPurchase(listing, purchase) {
+    if (purchase._credited) return;
+    listing.installs++;
+    listing.revenue += purchase.price;
+    if (purchase.sellerEarning > 0) {
+      const earnings = this._earnings.get(listing.sellerId) || { total: 0, pending: 0, paid: 0 };
+      earnings.total += purchase.sellerEarning;
+      earnings.pending += purchase.sellerEarning;
+      this._earnings.set(listing.sellerId, earnings);
+    }
+    purchase._credited = true;
   }
 
   /**
@@ -146,8 +162,11 @@ class MarketplaceEngine {
   completePayment(purchaseId) {
     const purchase = this._purchases.get(purchaseId);
     if (!purchase) throw new Error('Purchase not found');
+    if (purchase.status === 'completed') return purchase;
     purchase.status = 'completed';
     purchase.completedAt = Date.now();
+    const listing = this._listings.get(purchase.listingId);
+    if (listing) this._creditCompletedPurchase(listing, purchase);
     return purchase;
   }
 

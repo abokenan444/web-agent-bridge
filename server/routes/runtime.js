@@ -65,6 +65,27 @@ const PUBLIC_PATHS = [
   '/cluster/status',
 ];
 
+// Sub-prefixes that must NEVER be treated as public, even if a parent prefix
+// is listed in PUBLIC_PATHS. Required because the matcher allows arbitrary GET
+// sub-paths under any public prefix; without this guard, `/marketplace/admin/*`
+// and `/marketplace/my/*` (admin queue + per-agent earnings/purchases) were
+// publicly readable via the `/marketplace` prefix.
+const PUBLIC_DENY_PREFIXES = [
+  '/marketplace/admin',
+  '/marketplace/my',
+];
+
+// Cached require — used in admin-token check on every authenticated request.
+const { safeEqual } = require('../utils/safe-compare');
+
+// Capabilities that grant cross-agent / control-plane authority.
+const ADMIN_CAPABILITIES = ['admin:agents', 'control-plane'];
+
+function sessionIsAdmin(session) {
+  if (!session || !Array.isArray(session.capabilities)) return false;
+  return session.capabilities.some(c => ADMIN_CAPABILITIES.includes(c));
+}
+
 function authMiddleware(req, res, next) {
   // Allow ONLY pre-declared public paths. Exact match is method-agnostic
   // (covers POST /agents/register etc.); sub-resources are GET-only and
@@ -72,10 +93,25 @@ function authMiddleware(req, res, next) {
   // CRITICAL: do NOT allow arbitrary GET requests to bypass auth — prior code
   // had `if (req.method === 'GET') return next()` which exposed task data,
   // usage stats, and marketplace admin data to anonymous readers.
-  const matchesPublic = PUBLIC_PATHS.some(p =>
+  const deniedFromPublic = PUBLIC_DENY_PREFIXES.some(p =>
+    req.path === p || req.path.startsWith(p + '/')
+  );
+  const matchesPublic = !deniedFromPublic && PUBLIC_PATHS.some(p =>
     req.path === p || (req.method === 'GET' && req.path.startsWith(p + '/'))
   );
   if (matchesPublic) return next();
+
+  // Admin/control-plane via dedicated env-configured token (timing-safe compare).
+  // Same convention as server/index.js _adminAuth. Grants cross-agent authority
+  // without binding to any specific agent identity.
+  const wantAdminTok = process.env.WAB_ADMIN_TOKEN;
+  if (wantAdminTok) {
+    const gotAdminTok = req.headers['x-wab-admin-token'];
+    if (gotAdminTok && safeEqual(gotAdminTok, wantAdminTok)) {
+      req.isAdmin = true;
+      return next();
+    }
+  }
 
   // Check session token
   const authHeader = req.headers['authorization'];
@@ -85,6 +121,7 @@ function authMiddleware(req, res, next) {
     if (session) {
       req.agentId = session.agentId;
       req.session = session;
+      req.isAdmin = sessionIsAdmin(session);
       return next();
     }
   }
@@ -97,22 +134,28 @@ function authMiddleware(req, res, next) {
     if (session) {
       req.agentId = session.agentId;
       req.session = session;
+      req.isAdmin = sessionIsAdmin(session);
       return next();
     }
   }
 
-  // Check agent ID header (for internal/trusted calls)
-  const agentHeader = req.headers['x-wab-agent'];
-  if (agentHeader) {
-    const agent = identity.getAgent(agentHeader);
-    if (agent && agent.status === 'active') {
-      req.agentId = agentHeader;
-      return next();
-    }
-  }
+  // X-WAB-Agent is treated as METADATA ONLY — it must NEVER authenticate a
+  // request on its own. Possessing a known agentId is not proof of identity.
+  // Earlier versions had a fallback here that accepted the header and set
+  // req.agentId = headerValue, which let any caller impersonate another active
+  // agent (and revoke / negotiate capabilities for it via the :agentId routes).
+  // Removed: see SECURITY advisory on cross-agent impersonation.
 
   metrics.increment('auth.rejected');
   return res.status(401).json({ error: 'Authentication required. Provide X-WAB-Key or Authorization: Bearer <token>' });
+}
+
+// Authorization helpers for control-plane / lifecycle routes.
+// A non-admin caller may only act on its OWN agent identity. Admin (env token
+// or session with admin:agents / control-plane capability) may act on any.
+function ownsTarget(req, targetAgentId) {
+  if (req.isAdmin === true) return true;
+  return Boolean(req.agentId && targetAgentId && req.agentId === targetAgentId);
 }
 
 router.use(authMiddleware);
@@ -213,26 +256,41 @@ router.post('/agents/authenticate', (req, res) => {
 });
 
 /**
- * Get agent info
+ * Get agent info (self or admin only — prevents enumerating other agents
+ * via direct ID lookup once a target ID is guessed/leaked).
  */
 router.get('/agents/:agentId', (req, res) => {
+  if (!ownsTarget(req, req.params.agentId)) {
+    return res.status(403).json({ error: 'Not authorized to view this agent' });
+  }
   const agent = identity.getAgent(req.params.agentId);
   if (!agent) return res.status(404).json({ error: 'Agent not found' });
   res.json(agent);
 });
 
 /**
- * List agents
+ * List agents. Non-admin callers see ONLY their own agent — exposing the full
+ * active-agent list to ordinary callers gave attackers the IDs needed to
+ * impersonate or revoke other tenants. Admin/control-plane callers see all.
  */
 router.get('/agents', (req, res) => {
-  const agents = identity.listAgents({ type: req.query.type, status: req.query.status || 'active' });
-  res.json({ agents, total: agents.length });
+  if (req.isAdmin) {
+    const agents = identity.listAgents({ type: req.query.type, status: req.query.status || 'active' });
+    return res.json({ agents, total: agents.length });
+  }
+  if (!req.agentId) return res.json({ agents: [], total: 0 });
+  const self = identity.getAgent(req.agentId);
+  const list = self ? [self] : [];
+  return res.json({ agents: list, total: list.length });
 });
 
 /**
- * Negotiate capabilities
+ * Negotiate capabilities (self or admin only).
  */
 router.post('/agents/:agentId/capabilities', (req, res) => {
+  if (!ownsTarget(req, req.params.agentId)) {
+    return res.status(403).json({ error: 'Not authorized to negotiate capabilities for this agent' });
+  }
   const { capabilities, siteId, constraints } = req.body;
   if (!capabilities || !Array.isArray(capabilities)) {
     return res.status(400).json({ error: 'capabilities array required' });
@@ -243,12 +301,16 @@ router.post('/agents/:agentId/capabilities', (req, res) => {
 });
 
 /**
- * Revoke agent
+ * Revoke agent (self or admin only — non-admin callers may only revoke their
+ * own agent identity; cross-agent revocation requires admin/control-plane).
  */
 router.delete('/agents/:agentId', (req, res) => {
+  if (!ownsTarget(req, req.params.agentId)) {
+    return res.status(403).json({ error: 'Not authorized to revoke this agent' });
+  }
   identity.revoke(req.params.agentId);
   protocol.negotiator.revokeAgent(req.params.agentId);
-  logger.info('Agent revoked', { agentId: req.params.agentId });
+  logger.info('Agent revoked', { agentId: req.params.agentId, by: req.agentId || 'admin' });
   res.json({ success: true });
 });
 
@@ -377,12 +439,16 @@ router.get('/execute/resolve', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Deploy an agent
+ * Deploy an agent (self or admin only — non-admin callers may only deploy
+ * their own agent identity; cross-agent deployment requires admin).
  */
 router.post('/deployments', (req, res) => {
   try {
     const { agentId, config } = req.body;
     if (!agentId) return res.status(400).json({ error: 'agentId required' });
+    if (!ownsTarget(req, agentId)) {
+      return res.status(403).json({ error: 'Not authorized to deploy this agent' });
+    }
     const deployment = agentManager.deploy(agentId, config || {});
     res.json(deployment);
   } catch (err) {
@@ -1303,7 +1369,8 @@ router.post('/marketplace/:listingId/review', (req, res) => {
  * Get my purchases
  */
 router.get('/marketplace/my/purchases', (req, res) => {
-  const buyerId = req.agentId || req.query.buyerId;
+  const buyerId = req.isAdmin ? (req.query.buyerId || req.agentId) : req.agentId;
+  if (!buyerId) return res.status(400).json({ error: 'buyerId required' });
   res.json({ purchases: marketplace.getPurchases(buyerId) });
 });
 
@@ -1311,7 +1378,8 @@ router.get('/marketplace/my/purchases', (req, res) => {
  * Get seller earnings
  */
 router.get('/marketplace/my/earnings', (req, res) => {
-  const sellerId = req.agentId || req.query.sellerId;
+  const sellerId = req.isAdmin ? (req.query.sellerId || req.agentId) : req.agentId;
+  if (!sellerId) return res.status(400).json({ error: 'sellerId required' });
   res.json(marketplace.getEarnings(sellerId));
 });
 
@@ -1319,6 +1387,7 @@ router.get('/marketplace/my/earnings', (req, res) => {
  * Admin: pending listings
  */
 router.get('/marketplace/admin/pending', (req, res) => {
+  if (!req.isAdmin) return res.status(403).json({ error: 'admin required' });
   res.json({ listings: marketplace.getPendingListings() });
 });
 
@@ -1326,6 +1395,7 @@ router.get('/marketplace/admin/pending', (req, res) => {
  * Admin: approve listing
  */
 router.post('/marketplace/admin/:listingId/approve', (req, res) => {
+  if (!req.isAdmin) return res.status(403).json({ error: 'admin required' });
   try {
     const listing = marketplace.approve(req.params.listingId);
     res.json(listing);
@@ -1338,6 +1408,7 @@ router.post('/marketplace/admin/:listingId/approve', (req, res) => {
  * Admin: reject listing
  */
 router.post('/marketplace/admin/:listingId/reject', (req, res) => {
+  if (!req.isAdmin) return res.status(403).json({ error: 'admin required' });
   try {
     const listing = marketplace.reject(req.params.listingId, req.body.reason);
     res.json(listing);
